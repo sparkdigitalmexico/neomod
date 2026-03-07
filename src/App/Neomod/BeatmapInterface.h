@@ -65,6 +65,8 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     // returns true if we are actually just in the pause menu doing nothing (but NOT in "continue" screen)
     [[nodiscard]] bool isActuallyPausedAndNotSpectating() const;
 
+    [[nodiscard]] vec2 legacyPixels2RawPixels(
+        vec2 coords) const;  // only used for bounds calculations atm (just scales, nothing else)
     [[nodiscard]] vec2 pixels2OsuCoords(vec2 pixelCoords) const override;  // only used for positional audio atm
     [[nodiscard]] vec2 osuCoords2Pixels(
         vec2 coords) const override;  // hitobjects should use this one (includes lots of special behaviour)

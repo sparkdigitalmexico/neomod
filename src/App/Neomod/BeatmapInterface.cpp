@@ -3619,6 +3619,12 @@ bool BeatmapInterface::isActuallyLoading() const {
     return (!soundEngine->isReady() || !this->music->isAsyncReady() || this->bIsPreLoading);
 }
 
+vec2 BeatmapInterface::legacyPixels2RawPixels(vec2 coords) const {
+    // just scale
+    coords *= this->fScaleFactor;
+    return coords;
+}
+
 vec2 BeatmapInterface::pixels2OsuCoords(vec2 pixelCoords) const {
     // un-first-person
     if(cv::mod_fps.getBool()) {

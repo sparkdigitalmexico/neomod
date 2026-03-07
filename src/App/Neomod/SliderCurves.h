@@ -48,6 +48,9 @@ class SliderCurve {
 
     [[nodiscard]] inline float getPixelLength() const { return this->fPixelLength; }
 
+    [[nodiscard]] inline vec4 getBounds() const { return this->bounds; }                  // with stacking
+    [[nodiscard]] inline vec4 getOriginalBounds() const { return this->originalBounds; }  // without stacking
+
    protected:
     friend class SliderCurveBuilder;
 
@@ -61,6 +64,12 @@ class SliderCurve {
     std::vector<std::vector<vec2>> originalCurvePointSegments;
     std::vector<vec2> curvePoints;
     std::vector<vec2> originalCurvePoints;
+
+   private:
+    vec4 bounds;
+    vec4 originalBounds;
+
+   protected:
     float fStartAngle;
     float fEndAngle;
     float fPixelLength;

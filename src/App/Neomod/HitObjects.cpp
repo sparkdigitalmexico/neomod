@@ -1481,8 +1481,20 @@ void Slider::drawBody(float alpha, float from, float to) {
 
         if(cv::mod_fps.getBool()) translation += m_pf->getFirstPersonCursorDelta();
 
-        SliderRenderer::draw(m_vao.get(), alwaysPoints, translation, scale, m_pf->fHitcircleDiameter, from, to,
-                             undimmedComboColor, m_hittableDimRGBColorMultiplierPct, alpha, m_clickTimeMS);
+        vec2 minBounds = m_pf->legacyPixels2RawPixels(
+            m_pf->osuCoords2LegacyPixels(vec2(m_curve->getBounds().x, m_curve->getBounds().y)));
+        vec2 maxBounds = m_pf->legacyPixels2RawPixels(
+            m_pf->osuCoords2LegacyPixels(vec2(m_curve->getBounds().z, m_curve->getBounds().w)));
+
+        if(minBounds.x > maxBounds.x) std::swap(minBounds.x, maxBounds.x);
+        if(minBounds.y > maxBounds.y) std::swap(minBounds.y, maxBounds.y);
+
+        minBounds += translation;
+        maxBounds += translation;
+
+        SliderRenderer::draw(m_vao.get(), vec4{minBounds, maxBounds}, alwaysPoints, translation, scale,
+                             m_pf->fHitcircleDiameter, from, to, undimmedComboColor, m_hittableDimRGBColorMultiplierPct,
+                             alpha, m_clickTimeMS);
     }
 }
 

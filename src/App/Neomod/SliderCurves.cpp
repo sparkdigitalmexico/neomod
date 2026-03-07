@@ -726,6 +726,7 @@ std::unique_ptr<SliderCurve> SliderCurve::createCurve(SLIDERCURVETYPE type, std:
 
 std::unique_ptr<SliderCurve> SliderCurve::createCurve(SLIDERCURVETYPE type, std::vector<vec2> controlPoints,
                                                       f32 pixelLength, f32 curvePointsSeparation) {
+    std::unique_ptr<SliderCurve> ret;
     if(type == PASSTHROUGH && controlPoints.size() == 3) {
         vec2 nora = controlPoints[1] - controlPoints[0];
         vec2 norb = controlPoints[1] - controlPoints[2];
@@ -741,21 +742,38 @@ std::unique_ptr<SliderCurve> SliderCurve::createCurve(SLIDERCURVETYPE type, std:
         // segments if they are too big
 
         if(std::abs(norb.x * nora.y - norb.y * nora.x) < 0.00001f) {
-            return std::make_unique<SliderCurveBezier>(std::move(controlPoints), pixelLength, curvePointsSeparation,
-                                                       false);  // vectors parallel, use linear bezier instead
+            ret = std::make_unique<SliderCurveBezier>(std::move(controlPoints), pixelLength, curvePointsSeparation,
+                                                      false);  // vectors parallel, use linear bezier instead
         } else {
-            return std::make_unique<SliderCurveCircumscribedCircle>(std::move(controlPoints), pixelLength,
-                                                                    curvePointsSeparation);
+            ret = std::make_unique<SliderCurveCircumscribedCircle>(std::move(controlPoints), pixelLength,
+                                                                   curvePointsSeparation);
         }
     } else if(type == CATMULL) {
-        return std::make_unique<SliderCurveCatmull>(std::move(controlPoints), pixelLength, curvePointsSeparation);
+        ret = std::make_unique<SliderCurveCatmull>(std::move(controlPoints), pixelLength, curvePointsSeparation);
     } else {
-        return std::make_unique<SliderCurveBezier>(std::move(controlPoints), pixelLength, curvePointsSeparation,
-                                                   (type == LINEAR));
+        ret = std::make_unique<SliderCurveBezier>(std::move(controlPoints), pixelLength, curvePointsSeparation,
+                                                  (type == LINEAR));
     }
+
+    // calculate bounds
+    for(vec2 point : ret->getPoints()) {
+        if(point.x < ret->originalBounds.x) ret->originalBounds.x = point.x;
+        if(point.x > ret->originalBounds.z) ret->originalBounds.z = point.x;
+        if(point.y < ret->originalBounds.y) ret->originalBounds.y = point.y;
+        if(point.y > ret->originalBounds.w) ret->originalBounds.w = point.y;
+    }
+
+    ret->bounds = ret->originalBounds;
+    return ret;
 }
 
-SliderCurve::SliderCurve(std::vector<vec2> controlPoints, f32 pixelLength) {
+SliderCurve::SliderCurve(std::vector<vec2> controlPoints, f32 pixelLength)
+    : bounds(std::numeric_limits<float>::max(),  // minX
+             std::numeric_limits<float>::max(),  // minY
+             0.0f,                               // maxX
+             0.0f                                //
+             ),
+      originalBounds(bounds) {
     this->controlPoints = std::move(controlPoints);
     this->fPixelLength = std::abs(pixelLength);
 
@@ -775,4 +793,8 @@ void SliderCurve::updateStackPosition(f32 stackMulStackOffset, bool HR) {
                                              vec2(stackMulStackOffset, stackMulStackOffset * (HR ? -1.0f : 1.0f));
         }
     }
+    this->bounds.x = this->originalBounds.x - stackMulStackOffset;
+    this->bounds.y = this->originalBounds.y - (stackMulStackOffset * (HR ? -1.0f : 1.0f));
+    this->bounds.z = this->originalBounds.z - stackMulStackOffset;
+    this->bounds.w = this->originalBounds.w - (stackMulStackOffset * (HR ? -1.0f : 1.0f));
 }

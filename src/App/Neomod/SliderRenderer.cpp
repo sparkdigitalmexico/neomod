@@ -151,7 +151,8 @@ std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, 
         }
 
         if(!debugSquareVao) {
-            Mc::CDynArray<vec3> meshVertices{s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().begin(), s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().end()};
+            Mc::CDynArray<vec3> meshVertices{s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().begin(),
+                                             s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().end()};
             for(auto &meshVertex : meshVertices) {
                 meshVertex += vec3(point.x, point.y, 0) + translation;
             }
@@ -244,19 +245,19 @@ void draw(const std::vector<vec2> &points, const std::vector<vec2> &alwaysPoints
     g->setDepthBuffer(false);
 
     // now draw the slider to the screen (with alpha blending enabled again)
-    const int pixelFudge = 2;
+    const float pixelFudge = 2.0f;
     s_fBoundingBoxMinX -= pixelFudge;
     s_fBoundingBoxMaxX += pixelFudge;
     s_fBoundingBoxMinY -= pixelFudge;
     s_fBoundingBoxMaxY += pixelFudge;
 
     osu->getSliderFrameBuffer()->setColor(argb(alpha * cv::slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-    osu->getSliderFrameBuffer()->drawRect(s_fBoundingBoxMinX, s_fBoundingBoxMinY,
-                                          s_fBoundingBoxMaxX - s_fBoundingBoxMinX,
-                                          s_fBoundingBoxMaxY - s_fBoundingBoxMinY);
+    osu->getSliderFrameBuffer()->drawRect((int)s_fBoundingBoxMinX, (int)s_fBoundingBoxMinY,
+                                          (int)(s_fBoundingBoxMaxX - s_fBoundingBoxMinX),
+                                          (int)(s_fBoundingBoxMaxY - s_fBoundingBoxMinY));
 }
 
-void draw(VertexArrayObject *vao, const std::vector<vec2> &alwaysPoints, vec2 translation, float scale,
+void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPoints, vec2 translation, float scale,
           float hitcircleDiameter, float from, float to, Color undimmedColor, float colorRGBMultiplier, float alpha,
           i32 sliderTimeForRainbow, bool doEnableRenderTarget, bool doDisableRenderTarget,
           bool doDrawSliderFrameBufferToScreen) {
@@ -270,6 +271,12 @@ void draw(VertexArrayObject *vao, const std::vector<vec2> &alwaysPoints, vec2 tr
         drawDebugVAO(vao, translation, scale, from, to, undimmedColor, colorRGBMultiplier, alpha);
         return;
     }
+
+    // reset
+    s_fBoundingBoxMinX = (std::numeric_limits<float>::max)();
+    s_fBoundingBoxMaxX = 0.0f;
+    s_fBoundingBoxMinY = (std::numeric_limits<float>::max)();
+    s_fBoundingBoxMaxY = 0.0f;
 
     // draw entire slider into framebuffer
     g->setDepthBuffer(true);
@@ -311,9 +318,27 @@ void draw(VertexArrayObject *vao, const std::vector<vec2> &alwaysPoints, vec2 tr
     g->setBlending(true);
     g->setDepthBuffer(false);
 
+    // optional bounds performance optimization to reduce rt blending overdraw
+    if(bounds.x != 0.0f || bounds.y != 0.0f || bounds.z != 0.0f || bounds.w != 0.0f) {
+        const float pixelFudge = 2.0f;
+        s_fBoundingBoxMinX = std::max(0.0f, bounds.x - hitcircleDiameter / 2.0f - pixelFudge);
+        s_fBoundingBoxMaxX =
+            std::min((float)osu->getVirtScreenWidth(), bounds.z + hitcircleDiameter / 2.0f + pixelFudge);
+        s_fBoundingBoxMinY = std::max(0.0f, bounds.y - hitcircleDiameter / 2.0f - pixelFudge);
+        s_fBoundingBoxMaxY =
+            std::min((float)osu->getVirtScreenHeight(), bounds.w + hitcircleDiameter / 2.0f + pixelFudge);
+    } else {
+        s_fBoundingBoxMinX = 0.0f;
+        s_fBoundingBoxMaxX = (float)osu->getVirtScreenWidth();
+        s_fBoundingBoxMinY = 0.0f;
+        s_fBoundingBoxMaxY = (float)osu->getVirtScreenHeight();
+    }
+
     if(doDrawSliderFrameBufferToScreen) {
         osu->getSliderFrameBuffer()->setColor(argb(alpha * cv::slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-        osu->getSliderFrameBuffer()->draw(0, 0);
+        osu->getSliderFrameBuffer()->drawRect((int)s_fBoundingBoxMinX, (int)s_fBoundingBoxMinY,
+                                              (int)(s_fBoundingBoxMaxX - s_fBoundingBoxMinX),
+                                              (int)(s_fBoundingBoxMaxY - s_fBoundingBoxMinY));
     }
 }
 
