@@ -6,6 +6,7 @@
 #endif
 #include <lzma.h>
 
+#include "AsyncIOHandler.h"
 #include "OsuConVars.h"
 #include "Bancho.h"
 #include "BanchoApi.h"
@@ -13,6 +14,7 @@
 #include "BeatmapInterface.h"
 #include "Database.h"
 #include "Engine.h"
+#include "NetworkHandler.h"
 #include "NotificationOverlay.h"
 #include "Osu.h"
 #include "SongBrowser.h"
@@ -261,19 +263,36 @@ void load_and_watch(FinishedScore score) {
                 ui->getNotificationOverlay()->addToast(msg, ERROR_TOAST);
             }
 
-            // Need to allocate with calloc since BANCHO::Api::Requests free() the .extra
-            void* mem = calloc(1, sizeof(FinishedScore));
-            auto* score_cpy = new(mem) FinishedScore;
-            *score_cpy = score;
-
-            std::string url = fmt::format("/web/osu-getreplay.php?m=0&c={}", score.bancho_score_id);
+            std::string url = "osu." + BanchoState::endpoint;
+            url.append(fmt::format("/web/osu-getreplay.php?m=0&c={}", score.bancho_score_id));
             BANCHO::Api::append_auth_params(url);
 
-            BANCHO::Api::Request request;
-            request.type = BANCHO::Api::GET_REPLAY;
-            request.path = url;
-            request.extra = (u8*)score_cpy;
-            BANCHO::Api::send_request(request);
+            Mc::Net::RequestOptions options{
+                .user_agent = "osu!",
+                .timeout = 5,
+                .connect_timeout = 5,
+            };
+            networkHandler->httpRequestAsync(url, std::move(options), [score](const Mc::Net::Response& response) {
+                if(response.success) {
+                    auto replay_path =
+                        fmt::format(NEOMOD_REPLAYS_PATH "/{:s}/{:d}.replay.lzma", score.server, score.unixTimestamp);
+
+                    // TODO: progress bars? how do we make sure the user doesnt do anything weird while its saving to disk and break the flow
+                    debugLog("Saving replay to {}...", replay_path);
+
+                    io->write(replay_path, (const u8*)response.body.data(), response.body.size(),
+                              [score](bool success) {
+                                  if(success) {
+                                      LegacyReplay::load_and_watch(score);
+                                  } else {
+                                      ui->getNotificationOverlay()->addToast(US_("Failed to save replay"), ERROR_TOAST);
+                                  }
+                              });
+                } else {
+                    // Most likely, 404
+                    ui->getNotificationOverlay()->addToast(US_("Failed to download replay"), ERROR_TOAST);
+                }
+            });
 
             ui->getNotificationOverlay()->addNotification(u"Downloading replay...");
             return;

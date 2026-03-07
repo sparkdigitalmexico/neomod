@@ -797,16 +797,16 @@ void Chat::mark_as_read(ChatChannel *chan) {
     // XXX: Only mark as read after 500ms
     chan->read = true;
 
-    std::string url{"/web/osu-markasread.php?"};
-    url.append(fmt::format("channel={:s}", Mc::Net::urlEncode(chan->name.utf8View())));
+    std::string url = "osu." + BanchoState::endpoint;
+    url.append(fmt::format("/web/osu-markasread.php?channel={}", Mc::Net::urlEncode(chan->name.utf8View())));
     BANCHO::Api::append_auth_params(url);
 
-    BANCHO::Api::Request request;
-
-    request.type = BANCHO::Api::MARK_AS_READ;
-    request.path = url;
-
-    BANCHO::Api::send_request(request);
+    Mc::Net::RequestOptions options{
+        .user_agent = "osu!",
+        .timeout = 5,
+        .connect_timeout = 5,
+    };
+    networkHandler->httpRequestAsync(url, std::move(options));
 }
 
 void Chat::switchToChannel(ChatChannel *chan) {

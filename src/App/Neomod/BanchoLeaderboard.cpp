@@ -191,7 +191,6 @@ void fetch_online_scores(const DatabaseBeatmap *beatmap) {
         .user_agent = "osu!",
         .timeout = 5,
         .connect_timeout = 5,
-        .flags = Mc::Net::RequestOptions::FOLLOW_REDIRECTS,
     };
     networkHandler->httpRequestAsync(url, std::move(options), [map_md5](const Mc::Net::Response &response) {
         if(response.success) {

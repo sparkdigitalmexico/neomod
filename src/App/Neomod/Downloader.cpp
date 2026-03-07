@@ -414,15 +414,23 @@ DatabaseBeatmap* download_beatmap(i32 beatmap_id, MD5Hash beatmap_md5, DownloadH
             return nullptr;
         }
 
-        std::string url{"/web/osu-search-set.php?"};
-        url.append(fmt::format("b={}", beatmap_id));
+        std::string url = "osu." + BanchoState::endpoint;
+        url.append(fmt::format("/web/osu-search-set.php?b={}", beatmap_id));
         BANCHO::Api::append_auth_params(url);
 
-        BANCHO::Api::Request request;
-        request.type = BANCHO::Api::GET_BEATMAPSET_INFO;
-        request.path = url;
-        request.extra_int = beatmap_id;
-        BANCHO::Api::send_request(request);
+        Mc::Net::RequestOptions options{
+            .user_agent = "osu!",
+            .timeout = 5,
+            .connect_timeout = 5,
+        };
+        networkHandler->httpRequestAsync(url, std::move(options), [beatmap_id](const Mc::Net::Response& response) {
+            if(response.success) {
+                auto metadata = parse_beatmapset_metadata(response.body);
+                beatmap_to_beatmapset[beatmap_id] = metadata.set_id;
+            } else {
+                beatmap_to_beatmapset[beatmap_id] = 0;
+            }
+        });
 
         queried_map_id = beatmap_id;
         return nullptr;
@@ -487,15 +495,23 @@ DatabaseBeatmap* download_beatmap(i32 beatmap_id, i32 beatmapset_id, DownloadHan
             return nullptr;
         }
 
-        std::string url{"/web/osu-search-set.php?"};
-        url.append(fmt::format("b={}", beatmap_id));
+        std::string url = "osu." + BanchoState::endpoint;
+        url.append(fmt::format("/web/osu-search-set.php?b={}", beatmap_id));
         BANCHO::Api::append_auth_params(url);
 
-        BANCHO::Api::Request request;
-        request.type = BANCHO::Api::GET_BEATMAPSET_INFO;
-        request.path = url;
-        request.extra_int = beatmap_id;
-        BANCHO::Api::send_request(request);
+        Mc::Net::RequestOptions options{
+            .user_agent = "osu!",
+            .timeout = 5,
+            .connect_timeout = 5,
+        };
+        networkHandler->httpRequestAsync(url, std::move(options), [beatmap_id](const Mc::Net::Response& response) {
+            if(response.success) {
+                auto metadata = parse_beatmapset_metadata(response.body);
+                beatmap_to_beatmapset[beatmap_id] = metadata.set_id;
+            } else {
+                beatmap_to_beatmapset[beatmap_id] = 0;
+            }
+        });
 
         queried_map_id = beatmap_id;
         return nullptr;
@@ -622,16 +638,5 @@ BeatmapSetMetadata parse_beatmapset_metadata(std::string_view server_response) {
     }
 
     return meta;
-}
-
-void process_beatmapset_info_response(const Packet& packet) {
-    i32 map_id = packet.extra_int;
-    if(packet.size == 0) {
-        beatmap_to_beatmapset[map_id] = 0;
-        return;
-    }
-
-    auto metadata = parse_beatmapset_metadata((char*)packet.memory);
-    beatmap_to_beatmapset[map_id] = metadata.set_id;
 }
 }  // namespace Downloader
