@@ -307,6 +307,7 @@ class SDLGPUInterface final : public ModernGraphicsShared {
             u32 slot;
             u32 size;
             bool isVertex;  // true=vertex, false=fragment
+            [[nodiscard]] bool operator==(const UniformBlock &) const;
         };
         UniformBlock uniformBlocks[4];
 
@@ -340,29 +341,30 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     Mc::CDynArray<DrawCommand> m_pendingDraws;
 
     // pipeline state that requires rebuild
-    int m_iStencilState{0};  // 0=off, 1=writing mask, 2=testing
+    int m_stencilState{0};  // 0=off, 1=writing mask, 2=testing
     SDLGPUPrimitiveType m_currentPrimitiveType;
-    bool m_bDepthTestEnabled{false};
-    bool m_bDepthWriteEnabled{false};
-    bool m_bScissorEnabled{false};
-    bool m_bCullingEnabled{false};
-    bool m_bWireframe{false};
-    bool m_bColorWriteR{true}, m_bColorWriteG{true}, m_bColorWriteB{true}, m_bColorWriteA{true};
-    bool m_bPipelineDirty{true};
+    bool m_depthTestEnabled{false};
+    bool m_depthWriteEnabled{false};
+    bool m_scissorEnabled{false};
+    bool m_cullingEnabled{false};
+    bool m_wireframeEnabled{false};
+
+    u8 m_colorWriteMask{(1u << 0) | (1u << 1) | (1u << 2) | (1u << 3)};
+    bool m_isPipelineDirty{true};
 
     // state
     Viewport m_viewport{.pos = {0.f, 0.f}, .size = {1.f, 1.f}};
 
     Color m_color{(Color)-1};
-    int m_iMaxFrameLatency{1};
-    bool m_bTexturingEnabled{false};
-    bool m_bColorInversion{false};
-    bool m_bVSync{false};
+    int m_maxFrameLatency{1};
+    bool m_texturingEnabled{false};
+    bool m_colorInversion{false};
+    bool m_vsyncEnabled{false};
 
     // cached present mode support (queried once at init)
-    bool m_bSupportsSDRComposition{false};
-    bool m_bSupportsImmediate{false};
-    bool m_bSupportsMailbox{false};
+    bool m_supportsSDRComposition{false};
+    bool m_supportsImmediate{false};
+    bool m_supportsMailbox{false};
 
     // 1x1 white dummy texture+sampler (bound when texturing is disabled)
     SDL_GPUTexture *m_dummyTexture{nullptr};
@@ -420,9 +422,13 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     std::array<std::vector<SDL_GPUTransferBuffer *>, POOL_NUM_CLASSES> m_uploadTransferPool{};
     u32 m_uploadTransferPoolBytes{0};
 
-    // stats (TODO? unused)
-    int m_iStatsNumDrawCalls{0};
+    // stats
+    int m_statsNumDrawCalls{0};
+    int m_statsNumUniformUploads{0};
+    int m_statsNumVertexUploads{0};
 };
+
+extern template struct Mc::CDynArray<SDLGPUInterface::DrawCommand>;
 
 #endif
 

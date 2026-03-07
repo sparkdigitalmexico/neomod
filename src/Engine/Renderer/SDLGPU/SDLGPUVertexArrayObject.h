@@ -51,6 +51,8 @@ class SDLGPUVertexArrayObject final : public VertexArrayObject {
     DrawPrimitive m_convertedPrimitive;
 };
 
+extern template struct Mc::CDynArray<SDLGPUSimpleVertex>;
+
 #endif
 
 #endif

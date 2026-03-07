@@ -43,6 +43,8 @@ class DirectX11VertexArrayObject final : public VertexArrayObject {
     DrawPrimitive convertedPrimitive;
 };
 
+extern template struct Mc::CDynArray<DirectX11Interface::SimpleVertex>;
+
 #endif
 
 #endif

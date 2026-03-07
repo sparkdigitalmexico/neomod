@@ -28,6 +28,7 @@
 #include "Environment.h"
 #include "SString.h"
 #include "ContainerRanges.h"
+#include "VisualProfiler.h"
 
 #include "binary_embed.h"
 
@@ -151,11 +152,11 @@ bool SDLGPUInterface::init() {
     SDLGPUTextureFormat swapchainFormat = SDL_GetGPUSwapchainTextureFormat(m_device, m_window);
 
     // cache supported present modes
-    m_bSupportsSDRComposition =
+    m_supportsSDRComposition =
         SDL_WindowSupportsGPUSwapchainComposition(m_device, m_window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR);
-    if(m_bSupportsSDRComposition) {
-        m_bSupportsImmediate = SDL_WindowSupportsGPUPresentMode(m_device, m_window, SDL_GPU_PRESENTMODE_IMMEDIATE);
-        m_bSupportsMailbox = SDL_WindowSupportsGPUPresentMode(m_device, m_window, SDL_GPU_PRESENTMODE_MAILBOX);
+    if(m_supportsSDRComposition) {
+        m_supportsImmediate = SDL_WindowSupportsGPUPresentMode(m_device, m_window, SDL_GPU_PRESENTMODE_IMMEDIATE);
+        m_supportsMailbox = SDL_WindowSupportsGPUPresentMode(m_device, m_window, SDL_GPU_PRESENTMODE_MAILBOX);
     } else {
         debugLog("SDLGPUInterface: swapchain composition not supported: {}", SDL_GetError());
     }
@@ -163,7 +164,7 @@ bool SDLGPUInterface::init() {
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         debugLog(
             "SDLGPUInterface: swapchain format {} supports SDR comp.: {} supports immediate: {} supports mailbox: {}",
-            swapchainFormat, m_bSupportsSDRComposition, m_bSupportsImmediate, m_bSupportsMailbox);
+            swapchainFormat, m_supportsSDRComposition, m_supportsImmediate, m_supportsMailbox);
     }
 
     // create default shader
@@ -275,16 +276,16 @@ bool SDLGPUInterface::init() {
 
     // create initial pipeline
     createPipeline();
-    m_bPipelineDirty = false;
+    m_isPipelineDirty = false;
 
-    if(!SDL_SetGPUAllowedFramesInFlight(m_device, m_iMaxFrameLatency)) {
-        debugLog("SDLGPUInterface: Failed to set max frames in flight to {}: {}", m_iMaxFrameLatency, SDL_GetError());
+    if(!SDL_SetGPUAllowedFramesInFlight(m_device, m_maxFrameLatency)) {
+        debugLog("SDLGPUInterface: Failed to set max frames in flight to {}: {}", m_maxFrameLatency, SDL_GetError());
         // it's default to 2 in SDL, so if we failed to change it, set it to 2
-        m_iMaxFrameLatency = 2;
+        m_maxFrameLatency = 2;
     } else {
         // only set callbacks/values on this if we succeeded
-        cv::r_sync_max_frames.setDefaultDouble(m_iMaxFrameLatency);
-        cv::r_sync_max_frames.setValue(m_iMaxFrameLatency);
+        cv::r_sync_max_frames.setDefaultDouble(m_maxFrameLatency);
+        cv::r_sync_max_frames.setValue(m_maxFrameLatency);
         cv::r_sync_max_frames.setCallback(SA::MakeDelegate<&SDLGPUInterface::onFramecountNumChanged>(this));
     }
 
@@ -298,14 +299,13 @@ void SDLGPUInterface::createPipeline() {
         .primitiveType = m_currentPrimitiveType,
         .blendMode = this->currentBlendMode,
         .sampleCount = m_curRTState.sampleCount,
-        .stencilState = (u8)m_iStencilState,
+        .stencilState = (u8)m_stencilState,
         .blendingEnabled = this->bBlendingEnabled,
-        .depthTestEnabled = m_bDepthTestEnabled,
-        .depthWriteEnabled = m_bDepthWriteEnabled,
-        .wireframe = m_bWireframe,
-        .cullingEnabled = m_bCullingEnabled,
-        .colorWriteMask = (u8)((m_bColorWriteR ? 1 : 0) | (m_bColorWriteG ? 2 : 0) | (m_bColorWriteB ? 4 : 0) |
-                               (m_bColorWriteA ? 8 : 0)),
+        .depthTestEnabled = m_depthTestEnabled,
+        .depthWriteEnabled = m_depthWriteEnabled,
+        .wireframe = m_wireframeEnabled,
+        .cullingEnabled = m_cullingEnabled,
+        .colorWriteMask = m_colorWriteMask,
     };
 
     auto it = m_pipelineCache.find(key);
@@ -341,9 +341,7 @@ void SDLGPUInterface::createPipeline() {
     // blend state
     SDL_GPUColorTargetBlendState blendState{};
     blendState.enable_blend = this->bBlendingEnabled;
-    blendState.color_write_mask =
-        (m_bColorWriteR ? SDL_GPU_COLORCOMPONENT_R : 0) | (m_bColorWriteG ? SDL_GPU_COLORCOMPONENT_G : 0) |
-        (m_bColorWriteB ? SDL_GPU_COLORCOMPONENT_B : 0) | (m_bColorWriteA ? SDL_GPU_COLORCOMPONENT_A : 0);
+    blendState.color_write_mask = m_colorWriteMask;
 
     if(this->bBlendingEnabled) {
         switch(this->currentBlendMode) {
@@ -393,8 +391,8 @@ void SDLGPUInterface::createPipeline() {
     targetInfo.has_depth_stencil_target = true;
 
     SDL_GPURasterizerState rasterizerState{};
-    rasterizerState.fill_mode = m_bWireframe ? SDL_GPU_FILLMODE_LINE : SDL_GPU_FILLMODE_FILL;
-    rasterizerState.cull_mode = m_bCullingEnabled ? SDL_GPU_CULLMODE_BACK : SDL_GPU_CULLMODE_NONE;
+    rasterizerState.fill_mode = m_wireframeEnabled ? SDL_GPU_FILLMODE_LINE : SDL_GPU_FILLMODE_FILL;
+    rasterizerState.cull_mode = m_cullingEnabled ? SDL_GPU_CULLMODE_BACK : SDL_GPU_CULLMODE_NONE;
     rasterizerState.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
 
     SDL_GPUMultisampleState multisampleState{};
@@ -402,10 +400,10 @@ void SDLGPUInterface::createPipeline() {
 
     SDL_GPUDepthStencilState depthStencilState{};
     depthStencilState.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
-    depthStencilState.enable_depth_test = m_bDepthTestEnabled;
-    depthStencilState.enable_depth_write = m_bDepthWriteEnabled;
+    depthStencilState.enable_depth_test = m_depthTestEnabled;
+    depthStencilState.enable_depth_write = m_depthWriteEnabled;
 
-    if(m_iStencilState == 1) {
+    if(m_stencilState == 1) {
         // writing mask: always pass, replace stencil with 1
         depthStencilState.enable_stencil_test = true;
         depthStencilState.front_stencil_state = {
@@ -417,7 +415,7 @@ void SDLGPUInterface::createPipeline() {
         depthStencilState.back_stencil_state = depthStencilState.front_stencil_state;
         depthStencilState.compare_mask = 0xFF;
         depthStencilState.write_mask = 0xFF;
-    } else if(m_iStencilState == 2) {
+    } else if(m_stencilState == 2) {
         // test inside: draw where stencil != 0
         depthStencilState.enable_stencil_test = true;
         depthStencilState.front_stencil_state = {
@@ -429,7 +427,7 @@ void SDLGPUInterface::createPipeline() {
         depthStencilState.back_stencil_state = depthStencilState.front_stencil_state;
         depthStencilState.compare_mask = 0xFF;
         depthStencilState.write_mask = 0x00;
-    } else if(m_iStencilState == 3) {
+    } else if(m_stencilState == 3) {
         // test outside: draw where stencil == 0
         depthStencilState.enable_stencil_test = true;
         depthStencilState.front_stencil_state = {
@@ -462,9 +460,9 @@ void SDLGPUInterface::createPipeline() {
 }
 
 void SDLGPUInterface::rebuildPipeline() {
-    if(!m_bPipelineDirty || !m_device) return;
+    if(!m_isPipelineDirty || !m_device) return;
     createPipeline();
-    m_bPipelineDirty = false;
+    m_isPipelineDirty = false;
 }
 
 bool SDLGPUInterface::createDepthTexture(u32 width, u32 height) {
@@ -544,8 +542,18 @@ void SDLGPUInterface::beginScene() {
 
     this->updateTransform();
 
-    // reset stats
-    m_iStatsNumDrawCalls = 0;
+    // prev frame render stats
+    const int numDrawCallsPrevFrame = m_statsNumDrawCalls;
+    const int numShaderUniformUploadsPrevFrame = m_statsNumUniformUploads;
+    const int numVertexUploadsPrevFrame = m_statsNumVertexUploads;
+    m_statsNumDrawCalls = 0;
+    m_statsNumUniformUploads = 0;
+    m_statsNumVertexUploads = 0;
+    if(vprof && vprof->isEnabled()) {
+        vprof->addInfoBladeEngineTextLine(fmt::format("Draw Calls: {}", numDrawCallsPrevFrame));
+        vprof->addInfoBladeEngineTextLine(fmt::format("Uniform Uploads: {}", numShaderUniformUploadsPrevFrame));
+        vprof->addInfoBladeEngineTextLine(fmt::format("Vertex Uploads: {}", numVertexUploadsPrevFrame));
+    }
 }
 
 void SDLGPUInterface::endScene() {
@@ -600,7 +608,7 @@ void SDLGPUInterface::setColor(Color color) {
     if(m_color == color) return;
     m_color = color;
 
-    if(m_bTexturingEnabled) {
+    if(m_texturingEnabled) {
         m_defaultShader->setUniform4f("col", color.Rf(), color.Gf(), color.Bf(), color.Af());
     }
 }
@@ -609,7 +617,7 @@ void SDLGPUInterface::setAlpha(float alpha) {
     if(m_color.Af() == alpha) return;
     m_color.setA(alpha);
 
-    if(m_bTexturingEnabled) {
+    if(m_texturingEnabled) {
         m_defaultShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
     }
 }
@@ -763,7 +771,7 @@ void SDLGPUInterface::drawVAO(VertexArrayObject *vao) {
     if(const SDLGPUPrimitiveType gpuPrimitive = primitiveToSDLGPUPrimitive(srcPrimitive);
        gpuPrimitive != m_currentPrimitiveType) {
         m_currentPrimitiveType = gpuPrimitive;
-        m_bPipelineDirty = true;
+        m_isPipelineDirty = true;
     }
     rebuildPipeline();
 
@@ -850,7 +858,7 @@ void SDLGPUInterface::recordBakedDraw(SDL_GPUBuffer *buffer, u32 firstVertex, u3
 
     if(gpuPrimitive != m_currentPrimitiveType) {
         m_currentPrimitiveType = gpuPrimitive;
-        m_bPipelineDirty = true;
+        m_isPipelineDirty = true;
     }
     rebuildPipeline();
 
@@ -895,8 +903,8 @@ void SDLGPUInterface::recordDraw(SDL_GPUBuffer *bakedBuffer, u32 vertexOffset, u
     cmd.viewport = m_viewport;
 
     // snapshot scissor
-    cmd.scissorEnabled = m_bScissorEnabled;
-    if(m_bScissorEnabled && !m_clipRectStack.empty()) {
+    cmd.scissorEnabled = m_scissorEnabled;
+    if(m_scissorEnabled && !m_clipRectStack.empty()) {
         const auto &cr = m_clipRectStack.back();
         Scissor &csc =
             cmd.scissor = {.pos{(i32)cr.getMinX(), (i32)cr.getMinY()}, .size{(i32)cr.getWidth(), (i32)cr.getHeight()}};
@@ -914,9 +922,12 @@ void SDLGPUInterface::recordDraw(SDL_GPUBuffer *bakedBuffer, u32 vertexOffset, u
     }
 
     // snapshot stencil reference
-    cmd.stencilRef = (u8)(m_iStencilState == 1 ? 1 : 0);
+    cmd.stencilRef = (u8)(m_stencilState == 1 ? 1 : 0);
+}
 
-    m_iStatsNumDrawCalls++;
+bool SDLGPUInterface::DrawCommand::UniformBlock::operator==(const UniformBlock &o) const {
+    return (isVertex == o.isVertex) && (size == o.size) && (slot == o.slot) &&
+           (std::memcmp(data.data(), o.data.data(), size) == 0);
 }
 
 void SDLGPUInterface::flushDrawCommands() {
@@ -970,6 +981,7 @@ void SDLGPUInterface::flushDrawCommands() {
                 .offset = 0,
                 .size = static_cast<Uint32>(sizeof(SDLGPUSimpleVertex) * m_stagingVertices.size()),
             };
+            m_statsNumVertexUploads += static_cast<i32>(m_stagingVertices.size());
             SDL_UploadToGPUBuffer(copyPass, &src, &dst, true);
             SDL_EndGPUCopyPass(copyPass);
         }
@@ -1042,6 +1054,7 @@ void SDLGPUInterface::flushDrawCommands() {
         bool lastScissorEnabled = false;
         Scissor lastScissor{.pos = {-1, -1}, .size = {-1, -1}};
         u8 lastStencilRef = 0xFF;
+        std::span<const DrawCommand::UniformBlock> lastUBlock{}, curUBlock{};
 
         for(u32 di = drawStart; di < drawEnd; di++) {
             auto &cmd = m_pendingDraws[di];
@@ -1089,13 +1102,24 @@ void SDLGPUInterface::flushDrawCommands() {
                 lastStencilRef = cmd.stencilRef;
             }
 
-            // push uniforms (always, they're snapshots and might be different per-draw)
-            for(u8 i = 0; i < cmd.numUniformBlocks; i++) {
-                auto &ub = cmd.uniformBlocks[i];
-                if(ub.isVertex) {
-                    SDL_PushGPUVertexUniformData(m_cmdBuf, ub.slot, ub.data.data(), ub.size);
-                } else {
-                    SDL_PushGPUFragmentUniformData(m_cmdBuf, ub.slot, ub.data.data(), ub.size);
+            // push uniforms
+            curUBlock = {&cmd.uniformBlocks[0], cmd.numUniformBlocks};
+            bool needsPushUniforms = false;
+            if(!lastUBlock.empty() && curUBlock.size() == lastUBlock.size()) {
+                needsPushUniforms = !std::ranges::equal(lastUBlock, curUBlock);
+            } else {
+                needsPushUniforms = true;
+            }
+
+            if(needsPushUniforms) {
+                lastUBlock = curUBlock;
+                for(const auto &ub : curUBlock) {
+                    if(ub.isVertex) {
+                        SDL_PushGPUVertexUniformData(m_cmdBuf, ub.slot, ub.data.data(), ub.size);
+                    } else {
+                        SDL_PushGPUFragmentUniformData(m_cmdBuf, ub.slot, ub.data.data(), ub.size);
+                    }
+                    ++m_statsNumUniformUploads;
                 }
             }
 
@@ -1117,6 +1141,7 @@ void SDLGPUInterface::flushDrawCommands() {
                 lastVertexBuffer = vb;
             }
 
+            ++m_statsNumDrawCalls;
             SDL_DrawGPUPrimitives(m_renderPass, cmd.vertexCount, 1, cmd.vertexOffset, 0);
         }
 
@@ -1145,7 +1170,7 @@ void SDLGPUInterface::addRenderPassBoundary() {
 
 void SDLGPUInterface::setClipRect(McRect /*clipRect*/) {
     if(cv::r_debug_disable_cliprect.getBool()) return;
-    m_bScissorEnabled = true;
+    m_scissorEnabled = true;
     // TODO: is this necessary? maybe this shouldn't be a public API at all (not used in app code currently anyways)
 }
 
@@ -1204,21 +1229,21 @@ void SDLGPUInterface::pushStencil() {
     addRenderPassBoundary();
 
     // stencil writing phase: color off, write 1 where geometry is drawn
-    m_iStencilState = 1;
+    m_stencilState = 1;
     setColorWriting(false, false, false, false);
-    m_bPipelineDirty = true;
+    m_isPipelineDirty = true;
 }
 
 void SDLGPUInterface::fillStencil(bool inside) {
     // stencil testing phase: color on, test against stencil
-    m_iStencilState = inside ? 2 : 3;  // 2 = draw where stencil==0 (inside), 3 = draw where stencil==1 (outside)
+    m_stencilState = inside ? 2 : 3;  // 2 = draw where stencil==0 (inside), 3 = draw where stencil==1 (outside)
     setColorWriting(true, true, true, true);
-    m_bPipelineDirty = true;
+    m_isPipelineDirty = true;
 }
 
 void SDLGPUInterface::popStencil() {
-    m_iStencilState = 0;
-    m_bPipelineDirty = true;
+    m_stencilState = 0;
+    m_isPipelineDirty = true;
 }
 
 // renderer settings
@@ -1227,7 +1252,7 @@ void SDLGPUInterface::setClipping(bool enabled) {
     if(enabled) {
         if(m_clipRectStack.size() < 1) enabled = false;
     }
-    m_bScissorEnabled = enabled;
+    m_scissorEnabled = enabled;
     // scissor state is captured per-draw in recordDraw();
 }
 
@@ -1242,7 +1267,7 @@ void SDLGPUInterface::setAlphaTestFunc(DrawCompareFunc /*alphaFunc*/, float /*re
 void SDLGPUInterface::setBlending(bool enabled) {
     if(this->bBlendingEnabled != enabled) {
         this->bBlendingEnabled = enabled;
-        m_bPipelineDirty = true;
+        m_isPipelineDirty = true;
     }
     Graphics::setBlending(enabled);
 }
@@ -1250,46 +1275,45 @@ void SDLGPUInterface::setBlending(bool enabled) {
 void SDLGPUInterface::setBlendMode(DrawBlendMode blendMode) {
     if(this->currentBlendMode != blendMode) {
         this->currentBlendMode = blendMode;
-        m_bPipelineDirty = true;
+        m_isPipelineDirty = true;
     }
     Graphics::setBlendMode(blendMode);
 }
 
 void SDLGPUInterface::setDepthBuffer(bool enabled) {
-    if(m_bDepthTestEnabled != enabled || m_bDepthWriteEnabled != enabled) {
-        m_bDepthTestEnabled = enabled;
-        m_bDepthWriteEnabled = enabled;
-        m_bPipelineDirty = true;
+    if(m_depthTestEnabled != enabled || m_depthWriteEnabled != enabled) {
+        m_depthTestEnabled = enabled;
+        m_depthWriteEnabled = enabled;
+        m_isPipelineDirty = true;
     }
 }
 
 void SDLGPUInterface::setColorWriting(bool r, bool g, bool b, bool a) {
-    if(m_bColorWriteR != r || m_bColorWriteG != g || m_bColorWriteB != b || m_bColorWriteA != a) {
-        m_bColorWriteR = r;
-        m_bColorWriteG = g;
-        m_bColorWriteB = b;
-        m_bColorWriteA = a;
-        m_bPipelineDirty = true;
+    const u8 newMask = (r ? SDL_GPU_COLORCOMPONENT_R : 0) | (g ? SDL_GPU_COLORCOMPONENT_G : 0) |
+                       (b ? SDL_GPU_COLORCOMPONENT_B : 0) | (a ? SDL_GPU_COLORCOMPONENT_A : 0);
+    if(m_colorWriteMask != newMask) {
+        m_colorWriteMask = newMask;
+        m_isPipelineDirty = true;
     }
 }
 
 void SDLGPUInterface::setColorInversion(bool enabled) {
-    if(m_bColorInversion == enabled) return;
+    if(m_colorInversion == enabled) return;
 
-    m_bColorInversion = enabled;
-    setTexturing(m_bTexturingEnabled, true /* force */);  // re-apply with new inversion state
+    m_colorInversion = enabled;
+    setTexturing(m_texturingEnabled, true /* force */);  // re-apply with new inversion state
 }
 
 void SDLGPUInterface::setCulling(bool enabled) {
-    if(m_bCullingEnabled != enabled) {
-        m_bCullingEnabled = enabled;
-        m_bPipelineDirty = true;
+    if(m_cullingEnabled != enabled) {
+        m_cullingEnabled = enabled;
+        m_isPipelineDirty = true;
     }
 }
 
 void SDLGPUInterface::setVSync(bool enabled) {
-    m_bVSync = enabled;
-    if(!m_device || !m_window || !m_bSupportsSDRComposition) return;
+    m_vsyncEnabled = enabled;
+    if(!m_device || !m_window || !m_supportsSDRComposition) return;
 
     if(enabled) {
         if(!SDL_SetGPUSwapchainParameters(m_device, m_window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
@@ -1299,11 +1323,11 @@ void SDLGPUInterface::setVSync(bool enabled) {
     }
 
     // prefer immediate, fall back to mailbox
-    if(m_bSupportsImmediate) {
+    if(m_supportsImmediate) {
         if(!SDL_SetGPUSwapchainParameters(m_device, m_window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
                                           SDL_GPU_PRESENTMODE_IMMEDIATE))
             debugLog("SDLGPUInterface: couldn't set immediate present mode: {}", SDL_GetError());
-    } else if(m_bSupportsMailbox) {
+    } else if(m_supportsMailbox) {
         if(!SDL_SetGPUSwapchainParameters(m_device, m_window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
                                           SDL_GPU_PRESENTMODE_MAILBOX))
             debugLog("SDLGPUInterface: couldn't set mailbox present mode: {}", SDL_GetError());
@@ -1316,9 +1340,9 @@ void SDLGPUInterface::setAntialiasing(bool /*enabled*/) {
 }
 
 void SDLGPUInterface::setWireframe(bool enabled) {
-    if(m_bWireframe != enabled) {
-        m_bWireframe = enabled;
-        m_bPipelineDirty = true;
+    if(m_wireframeEnabled != enabled) {
+        m_wireframeEnabled = enabled;
+        m_isPipelineDirty = true;
     }
 }
 
@@ -1411,7 +1435,7 @@ void SDLGPUInterface::pushRenderTarget(SDL_GPUTexture *colorTex, SDL_GPUTexture 
     m_renderTargetStack.push_back(m_curRTState);
     auto &cur = m_curRTState;
 
-    if(cur.sampleCount != sampleCount) m_bPipelineDirty = true;
+    if(cur.sampleCount != sampleCount) m_isPipelineDirty = true;
 
     cur.colorTarget = colorTex;
     cur.depthTarget = depthTex;
@@ -1434,7 +1458,7 @@ void SDLGPUInterface::popRenderTarget() {
     // restore previous state
     auto prev = m_renderTargetStack.back();
     m_renderTargetStack.pop_back();
-    if(m_curRTState.sampleCount != prev.sampleCount) m_bPipelineDirty = true;
+    if(m_curRTState.sampleCount != prev.sampleCount) m_isPipelineDirty = true;
 
     m_curRTState = prev;
 
@@ -1448,13 +1472,13 @@ void SDLGPUInterface::onFramecountNumChanged(float maxFramesInFlight) {
     if(!m_device) return;
 
     const int maxFrames = std::clamp(static_cast<int>(maxFramesInFlight), 1, 3);
-    if(maxFrames == m_iMaxFrameLatency) return;
+    if(maxFrames == m_maxFrameLatency) return;
 
     if(!SDL_SetGPUAllowedFramesInFlight(m_device, maxFrames)) {
         debugLog("SDLGPUInterface: Failed to set max frames in flight to {}: {}", maxFrames, SDL_GetError());
-        cv::r_sync_max_frames.setValue(m_iMaxFrameLatency, false);
+        cv::r_sync_max_frames.setValue(m_maxFrameLatency, false);
     } else {
-        m_iMaxFrameLatency = maxFrames;
+        m_maxFrameLatency = maxFrames;
     }
 }
 
@@ -1495,10 +1519,10 @@ void SDLGPUInterface::onTransformUpdate() {
 }
 
 void SDLGPUInterface::setTexturing(bool enabled, bool force) {
-    if(!force && enabled == m_bTexturingEnabled) return;
+    if(!force && enabled == m_texturingEnabled) return;
 
-    m_bTexturingEnabled = enabled;
-    m_defaultShader->setUniform4f("misc", enabled ? 1.f : 0.f, m_bColorInversion ? 1.f : 0.f, 0.f, 0.f);
+    m_texturingEnabled = enabled;
+    m_defaultShader->setUniform4f("misc", enabled ? 1.f : 0.f, m_colorInversion ? 1.f : 0.f, 0.f, 0.f);
     if(enabled) {
         m_defaultShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
     }
@@ -1509,7 +1533,7 @@ void SDLGPUInterface::setTexturing(bool enabled, bool force) {
 void SDLGPUInterface::setActiveShader(SDLGPUShader *shader) {
     if(m_activeShader != shader) {
         m_activeShader = shader;
-        m_bPipelineDirty = true;
+        m_isPipelineDirty = true;
     }
 }
 

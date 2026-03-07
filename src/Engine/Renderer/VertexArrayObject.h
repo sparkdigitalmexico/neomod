@@ -9,6 +9,11 @@
 
 #include <span>
 
+extern template struct Mc::CDynArray<vec3>;
+extern template struct Mc::CDynArray<vec2>;
+extern template struct Mc::CDynArray<vec3>;
+extern template struct Mc::CDynArray<Color>;
+
 class VertexArrayObject : public Resource {
     NOCOPY_NOMOVE(VertexArrayObject)
    public:
