@@ -105,7 +105,8 @@ void attempt_logging_in() {
             if(Env::cfg(OS::WASM) && response.response_code == 0) {
                 // Provide extra guidance since "Connection failed" isn't very descriptive
                 ui->getNotificationOverlay()->addToast(
-                    "Either you are offline, or the server doesn't support the web version of " PACKAGE_NAME ".", ERROR_TOAST);
+                    "Either you are offline, or the server doesn't support the web version of " PACKAGE_NAME ".",
+                    ERROR_TOAST);
             }
 
             return;
@@ -169,7 +170,7 @@ void send_bancho_packet_http(Packet outgoing) {
 void send_bancho_packet_ws(Packet outgoing) {
     if(auth_token.empty()) return;
 
-    if(websocket == nullptr || websocket->status == Mc::Net::WSStatus::DISCONNECTED) {
+    if(websocket == nullptr || websocket->status.load(std::memory_order_relaxed) == Mc::Net::WSStatus::DISCONNECTED) {
         // We have been disconnected in less than 5 seconds.
         // Don't try to reconnect, server clearly doesn't want us to.
         // (without this, we would be spamming retries every frame)
@@ -188,17 +189,23 @@ void send_bancho_packet_ws(Packet outgoing) {
         std::string url = fmt::format("c.{}/ws/", BanchoState::endpoint);
 
         auto new_websocket = networkHandler->initWebsocket(url, options);
-        if(websocket != nullptr) new_websocket->out = websocket->out;  // don't lose outgoing packet queue
+        if(websocket != nullptr) {
+            // don't lose outgoing packet queue
+            new_websocket->write(websocket->drain_output());
+        }
         websocket = new_websocket;
     }
 
-    if(websocket->status == Mc::Net::WSStatus::UNSUPPORTED) {
+    if(!websocket || websocket->status.load(std::memory_order_relaxed) == Mc::Net::WSStatus::UNSUPPORTED) {
         // fallback to http!
-        use_websockets = false;
+        if(websocket) {
+            websocket = nullptr;
+            use_websockets = false;
+        }
         send_bancho_packet_http(outgoing);
     } else {
         // enqueue packets to be sent
-        websocket->out.insert(websocket->out.end(), outgoing.memory, outgoing.memory + outgoing.pos);
+        websocket->write({outgoing.memory, static_cast<size_t>(outgoing.pos)});
     }
 }
 
@@ -265,6 +272,7 @@ void update_networking() {
 
         if(use_websockets) {
             // cloudflare might have silently dropped the connection, try opening a new websocket
+            if(websocket) websocket->status.store(Mc::Net::WSStatus::DISCONNECTED, std::memory_order_relaxed);
             websocket = nullptr;
         } else {
             BanchoState::disconnect();
@@ -294,9 +302,11 @@ void update_networking() {
         free(out.memory);
     }
 
-    if(websocket && !websocket->in.empty()) {
-        parse_packets(websocket->in);
-        websocket->in.clear();
+    if(websocket) {
+        auto received = websocket->read();
+        if(!received.empty()) {
+            parse_packets(received);
+        }
     }
 }
 
@@ -417,6 +427,8 @@ void BanchoState::disconnect(bool shutdown) {
 
     free(BANCHO::Net::outgoing.memory);
     BANCHO::Net::outgoing = Packet();
+    if(BANCHO::Net::websocket)
+        BANCHO::Net::websocket->status.store(Mc::Net::WSStatus::DISCONNECTED, std::memory_order_relaxed);
     BANCHO::Net::websocket = nullptr;
     BANCHO::Net::use_websockets = false;
 
@@ -481,7 +493,8 @@ void BanchoState::reconnect() {
     };
 
     if(std::ranges::contains(server_blacklist, BanchoState::endpoint)) {
-        ui->getNotificationOverlay()->addToast(US_("This server does not allow " PACKAGE_NAME " clients."), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast(US_("This server does not allow " PACKAGE_NAME " clients."),
+                                               ERROR_TOAST);
         return;
     }
 

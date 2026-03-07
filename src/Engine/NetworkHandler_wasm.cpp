@@ -16,6 +16,7 @@
 #include <emscripten/websocket.h>
 #include <cstring>
 #include <cstdlib>
+#include <utility>
 
 // the unnecessary-value-param one is a bit unfortunate, but the main NetworkHandler implementation expects these to be moved
 // into internally-held data, and changing the interface is a bit more convoluted than what's worth it
@@ -113,6 +114,18 @@ WSInstance::~WSInstance() {
     if(this->handle) {
         emscripten_websocket_delete(this->handle);
     }
+}
+
+void WSInstance::write(std::span<const u8> data) {
+    this->out.insert(this->out.end(), data.begin(), data.end());
+}
+
+std::vector<u8> WSInstance::read() {
+    return std::exchange(this->in, {});
+}
+
+std::vector<u8> WSInstance::drain_output() {
+    return std::exchange(this->out, {});
 }
 
 std::string urlEncode(std::string_view input) noexcept {

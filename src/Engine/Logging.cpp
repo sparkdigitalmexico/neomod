@@ -34,6 +34,7 @@
 
 #define DEFAULT_LOGGER_NAME "main"
 #define RAW_LOGGER_NAME "raw"
+#define NETWORK_LOGGER_NAME "network"
 
 #ifdef _DEBUG
 // debug pattern: [filename:line] [function]: message
@@ -405,11 +406,11 @@ void init(bool create_console) noexcept {
         // network channel: file-only, single plain format
         auto network_file_sink{
             std::make_shared<spdlog::sinks::basic_file_sink<custom_spdmtx>>(LOGFILE_NAME_NETWORK, true)};
-        network_file_sink->set_pattern(FILE_LOG_PATTERN_PREF " %v");
+        network_file_sink->set_pattern("[%T] %v");  // just timestamp and message
 
-        s_network_logger = std::make_shared<spdlog::async_logger>("network", spdlog::sinks_init_list{network_file_sink},
-                                                                  spdlog::thread_pool(),
-                                                                  spdlog::async_overflow_policy::overrun_oldest);
+        s_network_logger = std::make_shared<spdlog::async_logger>(
+            NETWORK_LOGGER_NAME, spdlog::sinks_init_list{network_file_sink}, spdlog::thread_pool(),
+            spdlog::async_overflow_policy::overrun_oldest);
         s_network_logger_raw_ptr = s_network_logger.get();
         s_network_logger->set_level(spdlog::level::trace);
         s_network_logger->flush_on(spdlog::level::off);

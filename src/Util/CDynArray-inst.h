@@ -27,20 +27,20 @@ template struct Mc::CDynArray<vec4>;
 
 template struct Mc::CDynArray<u8>;
 template struct Mc::CDynArray<u16>;
-template struct Mc::CDynArray<u32>;
-template struct Mc::CDynArray<u64>;
+template struct Mc::CDynArray<unsigned int>;
+template struct Mc::CDynArray<unsigned long>;
+template struct Mc::CDynArray<unsigned long long>;
 
 template struct Mc::CDynArray<i8>;
 template struct Mc::CDynArray<i16>;
-template struct Mc::CDynArray<i32>;
-template struct Mc::CDynArray<i64>;
+template struct Mc::CDynArray<int>;
+template struct Mc::CDynArray<long>;
+template struct Mc::CDynArray<long long>;
 
 template struct Mc::CDynArray<f32>;
 template struct Mc::CDynArray<f64>;
 
 #include "config.h"
-
-template struct Mc::CDynArray<unsigned long>;
 
 #ifdef MCENGINE_FEATURE_SDLGPU
 #include "SDLGPUInterface.h"

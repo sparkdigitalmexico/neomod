@@ -6,6 +6,7 @@
 #include "types.h"
 #include "StaticPImpl.h"
 #include "Hashing.h"
+#include "SyncMutex.h"
 
 #include <string>
 #include <string_view>
@@ -13,10 +14,12 @@
 #include <memory>
 #include <atomic>
 #include <vector>
+#include <span>
 
 // forward defs
 #ifndef MCENGINE_PLATFORM_WASM
 typedef void CURL;
+typedef void CURLM;
 #endif
 class Engine;
 
@@ -55,15 +58,23 @@ struct WSInstance {
     ~WSInstance();
 
     std::atomic<WSStatus> status{WSStatus::CONNECTING};
-    std::vector<u8> in;
-    std::vector<u8> out;
     f64 time_created{0.f};
 
+    // thread-safe I/O (on native, websocket I/O runs on the network thread)
+    void write(std::span<const u8> data);
+    [[nodiscard]] std::vector<u8> read();
+    [[nodiscard]] std::vector<u8> drain_output();
+
    private:
+    std::vector<u8> in;
+    std::vector<u8> out;
+
 #ifdef MCENGINE_PLATFORM_WASM
     int handle{0};
 #else
     CURL* handle{nullptr};
+    Sync::mutex io_mutex;
+    std::atomic<CURLM*> multi_wakeup{nullptr};  // CURLM*; set when connected, for waking poll on write()
 
     // Servers can send fragmented packets, we want to only append them
     // to "in" once the packets are complete.
@@ -103,14 +114,6 @@ struct RequestOptions {
 
 // async response data
 struct Response {
-   private:
-    friend class NetworkHandler;
-    friend struct NetworkImpl;
-#ifndef MCENGINE_PLATFORM_WASM
-    // HACK for passing websocket handle
-    CURL* easy_handle{nullptr};
-#endif
-
    public:
     long response_code{0};
     std::string body;
