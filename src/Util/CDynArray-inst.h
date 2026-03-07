@@ -40,10 +40,7 @@ template struct Mc::CDynArray<f64>;
 
 #include "config.h"
 
-#ifdef MCENGINE_PLATFORM_WASM
-// idk why?
 template struct Mc::CDynArray<unsigned long>;
-#endif
 
 #ifdef MCENGINE_FEATURE_SDLGPU
 #include "SDLGPUInterface.h"
