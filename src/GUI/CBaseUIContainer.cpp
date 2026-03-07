@@ -167,23 +167,20 @@ void CBaseUIContainer::draw() {
 
 void CBaseUIContainer::draw_debug() {
     g->setColor(0xffffffff);
-    g->drawLine(this->rect.getPos().x, this->rect.getPos().y, this->rect.getPos().x + this->getSize().x,
-                this->rect.getPos().y);
-    g->drawLine(this->rect.getPos().x, this->rect.getPos().y, this->rect.getPos().x,
-                this->rect.getPos().y + this->getSize().y);
-    g->drawLine(this->rect.getPos().x, this->rect.getPos().y + this->getSize().y,
-                this->rect.getPos().x + this->getSize().x, this->rect.getPos().y + this->getSize().y);
-    g->drawLine(this->rect.getPos().x + this->getSize().x, this->rect.getPos().y,
-                this->rect.getPos().x + this->getSize().x, this->rect.getPos().y + this->getSize().y);
+    g->drawRect(this->getRect());
+
+    if(this->isMouseInside()) {
+        g->setColor(0x44333377);
+        g->fillRect(this->getRect());
+    }
 
     g->setColor(0xff0000ff);
-    for(const auto *e : this->vElements) {
-        const auto ePos = e->rect.getPos();
-        const auto eSize = e->getSize();
-        g->drawLine(ePos.x, ePos.y, ePos.x + eSize.x, ePos.y);
-        g->drawLine(ePos.x, ePos.y, ePos.x, ePos.y + eSize.y);
-        g->drawLine(ePos.x, ePos.y + eSize.y, ePos.x + eSize.x, ePos.y + eSize.y);
-        g->drawLine(ePos.x + eSize.x, ePos.y, ePos.x + eSize.x, ePos.y + eSize.y);
+    for(auto *e : this->vElements) {
+        g->drawRect(e->getRect());
+        if(e->isMouseInside()) {
+            g->setColor(0x55995555);
+            g->fillRect(e->getRect());
+        }
     }
 }
 

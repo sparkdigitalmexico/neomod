@@ -568,6 +568,7 @@ void SongBrowser::draw() {
 
     if(cv::debug_osu.getBool()) {
         this->scoreBrowser->container.draw_debug();
+        this->localBestContainer->draw_debug();
     }
 
     // draw strain graph of currently selected beatmap
@@ -843,6 +844,10 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
 
     this->localBestContainer->update(c);
+    if(this->localBestButton && this->localBestButton->isVisible() && this->localBestButton->isMouseInside()) {
+        // HACKHACK: don't hover score button list buttons under local best!
+        this->scoreBrowser->stealFocus();
+    }
     ScreenBackable::update(c);
 
     // NOTE: This is placed before BottomBar::update(), otherwise the context menu would close

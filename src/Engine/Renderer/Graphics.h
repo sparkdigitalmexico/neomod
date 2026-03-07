@@ -148,12 +148,24 @@ class Graphics {
         return this->drawRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y, top, right, bottom, left);
     }
 
+    inline void drawRect(McRect rect) {
+        return this->drawRect(rect.getMin(), rect.getSize());
+    }
+    inline void drawRect(McRect rect, Color top, Color right, Color bottom, Color left) {
+        return this->drawRect(rect.getMin(), rect.getSize(), top, right, bottom, left);
+    }
+
     inline void fillRect(int x, int y, int width, int height) {
         return this->fillRectf((float)x, (float)y, (float)width, (float)height);
     }
     inline void fillRect(vec2 pos, vec2 size) {
         return this->fillRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y);
     }
+
+    inline void fillRect(McRect rect) {
+        return this->fillRect(rect.getMin(), rect.getSize());
+    }
+
     inline void fillRoundedRect(vec2 pos, vec2 size, int radius) {
         return this->fillRoundedRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y, radius);
     }
