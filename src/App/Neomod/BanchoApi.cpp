@@ -1,6 +1,7 @@
 // Copyright (c) 2025, kiwec, All rights reserved.
 #include "BanchoApi.h"
 #include "Bancho.h"
+#include "fmt/format.h"
 
 namespace BANCHO::Api {
 
