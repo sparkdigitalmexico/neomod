@@ -198,6 +198,7 @@ class Osu final : public App, public MouseListener {
     [[nodiscard]] bool getModTraceable() const;
     [[nodiscard]] bool getModFreezeFrame() const;
 
+    [[nodiscard]] static bool isKioskMode();
     [[nodiscard]] static bool isBleedingEdge();
     [[nodiscard]] constexpr bool isInPlayMode() const { return this->bIsPlayingASelectedBeatmap; }
     [[nodiscard]] inline bool isSkinLoading() const {

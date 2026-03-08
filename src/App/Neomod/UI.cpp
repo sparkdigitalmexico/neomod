@@ -157,7 +157,7 @@ bool UI::init() {
 
     this->notificationOverlay->addKeyListener(this->optionsOverlay);
 
-    this->active_screen = this->mainMenu;
+    this->active_screen = Osu::isKioskMode() ? static_cast<UIScreen *>(this->dummy) : this->mainMenu;
 
     // debug
     // this->windowManager = std::make_unique<CWindowManager>();

@@ -769,6 +769,7 @@ class CategoryButton final : public CBaseUIButton {
 }  // namespace
 
 OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) {
+    parent->backable = true;
     this->elemContainers.reserve(1024);
 
     // convar callbacks

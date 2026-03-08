@@ -1356,7 +1356,7 @@ void Osu::onPlayEnd(const FinishedScore &score, bool quit) {
         return;  // nothing more to do here
     }
 
-    if(quit) {
+    if(quit && !Osu::isKioskMode()) {
         ui->setScreen(ui->getSongBrowser());
     } else {
         ui->getRankingScreen()->setScore(score);
@@ -2093,6 +2093,8 @@ bool Osu::getModNC() const {
     return this->score->mods.speed == 1.5f && flags::has<ModFlags::NoPitchCorrection>(this->score->mods.flags);
 }
 bool Osu::getModHT() const { return this->score->mods.speed == 0.75f; }
+
+bool Osu::isKioskMode() { return Environment::getEnvVariable("NEOSU_KIOSK_MODE") == "1"; }
 
 bool Osu::isBleedingEdge() {
     if constexpr(Env::cfg(OS::WASM)) {

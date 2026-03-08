@@ -6,6 +6,8 @@
 namespace BANCHO::Api {
 
 void append_auth_params(std::string &url, std::string user_param, std::string pw_param) {
+    if(!BanchoState::is_online()) return;
+
     std::string user, pw;
     if(BanchoState::is_oauth) {
         user = "$token";

@@ -933,7 +933,7 @@ void BeatmapInterface::stop(bool quit) {
     this->unloadObjects();
 
     if(BanchoState::is_playing_a_multi_map()) {
-        if(quit) {
+        if(quit && !Osu::isKioskMode()) {
             osu->onPlayEnd(score, true);
             ui->getRoom()->ragequit();
         } else {

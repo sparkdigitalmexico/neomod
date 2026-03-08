@@ -20,4 +20,5 @@ class ScreenBackable : public UIScreen {
     virtual void updateLayout();
 
     std::unique_ptr<UIBackButton> backButton;
+    bool backable{true};
 };
