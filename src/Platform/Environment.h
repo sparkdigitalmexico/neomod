@@ -75,11 +75,11 @@ class Environment {
         Interop() = delete;
         Interop(Environment *env_ptr) : env_p(env_ptr) {}
         virtual ~Interop() { env_p = nullptr; }
-        bool handle_cmdline_args() { return handle_cmdline_args(this->env_p->getCommandLine()); }
+        void handle_cmdline_args() { handle_cmdline_args(this->env_p->getCommandLine()); }
 
-        virtual bool handle_cmdline_args(const std::vector<std::string> & /*args*/) { return false; }
+        virtual void handle_cmdline_args(const std::vector<std::string> & /*args*/) {}
         virtual bool handle_osk(const char * /*osk_path*/) { return false; }
-        virtual bool handle_osz(const char * /*osz_path*/) { return false; }
+        virtual bool handle_osz(const std::string /*osz_path*/) { return false; }
         virtual void setup_system_integrations() {}
 
         Environment *env_p;

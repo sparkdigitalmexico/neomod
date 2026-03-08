@@ -1375,7 +1375,7 @@ void SongBrowser::onDifficultySelected(DatabaseBeatmap *map, bool play) {
 
 void SongBrowser::refreshBeatmaps() { return this->refreshBeatmaps(this); }
 
-void SongBrowser::refreshBeatmaps(UIScreen *next_screen) {
+void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> on_refreshed) {
     if(osu->isInPlayMode()) return;
 
     if(!!this->loadingOverlay) {
@@ -1454,7 +1454,7 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen) {
             }
             return db->getProgress();
         },
-        (LoadingFinishedFn)[](LoadingScreen * ldscr) {
+        (LoadingFinishedFn)[on_refreshed](LoadingScreen * ldscr) {
             if(!db->isFinished()) {
                 db->cancel();
             }
@@ -1472,6 +1472,9 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen) {
 
             // kill ourselves
             ui->popOverlay(ldscr);
+
+            // call callback (if it exists)
+            if(on_refreshed) on_refreshed();
         });
 
     this->loadingOverlay = ui->pushOverlay(std::move(loading_screen));
@@ -2414,7 +2417,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
     for(const auto &file : oszs) {
         if(env->getFileExtensionFromFilePath(file) != "osz") continue;
         auto path = NEOMOD_MAPS_PATH "/" + file;
-        bool extracted = env->getEnvInterop().handle_osz(path.c_str());
+        bool extracted = env->getEnvInterop().handle_osz(path);
         if(extracted) env->deleteFile(path);
     }
 
@@ -2500,7 +2503,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
         if(ev.type != FileChangeType::CREATED) return;
         logRaw("[DirectoryWatcher] Importing new beatmap {}: type {}", ev.path, (u32)ev.type);
         if(env->getFileExtensionFromFilePath(ev.path) != "osz") return;
-        const bool extracted = env->getEnvInterop().handle_osz(ev.path.c_str());
+        const bool extracted = env->getEnvInterop().handle_osz(ev.path);
         if(extracted) env->deleteFile(ev.path);
     });
 }

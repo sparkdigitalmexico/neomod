@@ -1,7 +1,7 @@
 #pragma once
-// Copyright (c) 2016, PG, All rights reserved.
+// Copyright (c) 2024, kiwec, All rights reserved.
 #include "ModFlags.h"
-#include "UString.h"
+#include "MD5Hash.h"
 
 struct FinishedScore;
 
@@ -37,9 +37,9 @@ struct BEATMAP_VALUES {
 struct Info {
     u8 gamemode;
     u32 osu_version;
-    UString map_md5;
-    UString username;
-    UString replay_md5;
+    MD5Hash map_md5;
+    std::string username;
+    MD5Hash replay_md5;
     int num300s;
     int num100s;
     int num50s;
@@ -50,7 +50,7 @@ struct Info {
     int comboMax;
     bool perfect;
     LegacyFlags mod_flags;
-    UString life_bar_graph;
+    std::string life_bar_graph;
     i64 timestamp;
     std::vector<Frame> frames;
     i64 bancho_score_id = 0;
@@ -63,6 +63,7 @@ Info from_bytes(u8* data, uSz s_data);
 std::vector<Frame> get_frames(u8* replay_data, uSz replay_size);
 std::vector<u8> compress_frames(const std::vector<Frame>& frames);
 bool load_from_disk(FinishedScore& score, bool update_db);
+bool load_osr(const std::string osr_path, FinishedScore& score_out);
 void load_and_watch(FinishedScore score);
 
 }  // namespace LegacyReplay

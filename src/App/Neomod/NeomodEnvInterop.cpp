@@ -11,6 +11,7 @@
 #include "OptionsOverlay.h"
 #include "Osu.h"
 #include "Parsing.h"
+#include "RankingScreen.h"
 #include "Skin.h"
 #include "SongBrowser/SongBrowser.h"
 #include "UI.h"
@@ -23,9 +24,9 @@ struct NeomodEnvInterop : public Environment::Interop {
     NeomodEnvInterop(Environment *env_ptr) : Interop(env_ptr) {}
     ~NeomodEnvInterop() override = default;
 
-    bool handle_cmdline_args(const std::vector<std::string> &args) override;
+    void handle_cmdline_args(const std::vector<std::string> &args) override;
     bool handle_osk(const char *osk_path) override;
-    bool handle_osz(const char *osz_path) override;
+    bool handle_osz(const std::string osz_path) override;
     void setup_system_integrations() override;
 };
 
@@ -50,7 +51,7 @@ bool NeomodEnvInterop::handle_osk(const char *osk_path) {
     return true;
 }
 
-bool NeomodEnvInterop::handle_osz(const char *osz_path) {
+bool NeomodEnvInterop::handle_osz(const std::string osz_path) {
     if(!osu) return false;
 
     if(osu->isInPlayMode()) {
@@ -108,9 +109,10 @@ bool NeomodEnvInterop::handle_osz(const char *osz_path) {
     return true;
 }
 
-bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args) {
-    if(!osu || !db) return false;
+void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args) {
+    if(!osu || !db) return;
 
+    std::vector<std::string> db_dependent_imports;
     bool need_to_reload_database = false;
 
     for(const auto &arg : args) {
@@ -124,24 +126,54 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
             auto extension = Environment::getFileExtensionFromFilePath(arg);
             SString::lower_inplace(extension);
 
-            if(extension == "osz") {
-                // NOTE: we're assuming db is loaded here?
-                handle_osz(arg.c_str());
+            debugLog("Handling {}...", arg);
+            if(extension == "osz" || extension == "osr") {
+                db_dependent_imports.push_back(arg);
+                need_to_reload_database |= (!db->isFinished() || db->isCancelled());
             } else if(extension == "osk" || extension == "zip") {
                 handle_osk(arg.c_str());
             } else if(extension == "db") {
                 db->addPathToImport(arg);
-                need_to_reload_database = (osu && !osu->isInPlayMode() /* don't immediately import if playing */);
+                need_to_reload_database = true;
             }
         }
     }
 
-    if(need_to_reload_database) {
-        // TODO: bug prone since it can be called from any state...
-        ui->getSongBrowser()->refreshBeatmaps(ui->getActiveScreen());
-    }
+    // Don't import maps, replays or reload database while playing
+    // TODO: bug prone since there are many other possible edge cases...
+    if(!osu->isInPlayMode()) {
+        auto finish_importing = [db_dependent_imports] {
+            for(const auto &path : db_dependent_imports) {
+                auto extension = Environment::getFileExtensionFromFilePath(path);
+                if(extension == "osz") {
+                    env->getEnvInterop().handle_osz(path);
+                } else if(extension == "osr") {
+                    FinishedScore replay_score;
+                    if(LegacyReplay::load_osr(path, replay_score)) {
+                        auto map = db->getBeatmapDifficulty(replay_score.beatmap_hash);
+                        if(map) {
+                            replay_score.map = map;
+                            ui->getSongBrowser()->onDifficultySelected(map, false);
+                            ui->getRankingScreen()->setScore(replay_score);
+                            ui->setScreen(ui->getRankingScreen());
+                        } else {
+                            // TODO: auto-download
+                            ui->getNotificationOverlay()->addToast(US_("This replay's beatmap is not installed."),
+                                                                   ERROR_TOAST);
+                        }
+                    } else {
+                        ui->getNotificationOverlay()->addToast(US_("Failed to load replay."), ERROR_TOAST);
+                    }
+                }
+            }
+        };
 
-    return need_to_reload_database;
+        if(need_to_reload_database) {
+            ui->getSongBrowser()->refreshBeatmaps(ui->getActiveScreen(), finish_importing);
+        } else {
+            finish_importing();
+        }
+    }
 }
 
 #ifdef MCENGINE_PLATFORM_WINDOWS

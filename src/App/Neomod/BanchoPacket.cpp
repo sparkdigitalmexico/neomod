@@ -45,8 +45,6 @@ std::string Packet::read_stdstring() {
     return str_out;
 }
 
-UString Packet::read_ustring() { return this->read_stdstring(); }
-
 MD5String Packet::read_hash_chars() {
     MD5String hash;
 

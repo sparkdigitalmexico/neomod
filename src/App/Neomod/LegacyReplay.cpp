@@ -1,4 +1,4 @@
-// Copyright (c) 2016, PG, All rights reserved.
+// Copyright (c) 2024, kiwec, All rights reserved.
 #include "LegacyReplay.h"
 
 #ifndef LZMA_API_STATIC
@@ -175,9 +175,9 @@ Info from_bytes(u8* data, uSz s_data) {
     }
 
     info.osu_version = replay.read<u32>();
-    info.map_md5 = replay.read_ustring();
-    info.username = replay.read_ustring();
-    info.replay_md5 = replay.read_ustring();
+    info.map_md5 = replay.read_hash_chars();
+    info.username = replay.read_stdstring();
+    info.replay_md5 = replay.read_hash_chars();
     info.num300s = replay.read<u16>();
     info.num100s = replay.read<u16>();
     info.num50s = replay.read<u16>();
@@ -188,7 +188,7 @@ Info from_bytes(u8* data, uSz s_data) {
     info.comboMax = replay.read<u16>();
     info.perfect = replay.read<u8>();
     info.mod_flags = replay.read<LegacyFlags>();
-    info.life_bar_graph = replay.read_ustring();
+    info.life_bar_graph = replay.read_stdstring();
     info.timestamp = replay.read<i64>() / 10LL;
 
     i32 replay_size = replay.read<i32>();
@@ -211,47 +211,75 @@ Info from_bytes(u8* data, uSz s_data) {
     return info;
 }
 
-bool load_from_disk(FinishedScore& score, bool update_db) {
-    bool success = false;
+bool load_osr(const std::string osr_path, FinishedScore& score_out) {
+    uSz file_size = 0;
+    std::unique_ptr<u8[]> buffer;
+    {
+        File replay_file(osr_path);
+        if(!replay_file.canRead() || !(file_size = replay_file.getFileSize())) return false;
+        buffer = replay_file.takeFileBuffer();
+        if(!buffer) return false;
+    }
 
+    auto info = from_bytes(buffer.get(), file_size);
+    if(info.frames.empty()) return false;
+
+    score_out.replay = info.frames;
+    score_out.mods = Replay::Mods::from_legacy(info.mod_flags);
+    score_out.num300s = info.num300s;
+    score_out.num100s = info.num100s;
+    score_out.num50s = info.num50s;
+    score_out.numGekis = info.numGekis;
+    score_out.numKatus = info.numKatus;
+    score_out.numMisses = info.numMisses;
+    score_out.score = info.score;
+    score_out.playerName = info.username;
+    score_out.beatmap_hash = info.map_md5;
+    score_out.perfect = info.perfect;
+    score_out.comboMax = info.comboMax;
+    score_out.unixTimestamp = info.timestamp;  // TODO @kiwec: not sure if correct
+    score_out.bancho_score_id = info.bancho_score_id;
+
+    return true;
+}
+
+bool load_raw(const std::string lzma_path, FinishedScore& score_out) {
+    uSz file_size = 0;
+    std::unique_ptr<u8[]> buffer;
+    {
+        File replay_file(lzma_path);
+        if(!replay_file.canRead() || !(file_size = replay_file.getFileSize())) return false;
+        buffer = replay_file.takeFileBuffer();
+        if(!buffer) return false;
+    }
+
+    score_out.replay = get_frames(buffer.get(), file_size);
+    return !score_out.replay.empty();
+}
+
+bool load_from_disk(FinishedScore& score, bool update_db) {
     const bool is_peppy = score.peppy_replay_tms > 0;
     const auto path =
-        is_peppy ? fmt::format("{:s}/Data/r/{:s}-{:d}.osr", cv::osu_folder.getString(), score.beatmap_hash,
-                               score.peppy_replay_tms)
-                 : fmt::format(NEOMOD_REPLAYS_PATH "/{:s}/{:d}.replay.lzma", score.server, score.unixTimestamp);
-    do {
-        uSz file_size = 0;
-        std::unique_ptr<u8[]> buffer;
-        {
-            File replay_file(path);
-            if(!replay_file.canRead() || !(file_size = replay_file.getFileSize())) break;
-            buffer = replay_file.takeFileBuffer();
-            if(!buffer) break;
-        }
+        is_peppy
+            ? fmt::format("{}/Data/r/{}-{}.osr", cv::osu_folder.getString(), score.beatmap_hash, score.peppy_replay_tms)
+            : fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
 
-        if(is_peppy) {
-            auto info = from_bytes(buffer.get(), file_size);
-            score.replay = info.frames;
-            score.mods = Replay::Mods::from_legacy(info.mod_flags);  // update mods just in case
-        } else {
-            score.replay = get_frames(buffer.get(), file_size);
-        }
+    if(is_peppy) {
+        if(!load_osr(path, score)) return false;
+    } else {
+        if(!load_raw(path, score)) return false;
+    }
 
-        if(score.replay.empty()) break;
-
-        success = true;  // FIXME/TODO (?): we're just assuming from_bytes/get_frames will have worked?
-
-        if(update_db) {
-            Sync::unique_lock lk(db->scores_mtx);
-            if(const auto& it = db->getScoresMutable().find(score.beatmap_hash); it != db->getScoresMutable().end()) {
-                if(auto scorevecIt = std::ranges::find(it->second, score); scorevecIt != it->second.end()) {
-                    scorevecIt->replay = score.replay;
-                }
+    if(update_db) {
+        Sync::unique_lock lk(db->scores_mtx);
+        if(const auto& it = db->getScoresMutable().find(score.beatmap_hash); it != db->getScoresMutable().end()) {
+            if(auto scorevecIt = std::ranges::find(it->second, score); scorevecIt != it->second.end()) {
+                scorevecIt->replay = score.replay;
             }
         }
-    } while(false);
+    }
 
-    return success;
+    return true;
 }
 
 void load_and_watch(FinishedScore score) {
@@ -275,7 +303,7 @@ void load_and_watch(FinishedScore score) {
             networkHandler->httpRequestAsync(url, std::move(options), [score](const Mc::Net::Response& response) {
                 if(response.success) {
                     auto replay_path =
-                        fmt::format(NEOMOD_REPLAYS_PATH "/{:s}/{:d}.replay.lzma", score.server, score.unixTimestamp);
+                        fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
 
                     // TODO: progress bars? how do we make sure the user doesnt do anything weird while its saving to disk and break the flow
                     debugLog("Saving replay to {}...", replay_path);

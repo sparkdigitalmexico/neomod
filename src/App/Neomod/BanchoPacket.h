@@ -22,7 +22,6 @@ struct Packet {
     void read_bytes(u8 *bytes, size_t n);
     u32 read_uleb128();
     std::string read_stdstring();
-    UString read_ustring();
     void skip_string();
     MD5String read_hash_chars();
     MD5Hash read_hash_digest();
