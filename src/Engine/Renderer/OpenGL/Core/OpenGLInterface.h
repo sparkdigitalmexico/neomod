@@ -26,7 +26,7 @@ class OpenGLInterface : public Graphics {
     // color
     void setColor(Color color) final;
     inline void setAlpha(float alpha) final {
-        if(this->color.Af() == alpha) return;
+        if(this->color.a == Colors::to_byte(alpha)) return;
         Color newColor = this->color;
         this->setColor(newColor.setA(alpha));
     }

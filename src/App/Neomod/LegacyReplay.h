@@ -63,7 +63,7 @@ Info from_bytes(u8* data, uSz s_data);
 std::vector<Frame> get_frames(u8* replay_data, uSz replay_size);
 std::vector<u8> compress_frames(const std::vector<Frame>& frames);
 bool load_from_disk(FinishedScore& score, bool update_db);
-bool load_osr(const std::string osr_path, FinishedScore& score_out);
+bool load_osr(std::string_view osr_path, FinishedScore& score_out);
 void load_and_watch(FinishedScore score);
 
 }  // namespace LegacyReplay

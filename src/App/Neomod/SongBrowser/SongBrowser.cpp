@@ -780,33 +780,22 @@ SongDifficultyButton *SongBrowser::getDiffButtonByHash(const MD5Hash &diff_hash)
     return nullptr;
 }
 
-// FIXME: this should not be a public function
-bool SongBrowser::selectBeatmapset(i32 set_id) {
+// FIXME: this should not be a public function (way too multi-purpose, too many side effects)
+bool SongBrowser::selectBeatmapset(const BeatmapSet *set) {
     if(db->isLoading()) {
         debugLog("Can't select a beatmapset while database is loading!");
         return false;
     }
 
-    auto beatmapset = db->getBeatmapSet(set_id);
-    if(beatmapset == nullptr) {
-        // Pasted from Downloader::download_beatmap
-        auto mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
-        beatmapset = db->addBeatmapSet(mapset_path);
-        debugLog("Finished loading beatmapset {:d}.", set_id);
-    }
-
-    if(beatmapset == nullptr) {
-        return false;
-    }
-
+    assert(set);
     if(!this->bInitializedBeatmaps) {
-        BeatmapInterface::loading_reselect_map = beatmapset->getDifficulties()[0]->getMD5();
+        BeatmapInterface::loading_reselect_map = set->getDifficulties()[0]->getMD5();
         return false;
     }
 
     // Just picking the hardest diff for now
     DatabaseBeatmap *best_diff = nullptr;
-    const auto &diffs = beatmapset->getDifficulties();
+    const auto &diffs = set->getDifficulties();
     for(auto &diff : diffs) {
         if(!best_diff ||
            diff->getStarRating(StarPrecalc::active_idx) > best_diff->getStarRating(StarPrecalc::active_idx)) {
@@ -823,6 +812,29 @@ bool SongBrowser::selectBeatmapset(i32 set_id) {
         this->selectSelectedBeatmapSongButton();
         return true;
     }
+}
+
+bool SongBrowser::selectBeatmapset(i32 set_id) {
+    if(db->isLoading()) {
+        debugLog("Can't select a beatmapset while database is loading!");
+        return false;
+    }
+
+    const auto *beatmapset = db->getBeatmapSet(set_id);
+    if(beatmapset == nullptr) {
+        // Pasted from Downloader::download_beatmap
+        auto mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
+        beatmapset = db->addBeatmapSet(mapset_path);
+
+        if(beatmapset == nullptr) {
+            debugLog("Could not load beatmapset! (ID {})", set_id);
+            return false;
+        } else {
+            debugLog("Finished loading beatmapset (ID {})", set_id);
+        }
+    }
+
+    return this->selectBeatmapset(set_id);
 }
 
 void SongBrowser::update(CBaseUIEventCtx &c) {
@@ -1456,7 +1468,7 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> o
             }
             return db->getProgress();
         },
-        (LoadingFinishedFn)[on_refreshed](LoadingScreen * ldscr) {
+        (LoadingFinishedFn)[on_refreshed = std::move(on_refreshed)](LoadingScreen * ldscr) mutable {
             if(!db->isFinished()) {
                 db->cancel();
             }

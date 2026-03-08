@@ -125,7 +125,7 @@ class Database final {
     void cancel();
     void save();
 
-    BeatmapSet *addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override = -1, bool is_peppy = false);
+    const BeatmapSet *addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override = -1, bool is_peppy = false);
 
     // returns true if adding succeeded
     bool addScore(const FinishedScore &score);

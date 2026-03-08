@@ -615,7 +615,7 @@ void SDLGPUInterface::setColor(Color color) {
 }
 
 void SDLGPUInterface::setAlpha(float alpha) {
-    if(m_color.Af() == alpha) return;
+    if(m_color.a == Colors::to_byte(alpha)) return;
     m_color.setA(alpha);
 
     if(m_texturingEnabled) {
@@ -626,8 +626,8 @@ void SDLGPUInterface::setAlpha(float alpha) {
 // 2d resource drawing
 
 void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
-    // skip entirely transparent images or if the current transparency is disabled
-    if(image == nullptr || !image->isGPUReady() || m_color.a == 0) {
+    // skip entirely transparent images
+    if(image == nullptr || !image->isGPUReady()) {
         if(image && cv::r_debug_drawimage.getBool()) {
             const vec2 size = image->getSize();
             const vec2 pos = getAnchoredOrigin(anchor, size);

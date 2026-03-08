@@ -97,14 +97,14 @@ bool NeomodEnvInterop::handle_osz(std::string_view osz_path) {
         return false;
     }
 
-    BeatmapSet *set = db->addBeatmapSet(mapset_dir, set_id);
+    const BeatmapSet *set = db->addBeatmapSet(mapset_dir, set_id);
     if(!set) {
         ui->getNotificationOverlay()->addToast(US_("Failed to import beatmapset"), ERROR_TOAST);
         return false;
     }
 
     // FIXME: dont call this here
-    ui->getSongBrowser()->selectBeatmapset(set_id);
+    ui->getSongBrowser()->selectBeatmapset(set);
 
     return true;
 }
@@ -150,7 +150,7 @@ void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
                 } else if(extension == "osr") {
                     FinishedScore replay_score;
                     if(LegacyReplay::load_osr(path, replay_score)) {
-                        auto map = db->getBeatmapDifficulty(replay_score.beatmap_hash);
+                        BeatmapDifficulty *map = db->getBeatmapDifficulty(replay_score.beatmap_hash);
                         if(map) {
                             replay_score.map = map;
                             ui->getSongBrowser()->onDifficultySelected(map, false);
@@ -169,7 +169,7 @@ void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
         };
 
         if(need_to_reload_database) {
-            ui->getSongBrowser()->refreshBeatmaps(ui->getActiveScreen(), finish_importing);
+            ui->getSongBrowser()->refreshBeatmaps(ui->getActiveScreen(), std::move(finish_importing));
         } else {
             finish_importing();
         }

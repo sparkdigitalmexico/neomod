@@ -321,8 +321,8 @@ void OpenGLInterface::drawQuad(vec2 topLeft, vec2 topRight, vec2 bottomRight, ve
 }
 
 void OpenGLInterface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
-    // skip entirely transparent images or if the current transparency is disabled
-    if(image == nullptr || !image->isGPUReady() || this->color.a == 0) {
+    // skip entirely transparent images
+    if(image == nullptr || !image->isGPUReady()) {
         if(image && cv::r_debug_drawimage.getBool()) {
             const vec2 size = image->getSize();
             const vec2 pos = getAnchoredOrigin(anchor, size);

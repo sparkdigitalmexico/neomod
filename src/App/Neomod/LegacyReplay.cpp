@@ -211,7 +211,7 @@ Info from_bytes(u8* data, uSz s_data) {
     return info;
 }
 
-bool load_osr(const std::string osr_path, FinishedScore& score_out) {
+bool load_osr(std::string_view osr_path, FinishedScore& score_out) {
     uSz file_size = 0;
     std::unique_ptr<u8[]> buffer;
     {
@@ -243,7 +243,8 @@ bool load_osr(const std::string osr_path, FinishedScore& score_out) {
     return true;
 }
 
-bool load_raw(const std::string lzma_path, FinishedScore& score_out) {
+namespace {
+bool load_raw(std::string_view lzma_path, FinishedScore& score_out) {
     uSz file_size = 0;
     std::unique_ptr<u8[]> buffer;
     {
@@ -256,6 +257,7 @@ bool load_raw(const std::string lzma_path, FinishedScore& score_out) {
     score_out.replay = get_frames(buffer.get(), file_size);
     return !score_out.replay.empty();
 }
+}  // namespace
 
 bool load_from_disk(FinishedScore& score, bool update_db) {
     const bool is_peppy = score.peppy_replay_tms > 0;

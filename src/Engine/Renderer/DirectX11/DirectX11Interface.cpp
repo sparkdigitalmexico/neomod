@@ -442,6 +442,7 @@ void DirectX11Interface::setColor(Color color) {
 }
 
 void DirectX11Interface::setAlpha(float alpha) {
+    if(m_color.a == Colors::to_byte(alpha)) return;
     Color newColor = this->color;
     newColor.setA(alpha);
 
@@ -466,8 +467,8 @@ void DirectX11Interface::drawPixel(int x, int y) {
 }
 
 void DirectX11Interface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
-    // skip entirely transparent images or if the current transparency is disabled
-    if(image == nullptr || !image->isGPUReady() || this->color.a == 0) {
+    // skip entirely transparent images
+    if(image == nullptr || !image->isGPUReady()) {
         if(image && cv::r_debug_drawimage.getBool()) {
             const vec2 size = image->getSize();
             const vec2 pos = getAnchoredOrigin(anchor, size);

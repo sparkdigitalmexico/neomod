@@ -195,7 +195,7 @@ void OnlineMapListing::update(CBaseUIEventCtx& c) {
             this->downloading = false;
 
             std::string mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", this->meta.set_id);
-            const auto set = db->addBeatmapSet(mapset_path, this->meta.set_id);
+            const auto *set = db->addBeatmapSet(mapset_path, this->meta.set_id);
             if(set) {
                 this->installed = true;
 

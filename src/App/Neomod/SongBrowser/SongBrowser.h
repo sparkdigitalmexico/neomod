@@ -136,6 +136,8 @@ class SongBrowser final : public ScreenBackable {
 
     CBaseUIContainer *setVisible(bool visible) override;
 
+    bool selectBeatmapset(const BeatmapSet *set);
+    // NOTE: this also tries to find+add the beatmapset from NEOSU_MAPS_PATH to the database!!
     bool selectBeatmapset(i32 set_id);
     void selectSelectedBeatmapSongButton();
     void onPlayEnd(bool quit = true);  // called when a beatmap is finished playing (or the player quit)

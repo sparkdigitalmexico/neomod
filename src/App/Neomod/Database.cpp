@@ -479,11 +479,13 @@ void Database::save() {
 // NOTE: Should currently only be used for neomod beatmapsets! e.g. from maps/ folder
 //       See loadRawBeatmap()
 //       (unless is_peppy is specified, in which case we're loading a raw osu folder and not saving the things we loaded)
-BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override, bool is_peppy) {
+const BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override, bool is_peppy) {
     std::unique_ptr<BeatmapSet> mapset = this->loadRawBeatmap(beatmapFolderPath, is_peppy);
     if(mapset == nullptr) return nullptr;
 
     BeatmapSet *raw_mapset = mapset.get();
+
+    const i32 real_set_id = set_id_override != -1 ? set_id_override : mapset->iSetID;
 
     {
         // deduplicate diffs
@@ -494,8 +496,6 @@ BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, i32 se
             auto [existingit, inserted] = this->beatmap_difficulties.try_emplace(diff->getMD5(), diff.get());
             if(!inserted) {
                 // update set id just in case we had an override, though
-                const i32 real_set_id = set_id_override != -1 ? set_id_override : mapset->iSetID;
-
                 BeatmapDifficulty *diffparent = existingit->second->parentSet;
                 if(const i32 old_set_id = diffparent->iSetID; old_set_id == -1 && real_set_id > 0) {
                     logIfCV(debug_db, "updating old set {} id {} -> {}", diffparent->getFolder(), old_set_id,
@@ -517,9 +517,14 @@ BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, i32 se
     }
 
     if(mapset->difficulties->empty()) {
-        logIfCV(debug_db, "WARNING: not adding raw mapset {} id {}, only had duplicate difficulties!",
-                mapset->getFolder(), set_id_override != -1 ? set_id_override : mapset->iSetID);
-        return nullptr;
+        debugLog("WARNING: didn't add new mapset {} id {}, only had duplicate difficulties!", mapset->getFolder(),
+                 real_set_id);
+        if(const auto *existing_mapset = this->getBeatmapSet(real_set_id)) {
+            return existing_mapset;
+        } else {
+            assert(false);  // should be unreachable
+            return nullptr;
+        }
     }
 
     // Some beatmaps don't provide beatmap/beatmapset IDs in the .osu files
@@ -1734,8 +1739,7 @@ void Database::loadMaps(std::string_view neomod_maps_path, std::string_view pepp
                         diffp->ppv2Version = override_.ppv2_version;
                         diffp->loudness = override_.loudness;
                         diffp->draw_background = override_.draw_background;
-                        diffp->sBackgroundImageFileName =
-                            SString::strcpy_u(override_.background_image_filename);
+                        diffp->sBackgroundImageFileName = SString::strcpy_u(override_.background_image_filename);
                         if(override_.loudness != 0.f) {
                             loudness_found = true;
                         }
