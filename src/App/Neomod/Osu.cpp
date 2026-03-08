@@ -2094,7 +2094,20 @@ bool Osu::getModNC() const {
 }
 bool Osu::getModHT() const { return this->score->mods.speed == 0.75f; }
 
-bool Osu::isKioskMode() { return Environment::getEnvVariable("NEOSU_KIOSK_MODE") == "1"; }
+bool Osu::isKioskMode() {
+    // environment variables can't change under normal circumstances
+    // using them to control ambient state in wasm is kinda sus
+    if constexpr(Env::cfg(OS::WASM)) {
+        return Environment::getEnvVariable("NEOSU_KIOSK_MODE") == "1";
+    } else {
+        // should just return false?
+        static int isKioskMode = -1;
+        if(isKioskMode == -1) {
+            isKioskMode = Environment::getEnvVariable("NEOSU_KIOSK_MODE") == "1";
+        }
+        return !!isKioskMode;
+    }
+}
 
 bool Osu::isBleedingEdge() {
     if constexpr(Env::cfg(OS::WASM)) {

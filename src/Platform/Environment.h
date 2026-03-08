@@ -80,7 +80,7 @@ class Environment {
 
         virtual void handle_cmdline_args(const std::vector<std::string> & /*args*/) {}
         virtual bool handle_osk(const char * /*osk_path*/) { return false; }
-        virtual bool handle_osz(const std::string /*osz_path*/) { return false; }
+        virtual bool handle_osz(const std::string_view /*osz_path*/) { return false; }
         virtual void setup_system_integrations() {}
 
         Environment *env_p;

@@ -26,7 +26,7 @@ struct NeomodEnvInterop : public Environment::Interop {
 
     void handle_cmdline_args(const std::vector<std::string> &args) override;
     bool handle_osk(const char *osk_path) override;
-    bool handle_osz(const std::string osz_path) override;
+    bool handle_osz(std::string_view osz_path) override;
     void setup_system_integrations() override;
 };
 
@@ -51,7 +51,7 @@ bool NeomodEnvInterop::handle_osk(const char *osk_path) {
     return true;
 }
 
-bool NeomodEnvInterop::handle_osz(const std::string osz_path) {
+bool NeomodEnvInterop::handle_osz(std::string_view osz_path) {
     if(!osu) return false;
 
     if(osu->isInPlayMode()) {
@@ -145,7 +145,7 @@ void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
         auto finish_importing = [db_dependent_imports] {
             for(const auto &path : db_dependent_imports) {
                 auto extension = Environment::getFileExtensionFromFilePath(path);
-                if(extension == "osz") {
+                if(extension == "osz"sv) {
                     env->getEnvInterop().handle_osz(path);
                 } else if(extension == "osr") {
                     FinishedScore replay_score;
