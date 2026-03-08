@@ -170,6 +170,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
 
     // replay replaying (prerecorded)
     // current_keys, last_keys also reused
+    FinishedScore replay_data;
     std::vector<LegacyReplay::Frame> spectated_replay;
     vec2 interpolatedMousePos{0.f};
     bool is_watching = false;

@@ -472,6 +472,7 @@ bool BeatmapInterface::watch(const FinishedScore &score, u32 start_ms) {
 
     osu->watched_user_name = score.playerName;
     osu->watched_user_id = score.player_id;
+    this->replay_data = score;
     this->is_watching = true;
 
     Replay::Mods::use(score.mods);
@@ -777,7 +778,6 @@ void BeatmapInterface::actualRestart() {
 
     this->bIsPlaying = true;
     this->bTempSeekNF = false;
-    this->is_watching = false;
 }
 
 void BeatmapInterface::pause(bool quitIfWaiting) {
@@ -908,9 +908,15 @@ void BeatmapInterface::stop(bool quit) {
     this->bIsPaused = false;
     this->bContinueScheduled = false;
 
-    // Call this BEFORE unloadObjects()!
-    FinishedScore score =
-        BanchoState::is_playing_a_multi_map() ? ui->getRoom()->get_approximate_score() : this->saveAndSubmitScore(quit);
+    FinishedScore score;
+    if(this->is_watching) {
+        score = this->replay_data;
+    } else if(BanchoState::is_playing_a_multi_map()) {
+        score = ui->getRoom()->get_approximate_score();
+    } else {
+        // Call this BEFORE unloadObjects()!
+        score = this->saveAndSubmitScore(quit);
+    }
 
     // Auto mod was "temporary" since it was set from Ctrl+Clicking a map, not from the mod selector
     if(osu->bModAutoTemp) {
