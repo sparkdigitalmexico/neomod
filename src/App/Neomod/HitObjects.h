@@ -74,6 +74,7 @@ class HitObject {
     [[nodiscard]] forceinline bool isEndOfCombo() const { return m_endOfCombo; }
 
     // Visual
+    [[nodiscard]] forceinline i32 getComboStartTime() const { return m_comboStartMS; }
     [[nodiscard]] forceinline i32 getComboNumber() const { return m_comboNumber; }
 
     void addHitResult(LiveScore::HIT result, i32 delta, bool isEndOfCombo, vec2 posRaw, float targetDeltaPct = 0.0f,
@@ -324,7 +325,6 @@ class Slider final : public HitObject {
         [[nodiscard]] bool isAnimating() const { return (percent > 0.f && percent != 1.f); };
     };
     HitAnim &addHitAnim(u8 typeFlags, float duration);
-
 
     std::vector<HitAnim> m_clickAnimations;
     std::vector<vec2> m_points;

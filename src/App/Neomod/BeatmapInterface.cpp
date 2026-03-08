@@ -2862,14 +2862,33 @@ void BeatmapInterface::update2() {
         this->fSpeedAdjustedAnimationSpeedFactor = this->getSpeedMultiplier() / this->fBaseAnimationSpeedFactor;
 
         const i32 pvs = [&]() -> i32 {
-            if(likely(!cv::mod_mafham.getBool()) || unlikely(this->hitobjects.empty())) {
+            if(unlikely(this->hitobjects.empty())) {
                 return this->getPVS();
             }
-            // mafham PVS
-            const i32 objIdx =
-                std::clamp<i32>(this->iCurrentHitObjectIndex + cv::mod_mafham_render_livesize.getInt() + 1, 0,
-                                (i32)this->hitobjects.size() - 1);
-            return this->hitobjects[objIdx]->getClickTime() - this->iCurMusicPosWithOffsets + 1500;
+            if(unlikely(cv::mod_mafham.getBool())) {
+                const i32 objIdx =
+                    std::clamp<i32>(this->iCurrentHitObjectIndex + cv::mod_mafham_render_livesize.getInt() + 1, 0,
+                                    (i32)this->hitobjects.size() - 1);
+                return this->hitobjects[objIdx]->getClickTime() - this->iCurMusicPosWithOffsets + 1500;
+            }
+            if(unlikely(cv::mod_freeze_frame.getBool())) {
+                // For freeze frame, we want to extend PVS to encompass the whole combo group
+                // Find the next combo group, then get the difference from our current combo group
+                const auto &current_hitobject = this->hitobjects[this->iCurrentHitObjectIndex];
+                for(int i = this->iCurrentHitObjectIndex; i < this->hitobjects.size(); i++) {
+                    const auto &future_hitobject = this->hitobjects[i];
+                    if(future_hitobject->getComboStartTime() > current_hitobject->getComboStartTime()) {
+                        return this->getPVS() +
+                               (future_hitobject->getClickTime() - current_hitobject->getComboStartTime());
+                    }
+                }
+
+                // Oops! We are on the last combo group.
+                const auto &last_hitobject = this->hitobjects.back();
+                return this->getPVS() + (last_hitobject->getClickTime() - current_hitobject->getComboStartTime());
+            }
+
+            return this->getPVS();
         }();
         const bool usePVS = cv::pvs.getBool();
 
