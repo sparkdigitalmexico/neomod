@@ -442,7 +442,7 @@ void DirectX11Interface::setColor(Color color) {
 }
 
 void DirectX11Interface::setAlpha(float alpha) {
-    if(m_color.a == Colors::to_byte(alpha)) return;
+    if(this->color.a == Colors::to_byte(alpha)) return;
     Color newColor = this->color;
     newColor.setA(alpha);
 
