@@ -74,16 +74,10 @@ template <typename T>
 CDynArray<T> &CDynArray<T>::operator=(const CDynArray &other) noexcept {
     static_assert(std::is_trivial_v<T>);
     if(this != &other) {
-        const uSz newCap = std::max(other.m_size, BASE_CAPACITY);
-        this->reset(other.get() ? static_cast<T *>(std::malloc(newCap * sizeof(T))) : nullptr);
-        if(this->get()) {
-            m_size = other.m_size;
-            m_capacity = newCap;
-            std::memcpy(static_cast<void *>(this->get()), static_cast<void *>(other.get()), m_size * sizeof(T));
-        } else {
-            m_capacity = 0;
-            m_size = 0;
-        }
+        if(other.m_size > m_capacity || !this->get()) reserve(other.m_size);
+        m_size = other.m_size;
+        if(m_size > 0)
+            std::memcpy(static_cast<void *>(this->data()), static_cast<const void *>(other.data()), m_size * sizeof(T));
     }
     return *this;
 }
@@ -117,19 +111,26 @@ void CDynArray<T>::resize(uSz size) {
 
 template <typename T>
 void CDynArray<T>::resize(uSz size, const T &value) {
+    const uSz oldSize = m_size;
     this->resize(size);
-    if(size > 0) {
+    if(size > oldSize) {
         if constexpr(sizeof(T) <= sizeof(u8)) {
-            std::memset(this->data(), static_cast<u8>(value), size * sizeof(T));
+            std::memset(this->data() + oldSize, static_cast<u8>(value), (size - oldSize) * sizeof(T));
         } else {
-            std::fill(this->begin(), this->end(), value);
+            std::fill(this->data() + oldSize, this->data() + size, value);
         }
     }
 }
 
 template <typename T>
 void CDynArray<T>::assign(uSz num, const T &value) {
-    this->resize(num, value);
+    this->resize(num);
+    if(num == 0) return;
+    if constexpr(sizeof(T) <= sizeof(u8)) {
+        std::memset(this->data(), static_cast<u8>(value), num * sizeof(T));
+    } else {
+        std::fill(this->begin(), this->end(), value);
+    }
 }
 
 template <typename T>
@@ -210,23 +211,29 @@ CDynArray<T>::const_iterator CDynArray<T>::cend() const noexcept {
 }
 template <typename T>
 T *CDynArray<T>::insert(CDynArray<T>::const_iterator pos, uSz n, const value_type &x) noexcept {
-    if(n == 0) return this->begin();
+    const uSz offset = static_cast<uSz>(pos - this->cbegin());
+    if(n == 0) return this->begin() + offset;
 
-    const sSz offset = pos - this->cbegin();
-    if(offset + n >= m_capacity) {
-        this->reserve((m_size + 1) * 2);
+    const uSz newSize = m_size + n;
+    if(unlikely(newSize > m_capacity || !this->get())) reserve(newSize * 2);
+
+    if(offset < m_size) {
+        std::memmove(static_cast<void *>(this->data() + offset + n), static_cast<void *>(this->data() + offset),
+                     (m_size - offset) * sizeof(T));
     }
+
     if constexpr(sizeof(T) <= sizeof(u8)) {
         std::memset(this->data() + offset, static_cast<u8>(x), n * sizeof(T));
     } else {
-        std::fill(this->begin(), this->end(), x);
+        std::fill(this->data() + offset, this->data() + offset + n, x);
     }
+    m_size = newSize;
     return this->begin() + offset;
 }
 
 template <typename T>
 void CDynArray<T>::push_back(const T &e) {
-    if(m_size >= m_capacity || this->data() == nullptr) {
+    if(unlikely(m_size >= m_capacity || this->data() == nullptr)) {
         this->reserve((m_size + 1) * 2);
     }
     this->data()[m_size++] = e;
@@ -234,7 +241,7 @@ void CDynArray<T>::push_back(const T &e) {
 
 template <typename T>
 T &CDynArray<T>::emplace_back() {
-    if(m_size >= m_capacity || this->data() == nullptr) {
+    if(unlikely(m_size >= m_capacity || this->data() == nullptr)) {
         this->reserve((m_size + 1) * 2);
     }
     return this->data()[m_size++];
@@ -242,7 +249,7 @@ T &CDynArray<T>::emplace_back() {
 
 template <typename T>
 T &CDynArray<T>::emplace_back(T &&e) {
-    if(m_size >= m_capacity || this->data() == nullptr) {
+    if(unlikely(m_size >= m_capacity || this->data() == nullptr)) {
         this->reserve((m_size + 1) * 2);
     }
     return (this->data()[m_size++] = std::move(e));

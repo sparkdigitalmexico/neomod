@@ -2338,7 +2338,7 @@ void Slider::rebuildVertexBuffer(bool useRawCoords) {
 
 Slider::~Slider() { onReset(0); }
 
-bool Slider::isClickHeldSlider() {
+bool Slider::isClickHeldSlider() const {
     // osu! has a weird slider quirk, that I'll explain in detail here.
     // When holding K1 before the slider, tapping K2 on slider head, and releasing K2 later,
     // the slider is no longer considered being "held" until K2 is pressed again, or K1 is released and pressed again.

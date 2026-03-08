@@ -310,7 +310,7 @@ class Slider final : public HitObject {
 
     [[nodiscard]] float getT(i32 posMS, bool raw) const;
 
-    bool isClickHeldSlider();  // special logic to disallow hold tapping
+    [[nodiscard]] bool isClickHeldSlider() const;  // special logic to disallow hold tapping
     struct SLIDERTICK {
         float percent;
         bool finished;

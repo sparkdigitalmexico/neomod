@@ -36,7 +36,7 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
 
     CDynArray& operator=(CDynArray&& other) noexcept;
 
-    template <std::forward_iterator InputIt>
+    template <std::contiguous_iterator InputIt>
     explicit CDynArray(InputIt first, InputIt last) {
         this->assign(first, last);
     }
@@ -66,7 +66,7 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
         this->resize(count);
         if(count == 0) return;
         const auto* src = std::to_address(first);
-        std::memmove(static_cast<void*>(this->data()), static_cast<const void*>(src), count * sizeof(T));
+        std::memcpy(static_cast<void*>(this->data()), static_cast<const void*>(src), count * sizeof(T));
     }
 
     void clear();
@@ -109,7 +109,8 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
                          (m_size - offset) * sizeof(T));
         }
 
-        for(T* dest = this->data() + offset; first != last; ++first, ++dest) *dest = *first;
+        std::memcpy(static_cast<void*>(this->data() + offset), static_cast<const void*>(std::to_address(first)),
+                    count * sizeof(T));
 
         m_size = newSize;
         return this->begin() + offset;
@@ -153,9 +154,13 @@ struct CDynArray<T*> final {
 
     forceinline void reserve(uSz cap) { m_impl.reserve(cap); }
     forceinline void resize(uSz size) { m_impl.resize(size); }
-    forceinline void resize(uSz size, const T& fillValue) { m_impl.resize(size, fillValue); }
+    forceinline void resize(uSz size, const value_type& fillValue) {
+        m_impl.resize(size, reinterpret_cast<const uintptr_t&>(fillValue));
+    }
 
-    forceinline void assign(uSz num, const T& value) { m_impl.assign(num, value); }
+    forceinline void assign(uSz num, const value_type& value) {
+        m_impl.assign(num, reinterpret_cast<const uintptr_t&>(value));
+    }
 
     template <std::contiguous_iterator InputIt>
     really_forceinline void assign(InputIt first, InputIt last) {
@@ -169,8 +174,9 @@ struct CDynArray<T*> final {
     forceinline void shrink_to_fit() { m_impl.shrink_to_fit(); }
 
     forceinline iterator insert(const_iterator pos, uSz n, const value_type& x) noexcept {
-        return m_impl.insert(reinterpret_cast<const uintptr_t*>(pos), n, x);
-    };
+        return reinterpret_cast<iterator>(
+            m_impl.insert(reinterpret_cast<const uintptr_t*>(pos), n, reinterpret_cast<const uintptr_t&>(x)));
+    }
 
     template <std::contiguous_iterator InputIt>
     really_forceinline iterator insert(const_iterator pos, InputIt first, InputIt last) {
@@ -195,8 +201,10 @@ struct CDynArray<T*> final {
     }
 
     forceinline void push_back(value_type e) { m_impl.push_back(reinterpret_cast<uintptr_t>(e)); }
-    forceinline value_type& emplace_back() { return m_impl.emplace_back(); }
-    forceinline value_type& emplace_back(value_type e) { return m_impl.push_back(reinterpret_cast<uintptr_t>(e)); }
+    forceinline value_type& emplace_back() { return reinterpret_cast<value_type&>(m_impl.emplace_back()); }
+    forceinline value_type& emplace_back(value_type e) {
+        return reinterpret_cast<value_type&>(m_impl.emplace_back(reinterpret_cast<uintptr_t>(e)));
+    }
     forceinline void pop_back() { m_impl.pop_back(); }
 
     forceinline void erase(const_iterator it) { m_impl.erase(reinterpret_cast<const uintptr_t*>(it)); }

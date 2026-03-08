@@ -326,7 +326,7 @@ McFontImpl::McFontImpl(McFont *parent, int fontSize, bool antialiasing, int font
     : m_parent(parent),
       m_vao(g->createVertexArrayObject(
           (Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS),
-          DrawUsageType::DYNAMIC, false)) {
+          DrawUsageType::DYNAMIC, true)) {
     std::array<char16_t, 96> characters;
     // initialize with basic ASCII, load the rest as needed
     for(int i = 32; i < 128; i++) {
@@ -341,7 +341,7 @@ McFontImpl::McFontImpl(McFont *parent, const std::span<const char16_t> &characte
     : m_parent(parent),
       m_vao(g->createVertexArrayObject(
           (Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS),
-          DrawUsageType::DYNAMIC, false)) {
+          DrawUsageType::DYNAMIC, true)) {
     // don't try to find fallbacks if we had an explicitly-passed character set on construction
     m_bTryFindFallbacks = false;
     constructor(characters, fontSize, antialiasing, fontDPI);
