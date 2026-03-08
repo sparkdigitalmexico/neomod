@@ -118,7 +118,7 @@ static inline std::unique_ptr<char[]> strcpy_u(std::string_view sv) {
     return ret;
 }
 
-static inline std::unique_ptr<char[]> strcpy_u(const char *data) {
+static inline std::unique_ptr<char[]> strcpy_u(const char* data) {
     if(!data) return nullptr;
 
     const size_t len = std::strlen(data);
@@ -133,7 +133,42 @@ static inline std::unique_ptr<char[]> strcpy_u(const char *data) {
 template <typename T>
 concept Integral = std::is_integral_v<T>;
 
-template <Integral T> 
+template <Integral T>
 std::string thousands(T n);
+
+// extern template decls, we only instantiate+compile them in SString.cpp
+
+extern template std::vector<std::string> split<std::string, char>(std::string_view, char);
+extern template std::vector<std::string> split<std::string, const char*>(std::string_view, const char*);
+extern template std::vector<std::string> split<std::string, std::string_view>(std::string_view, std::string_view);
+
+extern template std::vector<std::string_view> split<std::string_view, char>(std::string_view, char);
+extern template std::vector<std::string_view> split<std::string_view, const char*>(std::string_view, const char*);
+extern template std::vector<std::string_view> split<std::string_view, std::string_view>(std::string_view,
+                                                                                        std::string_view);
+
+extern template void split<std::string, char>(std::vector<std::string>&, std::string_view, char, size_t);
+extern template void split<std::string, const char*>(std::vector<std::string>&, std::string_view, const char*, size_t);
+extern template void split<std::string, std::string_view>(std::vector<std::string>&, std::string_view, std::string_view,
+                                                          size_t);
+extern template void split<std::string_view, char>(std::vector<std::string_view>&, std::string_view, char, size_t);
+extern template void split<std::string_view, const char*>(std::vector<std::string_view>&, std::string_view, const char*,
+                                                          size_t);
+extern template void split<std::string_view, std::string_view>(std::vector<std::string_view>&, std::string_view,
+                                                               std::string_view, size_t);
+extern template std::vector<std::string> split_newlines<std::string>(std::string_view);
+extern template std::vector<std::string_view> split_newlines<std::string_view>(std::string_view);
+
+extern template void split_newlines<std::string>(std::vector<std::string>&, std::string_view);
+extern template void split_newlines<std::string_view>(std::vector<std::string_view>&, std::string_view);
+
+extern template std::string join<char>(const std::vector<std::string>&, char);
+extern template std::string join<const char*>(const std::vector<std::string>&, const char*);
+extern template std::string join<std::string_view>(const std::vector<std::string>&, std::string_view);
+
+extern template std::string thousands(int64_t n);
+extern template std::string thousands(uint64_t n);
+extern template std::string thousands(int32_t n);
+extern template std::string thousands(uint32_t n);
 
 }  // namespace SString

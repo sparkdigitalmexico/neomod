@@ -1,8 +1,11 @@
 #pragma once
 // Copyright (c) 2025, kiwec, All rights reserved.
+
+#include "types.h"
+
 #include <string>
 #include <vector>
-#include "types.h"
+#include <memory>
 
 namespace SampleSetType {
 enum {
@@ -51,12 +54,13 @@ struct ResolvedSliderTick {
 };
 
 struct HitSamples final {
-    u8 hitSounds = 0;           // bitfield of HitSoundTypes to play
-    u8 normalSet = 0;           // SampleSetType of the normal sound
-    u8 additionSet = 0;         // SampleSetType of the whistle, finish and clap sounds
-    u8 volume = 0;              // volume of the sample, 1-100. if 0, use timing point volume instead
-    i32 index = 0;              // index of the sample (for custom map sounds). if 0, use skin sound instead
-    std::string filename = "";  // when not empty, ignore all the above mess (except volume) and just play that file
+    u8 hitSounds{0};    // bitfield of HitSoundTypes to play
+    u8 normalSet{0};    // SampleSetType of the normal sound
+    u8 additionSet{0};  // SampleSetType of the whistle, finish and clap sounds
+    u8 volume{0};       // volume of the sample, 1-100. if 0, use timing point volume instead
+    i32 index{0};       // index of the sample (for custom map sounds). if 0, use skin sound instead
+    // when not empty, ignore all the above mess (except volume) and just play that file (TODO: parsed but unused)
+    std::shared_ptr<char[]> filename{nullptr};
 
     struct Set_Slider_Hit {
         i32 set;

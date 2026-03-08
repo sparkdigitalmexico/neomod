@@ -8,11 +8,11 @@
 #include "noinclude.h"
 #include "Vectors.h"
 #include "FixedSizeArray.h"
-#include "StarPrecalc.h"
 
 // TODO: make these utilities available without all of these ifdefs (move all diffcalc things to a lightweight separate directory)
 #ifndef BUILD_TOOLS_ONLY
 
+#include "StarPrecalc.h"
 #include "Overrides.h"
 #include "MD5Hash.h"
 #include "Color.h"
@@ -20,6 +20,11 @@
 #include "SyncStoptoken.h"
 
 #else
+#include <memory>
+#include <stop_token>
+namespace Sync {
+using std::stop_token;
+}
 
 using Color = uint32_t;
 
@@ -50,13 +55,9 @@ struct HitSamples final {
     u8 additionSet = 0;
     u8 volume = 0;
     i32 index = 0;
-    std::string filename = "";
+    std::shared_ptr<char[]> filename{nullptr};
 };
 
-#include <stop_token>
-namespace Sync {
-using std::stop_token;
-}
 #endif
 
 #include <atomic>

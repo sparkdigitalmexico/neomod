@@ -374,8 +374,9 @@ void parse_hitsamples(std::vector<std::string_view> &parts, std::string_view hit
         volume = Parsing::strto<i32>(parts[3]);  // for some reason this can be negative
         samples.volume = std::clamp<u8>(volume, 0, 100);
     }
-    if(parts.size() >= 5) {
-        samples.filename = parts[4];  // filename can be empty
+    if(parts.size() >= 5 && !parts[4].empty()) {
+        // TODO: unused atm
+        samples.filename = SString::strcpy_u(parts[4]);
     }
 };
 

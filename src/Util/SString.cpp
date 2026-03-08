@@ -1,6 +1,7 @@
 // Copyright (c) 2023-2024, kiwec & 2025, WH, All rights reserved.
-
+#if __has_include("config.h")
 #include "config.h"
+#endif
 
 #include "SString.h"
 
