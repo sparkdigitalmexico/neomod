@@ -31,24 +31,35 @@ void SDLGPUVertexArrayObject::init() {
 
     // if already ready, handle partial updates by re-uploading
     if(this->isReady()) {
+        // TODO: colors?
         if(!this->partialUpdateVertexIndices.empty()) {
             for(auto idx : this->partialUpdateVertexIndices) {
                 m_convertedVertices[idx].pos = this->vertices[idx];
             }
 
             // re-upload
-            void *mapped = SDL_MapGPUTransferBuffer(m_device, m_transferBuffer, true);
+            u32 pooledSize = 0;
+            const u32 bufSize = static_cast<u32>(sizeof(SDLGPUSimpleVertex) * m_convertedVertices.size());
+            SDL_GPUTransferBuffer *transferBuffer = m_gpu->acquireUploadTransferBuffer(bufSize, pooledSize);
+            if(!transferBuffer) {
+                engine->showMessageError(US_("SDLGPUVertexArrayObject ERROR"),
+                                         US_("Failed to acquire vertex upload transfer buffer!"));
+                this->partialUpdateVertexIndices.clear();
+                this->partialUpdateColorIndices.clear();
+                return;
+            }
+            void *mapped = SDL_MapGPUTransferBuffer(m_device, transferBuffer, true);
             if(mapped) {
                 std::memcpy(mapped, m_convertedVertices.data(),
                             sizeof(SDLGPUSimpleVertex) * m_convertedVertices.size());
-                SDL_UnmapGPUTransferBuffer(m_device, m_transferBuffer);
+                SDL_UnmapGPUTransferBuffer(m_device, transferBuffer);
             }
 
             auto *cmdBuf = SDL_AcquireGPUCommandBuffer(m_device);
             if(cmdBuf) {
                 auto *copyPass = SDL_BeginGPUCopyPass(cmdBuf);
                 if(copyPass) {
-                    SDL_GPUTransferBufferLocation src{.transfer_buffer = m_transferBuffer, .offset = 0};
+                    SDL_GPUTransferBufferLocation src{.transfer_buffer = transferBuffer, .offset = 0};
                     SDL_GPUBufferRegion dst{
                         .buffer = m_vertexBuffer,
                         .offset = 0,
@@ -59,6 +70,8 @@ void SDLGPUVertexArrayObject::init() {
                 }
                 SDL_SubmitGPUCommandBuffer(cmdBuf);
             }
+
+            m_gpu->releaseUploadTransferBuffer(transferBuffer, pooledSize);
 
             this->partialUpdateVertexIndices.clear();
             this->partialUpdateColorIndices.clear();
@@ -191,39 +204,41 @@ void SDLGPUVertexArrayObject::init() {
         }
     }
 
-    // create transfer buffer
-    if(!m_transferBuffer) {
-        SDL_GPUTransferBufferCreateInfo tbInfo{};
-        tbInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-        tbInfo.size = bufSize;
-
-        m_transferBuffer = SDL_CreateGPUTransferBuffer(m_device, &tbInfo);
-        if(!m_transferBuffer) return;
+    // get temp transfer buffer
+    u32 pooledSize = 0;
+    SDL_GPUTransferBuffer *transferBuffer = m_gpu->acquireUploadTransferBuffer(bufSize, pooledSize);
+    if(!transferBuffer) {
+        engine->showMessageError(US_("SDLGPUVertexArrayObject ERROR"),
+                                 US_("Failed to acquire vertex upload transfer buffer!"));
+        return;
     }
 
     // upload data
-    void *mapped = SDL_MapGPUTransferBuffer(m_device, m_transferBuffer, false);
+    void *mapped = SDL_MapGPUTransferBuffer(m_device, transferBuffer, true);
     if(mapped) {
         std::memcpy(mapped, m_convertedVertices.data(), bufSize);
-        SDL_UnmapGPUTransferBuffer(m_device, m_transferBuffer);
+        SDL_UnmapGPUTransferBuffer(m_device, transferBuffer);
     }
 
     auto *cmdBuf = SDL_AcquireGPUCommandBuffer(m_device);
     if(cmdBuf) {
         auto *copyPass = SDL_BeginGPUCopyPass(cmdBuf);
         if(copyPass) {
-            SDL_GPUTransferBufferLocation src{.transfer_buffer = m_transferBuffer, .offset = 0};
+            SDL_GPUTransferBufferLocation src{.transfer_buffer = transferBuffer, .offset = 0};
             SDL_GPUBufferRegion dst{.buffer = m_vertexBuffer, .offset = 0, .size = bufSize};
-            SDL_UploadToGPUBuffer(copyPass, &src, &dst, false);
+            SDL_UploadToGPUBuffer(copyPass, &src, &dst, this->bKeepInSystemMemory);
             SDL_EndGPUCopyPass(copyPass);
         }
         SDL_SubmitGPUCommandBuffer(cmdBuf);
     }
 
+    m_gpu->releaseUploadTransferBuffer(transferBuffer, pooledSize);
+
     // free system memory
     if(!this->bKeepInSystemMemory) {
         this->clear();
         m_convertedVertices.clear();
+        m_convertedVertices.shrink_to_fit();
     }
 
     this->setReady(true);
@@ -234,10 +249,6 @@ void SDLGPUVertexArrayObject::initAsync() { this->setAsyncReady(true); }
 void SDLGPUVertexArrayObject::destroy() {
     VertexArrayObject::destroy();
 
-    if(m_transferBuffer) {
-        SDL_ReleaseGPUTransferBuffer(m_device, m_transferBuffer);
-        m_transferBuffer = nullptr;
-    }
     if(m_vertexBuffer) {
         SDL_ReleaseGPUBuffer(m_device, m_vertexBuffer);
         m_vertexBuffer = nullptr;

@@ -20,7 +20,6 @@ void VertexArrayObject::destroy() {
 void VertexArrayObject::clear() {
     this->iNumVertices = this->vertices.size();
     this->bHasTexcoords = !this->texcoords.empty();
-
     this->vertices.clear();
     this->texcoords.clear();
     this->normals.clear();
@@ -29,6 +28,15 @@ void VertexArrayObject::clear() {
     this->partialUpdateVertexIndices.clear();
     this->partialUpdateColorIndices.clear();
 
+    if(!this->bKeepInSystemMemory) {
+        this->vertices.shrink_to_fit();
+        this->texcoords.shrink_to_fit();
+        this->normals.shrink_to_fit();
+        this->colors.shrink_to_fit();
+
+        this->partialUpdateVertexIndices.shrink_to_fit();
+        this->partialUpdateColorIndices.shrink_to_fit();
+    }
     // NOTE: do NOT set m_iNumVertices to 0! (also don't change m_bHasTexcoords)
 }
 
@@ -66,7 +74,6 @@ void VertexArrayObject::addColors(Mc::CDynArray<Color> colors) noexcept {
     Mc::append_range(this->colors, std::move(colors));
 }
 
-
 void VertexArrayObject::addVertices(std::span<const vec3> vertices) noexcept {
     Mc::append_range(this->vertices, vertices);
     this->iNumVertices = this->vertices.size();
@@ -93,6 +100,38 @@ void VertexArrayObject::setTexcoords(std::span<const vec2> texcoords) noexcept {
 void VertexArrayObject::setNormals(std::span<const vec3> normals) noexcept { Mc::assign_range(this->normals, normals); }
 
 void VertexArrayObject::setColors(std::span<const Color> colors) noexcept { Mc::assign_range(this->colors, colors); }
+
+void VertexArrayObject::setVertices(Mc::CDynArray<vec3> &&vertices) noexcept {
+    this->vertices = std::move(vertices);
+    this->iNumVertices = this->vertices.size();
+}
+
+void VertexArrayObject::setTexcoords(Mc::CDynArray<vec2> &&texcoords) noexcept {
+    this->texcoords = std::move(texcoords);
+    this->bHasTexcoords = !this->texcoords.empty();
+}
+
+void VertexArrayObject::setNormals(Mc::CDynArray<vec3> &&normals) noexcept { this->normals = std::move(normals); }
+
+void VertexArrayObject::setColors(Mc::CDynArray<Color> &&colors) noexcept { this->colors = std::move(colors); }
+
+void VertexArrayObject::setVertices(const Mc::CDynArray<vec3> &vertices) noexcept {
+    Mc::assign_range(this->vertices, vertices);
+    this->iNumVertices = this->vertices.size();
+}
+
+void VertexArrayObject::setTexcoords(const Mc::CDynArray<vec2> &texcoords) noexcept {
+    Mc::assign_range(this->texcoords, texcoords);
+    this->bHasTexcoords = !this->texcoords.empty();
+}
+
+void VertexArrayObject::setNormals(const Mc::CDynArray<vec3> &normals) noexcept {
+    Mc::assign_range(this->normals, normals);
+}
+
+void VertexArrayObject::setColors(const Mc::CDynArray<Color> &colors) noexcept {
+    Mc::assign_range(this->colors, colors);
+}
 
 void VertexArrayObject::setVertex(int index, vec2 v) noexcept {
     if(index < 0 || index > (this->vertices.size() - 1)) return;

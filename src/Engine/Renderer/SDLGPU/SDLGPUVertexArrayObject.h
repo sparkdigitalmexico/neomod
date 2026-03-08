@@ -18,7 +18,6 @@
 struct SDLGPUSimpleVertex;
 
 typedef struct SDL_GPUBuffer SDL_GPUBuffer;
-typedef struct SDL_GPUTransferBuffer SDL_GPUTransferBuffer;
 typedef struct SDL_GPUDevice SDL_GPUDevice;
 
 class SDLGPUInterface;
@@ -47,7 +46,6 @@ class SDLGPUVertexArrayObject final : public VertexArrayObject {
 
     Mc::CDynArray<SDLGPUSimpleVertex> m_convertedVertices;
     SDL_GPUBuffer *m_vertexBuffer{nullptr};
-    SDL_GPUTransferBuffer *m_transferBuffer{nullptr};
     DrawPrimitive m_convertedPrimitive;
 };
 

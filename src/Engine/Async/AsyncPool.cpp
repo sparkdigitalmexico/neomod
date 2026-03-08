@@ -7,21 +7,12 @@
 
 #include <cassert>
 
-static AsyncPool *s_pool{nullptr};
-
-namespace Async {
-
-AsyncPool &pool() {
-    assert(s_pool && "Async::pool() called before AsyncPool was created");
-    return *s_pool;
+AsyncPool &AsyncPool::get() {
+    static AsyncPool instance{std::clamp<size_t>(McThread::get_logical_cpu_count() - 1, 2, 32)};
+    return instance;
 }
 
-}  // namespace Async
-
 AsyncPool::AsyncPool(size_t thread_count) {
-    assert(!s_pool && "only one AsyncPool instance allowed");
-    s_pool = this;
-
     const size_t bg = std::clamp<size_t>(thread_count / 4, 1, 8);
     const size_t fg = thread_count - bg;
 
@@ -38,10 +29,7 @@ AsyncPool::AsyncPool(size_t thread_count) {
     debugLog("AsyncPool: started {} worker threads ({} fg, {} bg)", thread_count, fg, bg);
 }
 
-AsyncPool::~AsyncPool() {
-    shutdown();
-    s_pool = nullptr;
-}
+AsyncPool::~AsyncPool() { shutdown(); }
 
 void AsyncPool::shutdown() {
     {

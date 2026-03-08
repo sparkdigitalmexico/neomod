@@ -98,12 +98,6 @@ Engine::Engine() {
         directoryWatcher = std::make_unique<DirectoryWatcher>();
         this->runtime_assert(!!io && io->succeeded() && !!directoryWatcher, "I/O subsystem failed to initialize!");
 
-        // async thread pool
-        {
-            const size_t poolThreads = std::clamp<size_t>(McThread::get_logical_cpu_count() - 1, 2, 32);
-            m_asyncPool = std::make_unique<AsyncPool>(poolThreads);
-        }
-
         // shared freetype init
         this->runtime_assert(McFont::initSharedResources(), "FreeType failed to initialize!");
 
@@ -177,8 +171,8 @@ Engine::~Engine() {
     debugLog("Engine: Freeing resource manager...");
     resourceManager.reset();
 
-    debugLog("Engine: Freeing async pool...");
-    m_asyncPool.reset();
+    debugLog("Engine: Stopping threads...");
+    AsyncPool::get().shutdown();
 
     debugLog("Engine: Freeing Sound...");
     soundEngine.reset();

@@ -9,8 +9,8 @@
 
 // NOLINTBEGIN(misc-definitions-in-headers)
 
-#if !defined(CONVAR_H) && \
-    (defined(_CLANGD) || defined(Q_CREATOR_RUN) || defined(__INTELLISENSE__) || defined(__CDT_PARSER__) || defined(__clang_analyzer__))
+#if !defined(CONVAR_H) && (defined(_CLANGD) || defined(Q_CREATOR_RUN) || defined(__INTELLISENSE__) || \
+                           defined(__CDT_PARSER__) || defined(__clang_analyzer__))
 #define DEFINE_CONVARS
 #include "ConVar.h"
 
@@ -192,6 +192,7 @@ CONVAR(debug_shaders, false, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(debug_vprof, false, CLIENT | SERVER);
 CONVAR(debug_opengl, false, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(debug_snd, false, CLIENT | NOSAVE);
+CONVAR(debug_disable_async_free, false, CLIENT | SERVER);
 CONVAR(r_3dscene_zf, 5000.0f, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(r_3dscene_zn, 5.0f, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(r_debug_disable_3dscene, false, CLIENT | PROTECTED | GAMEPLAY);

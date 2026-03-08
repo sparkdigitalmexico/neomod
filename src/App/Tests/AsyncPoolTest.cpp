@@ -160,7 +160,7 @@ void AsyncPoolTest::runSyncTests() {
 
     TEST_SECTION("thread_count");
     {
-        TEST_ASSERT(Async::pool().thread_count() >= 1, "pool has at least 1 thread");
+        TEST_ASSERT(AsyncPool::get().thread_count() >= 1, "pool has at least 1 thread");
     }
 
     TEST_SECTION("submit_cancellable");
@@ -218,7 +218,7 @@ void AsyncPoolTest::runSyncTests() {
 
     TEST_SECTION("thread_count >= 2");
     {
-        TEST_ASSERT(Async::pool().thread_count() >= 2, "pool has at least 2 threads");
+        TEST_ASSERT(AsyncPool::get().thread_count() >= 2, "pool has at least 2 threads");
     }
 
     TEST_SECTION("channel push + drain");

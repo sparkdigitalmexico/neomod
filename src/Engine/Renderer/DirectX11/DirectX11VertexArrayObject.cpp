@@ -250,6 +250,7 @@ void DirectX11VertexArrayObject::init() {
     if(!this->bKeepInSystemMemory) {
         this->clear();
         this->convertedVertices.clear();
+        this->convertedVertices.shrink_to_fit();
     }
 
     this->setReady(true);

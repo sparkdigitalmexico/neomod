@@ -140,25 +140,36 @@ std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, 
 
     const bool debugSquareVao = cv::slider_debug_draw_square_vao.getBool();
 
+    const auto &triangleMeshVerts = s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices();
+    const auto &triangleMeshTCs = s_UNIT_CIRCLE_VAO_TRIANGLES.getTexcoords();
+    Mc::CDynArray<vec2> tempTexCoords{triangleMeshTCs.size() * points.size()};
+    Mc::CDynArray<vec3> tempMeshVerts{triangleMeshVerts.size() * points.size()};
+
+    const float screenMinX = -hitcircleDiameter - GameRules::OSU_COORD_WIDTH * 2;
+    const float screenMaxX = osu->getVirtScreenWidth() + hitcircleDiameter + GameRules::OSU_COORD_WIDTH * 2;
+    const float screenMinY = -hitcircleDiameter - GameRules::OSU_COORD_HEIGHT * 2;
+    const float screenMaxY = osu->getVirtScreenHeight() + hitcircleDiameter + GameRules::OSU_COORD_HEIGHT * 2;
+
+    size_t tempMeshVertOffset = 0;
+    size_t tempMeshTCOffset = 0;
     for(const auto &point : points) {
         // fuck oob sliders
         if(skipOOBPoints) {
-            if(point.x < -hitcircleDiameter - GameRules::OSU_COORD_WIDTH * 2 ||
-               point.x > osu->getVirtScreenWidth() + hitcircleDiameter + GameRules::OSU_COORD_WIDTH * 2 ||
-               point.y < -hitcircleDiameter - GameRules::OSU_COORD_HEIGHT * 2 ||
-               point.y > osu->getVirtScreenHeight() + hitcircleDiameter + GameRules::OSU_COORD_HEIGHT * 2)
+            if(point.x < screenMinX ||  //
+               point.x > screenMaxX ||  //
+               point.y < screenMinY ||  //
+               point.y > screenMaxY) {  //
                 continue;
+            }
         }
 
         if(!debugSquareVao) {
-            Mc::CDynArray<vec3> meshVertices{s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().begin(),
-                                             s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().end()};
-            for(auto &meshVertex : meshVertices) {
-                meshVertex += vec3(point.x, point.y, 0) + translation;
+            for(const auto &meshVertex : triangleMeshVerts) {
+                tempMeshVerts[tempMeshVertOffset++] = (meshVertex + vec3(point.x, point.y, 0) + translation);
             }
-            vao->addVertices(std::move(meshVertices));
-
-            vao->addTexcoords(s_UNIT_CIRCLE_VAO_TRIANGLES.getTexcoords());
+            std::memcpy(&tempTexCoords[tempMeshTCOffset], triangleMeshTCs.data(),
+                        triangleMeshTCs.size() * sizeof(vec2));
+            tempMeshTCOffset += triangleMeshTCs.size();
         } else {
             const vec3 topLeft = vec3(point.x, point.y, 0) - xOffset / 2.0f - yOffset / 2.0f + translation;
             const vec3 topRight = topLeft + xOffset;
@@ -185,10 +196,20 @@ std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, 
         }
     }
 
-    if(vao->getNumVertices() > 0)
+    if(!debugSquareVao) {
+        tempMeshVerts.resize(tempMeshVertOffset);
+        tempMeshVerts.shrink_to_fit();
+        tempTexCoords.resize(tempMeshTCOffset);
+        tempTexCoords.shrink_to_fit();
+        vao->setVertices(std::move(tempMeshVerts));
+        vao->setTexcoords(std::move(tempTexCoords));
+    }
+
+    if(vao->getNumVertices() > 0) {
         resourceManager->loadResource(vao.get());
-    else
+    } else {
         debugLog("generateSliderVAO() ERROR: Zero triangles!");
+    }
 
     return vao;
 }

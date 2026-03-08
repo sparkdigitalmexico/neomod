@@ -60,11 +60,13 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
 
     void assign(uSz num, const T& value);
 
-    template <std::forward_iterator InputIt>
+    template <std::contiguous_iterator InputIt>
     really_forceinline void assign(InputIt first, InputIt last) {
         const uSz count = static_cast<uSz>(std::distance(first, last));
         this->resize(count);
-        for(T* dest = this->data(); first != last; ++first, ++dest) *dest = *first;
+        if(count == 0) return;
+        const auto* src = std::to_address(first);
+        std::memmove(static_cast<void*>(this->data()), static_cast<const void*>(src), count * sizeof(T));
     }
 
     void clear();
@@ -93,7 +95,7 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
 
     iterator insert(const_iterator pos, uSz n, const value_type& x) noexcept;
 
-    template <std::forward_iterator InputIt>
+    template <std::contiguous_iterator InputIt>
     really_forceinline iterator insert(const_iterator pos, InputIt first, InputIt last) {
         const uSz offset = static_cast<uSz>(pos - this->cbegin());
         const uSz count = static_cast<uSz>(std::distance(first, last));
@@ -155,7 +157,7 @@ struct CDynArray<T*> final {
 
     forceinline void assign(uSz num, const T& value) { m_impl.assign(num, value); }
 
-    template <std::forward_iterator InputIt>
+    template <std::contiguous_iterator InputIt>
     really_forceinline void assign(InputIt first, InputIt last) {
         const uSz count = static_cast<uSz>(std::distance(first, last));
         m_impl.resize(count);
@@ -170,7 +172,7 @@ struct CDynArray<T*> final {
         return m_impl.insert(reinterpret_cast<const uintptr_t*>(pos), n, x);
     };
 
-    template <std::forward_iterator InputIt>
+    template <std::contiguous_iterator InputIt>
     really_forceinline iterator insert(const_iterator pos, InputIt first, InputIt last) {
         const uSz offset = static_cast<uSz>(pos - cbegin());
         const uSz count = static_cast<uSz>(std::distance(first, last));

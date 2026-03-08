@@ -58,8 +58,12 @@ class AsyncPool final {
         void execute() noexcept override { this->work(); }
     };
 
-   public:
     explicit AsyncPool(size_t thread_count);
+
+   public:
+    static AsyncPool& get();  // single instance
+
+    AsyncPool() = delete;
     ~AsyncPool();
 
     // submit work, get a future back
@@ -140,20 +144,18 @@ class AsyncPool final {
 };
 
 // ---------------------------------------------------------------------------
-// free-function API via global pool pointer
+// free-function API
 // ---------------------------------------------------------------------------
 namespace Async {
 
-AsyncPool& pool();
-
 template <typename F>
 auto submit(F&& f, Lane lane = Lane::Foreground) -> Future<std::invoke_result_t<F>> {
-    return pool().submit(std::forward<F>(f), lane);
+    return AsyncPool::get().submit(std::forward<F>(f), lane);
 }
 
 template <typename F>
 void dispatch(F&& f, Lane lane = Lane::Foreground) {
-    pool().dispatch(std::forward<F>(f), lane);
+    AsyncPool::get().dispatch(std::forward<F>(f), lane);
 }
 
 // cancellable submit: composes submit() with a stop_source.
@@ -166,14 +168,14 @@ auto submit_cancellable(F&& f, Lane lane = Lane::Foreground)
     Sync::stop_source source;
     auto token = source.get_token();
 
-    auto future =
-        pool().submit([func = std::forward<F>(f), tok = std::move(token)]() mutable -> T { return func(tok); }, lane);
+    auto future = AsyncPool::get().submit(
+        [func = std::forward<F>(f), tok = std::move(token)]() mutable -> T { return func(tok); }, lane);
 
     return CancellableHandle<T>(std::move(future), std::move(source));
 }
 
-inline void queue_main(std::function<void()> fn) { pool().queue_main(std::move(fn)); }
-inline void update() { pool().update(); }
+inline void queue_main(std::function<void()> fn) { AsyncPool::get().queue_main(std::move(fn)); }
+inline void update() { AsyncPool::get().update(); }
 
 // ---------------------------------------------------------------------------
 // make_ready_future: create a future that is immediately ready

@@ -64,6 +64,16 @@ class VertexArrayObject : public Resource {
     void setNormals(std::span<const vec3> normals) noexcept;
     void setColors(std::span<const Color> colors) noexcept;
 
+    void setVertices(Mc::CDynArray<vec3> &&vertices) noexcept;
+    void setTexcoords(Mc::CDynArray<vec2> &&texcoords) noexcept;
+    void setNormals(Mc::CDynArray<vec3> &&normals) noexcept;
+    void setColors(Mc::CDynArray<Color> &&colors) noexcept;
+
+    void setVertices(const Mc::CDynArray<vec3> &vertices) noexcept;
+    void setTexcoords(const Mc::CDynArray<vec2> &texcoords) noexcept;
+    void setNormals(const Mc::CDynArray<vec3> &normals) noexcept;
+    void setColors(const Mc::CDynArray<Color> &colors) noexcept;
+
     void setColor(int index, Color color) noexcept;
 
     inline void setType(DrawPrimitive primitive) noexcept { this->primitive = primitive; }
