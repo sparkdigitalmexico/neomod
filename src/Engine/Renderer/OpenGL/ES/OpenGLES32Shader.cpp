@@ -12,6 +12,7 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "Logging.h"
+#include "Matrices.h"
 
 #include "OpenGLHeaders.h"
 #include "OpenGLES32Interface.h"

@@ -23,6 +23,8 @@
 #include "OpenGLRenderTarget.h"
 #include "OpenGLStateCache.h"
 
+#include "Graphics_private.h"
+
 #include "SDLGLInterface.h"
 
 #include "binary_embed.h"
@@ -302,7 +304,7 @@ void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, floa
         this->smoothClipShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
 
         // set mvp for the shader
-        this->smoothClipShader->setMVP(this->MP);
+        this->smoothClipShader->setMVP(m_data->MP);
     }
 
     static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
@@ -567,8 +569,8 @@ void OpenGLES32Interface::popClipRect() {
 }
 
 void OpenGLES32Interface::pushViewport() {
-    this->viewportStack.push_back(GLStateCache::getCurrentViewport());
-    this->resolutionStack.push_back(m_vResolution);
+    m_data->viewportStack.push_back(GLStateCache::getCurrentViewport());
+    m_data->resolutionStack.push_back(m_vResolution);
 }
 
 void OpenGLES32Interface::setViewport(int x, int y, int width, int height) {
@@ -577,16 +579,16 @@ void OpenGLES32Interface::setViewport(int x, int y, int width, int height) {
 }
 
 void OpenGLES32Interface::popViewport() {
-    if(this->viewportStack.empty() || this->resolutionStack.empty()) {
+    if(m_data->viewportStack.empty() || m_data->resolutionStack.empty()) {
         debugLog("WARNING: viewport stack underflow!");
         return;
     }
 
-    m_vResolution = this->resolutionStack.back();
-    this->resolutionStack.pop_back();
+    m_vResolution = m_data->resolutionStack.back();
+    m_data->resolutionStack.pop_back();
 
-    GLStateCache::setViewport(this->viewportStack.back());
-    this->viewportStack.pop_back();
+    GLStateCache::setViewport(m_data->viewportStack.back());
+    m_data->viewportStack.pop_back();
 }
 
 void OpenGLES32Interface::pushStencil() {
@@ -779,9 +781,9 @@ void OpenGLES32Interface::onResolutionChange(vec2 newResolution) {
 
     // special case: custom rendertarget resolution rendering, update active projection matrix immediately
     if(m_bInScene) {
-        this->projectionTransformStack.back() =
+        m_data->projectionTransformStack.back() =
             Camera::buildMatrixOrtho2D(0, m_vResolution.x, m_vResolution.y, 0, -1.0f, 1.0f);
-        this->bTransformUpToDate = false;
+        m_data->bTransformUpToDate = false;
     }
 }
 
@@ -818,7 +820,7 @@ VertexArrayObject *OpenGLES32Interface::createVertexArrayObject(DrawPrimitive pr
 
 void OpenGLES32Interface::onTransformUpdate() {
     // always update default shader
-    if(m_shaderTexturedGeneric) m_shaderTexturedGeneric->setMVP(this->MP);
+    if(m_shaderTexturedGeneric) m_shaderTexturedGeneric->setMVP(m_data->MP);
 
     // update all registered shaders, including the default one
     updateAllShaderTransforms();
@@ -852,7 +854,7 @@ void OpenGLES32Interface::unregisterShader(OpenGLES32Shader *shader) {
 void OpenGLES32Interface::updateAllShaderTransforms() {
     for(size_t i = 0; i < m_registeredShaders.size(); i++) {
         if(m_registeredShaders[i]->isActive()) {
-            m_registeredShaders[i]->setMVP(this->MP);
+            m_registeredShaders[i]->setMVP(m_data->MP);
         }
     }
 }

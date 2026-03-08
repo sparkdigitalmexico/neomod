@@ -373,7 +373,7 @@ void SkinImage::setAnimationFrameClampUp() {
 
 vec2 SkinImage::getSize(bool animated) const {
     if(this->images.size() > 0)
-        return this->getImageForCurrentFrame(animated).img->getSize() * this->getScale();
+        return vec2{this->getImageForCurrentFrame(animated).img->getSize()} * this->getScale();
     else
         return this->getSizeBase();
 }

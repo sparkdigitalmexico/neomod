@@ -5,7 +5,7 @@
 #include "noinclude.h"
 
 #include "OsuConfig.h"
-#include "Vectors.h"
+#include "Vectors_fwd.h"
 #include "Hashing.h"
 
 #include <memory>

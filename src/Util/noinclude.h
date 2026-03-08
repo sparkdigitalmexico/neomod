@@ -95,6 +95,57 @@ inline bool isInt(float f) { return (f == static_cast<float>(static_cast<int>(f)
 #define MC_ASSUME(expr) __assume(expr)
 #endif
 
+#ifdef __AVX512F__
+#define OPTIMAL_UNROLL 10
+#elif defined(__AVX__)
+#define OPTIMAL_UNROLL 8
+#elif defined(__SSE__)
+#define OPTIMAL_UNROLL 6
+#else
+#define OPTIMAL_UNROLL 4
+#endif
+
+#define MC_QUOTE(s) #s
+#define MC_STRINGIZE(s) MC_QUOTE(s)
+
+#define MC_DO_PRAGMA(x) _Pragma(MC_STRINGIZE(x))
+#define MC_MESSAGE(msg) MC_DO_PRAGMA(message(msg))
+
+#if defined(__GNUC__) || defined(__clang__)
+#ifdef __clang__
+#define MC_VECTORIZE_LOOP MC_DO_PRAGMA(clang loop vectorize(enable))
+#define MC_UNR_cnt(num) MC_DO_PRAGMA(clang loop unroll_count(num))
+#define NULL_PUSH
+#define NULL_POP
+#else
+#define MC_VECTORIZE_LOOP MC_DO_PRAGMA(GCC ivdep)
+#define MC_UNR_cnt(num) MC_DO_PRAGMA(GCC unroll num)
+#define NULL_PUSH MC_DO_PRAGMA(GCC diagnostic ignored "-Wformat") MC_DO_PRAGMA(GCC diagnostic push)
+#define NULL_POP MC_DO_PRAGMA(GCC diagnostic pop)
+#endif
+
+#define MC_VEC_UNR_cnt(num) MC_VECTORIZE_LOOP MC_UNR_cnt(num)
+#define MC_UNROLL_VECTOR MC_VEC_UNR_cnt(OPTIMAL_UNROLL)
+#define MC_UNROLL MC_UNR_cnt(OPTIMAL_UNROLL)
+
+#ifdef _OPENMP
+#define ACCUMULATE(op, var) MC_DO_PRAGMA(omp simd reduction(op : var))  // use openmp if available, otherwise unroll
+#else
+#define ACCUMULATE(op, var) MC_UNR_cnt(OPTIMAL_UNROLL)
+#endif
+
+#else
+
+#define MC_VECTORIZE_LOOP
+#define MC_UNR_cnt(num)
+#define MC_VEC_UNR_cnt(num)
+#define MC_UNROLL_VECTOR
+#define MC_UNROLL
+#define NULL_PUSH
+#define NULL_POP
+#define ACCUMULATE(op, var)
+#endif  // defined(__GNUC__) || defined(__clang__)
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #pragma execution_character_set("utf-8")  // msvc wrangling

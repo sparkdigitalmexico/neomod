@@ -19,7 +19,8 @@ SOURCES = \
 	$(SRCDIR)/App/Neomod/GameRules.cpp \
 	$(SRCDIR)/App/Neomod/SliderCurves.cpp \
 	$(SRCDIR)/App/Neomod/Tools/DiffCalcTool.cpp \
-	$(SRCDIR)/Util/SString.cpp
+	$(SRCDIR)/Util/SString.cpp \
+	$(SRCDIR)/Util/Vectors.cpp
 
 OBJDIR = obj
 BINDIR = bin

@@ -1,141 +1,92 @@
 #pragma once
 // Copyright (c) 2012, PG, All rights reserved.
+#include "config.h"
 #include "noinclude.h"
 #include "Vectors.h"
 
+#ifndef BUILD_TOOLS_ONLY
+#include "fmt/format.h"
+#include "fmt/compile.h"
+#endif
+
 template <typename Vec = vec2>
 class McRectBase {
-    using scalar = typename Vec::value_type;
+    using scalar = Vec::value_type;
 
    public:
-    constexpr McRectBase(scalar x = 0, scalar y = 0, scalar width = 0, scalar height = 0, bool isCentered = false) {
-        this->set(x, y, width, height, isCentered);
-    }
+    McRectBase(scalar x = 0, scalar y = 0, scalar width = 0, scalar height = 0, bool isCentered = false);
+    McRectBase(Vec pos, Vec size, bool isCentered = false);
 
-    constexpr McRectBase(Vec pos, Vec size, bool isCentered = false) { this->set(pos, size, isCentered); }
+    ~McRectBase();
+    McRectBase(const McRectBase &);
+    McRectBase &operator=(const McRectBase &);
+    McRectBase(McRectBase &&) noexcept;
+    McRectBase &operator=(McRectBase &&) noexcept;
 
     template <typename OtherVec>
         requires(!std::is_same_v<OtherVec, Vec>)
-    constexpr McRectBase(const McRectBase<OtherVec> &other) : vMin(other.vMin), vSize(other.vSize) {}
+    McRectBase(const McRectBase<OtherVec> &other);
 
     // grow to a union of another rect
-    inline void grow(const McRectBase &other) {
-        const Vec oldMax = this->vMin + this->vSize;
-        const Vec otherMax = other.vMin + other.vSize;
-
-        this->vMin = vec::min(this->vMin, other.vMin);
-        Vec resultMax = vec::max(oldMax, otherMax);
-        this->vSize = resultMax - this->vMin;
-    }
+    void grow(const McRectBase &other);
 
     // grow to include a point
-    inline void grow(Vec point) {
-        const Vec oldMax = this->vMin + this->vSize;
-        this->vMin = vec::min(this->vMin, point);
-        this->vSize = vec::max(oldMax, point) - this->vMin;
-    }
+    void grow(Vec point);
 
     // loosely within (inside or equals (+ lenience amount))
-    [[nodiscard]] inline bool contains(Vec point, scalar lenience = 0) const {
-        return vec::all(vec::greaterThanEqual(point + lenience, this->vMin)) &&
-               vec::all(vec::lessThanEqual(point - lenience, this->vMin + this->vSize));
-    }
+    [[nodiscard]] bool contains(Vec point, scalar lenience = 0) const;
 
     // strictly within (not or-equal)
-    [[nodiscard]] inline bool containsStrict(Vec point) const {
-        return vec::all(vec::greaterThan(point, this->vMin)) &&
-               vec::all(vec::lessThan(point, this->vMin + this->vSize));
-    }
+    [[nodiscard]] bool containsStrict(Vec point) const;
 
-    [[nodiscard]] forceinline bool intersects(const McRectBase &rect) const {
-        const Vec maxMin = vec::max(this->vMin, rect.vMin);
-        const Vec minMax = vec::min(this->vMin + this->vSize, rect.vMin + rect.vSize);
-        return maxMin.x < minMax.x && maxMin.y < minMax.y;
-    }
+    [[nodiscard]] bool intersects(const McRectBase &rect) const;
 
-    [[nodiscard]] McRectBase intersect(const McRectBase &rect) const {
-        McRectBase intersection;
+    [[nodiscard]] McRectBase intersect(const McRectBase &rect) const;
 
-        Vec thisMax = this->vMin + this->vSize;
-        Vec rectMax = rect.vMin + rect.vSize;
+    [[nodiscard]] McRectBase Union(const McRectBase &other) const;
 
-        intersection.vMin = vec::max(this->vMin, rect.vMin);
-        Vec intersectMax = vec::min(thisMax, rectMax);
-
-        if(vec::any(vec::greaterThan(intersection.vMin, intersectMax))) {
-            intersection.vMin = Vec{0};
-            intersection.vSize = Vec{0};
-        } else {
-            intersection.vSize = intersectMax - intersection.vMin;
-        }
-
-        return intersection;
-    }
-
-    [[nodiscard]] McRectBase Union(const McRectBase &other) const {
-        McRectBase result;
-
-        Vec thisMax = this->vMin + this->vSize;
-        Vec rectMax = other.vMin + other.vSize;
-
-        result.vMin = vec::min(this->vMin, other.vMin);
-        Vec resultMax = vec::max(thisMax, rectMax);
-        result.vSize = resultMax - result.vMin;
-
-        return result;
-    }
-
-    [[nodiscard]] inline Vec getCenter() const { return this->vMin + this->vSize / scalar(2); }
-    [[nodiscard]] inline Vec getMax() const { return this->vMin + this->vSize; }
+    [[nodiscard]] Vec getCenter() const;
+    [[nodiscard]] Vec getMax() const;
 
     // get
-    [[nodiscard]] constexpr const Vec &getPos() const { return this->vMin; }
-    [[nodiscard]] constexpr const Vec &getMin() const { return this->vMin; }
-    [[nodiscard]] constexpr const Vec &getSize() const { return this->vSize; }
+    [[nodiscard]] const Vec &getPos() const;
+    [[nodiscard]] const Vec &getMin() const;
+    [[nodiscard]] const Vec &getSize() const;
 
-    [[nodiscard]] constexpr const scalar &getX() const { return this->vMin.x; }
-    [[nodiscard]] constexpr const scalar &getY() const { return this->vMin.y; }
-    [[nodiscard]] constexpr const scalar &getMinX() const { return this->vMin.x; }
-    [[nodiscard]] constexpr const scalar &getMinY() const { return this->vMin.y; }
+    [[nodiscard]] const scalar &getX() const;
+    [[nodiscard]] const scalar &getY() const;
+    [[nodiscard]] const scalar &getMinX() const;
+    [[nodiscard]] const scalar &getMinY() const;
 
-    [[nodiscard]] inline scalar getMaxX() const { return this->vMin.x + this->vSize.x; }
-    [[nodiscard]] inline scalar getMaxY() const { return this->vMin.y + this->vSize.y; }
+    [[nodiscard]] scalar getMaxX() const;
+    [[nodiscard]] scalar getMaxY() const;
 
-    [[nodiscard]] constexpr const scalar &getWidth() const { return this->vSize.x; }
-    [[nodiscard]] constexpr const scalar &getHeight() const { return this->vSize.y; }
+    [[nodiscard]] const scalar &getWidth() const;
+    [[nodiscard]] const scalar &getHeight() const;
 
     // set
-    inline void setMin(Vec min) { this->vMin = min; }
-    inline void setMax(Vec max) { this->vSize = max - this->vMin; }
-    inline void setMinX(scalar minx) { this->vMin.x = minx; }
-    inline void setMinY(scalar miny) { this->vMin.y = miny; }
-    inline void setMaxX(scalar maxx) { this->vSize.x = maxx - this->vMin.x; }
-    inline void setMaxY(scalar maxy) { this->vSize.y = maxy - this->vMin.y; }
-    inline void setPos(Vec pos) { this->vMin = pos; }
-    inline void setPosX(scalar posx) { this->vMin.x = posx; }
-    inline void setPosY(scalar posy) { this->vMin.y = posy; }
-    inline void setSize(Vec size) { this->vSize = size; }
-    inline void setWidth(scalar width) { this->vSize.x = width; }
-    inline void setHeight(scalar height) { this->vSize.y = height; }
+    void setMin(Vec min);
+    void setMax(Vec max);
+    void setMinX(scalar minx);
+    void setMinY(scalar miny);
+    void setMaxX(scalar maxx);
+    void setMaxY(scalar maxy);
+    void setPos(Vec pos);
+    void setPosX(scalar posx);
+    void setPosY(scalar posy);
+    void setSize(Vec size);
+    void setWidth(scalar width);
+    void setHeight(scalar height);
 
-    bool operator==(const McRectBase &rhs) const { return (this->vMin == rhs.vMin) && (this->vSize == rhs.vSize); }
+    [[nodiscard]] bool operator==(const McRectBase &rhs) const;
 
    private:
-    constexpr void set(scalar x, scalar y, scalar width, scalar height, bool isCentered = false) {
-        this->set(Vec(x, y), Vec(width, height), isCentered);
-    }
+    void set(scalar x, scalar y, scalar width, scalar height, bool isCentered = false);
 
-    constexpr void set(Vec pos, Vec size, bool isCentered = false) {
-        if(isCentered) {
-            this->vMin = pos - size / scalar(2);
-        } else {
-            this->vMin = pos;
-        }
-        this->vSize = size;
-    }
+    void set(Vec pos, Vec size, bool isCentered = false);
 
-    Vec vMin{0};
-    Vec vSize{0};
+    Vec vMin;
+    Vec vSize;
 
     template <typename>
     friend class McRectBase;
@@ -145,6 +96,9 @@ class McRectBase {
     friend struct fmt::formatter;
 #endif
 };
+
+extern template class McRectBase<vec2>;
+extern template class McRectBase<ivec2>;
 
 using McRect = McRectBase<vec2>;
 using McFRect = McRectBase<vec2>;
@@ -161,7 +115,7 @@ struct formatter<McRectBase<Vec>> {
 
     template <typename FormatContext>
     auto format(const McRectBase<Vec> &r, FormatContext &ctx) const {
-        if constexpr(std::is_floating_point_v<typename Vec::value_type>) {
+        if constexpr(std::is_floating_point_v<typename McRectBase<Vec>::scalar>) {
             return format_to(ctx.out(), "({:.2f},{:.2f}): {:.2f}x{:.2f}"_cf, r.vMin.x, r.vMin.y, r.vSize.x, r.vSize.y);
         } else {
             return format_to(ctx.out(), "({},{}): {}x{}"_cf, r.vMin.x, r.vMin.y, r.vSize.x, r.vSize.y);

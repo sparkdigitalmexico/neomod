@@ -1,7 +1,7 @@
 #pragma once
 #include "Replay.h"
 #include "score.h"
-#include "Vectors.h"
+#include "Vectors_fwd.h"
 
 class HitObject;
 class DatabaseBeatmap;

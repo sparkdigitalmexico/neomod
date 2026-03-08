@@ -20,6 +20,8 @@
 #include "Logging.h"
 #include "RuntimePlatform.h"
 
+#include "Graphics_private.h"
+
 #include "ResourceManager.h"
 #include "VisualProfiler.h"
 
@@ -523,7 +525,7 @@ void DirectX11Interface::drawImage(const Image *image, AnchorPoint anchor, float
         this->smoothClipShader->setUniform1f("edge_softness", edgeSoftness);
 
         // set mvp for the shader
-        this->smoothClipShader->setMVP(this->MP);
+        this->smoothClipShader->setMVP(m_data->MP);
     }
 
     static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
@@ -757,8 +759,8 @@ void DirectX11Interface::pushViewport() {
     UINT numViewports = 1;
     this->deviceContext->RSGetViewports(&numViewports, &vp);
 
-    this->viewportStack.push_back({(int)vp.TopLeftX, (int)vp.TopLeftY, (int)vp.Width, (int)vp.Height});
-    this->resolutionStack.push_back(this->vResolution);
+    m_data->viewportStack.push_back({(int)vp.TopLeftX, (int)vp.TopLeftY, (int)vp.Width, (int)vp.Height});
+    m_data->resolutionStack.push_back(this->vResolution);
 }
 
 void DirectX11Interface::setViewport(int x, int y, int width, int height) {
@@ -777,15 +779,15 @@ void DirectX11Interface::setViewport(int x, int y, int width, int height) {
 }
 
 void DirectX11Interface::popViewport() {
-    if(this->viewportStack.empty() || this->resolutionStack.empty()) {
+    if(m_data->viewportStack.empty() || m_data->resolutionStack.empty()) {
         debugLog("WARNING: viewport stack underflow!");
         return;
     }
 
-    this->vResolution = this->resolutionStack.back();
-    this->resolutionStack.pop_back();
+    this->vResolution = m_data->resolutionStack.back();
+    m_data->resolutionStack.pop_back();
 
-    const auto &vp = this->viewportStack.back();
+    const auto &vp = m_data->viewportStack.back();
     D3D11_VIEWPORT viewport{
         .TopLeftX = (float)vp[0],
         .TopLeftY = (float)vp[1],
@@ -796,7 +798,7 @@ void DirectX11Interface::popViewport() {
     };
 
     this->deviceContext->RSSetViewports(1, &viewport);
-    this->viewportStack.pop_back();
+    m_data->viewportStack.pop_back();
 }
 
 void DirectX11Interface::setAlphaTesting(bool /*enabled*/) {
@@ -1207,11 +1209,11 @@ VertexArrayObject *DirectX11Interface::createVertexArrayObject(DrawPrimitive pri
 
 void DirectX11Interface::onTransformUpdate() {
     // always update default shader
-    if(this->shaderTexturedGeneric) this->shaderTexturedGeneric->setMVP(this->MP);
+    if(this->shaderTexturedGeneric) this->shaderTexturedGeneric->setMVP(m_data->MP);
 
     // update active shader
     if(this->activeShader && this->activeShader != this->shaderTexturedGeneric && this->activeShader->isReady()) {
-        this->activeShader->setMVP(this->MP);
+        this->activeShader->setMVP(m_data->MP);
     }
 }
 

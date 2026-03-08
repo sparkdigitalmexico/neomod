@@ -11,6 +11,7 @@
 #include "AtomicSharedPtr.h"
 #include "SyncMutex.h"
 #include "SyncJthread.h"
+#include "Vectors.h"
 
 #include <vector>
 #include <memory>
@@ -99,10 +100,10 @@ class Engine final : public KeyboardListener {
 
     // screen
     void requestResolutionChange(vec2 newResolution);
-    [[nodiscard]] constexpr McRect getScreenRect() const { return this->screenRect; }
-    [[nodiscard]] constexpr vec2 getScreenSize() const { return this->screenRect.getSize(); }
-    [[nodiscard]] constexpr int getScreenWidth() const { return (int)this->screenRect.getWidth(); }
-    [[nodiscard]] constexpr int getScreenHeight() const { return (int)this->screenRect.getHeight(); }
+    [[nodiscard]] inline McRect getScreenRect() const { return this->screenRect; }
+    [[nodiscard]] inline vec2 getScreenSize() const { return this->screenRect.getSize(); }
+    [[nodiscard]] inline int getScreenWidth() const { return (int)this->screenRect.getWidth(); }
+    [[nodiscard]] inline int getScreenHeight() const { return (int)this->screenRect.getHeight(); }
 
     // vars
     [[nodiscard]] constexpr double getTime() const { return this->dTime; }

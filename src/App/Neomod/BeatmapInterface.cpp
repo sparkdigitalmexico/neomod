@@ -51,6 +51,7 @@
 #include "SoundEngine.h"
 #include "SpectatorScreen.h"
 #include "UI.h"
+#include "Matrices.h"
 #include "UIModSelectorModButton.h"
 
 using namespace flags::operators;
@@ -2138,7 +2139,7 @@ void BeatmapInterface::drawFollowPoints() {
 
                 g->pushTransform();
                 {
-                    g->rotate(glm::degrees(std::atan2(yDiff, xDiff)));
+                    g->rotate(vec::degrees(std::atan2(yDiff, xDiff)));
 
                     skin->i_followpoint.setAnimationTimeOffset(fadeInTime);
 

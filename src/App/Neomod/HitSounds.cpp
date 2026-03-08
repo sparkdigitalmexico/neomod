@@ -238,11 +238,9 @@ std::vector<HitSamples::Set_Slider_Hit> HitSamples::play(f32 pan, i32 delta, i32
         .boostVolume = cv::snd_boost_hitsound_volume.getBool(),
     };
 
-    auto resolved = this->resolve(ctx, is_sliderslide);
-
     // actually play the resolved sounds
     std::vector<Set_Slider_Hit> played_list;
-    for(const auto &r : resolved) {
+    for(const auto &r : this->resolve(ctx, is_sliderslide)) {
         Sound *Skin::*sound_ptr = SOUND_METHODS[r.set][r.slider][r.hit];
         Sound *snd = skin->*sound_ptr;
         if(!snd) continue;

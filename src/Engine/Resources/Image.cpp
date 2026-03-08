@@ -14,6 +14,7 @@
 #include "ConVar.h"
 #include "Graphics.h"
 #include "AsyncPool.h"
+#include "Vectors.h"
 
 #include <png.h>
 #include <turbojpeg.h>
@@ -393,6 +394,8 @@ Image::Image(i32 width, i32 height, bool mipmapped, bool keepInSystemMemory) : R
     // special case: filled rawimage is always already async ready
     this->setAsyncReady(true);
 }
+
+ivec2 Image::getSize() const { return ivec2{this->iWidth, this->iHeight}; }
 
 std::vector<McIRect> Image::getDirtyRects() {
     if(this->bDirtyFull || this->dirtyGrid.empty()) return {{0, 0, this->iWidth, this->iHeight}};

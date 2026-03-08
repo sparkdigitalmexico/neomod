@@ -6,7 +6,7 @@
 
 #include "types.h"
 #include "noinclude.h"
-#include "Vectors.h"
+#include "Vectors_fwd.h"
 #include "FixedSizeArray.h"
 
 // TODO: make these utilities available without all of these ifdefs (move all diffcalc things to a lightweight separate directory)

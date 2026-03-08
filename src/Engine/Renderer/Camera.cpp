@@ -3,8 +3,60 @@
 
 #include "ConVar.h"
 #include "Engine.h"
+#include "Matrices.h"
+#include "Quaternion.h"
+
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/euler_angles.hpp"
+
+struct Camera::CamImpl {
+    struct CAM_PLANE {
+        float a, b, c, d;
+    };
+
+    static float planeDotCoord(CAM_PLANE plane, vec3 point);
+    static float planeDotCoord(vec3 planeNormal, vec3 planePoint, vec3 &pv);
+
+    void setPos(vec3 pos);
+
+    void updateVectors();
+    void updateViewFrustum();
+
+    void lookAt(vec3 eye, vec3 target);
+
+    // vars
+    CAMERA_TYPE camType{CAMERA_TYPE_FIRST_PERSON};
+    vec3 vPos{0.f};
+    vec3 vOrbitTarget{0.f};
+    float fFov{103.f};
+    float fOrbitDistance{5.f};
+    bool bOrbitYAxis{true};
+
+    // base axes
+    vec3 vWorldXAxis{1.f, 0.f, 0.f};
+    vec3 vWorldYAxis{0.f, 1.f, 0.f};
+    vec3 vWorldZAxis{0.f, 0.f, 1.f};
+
+    // derived axes
+    vec3 vXAxis{1.f, 0.f, 0.f};
+    vec3 vYAxis{0.f, 1.f, 0.f};
+    vec3 vZAxis{0.f, 0.f, 1.f};
+
+    // rotation
+    Quaternion rotation;
+    Quaternion worldRotation;
+    float fPitch{0.f};
+    float fYaw{0.f};
+    float fRoll{0.f};
+
+    // relative coordinate system
+    vec3 vViewDir{0.f};
+    vec3 vViewRight{1.f, 0.f, 0.f};
+    vec3 vViewUp{0.f, 1.f, 0.f};
+
+    // custom
+    CAM_PLANE viewFrustum[4]{};
+};
 
 Matrix4 Camera::buildMatrixOrtho2D(float left, float right, float bottom, float top, float zn, float zf) {
     return buildMatrixOrtho2DGLLH(left, right, bottom, top, zn, zf);
@@ -89,36 +141,47 @@ static vec3 vec3TransformCoord(const vec3 &in, const Matrix4 &mat) {
 //	Camera implementation  //
 //*************************//
 
-Camera::Camera(vec3 pos, vec3 viewDir, float fovDeg, CAMERA_TYPE camType) {
-    this->vPos = pos;
-    this->vViewDir = viewDir;
-    this->fFov = glm::radians(fovDeg);
-    this->camType = camType;
-
-    this->fOrbitDistance = 5.0f;
-    this->bOrbitYAxis = true;
-
-    this->fPitch = 0;
-    this->fYaw = 0;
-    this->fRoll = 0;
-
-    // base axes
-    this->vWorldXAxis = vec3(1, 0, 0);
-    this->vWorldYAxis = vec3(0, 1, 0);
-    this->vWorldZAxis = vec3(0, 0, 1);
-
-    // derived axes
-    this->vXAxis = this->vWorldXAxis;
-    this->vYAxis = this->vWorldYAxis;
-    this->vZAxis = this->vWorldZAxis;
-
-    this->vViewRight = this->vWorldXAxis;
-    this->vViewUp = this->vWorldYAxis;
+Camera::Camera(vec3 pos, vec3 viewDir, float fovDeg, CAMERA_TYPE camType) : m_impl() {
+    m_impl->vPos = pos;
+    m_impl->vViewDir = viewDir;
+    m_impl->fFov = vec::radians(fovDeg);
+    m_impl->camType = camType;
 
     this->lookAt(pos + viewDir);
 }
 
-void Camera::updateVectors() {
+void Camera::setFov(float fovDeg) { m_impl->fFov = vec::radians(fovDeg); }
+void Camera::setFovRad(float fovRad) { m_impl->fFov = fovRad; }
+void Camera::setOrbitYAxis(bool orbitYAxis) { m_impl->bOrbitYAxis = orbitYAxis; }
+
+void Camera::setWorldOrientation(Quaternion worldRotation) {
+    m_impl->worldRotation = worldRotation;
+    m_impl->updateVectors();
+}
+
+// get
+Camera::CAMERA_TYPE Camera::getType() const { return m_impl->camType; }
+vec3 Camera::getPos() const { return m_impl->vPos; }
+
+float Camera::getFov() const { return vec::degrees(m_impl->fFov); }
+float Camera::getFovRad() const { return m_impl->fFov; }
+float Camera::getOrbitDistance() const { return m_impl->fOrbitDistance; }
+
+vec3 Camera::getWorldXAxis() const { return m_impl->worldRotation * m_impl->vXAxis; }
+vec3 Camera::getWorldYAxis() const { return m_impl->worldRotation * m_impl->vYAxis; }
+vec3 Camera::getWorldZAxis() const { return m_impl->worldRotation * m_impl->vZAxis; }
+
+vec3 Camera::getViewDirection() const { return m_impl->vViewDir; }
+vec3 Camera::getViewUp() const { return m_impl->vViewUp; }
+vec3 Camera::getViewRight() const { return m_impl->vViewRight; }
+
+float Camera::getPitch() const { return m_impl->fPitch; }
+float Camera::getYaw() const { return m_impl->fYaw; }
+float Camera::getRoll() const { return m_impl->fRoll; }
+
+Quaternion Camera::getRotation() const { return m_impl->rotation; }
+
+void Camera::CamImpl::updateVectors() {
     // update rotation
     if(this->camType == CAMERA_TYPE_FIRST_PERSON)
         this->rotation.fromEuler(this->fRoll, this->fYaw, -this->fPitch);
@@ -152,9 +215,9 @@ void Camera::updateVectors() {
 }
 
 // using view matrix from camera position
-void Camera::updateViewFrustum() {
-    Matrix4 viewMatrix = this->buildMatrixLookAt(this->vPos, this->vPos + this->vViewDir, this->vViewUp);
-    Matrix4 projectionMatrix = this->buildMatrixPerspectiveFov(
+void Camera::CamImpl::updateViewFrustum() {
+    Matrix4 viewMatrix = Camera::buildMatrixLookAt(this->vPos, this->vPos + this->vViewDir, this->vViewUp);
+    Matrix4 projectionMatrix = Camera::buildMatrixPerspectiveFov(
         this->fFov, (float)engine->getScreenWidth() / (float)engine->getScreenHeight(), 0.1f, 100.0f);
     Matrix4 viewProj = projectionMatrix * viewMatrix;
 
@@ -204,30 +267,30 @@ void Camera::updateViewFrustum() {
 }
 
 void Camera::rotateX(float pitchDeg) {
-    this->fPitch += pitchDeg;
+    m_impl->fPitch += pitchDeg;
 
-    if(this->fPitch > 89.0f)
-        this->fPitch = 89.0f;
-    else if(this->fPitch < -89.0f)
-        this->fPitch = -89.0f;
+    if(m_impl->fPitch > 89.0f)
+        m_impl->fPitch = 89.0f;
+    else if(m_impl->fPitch < -89.0f)
+        m_impl->fPitch = -89.0f;
 
-    this->updateVectors();
+    m_impl->updateVectors();
 }
 
 void Camera::rotateY(float yawDeg) {
-    this->fYaw += yawDeg;
+    m_impl->fYaw += yawDeg;
 
-    if(this->fYaw > 360.0f)
-        this->fYaw = this->fYaw - 360.0f;
-    else if(this->fYaw < 0.0f)
-        this->fYaw = 360.0f + this->fYaw;
+    if(m_impl->fYaw > 360.0f)
+        m_impl->fYaw = m_impl->fYaw - 360.0f;
+    else if(m_impl->fYaw < 0.0f)
+        m_impl->fYaw = 360.0f + m_impl->fYaw;
 
-    this->updateVectors();
+    m_impl->updateVectors();
 }
 
-void Camera::lookAt(vec3 target) { this->lookAt(this->vPos, target); }
+void Camera::lookAt(vec3 target) { m_impl->lookAt(m_impl->vPos, target); }
 
-void Camera::lookAt(vec3 eye, vec3 target) {
+void Camera::CamImpl::lookAt(vec3 eye, vec3 target) {
     if(vec::length(eye - target) < 0.001f) return;
 
     this->vPos = eye;
@@ -235,31 +298,33 @@ void Camera::lookAt(vec3 eye, vec3 target) {
     // https://stackoverflow.com/questions/1996957/conversion-euler-to-matrix-and-matrix-to-euler
     // https://gamedev.stackexchange.com/questions/50963/how-to-extract-euler-angles-from-transformation-matrix
 
-    Matrix4 lookAtMatrix = this->buildMatrixLookAt(eye, target, this->vYAxis);
+    Matrix4 lookAtMatrix = Camera::buildMatrixLookAt(eye, target, this->vYAxis);
 
     // extract Euler angles from the matrix (NOTE: glm::extractEulerAngleYXZ works differently for some reason?)
     const float yaw = glm::atan2(-lookAtMatrix[8], lookAtMatrix[0]);
     const float pitch = glm::asin(-lookAtMatrix[6]);
     /// float roll = glm::atan2(lookAtMatrix[4], lookAtMatrix[5]);
 
-    this->fYaw = 180.0f + glm::degrees(yaw);
-    this->fPitch = glm::degrees(pitch);
+    this->fYaw = 180.0f + vec::degrees(yaw);
+    this->fPitch = vec::degrees(pitch);
 
     this->updateVectors();
 }
 
 void Camera::setType(CAMERA_TYPE camType) {
-    if(camType == this->camType) return;
+    if(camType == m_impl->camType) return;
 
-    this->camType = camType;
+    m_impl->camType = camType;
 
-    if(this->camType == CAMERA_TYPE_ORBIT)
-        this->setPos(this->vOrbitTarget);
+    if(m_impl->camType == CAMERA_TYPE_ORBIT)
+        m_impl->setPos(m_impl->vOrbitTarget);
     else
-        this->vPos = this->vOrbitTarget;
+        m_impl->vPos = m_impl->vOrbitTarget;
 }
 
-void Camera::setPos(vec3 pos) {
+void Camera::setPos(vec3 pos) { m_impl->setPos(pos); }
+
+void Camera::CamImpl::setPos(vec3 pos) {
     this->vOrbitTarget = pos;
 
     if(this->camType == CAMERA_TYPE_ORBIT)
@@ -269,39 +334,39 @@ void Camera::setPos(vec3 pos) {
 }
 
 void Camera::setOrbitDistance(float orbitDistance) {
-    this->fOrbitDistance = orbitDistance;
-    if(this->fOrbitDistance < 0) this->fOrbitDistance = 0;
+    m_impl->fOrbitDistance = orbitDistance;
+    if(m_impl->fOrbitDistance < 0) m_impl->fOrbitDistance = 0;
 }
 
 void Camera::setRotation(float yawDeg, float pitchDeg, float rollDeg) {
-    this->fYaw = yawDeg;
-    this->fPitch = pitchDeg;
-    this->fRoll = rollDeg;
-    this->updateVectors();
+    m_impl->fYaw = yawDeg;
+    m_impl->fPitch = pitchDeg;
+    m_impl->fRoll = rollDeg;
+    m_impl->updateVectors();
 }
 
 void Camera::setYaw(float yawDeg) {
-    this->fYaw = yawDeg;
-    this->updateVectors();
+    m_impl->fYaw = yawDeg;
+    m_impl->updateVectors();
 }
 
 void Camera::setPitch(float pitchDeg) {
-    this->fPitch = pitchDeg;
-    this->updateVectors();
+    m_impl->fPitch = pitchDeg;
+    m_impl->updateVectors();
 }
 
 void Camera::setRoll(float rollDeg) {
-    this->fRoll = rollDeg;
-    this->updateVectors();
+    m_impl->fRoll = rollDeg;
+    m_impl->updateVectors();
 }
 
 vec3 Camera::getNextPosition(vec3 velocity) const {
-    return this->vPos + ((this->worldRotation * this->rotation) * velocity);
+    return m_impl->vPos + ((m_impl->worldRotation * m_impl->rotation) * velocity);
 }
 
 vec3 Camera::getProjectedVector(vec3 point, float screenWidth, float screenHeight, float zn, float zf) const {
-    Matrix4 viewMatrix = this->buildMatrixLookAt(this->vPos, this->vPos + this->vViewDir, this->vViewUp);
-    Matrix4 projectionMatrix = this->buildMatrixPerspectiveFov(this->fFov, screenWidth / screenHeight, zn, zf);
+    Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_impl->vPos, m_impl->vPos + m_impl->vViewDir, m_impl->vViewUp);
+    Matrix4 projectionMatrix = Camera::buildMatrixPerspectiveFov(m_impl->fFov, screenWidth / screenHeight, zn, zf);
 
     // complete matrix
     Matrix4 viewProj = projectionMatrix * viewMatrix;
@@ -318,8 +383,8 @@ vec3 Camera::getProjectedVector(vec3 point, float screenWidth, float screenHeigh
 }
 
 vec3 Camera::getUnProjectedVector(vec2 point, float screenWidth, float screenHeight, float zn, float zf) const {
-    Matrix4 projectionMatrix = this->buildMatrixPerspectiveFov(this->fFov, screenWidth / screenHeight, zn, zf);
-    Matrix4 viewMatrix = this->buildMatrixLookAt(this->vPos, this->vPos + this->vViewDir, this->vViewUp);
+    Matrix4 projectionMatrix = Camera::buildMatrixPerspectiveFov(m_impl->fFov, screenWidth / screenHeight, zn, zf);
+    Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_impl->vPos, m_impl->vPos + m_impl->vViewDir, m_impl->vViewUp);
 
     // transform pick position from screen space into 3d space
     glm::vec4 viewport(0, 0, screenWidth, screenHeight);
@@ -340,16 +405,16 @@ bool Camera::isPointVisibleFrustum(vec3 point) const {
     const float epsilon = 0.01f;
 
     // left
-    float d11 = this->planeDotCoord(this->viewFrustum[0], point);
+    float d11 = m_impl->planeDotCoord(m_impl->viewFrustum[0], point);
 
     // right
-    float d21 = this->planeDotCoord(this->viewFrustum[1], point);
+    float d21 = m_impl->planeDotCoord(m_impl->viewFrustum[1], point);
 
     // top
-    float d31 = this->planeDotCoord(this->viewFrustum[2], point);
+    float d31 = m_impl->planeDotCoord(m_impl->viewFrustum[2], point);
 
     // bottom
-    float d41 = this->planeDotCoord(this->viewFrustum[3], point);
+    float d41 = m_impl->planeDotCoord(m_impl->viewFrustum[3], point);
 
     if((d11 < epsilon) || (d21 < epsilon) || (d31 < epsilon) || (d41 < epsilon)) return false;
 
@@ -359,15 +424,15 @@ bool Camera::isPointVisibleFrustum(vec3 point) const {
 bool Camera::isPointVisiblePlane(vec3 point) const {
     constexpr float epsilon = 0.0f;  // ?
 
-    if(!(this->planeDotCoord(this->vViewDir, this->vPos, point) < epsilon)) return true;
+    if(!(m_impl->planeDotCoord(m_impl->vViewDir, m_impl->vPos, point) < epsilon)) return true;
 
     return false;
 }
 
-float Camera::planeDotCoord(CAM_PLANE plane, vec3 point) {
+float Camera::CamImpl::planeDotCoord(CAM_PLANE plane, vec3 point) {
     return ((plane.a * point.x) + (plane.b * point.y) + (plane.c * point.z) + plane.d);
 }
 
-float Camera::planeDotCoord(vec3 planeNormal, vec3 planePoint, vec3 &pv) {
+float Camera::CamImpl::planeDotCoord(vec3 planeNormal, vec3 planePoint, vec3 &pv) {
     return vec::dot(planeNormal, pv - planePoint);
 }

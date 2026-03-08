@@ -4,8 +4,6 @@
 
 #include "Vectors.h"
 
-#include "glm/trigonometric.hpp"
-
 struct Matrix4;
 struct Matrix3;
 
@@ -32,18 +30,18 @@ class Quaternion {
     void fromEuler(float yawDeg, float pitchDeg, float rollDeg);
 
     [[nodiscard]] inline float getYaw() const {
-        return glm::degrees(std::atan2(2.0f * (this->y * this->z + this->w * this->x),
+        return vec::degrees(std::atan2(2.0f * (this->y * this->z + this->w * this->x),
                                        this->w * this->w - this->x * this->x - this->y * this->y + this->z * this->z));
     }
     [[nodiscard]] inline float getPitch() const {
-        return glm::degrees(std::asin(-2.0f * (this->x * this->z - this->w * this->y)));
+        return vec::degrees(std::asin(-2.0f * (this->x * this->z - this->w * this->y)));
     }
     [[nodiscard]] inline float getRoll() const {
-        return glm::degrees(std::atan2(2.0f * (this->x * this->y + this->w * this->z),
+        return vec::degrees(std::atan2(2.0f * (this->x * this->y + this->w * this->z),
                                        this->w * this->w + this->x * this->x - this->y * this->y - this->z * this->z));
     }
 
-    [[nodiscard]] inline Quaternion getConjugate() const { return Quaternion(-this->x, -this->y, -this->z, this->w); }
+    [[nodiscard]] inline Quaternion getConjugate() const { return {-this->x, -this->y, -this->z, this->w}; }
     [[nodiscard]] Matrix4 getMatrix() const;
     [[nodiscard]] Matrix3 getMatrix3() const;
 

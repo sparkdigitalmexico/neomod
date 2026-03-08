@@ -907,7 +907,7 @@ void Circle::update(i32 curPosMS, f64 frameTimeSecs) {
                 if(result != LiveScore::HIT::HIT_NULL) {
                     const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
                     const float targetAngle =
-                        glm::degrees(std::atan2(m_pi->getCursorPos().y - pos.y, m_pi->getCursorPos().x - pos.x));
+                        vec::degrees(std::atan2(m_pi->getCursorPos().y - pos.y, m_pi->getCursorPos().x - pos.x));
 
                     onHit(result, deltaMS, targetDelta, targetAngle);
                 }
@@ -960,7 +960,7 @@ void Circle::onClickEvent(std::vector<Click> &clicks) {
         LiveScore::HIT result = m_pi->getHitResult(deltaMS);
         if(result != LiveScore::HIT::HIT_NULL) {
             const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
-            const float targetAngle = glm::degrees(std::atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
+            const float targetAngle = vec::degrees(std::atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
 
             clicks.erase(clicks.begin());
             onHit(result, deltaMS, targetDelta, targetAngle);
@@ -1387,7 +1387,7 @@ void Slider::draw2(bool drawApproachCircle, bool drawOnlyApproachCircle) {
                 m_pf->osuCoords2Pixels(m_curve->pointAt(m_slidePct + 0.01f <= 1.0f ? m_slidePct : m_slidePct - 0.01f));
             vec2 c2 =
                 m_pf->osuCoords2Pixels(m_curve->pointAt(m_slidePct + 0.01f <= 1.0f ? m_slidePct + 0.01f : m_slidePct));
-            float ballAngle = glm::degrees(std::atan2(c2.y - c1.y, c2.x - c1.x));
+            float ballAngle = vec::degrees(std::atan2(c2.y - c1.y, c2.x - c1.x));
             if(skin->o_sliderball_flip) ballAngle += (m_curRepeat % 2 == 0) ? 0 : 180;
 
             g->setColor(skin->o_allow_sliderball_tint
@@ -1621,7 +1621,7 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
 
                         if(result != LiveScore::HIT::HIT_NULL) {
                             const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
-                            const float targetAngle = glm::degrees(
+                            const float targetAngle = vec::degrees(
                                 std::atan2(m_pi->getCursorPos().y - pos.y, m_pi->getCursorPos().x - pos.x));
 
                             m_startResult = result;
@@ -1977,7 +1977,7 @@ void Slider::onClickEvent(std::vector<Click> &clicks) {
             LiveScore::HIT result = m_pi->getHitResult(deltaMS);
             if(result != LiveScore::HIT::HIT_NULL) {
                 const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
-                const float targetAngle = glm::degrees(std::atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
+                const float targetAngle = vec::degrees(std::atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
 
                 clicks.erase(clicks.begin());
                 m_startResult = result;
@@ -2748,10 +2748,10 @@ void Spinner::onHit() {
 }
 
 void Spinner::rotate(float rad) {
-    m_drawRot += glm::degrees(rad);
+    m_drawRot += vec::degrees(rad);
 
     rad = std::abs(rad);
-    const float newRotations = m_rotations + glm::degrees(rad);
+    const float newRotations = m_rotations + vec::degrees(rad);
 
     // added one whole rotation
     if(std::floor(newRotations / 360.0f) > m_rotations / 360.0f) {

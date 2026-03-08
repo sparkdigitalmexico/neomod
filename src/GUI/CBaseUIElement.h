@@ -59,15 +59,15 @@ class CBaseUIElement : public KeyboardListener {
     // getters
     [[nodiscard]] constexpr const UString &getName() const { return this->sName ? *this->sName : emptyUString; }
 
-    [[nodiscard]] constexpr const McRect &getRect() const { return this->rect; }
+    [[nodiscard]] forceinline const McRect &getRect() const { return this->rect; }
 
-    [[nodiscard]] constexpr const vec2 &getPos() const { return this->rect.getPos(); }
-    [[nodiscard]] constexpr const vec2 &getSize() const { return this->rect.getSize(); }
+    [[nodiscard]] forceinline const vec2 &getPos() const { return this->rect.getPos(); }
+    [[nodiscard]] forceinline const vec2 &getSize() const { return this->rect.getSize(); }
 
-    [[nodiscard]] constexpr const McRect &getRelRect() const { return this->relRect; }
+    [[nodiscard]] forceinline const McRect &getRelRect() const { return this->relRect; }
 
-    [[nodiscard]] constexpr const vec2 &getRelPos() const { return this->relRect.getPos(); }
-    [[nodiscard]] constexpr const vec2 &getRelSize() const { return this->relRect.getSize(); }
+    [[nodiscard]] forceinline const vec2 &getRelPos() const { return this->relRect.getPos(); }
+    [[nodiscard]] forceinline const vec2 &getRelSize() const { return this->relRect.getSize(); }
 
     virtual bool isActive() { return this->bActive || this->isBusy(); }
     virtual bool isVisible() { return this->bVisible; }

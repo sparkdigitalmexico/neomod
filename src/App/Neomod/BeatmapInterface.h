@@ -9,6 +9,7 @@
 #include "PlaybackInterpolator.h"
 #include "score.h"
 #include "LivePPCalc.h"
+#include "Vectors.h"
 
 #include <memory>
 

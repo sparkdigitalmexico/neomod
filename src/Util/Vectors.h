@@ -1,94 +1,92 @@
 // Copyright (c) 2025, WH, All rights reserved.
-#pragma once
+#ifndef UTIL_VECTORS_H
+#define UTIL_VECTORS_H
 
-#include "glm/geometric.hpp"
-#include "glm/gtc/constants.hpp"
-#include "glm/vec2.hpp"
-#include "glm/vec3.hpp"
-#include "glm/vec4.hpp"
+#include "types.h"
+#include "glm/ext/vector_float1.hpp"
+#include "glm/ext/vector_float2.hpp"
+#include "glm/ext/vector_float3.hpp"
+#include "glm/ext/vector_float4.hpp"
 
 #ifndef BUILD_TOOLS_ONLY  // avoid an unnecessary dependency on fmt when building tools only
 #include "fmt/format.h"
 #include "fmt/compile.h"
 #endif
 
-using glm::dvec2;
-using glm::dvec3;
-using glm::dvec4;
+// typedefs
+#include "Vectors_fwd.h"
 
-using glm::vec2;
-using glm::vec3;
-using glm::vec4;
-
-using ivec2 = glm::i32vec2;
-using ivec3 = glm::i32vec3;
-using ivec4 = glm::i32vec4;
-
-using lvec2 = glm::i64vec2;
-using lvec3 = glm::i64vec3;
-using lvec4 = glm::i64vec4;
-
-using u8vec4 = glm::u8vec4;
-
-using uvec2 = glm::u32vec2;
-using uvec3 = glm::u32vec3;
-using uvec4 = glm::u32vec4;
-
-using ulvec2 = glm::u64vec2;
-using ulvec3 = glm::u64vec3;
-using ulvec4 = glm::u64vec4;
+// extern template struct glm::vec<1, bool, glm::qualifier::defaultp>;
+// extern template struct glm::vec<2, bool, glm::qualifier::defaultp>;
+// extern template struct glm::vec<3, bool, glm::qualifier::defaultp>;
+// extern template struct glm::vec<4, bool, glm::qualifier::defaultp>;
+extern template struct glm::vec<2, double, glm::qualifier::defaultp>;
+extern template struct glm::vec<3, double, glm::qualifier::defaultp>;
+extern template struct glm::vec<4, double, glm::qualifier::defaultp>;
+extern template struct glm::vec<2, float, glm::qualifier::defaultp>;
+extern template struct glm::vec<3, float, glm::qualifier::defaultp>;
+extern template struct glm::vec<4, float, glm::qualifier::defaultp>;
+extern template struct glm::vec<2, i32, glm::qualifier::defaultp>;
+extern template struct glm::vec<3, i32, glm::qualifier::defaultp>;
+extern template struct glm::vec<4, i32, glm::qualifier::defaultp>;
+extern template struct glm::vec<2, i64, glm::qualifier::defaultp>;
+extern template struct glm::vec<3, i64, glm::qualifier::defaultp>;
+extern template struct glm::vec<4, i64, glm::qualifier::defaultp>;
+extern template struct glm::vec<4, u8, glm::qualifier::defaultp>;
+extern template struct glm::vec<2, u32, glm::qualifier::defaultp>;
+extern template struct glm::vec<3, u32, glm::qualifier::defaultp>;
+extern template struct glm::vec<4, u32, glm::qualifier::defaultp>;
+extern template struct glm::vec<2, u64, glm::qualifier::defaultp>;
+extern template struct glm::vec<3, u64, glm::qualifier::defaultp>;
+extern template struct glm::vec<4, u64, glm::qualifier::defaultp>;
 
 namespace vec {
 
 inline constexpr auto FLOAT_NORMALIZE_EPSILON = 0.000001f;
 inline constexpr auto DOUBLE_NORMALIZE_EPSILON = FLOAT_NORMALIZE_EPSILON / 10e6;
 
-using glm::abs;
-using glm::all;
-using glm::any;
-using glm::ceil;
-using glm::clamp;
-using glm::cross;
-using glm::distance;
-using glm::dot;
-using glm::equal;
-using glm::floor;
-using glm::greaterThan;
-using glm::greaterThanEqual;
-using glm::length;
-using glm::lessThan;
-using glm::lessThanEqual;
-using glm::max;
-using glm::min;
-using glm::normalize;
-using glm::round;
+// more defs in Vectors_fwd.h
 
 template <typename T, typename V>
     requires(std::is_floating_point_v<V>) &&
             (std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4>)
-void setLength(T &vec, const V &len) {
-    if(length(vec) > FLOAT_NORMALIZE_EPSILON) {
-        vec = normalize(vec) * static_cast<float>(len);
-    }
-}
+extern void setLength(T& vec, V len);
+
+extern template void setLength(vec2&, float);
+extern template void setLength(vec3&, float);
+extern template void setLength(vec4&, float);
 
 template <typename T, typename V>
     requires(std::is_floating_point_v<V>) &&
             (std::is_same_v<T, dvec2> || std::is_same_v<T, dvec3> || std::is_same_v<T, dvec4>)
-void setLength(T &vec, const V &len) {
-    if(length(vec) > DOUBLE_NORMALIZE_EPSILON) {
-        vec = normalize(vec) * static_cast<double>(len);
-    }
-}
+extern void setLength(T& vec, V len);
+
+extern template void setLength(dvec2&, float);
+extern template void setLength(dvec3&, float);
+extern template void setLength(dvec4&, float);
 
 template <typename V>
     requires(std::is_same_v<V, vec2> || std::is_same_v<V, vec3> || std::is_same_v<V, vec4> ||
              std::is_same_v<V, dvec2> || std::is_same_v<V, dvec3> || std::is_same_v<V, dvec4> ||
              std::is_same_v<V, ivec2> || std::is_same_v<V, ivec3> || std::is_same_v<V, ivec4> ||
              std::is_same_v<V, lvec2> || std::is_same_v<V, lvec3> || std::is_same_v<V, lvec4>)
-inline constexpr bool allEqual(const V &vec1, const V vec2) {
-    return vec::all(vec::equal(vec1, vec2));
-}
+extern bool allEqual(const V& vec1, const V& vec2);
+
+extern template bool allEqual(const vec2&, const vec2&);
+extern template bool allEqual(const vec3&, const vec3&);
+extern template bool allEqual(const vec4&, const vec4&);
+
+extern template bool allEqual(const dvec2&, const dvec2&);
+extern template bool allEqual(const dvec3&, const dvec3&);
+extern template bool allEqual(const dvec4&, const dvec4&);
+
+extern template bool allEqual(const ivec2&, const ivec2&);
+extern template bool allEqual(const ivec3&, const ivec3&);
+extern template bool allEqual(const ivec4&, const ivec4&);
+
+extern template bool allEqual(const lvec2&, const lvec2&);
+extern template bool allEqual(const lvec3&, const lvec3&);
+extern template bool allEqual(const lvec4&, const lvec4&);
 
 }  // namespace vec
 
@@ -97,12 +95,12 @@ namespace fmt {
 template <typename Vec, int N>
 struct float_vec_formatter {
     template <typename ParseContext>
-    constexpr auto parse(ParseContext &ctx) const {
+    constexpr auto parse(ParseContext& ctx) const {
         return ctx.begin();
     }
 
     template <typename FormatContext>
-    auto format(const Vec &p, FormatContext &ctx) const {
+    auto format(const Vec& p, FormatContext& ctx) const {
         if constexpr(N == 2) {
             return format_to(ctx.out(), "({:.2f}, {:.2f})"_cf, p.x, p.y);
         } else if constexpr(N == 3) {
@@ -116,12 +114,12 @@ struct float_vec_formatter {
 template <typename Vec, int N>
 struct int_vec_formatter {
     template <typename ParseContext>
-    constexpr auto parse(ParseContext &ctx) const {
+    constexpr auto parse(ParseContext& ctx) const {
         return ctx.begin();
     }
 
     template <typename FormatContext>
-    auto format(const Vec &p, FormatContext &ctx) const {
+    auto format(const Vec& p, FormatContext& ctx) const {
         if constexpr(N == 2) {
             return format_to(ctx.out(), "({}, {})"_cf, p.x, p.y);
         } else if constexpr(N == 3) {
@@ -190,4 +188,6 @@ template <>
 struct formatter<ulvec4> : int_vec_formatter<ulvec4, 4> {};
 
 }  // namespace fmt
+#endif
+
 #endif

@@ -15,20 +15,28 @@ concept ContainerCompatibleRange =
 
 template <typename Container, typename R>
     requires ContainerCompatibleRange<R, typename Container::value_type>
-constexpr void append_range(Container& c, R&& rg) {
-    c.insert(c.end(), std::ranges::begin(rg), std::ranges::end(rg));
-}
-
-template <typename Container, typename R>
-    requires ContainerCompatibleRange<R, typename Container::value_type>
 constexpr void assign_range(Container& c, R&& rg) {
     c.assign(std::ranges::begin(rg), std::ranges::end(rg));
 }
 
 template <typename Container, typename R>
     requires ContainerCompatibleRange<R, typename Container::value_type>
+constexpr void append_range(Container& c, R&& rg) {
+    if(c.empty()) {
+        assign_range(c, std::forward<R>(rg));
+    } else {
+        c.insert(c.end(), std::ranges::begin(rg), std::ranges::end(rg));
+    }
+}
+
+template <typename Container, typename R>
+    requires ContainerCompatibleRange<R, typename Container::value_type>
 constexpr typename Container::iterator insert_range(Container& c, typename Container::const_iterator pos, R&& rg) {
-    return c.insert(pos, std::ranges::begin(rg), std::ranges::end(rg));
+    if(pos == c.end()) {
+        return append_range(c, std::forward<R>(rg));
+    } else {
+        return c.insert(pos, std::ranges::begin(rg), std::ranges::end(rg));
+    }
 }
 
 // NOLINTEND(cppcoreguidelines-missing-std-forward)

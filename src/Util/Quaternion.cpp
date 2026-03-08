@@ -23,7 +23,7 @@ void Quaternion::normalize() {
 }
 
 void Quaternion::fromAxis(const vec3 &axis, float angleDeg) {
-    angleDeg = glm::radians(angleDeg);
+    angleDeg = vec::radians(angleDeg);
 
     angleDeg *= 0.5f;
 

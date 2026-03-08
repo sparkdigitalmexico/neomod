@@ -4,9 +4,9 @@
 #include "noinclude.h"
 #include "types.h"
 #include "Color.h"
-#include "Matrices.h"
 #include "Rect.h"
 #include "Vectors.h"
+#include "StaticPImpl.h"
 
 #include <memory>
 #include <string>
@@ -18,6 +18,7 @@
 
 class ConVar;
 class UString;
+struct Matrix4;
 
 class Image;
 class McFont;
@@ -65,6 +66,8 @@ enum class DrawBlendMode : uint8_t {
 };
 
 enum class DrawCompareFunc : uint8_t { NEVER, LESS, EQUAL, LESSEQUAL, GREATER, NOTEQUAL, GREATEREQUAL, ALWAYS };
+
+struct GraphicsPrivateData;
 
 class Graphics {
     NOCOPY_NOMOVE(Graphics)
@@ -148,9 +151,7 @@ class Graphics {
         return this->drawRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y, top, right, bottom, left);
     }
 
-    inline void drawRect(McRect rect) {
-        return this->drawRect(rect.getMin(), rect.getSize());
-    }
+    inline void drawRect(McRect rect) { return this->drawRect(rect.getMin(), rect.getSize()); }
     inline void drawRect(McRect rect, Color top, Color right, Color bottom, Color left) {
         return this->drawRect(rect.getMin(), rect.getSize(), top, right, bottom, left);
     }
@@ -162,9 +163,7 @@ class Graphics {
         return this->fillRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y);
     }
 
-    inline void fillRect(McRect rect) {
-        return this->fillRect(rect.getMin(), rect.getSize());
-    }
+    inline void fillRect(McRect rect) { return this->fillRect(rect.getMin(), rect.getSize()); }
 
     inline void fillRoundedRect(vec2 pos, vec2 size, int radius) {
         return this->fillRoundedRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y, radius);
@@ -207,10 +206,10 @@ class Graphics {
     virtual void setClipping(bool enabled) = 0;
     virtual void setAlphaTesting(bool enabled) = 0;
     virtual void setAlphaTestFunc(DrawCompareFunc alphaFunc, float ref) = 0;
-    virtual void setBlending(bool enabled) { this->bBlendingEnabled = enabled; }
-    [[nodiscard]] inline bool getBlending() const { return this->bBlendingEnabled; }
-    virtual void setBlendMode(DrawBlendMode blendMode) { this->currentBlendMode = blendMode; }
-    [[nodiscard]] inline DrawBlendMode getBlendMode() const { return this->currentBlendMode; }
+    virtual void setBlending(bool enabled);
+    [[nodiscard]] bool getBlending() const;
+    virtual void setBlendMode(DrawBlendMode blendMode);
+    [[nodiscard]] DrawBlendMode getBlendMode() const;
     virtual void setDepthBuffer(bool enabled) = 0;
     virtual void setColorWriting(bool r, bool g, bool b, bool a) = 0;
     inline void setColorWriting(bool enabled) { this->setColorWriting(enabled, enabled, enabled, enabled); }
@@ -230,7 +229,7 @@ class Graphics {
     }
 
     // renderer info
-    virtual const char *getName() const = 0;
+    [[nodiscard]] virtual const char *getName() const = 0;
     [[nodiscard]] virtual vec2 getResolution() const = 0;
     virtual UString getVendor() = 0;
     virtual UString getModel() = 0;
@@ -279,9 +278,9 @@ class Graphics {
     void setWorldMatrixMul(Matrix4 &worldMatrix);
     void setProjectionMatrix(Matrix4 &projectionMatrix);
 
-    Matrix4 getWorldMatrix();
-    Matrix4 getProjectionMatrix();
-    inline Matrix4 getMVP() const { return this->MP; }
+    [[nodiscard]] Matrix4 getWorldMatrix() const;
+    [[nodiscard]] Matrix4 getProjectionMatrix() const;
+    [[nodiscard]] Matrix4 getMVP() const;
 
     // 3d gui scenes
     void push3DScene(McRect region);
@@ -303,33 +302,8 @@ class Graphics {
     void checkStackLeaks();
 
     void processPendingScreenshot();
-    std::vector<ScreenshotParams> pendingScreenshots;
 
-    // transforms
-    std::vector<Matrix4> worldTransformStack;
-    std::vector<Matrix4> projectionTransformStack;
-
-    std::vector<std::array<int, 4>> viewportStack;
-    std::vector<vec2> resolutionStack;
-
-    // 3d gui scenes
-    std::vector<bool> scene3d_stack;
-    Matrix4 scene3d_world_matrix;
-    Matrix4 scene3d_projection_matrix;
-
-    // transforms
-    Matrix4 projectionMatrix;
-    Matrix4 worldMatrix;
-    Matrix4 MP;
-
-    McRect scene3d_region;
-    vec3 v3dSceneOffset{0.f};
-
-    // info
-    DrawBlendMode currentBlendMode{DrawBlendMode::ALPHA};
-    bool bBlendingEnabled{true};
-    bool bTransformUpToDate;
-    bool bIs3dScene;
+    StaticPImpl<GraphicsPrivateData, 600> m_data;
 };
 
 // define/managed in Engine.cpp, declared here for convenience

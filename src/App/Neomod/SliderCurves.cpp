@@ -4,6 +4,7 @@
 #include "types.h"
 
 #include <algorithm>
+#include <cmath>
 
 #ifndef BUILD_TOOLS_ONLY
 #include "Engine.h"

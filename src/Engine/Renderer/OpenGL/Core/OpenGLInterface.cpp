@@ -5,6 +5,7 @@
 #include "OpenGLInterface.h"
 
 #include "Camera.h"
+#include "Matrices.h"
 #include "ConVar.h"
 #include "Engine.h"
 
@@ -18,6 +19,7 @@
 
 #include "SDLGLInterface.h"
 #include "OpenGLStateCache.h"
+#include "Graphics_private.h"
 
 #include "binary_embed.h"
 
@@ -559,8 +561,8 @@ void OpenGLInterface::popClipRect() {
 }
 
 void OpenGLInterface::pushViewport() {
-    this->viewportStack.push_back(GLStateCache::getCurrentViewport());
-    this->resolutionStack.push_back(this->vResolution);
+    m_data->viewportStack.push_back(GLStateCache::getCurrentViewport());
+    m_data->resolutionStack.push_back(this->vResolution);
 }
 
 void OpenGLInterface::setViewport(int x, int y, int width, int height) {
@@ -569,16 +571,16 @@ void OpenGLInterface::setViewport(int x, int y, int width, int height) {
 }
 
 void OpenGLInterface::popViewport() {
-    if(this->viewportStack.empty() || this->resolutionStack.empty()) {
+    if(m_data->viewportStack.empty() || m_data->resolutionStack.empty()) {
         debugLog("WARNING: viewport stack underflow!");
         return;
     }
 
-    this->vResolution = this->resolutionStack.back();
-    this->resolutionStack.pop_back();
+    this->vResolution = m_data->resolutionStack.back();
+    m_data->resolutionStack.pop_back();
 
-    GLStateCache::setViewport(this->viewportStack.back());
-    this->viewportStack.pop_back();
+    GLStateCache::setViewport(m_data->viewportStack.back());
+    m_data->viewportStack.pop_back();
 }
 
 void OpenGLInterface::pushStencil() {
@@ -731,9 +733,9 @@ void OpenGLInterface::onResolutionChange(vec2 newResolution) {
 
     // special case: custom rendertarget resolution rendering, update active projection matrix immediately
     if(this->bInScene) {
-        this->projectionTransformStack.back() =
+        m_data->projectionTransformStack.back() =
             Camera::buildMatrixOrtho2D(0, this->vResolution.x, this->vResolution.y, 0, -1.0f, 1.0f);
-        this->bTransformUpToDate = false;
+        m_data->bTransformUpToDate = false;
     }
 }
 
@@ -765,10 +767,10 @@ VertexArrayObject *OpenGLInterface::createVertexArrayObject(DrawPrimitive primit
 
 void OpenGLInterface::onTransformUpdate() {
     glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(this->projectionMatrix.get());
+    glLoadMatrixf(m_data->projectionMatrix.get());
 
     glMatrixMode(GL_MODELVIEW);
-    glLoadMatrixf(this->worldMatrix.get());
+    glLoadMatrixf(m_data->worldMatrix.get());
 }
 
 void OpenGLInterface::initSmoothClipShader() {

@@ -13,7 +13,7 @@
 #include "types.h"
 
 #include "Rect.h"
-#include "Vectors.h"
+#include "Vectors_fwd.h"
 #include "Resource.h"
 #include "Color.h"
 
@@ -53,7 +53,7 @@ class Image : public Resource {
     [[nodiscard]] inline Image::TYPE getType() const { return this->type; }
     [[nodiscard]] inline i32 getWidth() const { return this->iWidth; }
     [[nodiscard]] inline i32 getHeight() const { return this->iHeight; }
-    [[nodiscard]] inline ivec2 getSize() const { return ivec2{this->iWidth, this->iHeight}; }
+    [[nodiscard]] ivec2 getSize() const;
 
     Image *asImage() final { return this; }
     [[nodiscard]] const Image *asImage() const final { return this; }

@@ -460,8 +460,8 @@ struct Matrix4 : public glm::mat4 {
     Matrix4& rotate(float angle, const vec3& axis) { return rotate(angle, axis.x, axis.y, axis.z); }
 
     Matrix4& rotate(float angle, float x, float y, float z) {
-        float c = cosf(glm::radians(angle));  // cosine
-        float s = sinf(glm::radians(angle));  // sine
+        float c = cosf(vec::radians(angle));  // cosine
+        float s = sinf(vec::radians(angle));  // sine
         float c1 = 1.0f - c;                  // 1 - c
 
         float* m = &static_cast<glm::mat4&>(*this)[0][0];
@@ -497,8 +497,8 @@ struct Matrix4 : public glm::mat4 {
     }
 
     Matrix4& rotateX(float angle) {
-        float c = cosf(glm::radians(angle));
-        float s = sinf(glm::radians(angle));
+        float c = cosf(vec::radians(angle));
+        float s = sinf(vec::radians(angle));
         float* m = &static_cast<glm::mat4&>(*this)[0][0];
 
         float m1 = m[1], m2 = m[2], m5 = m[5], m6 = m[6], m9 = m[9], m10 = m[10], m13 = m[13], m14 = m[14];
@@ -516,8 +516,8 @@ struct Matrix4 : public glm::mat4 {
     }
 
     Matrix4& rotateY(float angle) {
-        float c = cosf(glm::radians(angle));
-        float s = sinf(glm::radians(angle));
+        float c = cosf(vec::radians(angle));
+        float s = sinf(vec::radians(angle));
         float* m = &static_cast<glm::mat4&>(*this)[0][0];
 
         float m0 = m[0], m2 = m[2], m4 = m[4], m6 = m[6], m8 = m[8], m10 = m[10], m12 = m[12], m14 = m[14];
@@ -535,8 +535,8 @@ struct Matrix4 : public glm::mat4 {
     }
 
     Matrix4& rotateZ(float angle) {
-        float c = cosf(glm::radians(angle));
-        float s = sinf(glm::radians(angle));
+        float c = cosf(vec::radians(angle));
+        float s = sinf(vec::radians(angle));
         float* m = &static_cast<glm::mat4&>(*this)[0][0];
 
         float m0 = m[0], m1 = m[1], m4 = m[4], m5 = m[5], m8 = m[8], m9 = m[9], m12 = m[12], m13 = m[13];

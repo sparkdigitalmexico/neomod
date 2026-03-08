@@ -3,8 +3,7 @@
 #define ANIMATIONHANDLER_H
 
 #include "types.h"
-
-#include <glm/vec2.hpp>
+#include "Vectors_fwd.h"
 
 #include <concepts>
 
@@ -75,6 +74,10 @@ class AnimHandleT {
 using AnimFloat = AnimHandleT<f32>;
 using AnimDouble = AnimHandleT<f64>;
 
+// instantiated explicitly in AnimationHandler.cpp
+extern template class AnimHandleT<f32>;
+extern template class AnimHandleT<f64>;
+
 struct AnimVec2 {
     AnimFloat x, y;
 
@@ -87,27 +90,16 @@ struct AnimVec2 {
         x = static_cast<f32>(initial1);
         y = static_cast<f32>(initial2);
     }
-    explicit AnimVec2(glm::vec2 initial) {
-        x = initial.x;
-        y = initial.y;
-    }
-    explicit AnimVec2(glm::dvec2 initial) {
-        x = static_cast<f32>(initial.x);
-        y = static_cast<f32>(initial.y);
-    }
+    explicit AnimVec2(vec2 initial);
+    explicit AnimVec2(dvec2 initial);
 
     inline void stop() {
         x.stop();
         y.stop();
     }
 
-    inline AnimVec2 &operator=(glm::vec2 value) {
-        x = value.x;
-        y = value.y;
-        return *this;
-    }
-
-    [[nodiscard]] constexpr operator glm::vec2() const { return glm::vec2{f32(x), f32(y)}; }
+    AnimVec2 &operator=(vec2 value);
+    [[nodiscard]] operator vec2() const;
 };
 
 struct AnimVec2D {
@@ -122,27 +114,16 @@ struct AnimVec2D {
         x = initial1;
         y = initial2;
     }
-    explicit AnimVec2D(glm::vec2 initial) {
-        x = initial.x;
-        y = initial.y;
-    }
-    explicit AnimVec2D(glm::dvec2 initial) {
-        x = initial.x;
-        y = initial.y;
-    }
+    explicit AnimVec2D(vec2 initial);
+    explicit AnimVec2D(dvec2 initial);
 
     inline void stop() {
         x.stop();
         y.stop();
     }
 
-    inline AnimVec2D &operator=(glm::dvec2 value) {
-        x = value.x;
-        y = value.y;
-        return *this;
-    }
-
-    [[nodiscard]] constexpr operator glm::dvec2() const { return glm::dvec2{f64(x), f64(y)}; }
+    AnimVec2D &operator=(dvec2 value);
+    [[nodiscard]] operator dvec2() const;
 };
 
 // --- engine-level functions ---

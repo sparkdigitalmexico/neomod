@@ -6,6 +6,7 @@
 #include "Bancho.h"
 #include "BeatmapInterface.h"
 #include "Camera.h"
+#include "Matrices.h"
 #include "OsuConVars.h"
 #include "Engine.h"
 #include "Environment.h"
@@ -28,7 +29,10 @@
 #include <cmath>
 #include <sstream>
 #include <fstream>
+#include <list>
+#include <memory>
 
+namespace {
 class ModFPoSu3DModel {
     NOCOPY_NOMOVE(ModFPoSu3DModel)
    public:
@@ -43,18 +47,77 @@ class ModFPoSu3DModel {
     VertexArrayObject *vao;
     Image *texture;
 };
+}  // namespace
 
-ModFPoSu::ModFPoSu() {
+struct ModFPoSu::FPoSuImpl {
+    void handleZoomedChange();
+    void noclipMove();
+
+    void handleInputOverrides(bool required);
+    void setMousePosCompensated(vec2 newMousePos);
+    vec2 intersectRayMesh(vec3 pos, vec3 dir);
+    vec3 calculateUnProjectedVector(vec2 pos);
+
+    void makePlayfield();
+
+    struct VertexPair {
+        vec3 a{0.f};
+        vec3 b{0.f};
+        float textureCoordinate;
+        // vec3 normal{0.f};
+
+        VertexPair(vec3 a, vec3 b, float tc) : a(a), b(b), textureCoordinate(tc) { ; }
+    };
+
+    static float subdivide(std::list<VertexPair> &meshList, const std::list<VertexPair>::iterator &begin,
+                           const std::list<VertexPair>::iterator &end, int n, float edgeDistance);
+    static vec3 normalFromTriangle(vec3 p1, vec3 p2, vec3 p3);
+
+    Matrix4 modelMatrix;
+    Matrix4 projectionMatrix;
+
+    VertexArrayObject *vao{nullptr};
+    VertexArrayObject *vaoCube{nullptr};
+
+    std::unique_ptr<Camera> camera{nullptr};
+    std::unique_ptr<ModFPoSu3DModel> skyboxModel{nullptr};  // lazy loaded
+
+    std::list<VertexPair> meshList;
+
+    vec3 vPrevNoclipCameraPos{0.f};
+    vec3 vVelocity{0.f};
+
+    float fCircumLength{0.f};
+
+    AnimFloat fZoomFOVAnimPercent;
+    float fZoomFOVAnimPercentPrevious{0.f};
+
+    float fEdgeDistance{0.f};
+
+    bool bZoomKeyDown{false};
+    bool bZoomed{false};
+    bool bKeyLeftDown{false};
+    bool bKeyUpDown{false};
+    bool bKeyRightDown{false};
+    bool bKeyDownDown{false};
+    bool bKeySpaceDown{false};
+    bool bKeySpaceUpDown{false};
+
+    bool bCrosshairIntersectsScreen{false};
+    bool bAlreadyWarnedAboutRawInputOverride{false};
+};
+
+ModFPoSu::ModFPoSu() : m_impl() {
     // vars
-    this->camera = std::make_unique<Camera>(vec3(0, 0, 0), vec3(0, 0, -1));
+    m_impl->camera = std::make_unique<Camera>(vec3(0, 0, 0), vec3(0, 0, -1));
 
     // load resources
-    this->vao = resourceManager->createVertexArrayObject();
-    this->vaoCube = resourceManager->createVertexArrayObject();
+    m_impl->vao = resourceManager->createVertexArrayObject();
+    m_impl->vaoCube = resourceManager->createVertexArrayObject();
 
     // init
     this->onResolutionChange(osu->getVirtScreenSize());
-    this->makePlayfield();
+    m_impl->makePlayfield();
     this->makeBackgroundCube();
 
     // convar callbacks
@@ -70,9 +133,9 @@ ModFPoSu::ModFPoSu() {
 }
 
 ModFPoSu::~ModFPoSu() {
-    this->fZoomFOVAnimPercent.stop();
-    resourceManager->destroyResource(this->vaoCube);
-    resourceManager->destroyResource(this->vao);
+    m_impl->fZoomFOVAnimPercent.stop();
+    resourceManager->destroyResource(m_impl->vaoCube);
+    resourceManager->destroyResource(m_impl->vao);
 
     cv::fposu_curved.reset();
     cv::fposu_distance.reset();
@@ -88,8 +151,9 @@ ModFPoSu::~ModFPoSu() {
 void ModFPoSu::draw() {
     if(!cv::mod_fposu.getBool()) return;
 
-    Matrix4 viewMatrix = Camera::buildMatrixLookAt(
-        this->camera->getPos(), this->camera->getPos() + this->camera->getViewDirection(), this->camera->getViewUp());
+    Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_impl->camera->getPos(),
+                                                   m_impl->camera->getPos() + m_impl->camera->getViewDirection(),
+                                                   m_impl->camera->getViewUp());
 
     g->pushViewport();
     g->setViewport(osu->getVirtScreenSize());
@@ -98,7 +162,7 @@ void ModFPoSu::draw() {
     g->pushTransform();
     {
         g->setWorldMatrix(viewMatrix);
-        g->setProjectionMatrix(this->projectionMatrix);
+        g->setProjectionMatrix(m_impl->projectionMatrix);
 
         g->setBlending(false);
         {
@@ -133,8 +197,8 @@ void ModFPoSu::draw() {
 
                 // skybox/cube
                 if(cv::fposu_skybox.getBool() &&
-                   (this->skyboxModel ||  // lazy load 3d model
-                    (this->skyboxModel = std::make_unique<ModFPoSu3DModel>(skyboxObj, nullptr, true)))) {
+                   (m_impl->skyboxModel ||  // lazy load 3d model
+                    (m_impl->skyboxModel = std::make_unique<ModFPoSu3DModel>(skyboxObj, nullptr, true)))) {
                     g->pushTransform();
                     {
                         Matrix4 modelMatrix;
@@ -149,7 +213,7 @@ void ModFPoSu::draw() {
                         g->setColor(0xffffffff);
                         osu->getSkin()->i_skybox.bind();
                         {
-                            this->skyboxModel->draw3D();
+                            m_impl->skyboxModel->draw3D();
                         }
                         osu->getSkin()->i_skybox.unbind();
                     }
@@ -160,7 +224,7 @@ void ModFPoSu::draw() {
                         g->setColor(rgb(std::clamp<int>(cv::fposu_cube_tint_r.getInt(), 0, 255),
                                         std::clamp<int>(cv::fposu_cube_tint_g.getInt(), 0, 255),
                                         std::clamp<int>(cv::fposu_cube_tint_b.getInt(), 0, 255)));
-                        g->drawVAO(this->vaoCube);
+                        g->drawVAO(m_impl->vaoCube);
                     }
                     osu->getSkin()->i_background_cube.unbind();
                 }
@@ -180,14 +244,14 @@ void ModFPoSu::draw() {
                 g->setBlendMode(DrawBlendMode::PREMUL_COLOR);
             }
 
-            Matrix4 worldMatrix = this->modelMatrix;
+            Matrix4 worldMatrix = m_impl->modelMatrix;
 
             g->setWorldMatrixMul(worldMatrix);
             {
                 osu->getPlayfieldBuffer()->bind();
                 {
                     g->setColor(0xffffffff);
-                    g->drawVAO(this->vao);
+                    g->drawVAO(m_impl->vao);
                 }
                 osu->getPlayfieldBuffer()->unbind();
             }
@@ -205,40 +269,40 @@ void ModFPoSu::draw() {
 
 void ModFPoSu::update() {
     if(!osu->isInPlayMode() || !cv::mod_fposu.getBool()) {
-        this->handleInputOverrides(false);  // release overridden rawinput state
+        m_impl->handleInputOverrides(false);  // release overridden rawinput state
         return;
     }
 
-    if(this->fZoomFOVAnimPercent != this->fZoomFOVAnimPercentPrevious) {
-        this->fZoomFOVAnimPercentPrevious = this->fZoomFOVAnimPercent;
+    if(m_impl->fZoomFOVAnimPercent != m_impl->fZoomFOVAnimPercentPrevious) {
+        m_impl->fZoomFOVAnimPercentPrevious = m_impl->fZoomFOVAnimPercent;
         // rebuild projection matrix
         this->onResolutionChange(osu->getVirtScreenSize());
     }
 
-    if(cv::fposu_noclip.getBool()) this->noclipMove();
+    if(cv::fposu_noclip.getBool()) m_impl->noclipMove();
 
-    this->modelMatrix = Matrix4();
+    m_impl->modelMatrix = Matrix4();
     {
-        this->modelMatrix.scale(
+        m_impl->modelMatrix.scale(
             1.0f,
-            (osu->getPlayfieldBuffer()->getHeight() / osu->getPlayfieldBuffer()->getWidth()) * (this->fCircumLength),
+            (osu->getPlayfieldBuffer()->getHeight() / osu->getPlayfieldBuffer()->getWidth()) * (m_impl->fCircumLength),
             1.0f);
 
         // rotate around center
         {
-            this->modelMatrix.translate(0, 0, cv::fposu_distance.getFloat());  // (compensate for mesh offset)
+            m_impl->modelMatrix.translate(0, 0, cv::fposu_distance.getFloat());  // (compensate for mesh offset)
             {
-                this->modelMatrix.rotateX(cv::fposu_playfield_rotation_x.getFloat());
-                this->modelMatrix.rotateY(cv::fposu_playfield_rotation_y.getFloat());
-                this->modelMatrix.rotateZ(cv::fposu_playfield_rotation_z.getFloat());
+                m_impl->modelMatrix.rotateX(cv::fposu_playfield_rotation_x.getFloat());
+                m_impl->modelMatrix.rotateY(cv::fposu_playfield_rotation_y.getFloat());
+                m_impl->modelMatrix.rotateZ(cv::fposu_playfield_rotation_z.getFloat());
             }
-            this->modelMatrix.translate(0, 0, -cv::fposu_distance.getFloat());  // (restore)
+            m_impl->modelMatrix.translate(0, 0, -cv::fposu_distance.getFloat());  // (restore)
         }
 
         // NOTE: slightly move back by default to avoid aliasing with background cube
-        this->modelMatrix.translate(cv::fposu_playfield_position_x.getFloat(),
-                                    cv::fposu_playfield_position_y.getFloat(),
-                                    -0.0015f + cv::fposu_playfield_position_z.getFloat());
+        m_impl->modelMatrix.translate(cv::fposu_playfield_position_x.getFloat(),
+                                      cv::fposu_playfield_position_y.getFloat(),
+                                      -0.0015f + cv::fposu_playfield_position_z.getFloat());
 
         if(cv::fposu_mod_strafing.getBool()) {
             if(osu->isInPlayMode()) {
@@ -256,7 +320,7 @@ void ModFPoSu::update() {
                                          cv::fposu_mod_strafing_frequency_z.getFloat()) *
                                 cv::fposu_mod_strafing_strength_z.getFloat();
 
-                this->modelMatrix.translate(x, y, z);
+                m_impl->modelMatrix.translate(x, y, z);
             }
         }
     }
@@ -264,7 +328,7 @@ void ModFPoSu::update() {
     const bool isAutoCursor =
         (osu->getModAuto() || osu->getModAutopilot() || osu->getMapInterface()->is_watching || BanchoState::spectating);
 
-    this->bCrosshairIntersectsScreen = true;
+    m_impl->bCrosshairIntersectsScreen = true;
     if(!cv::fposu_absolute_mode.getBool() && !isAutoCursor) {
         // regular mouse position mode
 
@@ -279,29 +343,29 @@ void ModFPoSu::update() {
         rawDelta *= multiplier;
 
         // apply zoom_sensitivity_ratio if zoomed
-        if(this->bZoomed && cv::fposu_zoom_sensitivity_ratio.getDouble() > 0.)
+        if(m_impl->bZoomed && cv::fposu_zoom_sensitivity_ratio.getDouble() > 0.)
             rawDelta *= (cv::fposu_zoom_fov.getDouble() / cv::fposu_fov.getDouble()) *
                         cv::fposu_zoom_sensitivity_ratio.getDouble();  // see
         // https://www.reddit.com/r/GlobalOffensive/comments/3vxkav/how_zoomed_sensitivity_works/
 
         // update camera
         if(rawDelta.x != 0.)
-            this->camera->rotateY((float)(rawDelta.x * (cv::fposu_invert_horizontal.getBool() ? 1. : -1.)));
+            m_impl->camera->rotateY((float)(rawDelta.x * (cv::fposu_invert_horizontal.getBool() ? 1. : -1.)));
         if(rawDelta.y != 0.)
-            this->camera->rotateX((float)(rawDelta.y * (cv::fposu_invert_vertical.getBool() ? 1. : -1.)));
+            m_impl->camera->rotateX((float)(rawDelta.y * (cv::fposu_invert_vertical.getBool() ? 1. : -1.)));
 
         // don't touch mouse pos if the os cursor is visible or we are unfocused
         if(!(env->isCursorVisible() || !env->isCursorInWindow() || !env->winFocused())) {
             // calculate ray-mesh intersection and set new mouse pos
-            vec2 newMousePos = this->intersectRayMesh(this->camera->getPos(), this->camera->getViewDirection());
+            vec2 newMousePos = m_impl->intersectRayMesh(m_impl->camera->getPos(), m_impl->camera->getViewDirection());
             if(newMousePos.x != 0.f || newMousePos.y != 0.f) {
-                this->setMousePosCompensated(newMousePos);
+                m_impl->setMousePosCompensated(newMousePos);
             } else {
-                this->bCrosshairIntersectsScreen = false;
+                m_impl->bCrosshairIntersectsScreen = false;
             }
         }
     } else {
-        this->handleInputOverrides(false);  // we don't need raw deltas for absolute mode
+        m_impl->handleInputOverrides(false);  // we don't need raw deltas for absolute mode
 
         // absolute mouse position mode (or auto)
         vec2 mousePos = mouse->getPos();
@@ -309,16 +373,16 @@ void ModFPoSu::update() {
             mousePos = osu->getMapInterface()->getCursorPos();
         }
 
-        this->bCrosshairIntersectsScreen = true;
-        this->camera->lookAt(this->calculateUnProjectedVector(mousePos));
+        m_impl->bCrosshairIntersectsScreen = true;
+        m_impl->camera->lookAt(m_impl->calculateUnProjectedVector(mousePos));
     }
 }
 
 void ModFPoSu::resetCamera() {
-    this->camera->lookAt(this->calculateUnProjectedVector(osu->getVirtScreenRect().getCenter()));
+    m_impl->camera->lookAt(m_impl->calculateUnProjectedVector(osu->getVirtScreenRect().getCenter()));
 }
 
-void ModFPoSu::noclipMove() {
+void ModFPoSu::FPoSuImpl::noclipMove() {
     const float noclipSpeed = cv::fposu_noclipspeed.getFloat() * (keyboard->isShiftDown() ? 3.0f : 1.0f) *
                               (keyboard->isControlDown() ? 0.2f : 1);
     const float noclipAccelerate = cv::fposu_noclipaccelerate.getFloat();
@@ -385,60 +449,62 @@ void ModFPoSu::noclipMove() {
 }
 
 void ModFPoSu::onResolutionChange(vec2 newResolution) {
-    const float fov = std::lerp(cv::fposu_fov.getFloat(), cv::fposu_zoom_fov.getFloat(), this->fZoomFOVAnimPercent);
-    this->projectionMatrix =
+    const float fov = std::lerp(cv::fposu_fov.getFloat(), cv::fposu_zoom_fov.getFloat(), m_impl->fZoomFOVAnimPercent);
+    m_impl->projectionMatrix =
         cv::fposu_vertical_fov.getBool()
             ? Camera::buildMatrixPerspectiveFovVertical(
-                  glm::radians(fov), ((float)newResolution.x / (float)newResolution.y), 0.05f, 1000.0f)
+                  vec::radians(fov), ((float)newResolution.x / (float)newResolution.y), 0.05f, 1000.0f)
             : Camera::buildMatrixPerspectiveFovHorizontal(
-                  glm::radians(fov), ((float)newResolution.y / (float)newResolution.x), 0.05f, 1000.0f);
+                  vec::radians(fov), ((float)newResolution.y / (float)newResolution.x), 0.05f, 1000.0f);
 }
+
+bool ModFPoSu::isCrosshairIntersectingScreen() const { return m_impl->bCrosshairIntersectsScreen; }
 
 void ModFPoSu::onResolutionChange0Args() { this->onResolutionChange(osu->getVirtScreenSize()); }
 
 void ModFPoSu::onKeyDown(KeyboardEvent &key) {
-    if(key == cv::FPOSU_ZOOM.getVal<SCANCODE>() && !this->bZoomKeyDown) {
-        this->bZoomKeyDown = true;
+    if(key == cv::FPOSU_ZOOM.getVal<SCANCODE>() && !m_impl->bZoomKeyDown) {
+        m_impl->bZoomKeyDown = true;
 
-        if(!this->bZoomed || cv::fposu_zoom_toggle.getBool()) {
+        if(!m_impl->bZoomed || cv::fposu_zoom_toggle.getBool()) {
             if(!cv::fposu_zoom_toggle.getBool())
-                this->bZoomed = true;
+                m_impl->bZoomed = true;
             else
-                this->bZoomed = !this->bZoomed;
+                m_impl->bZoomed = !m_impl->bZoomed;
 
-            this->handleZoomedChange();
+            m_impl->handleZoomedChange();
         }
     }
 
-    if(key == KEY_A) this->bKeyLeftDown = true;
-    if(key == KEY_W) this->bKeyUpDown = true;
-    if(key == KEY_D) this->bKeyRightDown = true;
-    if(key == KEY_S) this->bKeyDownDown = true;
+    if(key == KEY_A) m_impl->bKeyLeftDown = true;
+    if(key == KEY_W) m_impl->bKeyUpDown = true;
+    if(key == KEY_D) m_impl->bKeyRightDown = true;
+    if(key == KEY_S) m_impl->bKeyDownDown = true;
     if(key == KEY_SPACE) {
-        if(!this->bKeySpaceDown) this->bKeySpaceUpDown = !this->bKeySpaceUpDown;
+        if(!m_impl->bKeySpaceDown) m_impl->bKeySpaceUpDown = !m_impl->bKeySpaceUpDown;
 
-        this->bKeySpaceDown = true;
+        m_impl->bKeySpaceDown = true;
     }
 }
 
 void ModFPoSu::onKeyUp(KeyboardEvent &key) {
     if(key == cv::FPOSU_ZOOM.getVal<SCANCODE>()) {
-        this->bZoomKeyDown = false;
+        m_impl->bZoomKeyDown = false;
 
-        if(this->bZoomed && !cv::fposu_zoom_toggle.getBool()) {
-            this->bZoomed = false;
-            this->handleZoomedChange();
+        if(m_impl->bZoomed && !cv::fposu_zoom_toggle.getBool()) {
+            m_impl->bZoomed = false;
+            m_impl->handleZoomedChange();
         }
     }
 
-    if(key == KEY_A) this->bKeyLeftDown = false;
-    if(key == KEY_W) this->bKeyUpDown = false;
-    if(key == KEY_D) this->bKeyRightDown = false;
-    if(key == KEY_S) this->bKeyDownDown = false;
-    if(key == KEY_SPACE) this->bKeySpaceDown = false;
+    if(key == KEY_A) m_impl->bKeyLeftDown = false;
+    if(key == KEY_W) m_impl->bKeyUpDown = false;
+    if(key == KEY_D) m_impl->bKeyRightDown = false;
+    if(key == KEY_S) m_impl->bKeyDownDown = false;
+    if(key == KEY_SPACE) m_impl->bKeySpaceDown = false;
 }
 
-void ModFPoSu::handleZoomedChange() {
+void ModFPoSu::FPoSuImpl::handleZoomedChange() {
     if(this->bZoomed)
         this->fZoomFOVAnimPercent.set(
             1.0f, (1.0f - this->fZoomFOVAnimPercent) * cv::fposu_zoom_anim_duration.getFloat(), anim::QuadOut);
@@ -447,7 +513,7 @@ void ModFPoSu::handleZoomedChange() {
                                       anim::QuadOut);
 }
 
-void ModFPoSu::handleInputOverrides(bool rawDeltasRequired) {
+void ModFPoSu::FPoSuImpl::handleInputOverrides(bool rawDeltasRequired) {
     if(mouse->isRawInputWanted() == true) {
         return;  // nothing to do if user desired state is already raw (no override required)
     }
@@ -463,7 +529,7 @@ void ModFPoSu::handleInputOverrides(bool rawDeltasRequired) {
     }
 }
 
-void ModFPoSu::setMousePosCompensated(vec2 newMousePos) {
+void ModFPoSu::FPoSuImpl::setMousePosCompensated(vec2 newMousePos) {
     this->handleInputOverrides(true);  // outside of absolute mode, we need raw mouse deltas
 
     // NOTE: letterboxing uses Mouse::setOffset() to offset the virtual engine cursor coordinate system, so we have to
@@ -473,7 +539,7 @@ void ModFPoSu::setMousePosCompensated(vec2 newMousePos) {
     mouse->onPosChange(newMousePos);
 }
 
-vec2 ModFPoSu::intersectRayMesh(vec3 pos, vec3 dir) {
+vec2 ModFPoSu::FPoSuImpl::intersectRayMesh(vec3 pos, vec3 dir) {
     auto begin = this->meshList.begin();
     auto next = ++this->meshList.begin();
     int face = 0;
@@ -536,7 +602,7 @@ vec2 ModFPoSu::intersectRayMesh(vec3 pos, vec3 dir) {
     return vec2(0, 0);
 }
 
-vec3 ModFPoSu::calculateUnProjectedVector(vec2 pos) {
+vec3 ModFPoSu::FPoSuImpl::calculateUnProjectedVector(vec2 pos) {
     // calculate 3d position of 2d cursor on screen mesh
     const float cursorXPercent = std::clamp<float>(pos.x / (float)osu->getVirtScreenWidth(), 0.0f, 1.0f);
     const float cursorYPercent = std::clamp<float>(pos.y / (float)osu->getVirtScreenHeight(), 0.0f, 1.0f);
@@ -578,7 +644,7 @@ vec3 ModFPoSu::calculateUnProjectedVector(vec2 pos) {
     return vec3(-0.5f, 0.5f, -0.5f);
 }
 
-void ModFPoSu::makePlayfield() {
+void ModFPoSu::FPoSuImpl::makePlayfield() {
     this->vao->clear();
     this->meshList.clear();
 
@@ -633,116 +699,117 @@ void ModFPoSu::makePlayfield() {
 }
 
 void ModFPoSu::makeBackgroundCube() {
-    this->vaoCube->clear();
+    m_impl->vaoCube->clear();
 
     const float size = cv::fposu_cube_size.getFloat();
 
     // front
-    this->vaoCube->addVertex(-size, -size, -size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
-    this->vaoCube->addVertex(size, -size, -size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
-    this->vaoCube->addVertex(size, size, -size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, -size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, -size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
 
-    this->vaoCube->addVertex(size, size, -size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
-    this->vaoCube->addVertex(-size, size, -size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
-    this->vaoCube->addVertex(-size, -size, -size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, -size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
 
     // back
-    this->vaoCube->addVertex(-size, -size, size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
-    this->vaoCube->addVertex(size, -size, size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
-    this->vaoCube->addVertex(size, size, size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, -size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, -size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
 
-    this->vaoCube->addVertex(size, size, size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
-    this->vaoCube->addVertex(-size, size, size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
-    this->vaoCube->addVertex(-size, -size, size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, -size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
 
     // left
-    this->vaoCube->addVertex(-size, size, size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
-    this->vaoCube->addVertex(-size, size, -size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
-    this->vaoCube->addVertex(-size, -size, -size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(-size, size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, -size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
 
-    this->vaoCube->addVertex(-size, -size, -size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
-    this->vaoCube->addVertex(-size, -size, size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
-    this->vaoCube->addVertex(-size, size, size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, -size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(-size, -size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(-size, size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
 
     // right
-    this->vaoCube->addVertex(size, size, size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
-    this->vaoCube->addVertex(size, size, -size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
-    this->vaoCube->addVertex(size, -size, -size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(size, size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(size, -size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
 
-    this->vaoCube->addVertex(size, -size, -size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
-    this->vaoCube->addVertex(size, -size, size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
-    this->vaoCube->addVertex(size, size, size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(size, -size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, -size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
 
     // bottom
-    this->vaoCube->addVertex(-size, -size, -size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
-    this->vaoCube->addVertex(size, -size, -size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
-    this->vaoCube->addVertex(size, -size, size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(-size, -size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(size, -size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(size, -size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
 
-    this->vaoCube->addVertex(size, -size, size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
-    this->vaoCube->addVertex(-size, -size, size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
-    this->vaoCube->addVertex(-size, -size, -size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(size, -size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(-size, -size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(-size, -size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
 
     // top
-    this->vaoCube->addVertex(-size, size, -size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
-    this->vaoCube->addVertex(size, size, -size);
-    this->vaoCube->addTexcoord(1.0f, 1.0f);
-    this->vaoCube->addVertex(size, size, size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, -size);
+    m_impl->vaoCube->addTexcoord(1.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
 
-    this->vaoCube->addVertex(size, size, size);
-    this->vaoCube->addTexcoord(1.0f, 0.0f);
-    this->vaoCube->addVertex(-size, size, size);
-    this->vaoCube->addTexcoord(0.0f, 0.0f);
-    this->vaoCube->addVertex(-size, size, -size);
-    this->vaoCube->addTexcoord(0.0f, 1.0f);
+    m_impl->vaoCube->addVertex(size, size, size);
+    m_impl->vaoCube->addTexcoord(1.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, size, size);
+    m_impl->vaoCube->addTexcoord(0.0f, 0.0f);
+    m_impl->vaoCube->addVertex(-size, size, -size);
+    m_impl->vaoCube->addTexcoord(0.0f, 1.0f);
 }
 
-void ModFPoSu::onCurvedChange() { this->makePlayfield(); }
+// convar callbacks
+void ModFPoSu::onCurvedChange() { m_impl->makePlayfield(); }
 
-void ModFPoSu::onDistanceChange() { this->makePlayfield(); }
+void ModFPoSu::onDistanceChange() { m_impl->makePlayfield(); }
 
 void ModFPoSu::onNoclipChange() {
     if(cv::fposu_noclip.getBool())
-        this->camera->setPos(this->vPrevNoclipCameraPos);
+        m_impl->camera->setPos(m_impl->vPrevNoclipCameraPos);
     else {
-        this->vPrevNoclipCameraPos = this->camera->getPos();
-        this->camera->setPos(vec3(0, 0, 0));
+        m_impl->vPrevNoclipCameraPos = m_impl->camera->getPos();
+        m_impl->camera->setPos(vec3(0, 0, 0));
     }
 }
 
-float ModFPoSu::subdivide(std::list<VertexPair> &meshList, const std::list<VertexPair>::iterator &begin,
-                          const std::list<VertexPair>::iterator &end, int n, float edgeDistance) {
+float ModFPoSu::FPoSuImpl::subdivide(std::list<VertexPair> &meshList, const std::list<VertexPair>::iterator &begin,
+                                     const std::list<VertexPair>::iterator &end, int n, float edgeDistance) {
     const vec3 a = vec3((*begin).a.x, 0.0f, (*begin).a.z);
     const vec3 b = vec3((*end).a.x, 0.0f, (*end).a.z);
     vec3 middlePoint = vec3(std::lerp(a.x, b.x, 0.5f), std::lerp(a.y, b.y, 0.5f), std::lerp(a.z, b.z, 0.5f));
@@ -773,7 +840,7 @@ float ModFPoSu::subdivide(std::list<VertexPair> &meshList, const std::list<Verte
     return circumLength;
 }
 
-vec3 ModFPoSu::normalFromTriangle(vec3 p1, vec3 p2, vec3 p3) {
+vec3 ModFPoSu::FPoSuImpl::normalFromTriangle(vec3 p1, vec3 p2, vec3 p3) {
     const vec3 u = (p2 - p1);
     const vec3 v = (p3 - p1);
 

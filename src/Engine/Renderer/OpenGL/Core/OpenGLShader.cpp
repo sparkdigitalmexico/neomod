@@ -10,6 +10,7 @@
 #include "ConVar.h"
 #include "Engine.h"
 #include "Logging.h"
+#include "Matrices.h"
 
 #include <fstream>
 

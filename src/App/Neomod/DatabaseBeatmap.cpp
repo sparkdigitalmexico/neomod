@@ -8,6 +8,7 @@
 #include <source_location>
 #include <utility>
 #include <cassert>
+#include <cmath>
 
 #ifndef BUILD_TOOLS_ONLY
 

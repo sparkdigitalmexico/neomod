@@ -20,6 +20,7 @@
 #include "Graphics.h"
 #include "Logging.h"
 #include "ContainerRanges.h"
+#include "Matrices.h"
 
 #include "ctre.hpp"
 

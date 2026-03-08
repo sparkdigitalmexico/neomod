@@ -257,9 +257,11 @@ neomod_SOURCES = \
 	src/Util/CDynArray.cpp \
 	src/Util/MD5Hash.cpp \
 	src/Util/Quaternion.cpp \
+	src/Util/Rect.cpp \
 	src/Util/SString.cpp \
 	src/Util/SyncPrimitives/SyncJthread.cpp \
 	src/Util/UString.cpp \
+	src/Util/Vectors.cpp \
 	src/Util/crypto.cpp \
 	src/Util/dynutils.cpp \
 	$(GL_SHARED_SOURCES) \

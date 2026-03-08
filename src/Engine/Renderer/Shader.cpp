@@ -9,6 +9,7 @@
 #include "SString.h"
 #include "Engine.h"
 #include "UString.h"
+#include "Matrices.h"
 
 #include <sstream>
 
@@ -57,4 +58,9 @@ Shader::SHADER_PARSE_RESULT Shader::parseShaderFromString(const std::string &gra
                                         shaderSource.c_str()));
 
     return result;
+}
+
+void Shader::setMVP(const Matrix4 &mvp) {
+    if(std::memcmp((void *)m_lastMVP.data(), (void *)mvp.get(), sizeof(float) * 16) == 0) return;
+    setUniformMatrix4fv("mvp"sv, mvp);
 }

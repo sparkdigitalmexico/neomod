@@ -341,6 +341,42 @@ void AnimHandleT<T>::stop() {
 template class AnimHandleT<f32>;
 template class AnimHandleT<f64>;
 
+AnimVec2::AnimVec2(vec2 initial) {
+    x = initial.x;
+    y = initial.y;
+}
+
+AnimVec2::AnimVec2(dvec2 initial) {
+    x = static_cast<float>(initial.x);
+    y = static_cast<float>(initial.y);
+}
+
+AnimVec2 &AnimVec2::operator=(vec2 value) {
+    x = value.x;
+    y = value.y;
+    return *this;
+}
+
+AnimVec2::operator vec2() const { return vec2{f32(x), f32(y)}; }
+
+AnimVec2D::AnimVec2D(vec2 initial) {
+    x = initial.x;
+    y = initial.y;
+}
+
+AnimVec2D::AnimVec2D(dvec2 initial) {
+    x = initial.x;
+    y = initial.y;
+}
+
+AnimVec2D &AnimVec2D::operator=(dvec2 value) {
+    x = value.x;
+    y = value.y;
+    return *this;
+}
+
+AnimVec2D::operator dvec2() const { return dvec2{f64(x), f64(y)}; }
+
 // --- engine functions ---
 
 void clearAll() {

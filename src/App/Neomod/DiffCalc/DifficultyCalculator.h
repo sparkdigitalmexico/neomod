@@ -23,6 +23,7 @@ using std::stop_token;
 #include <array>
 #include <memory>
 #include <algorithm>
+#include <cmath>
 
 enum class ModFlags : u64;
 

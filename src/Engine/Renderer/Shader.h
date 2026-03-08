@@ -1,12 +1,12 @@
 #pragma once
 // Copyright (c) 2012, PG, All rights reserved.
 #include "Resource.h"
-#include "Matrices.h"
 
 #include <vector>
 #include <cstring>
+#include <array>
 
-using std::string_view_literals::operator""sv;
+struct Matrix4;
 
 class Shader : public Resource {
     NOCOPY_NOMOVE(Shader)
@@ -31,10 +31,7 @@ class Shader : public Resource {
     // to avoid redundantly setting MVP matrix
     // just a small optimization for a very common uniform
     // cache seems to have a ~21% hit rate in practice
-    inline void setMVP(const Matrix4 &mvp) {
-        if(std::memcmp((void *)m_lastMVP.get(), (void *)mvp.get(), sizeof(float) * 16) == 0) return;
-        setUniformMatrix4fv("mvp"sv, mvp);
-    }
+    void setMVP(const Matrix4 &mvp);
 
     Shader *asShader() final { return this; }
     [[nodiscard]] const Shader *asShader() const final { return this; }
@@ -54,12 +51,12 @@ class Shader : public Resource {
 
    private:
     // clang-format off
-    static inline constexpr float initCachedMVP[16]{
+    static inline constexpr std::array<float, 16> initCachedMVP{
         -1.f, -1.f, -1.f, -1.f,
         -1.f, -1.f, -1.f, -1.f,
         -1.f, -1.f, -1.f, -1.f,
         -1.f, -1.f, -1.f, -1.f
     };
     // clang-format on
-    Matrix4 m_lastMVP{&initCachedMVP[0]};
+    std::array<float, 16> m_lastMVP{initCachedMVP};
 };

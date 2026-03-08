@@ -27,7 +27,8 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
     struct zero_init_t {};
     static inline constexpr zero_init_t zero_init{};
 
-    constexpr CDynArray() : std::unique_ptr<T[], CDynArrayDeleter>(static_cast<T*>(std::malloc(BASE_CAPACITY * sizeof(T)))) {
+    constexpr CDynArray()
+        : std::unique_ptr<T[], CDynArrayDeleter>(static_cast<T*>(std::malloc(BASE_CAPACITY * sizeof(T)))) {
         static_assert(std::is_trivial_v<T>);
     }
     ~CDynArray();
@@ -60,11 +61,10 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
     void assign(uSz num, const T& value);
 
     template <std::forward_iterator InputIt>
-    void assign(InputIt first, InputIt last) {
+    really_forceinline void assign(InputIt first, InputIt last) {
         const uSz count = static_cast<uSz>(std::distance(first, last));
         this->resize(count);
-        T* dest = this->data();
-        for(; first != last; ++first, ++dest) *dest = *first;
+        for(T* dest = this->data(); first != last; ++first, ++dest) *dest = *first;
     }
 
     void clear();
@@ -94,7 +94,7 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
     iterator insert(const_iterator pos, uSz n, const value_type& x) noexcept;
 
     template <std::forward_iterator InputIt>
-    iterator insert(const_iterator pos, InputIt first, InputIt last) {
+    really_forceinline iterator insert(const_iterator pos, InputIt first, InputIt last) {
         const uSz offset = static_cast<uSz>(pos - this->cbegin());
         const uSz count = static_cast<uSz>(std::distance(first, last));
         if(count == 0) return this->begin() + offset;
@@ -107,8 +107,7 @@ struct CDynArray final : private std::unique_ptr<T[], CDynArrayDeleter> {
                          (m_size - offset) * sizeof(T));
         }
 
-        T* dest = this->data() + offset;
-        for(; first != last; ++first, ++dest) *dest = *first;
+        for(T* dest = this->data() + offset; first != last; ++first, ++dest) *dest = *first;
 
         m_size = newSize;
         return this->begin() + offset;
@@ -157,11 +156,11 @@ struct CDynArray<T*> final {
     forceinline void assign(uSz num, const T& value) { m_impl.assign(num, value); }
 
     template <std::forward_iterator InputIt>
-    forceinline void assign(InputIt first, InputIt last) {
+    really_forceinline void assign(InputIt first, InputIt last) {
         const uSz count = static_cast<uSz>(std::distance(first, last));
         m_impl.resize(count);
-        uintptr_t* dest = m_impl.data();
-        for(; first != last; ++first, ++dest) *dest = reinterpret_cast<uintptr_t>(*first);
+        for(uintptr_t* dest = m_impl.data(); first != last; ++first, ++dest)
+            *dest = reinterpret_cast<uintptr_t>(*first);
     }
 
     forceinline void clear() { m_impl.clear(); }
@@ -172,7 +171,7 @@ struct CDynArray<T*> final {
     };
 
     template <std::forward_iterator InputIt>
-    forceinline iterator insert(const_iterator pos, InputIt first, InputIt last) {
+    really_forceinline iterator insert(const_iterator pos, InputIt first, InputIt last) {
         const uSz offset = static_cast<uSz>(pos - cbegin());
         const uSz count = static_cast<uSz>(std::distance(first, last));
         if(count == 0) return begin() + offset;
@@ -187,8 +186,8 @@ struct CDynArray<T*> final {
                          (oldSize - offset) * sizeof(uintptr_t));
         }
 
-        uintptr_t* dest = m_impl.data() + offset;
-        for(; first != last; ++first, ++dest) *dest = reinterpret_cast<uintptr_t>(*first);
+        for(uintptr_t* dest = m_impl.data() + offset; first != last; ++first, ++dest)
+            *dest = reinterpret_cast<uintptr_t>(*first);
 
         return begin() + offset;
     }

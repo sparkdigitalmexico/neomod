@@ -630,7 +630,7 @@ class SliderPreviewElement final : public CBaseUIElement {
 
                             this->vao = SliderRenderer::generateVAO(points, hitcircleDiameter, vec3(0, 0, 0), false);
                         }
-                        vec4 emptyBounds;
+                        vec4 emptyBounds{};
                         SliderRenderer::draw(this->vao.get(), emptyBounds, emptyVector, this->getPos(), 1,
                                              hitcircleDiameter, 0, 1, osu->getSkin()->getComboColorForCounter(420, 0));
                     }

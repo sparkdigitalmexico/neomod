@@ -17,6 +17,7 @@
 #include "Engine.h"
 #include "Logging.h"
 #include "SString.h"
+#include "Matrices.h"
 
 #include "DirectX11Interface.h"
 

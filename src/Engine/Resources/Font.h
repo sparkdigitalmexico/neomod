@@ -10,7 +10,6 @@
 #define FONT_H
 
 #include "Resource.h"
-#include "Vectors.h"
 #include "StaticPImpl.h"
 #include "Color.h"
 

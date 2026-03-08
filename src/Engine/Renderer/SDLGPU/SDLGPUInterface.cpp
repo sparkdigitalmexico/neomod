@@ -27,8 +27,9 @@
 #include "VertexArrayObject.h"
 #include "Environment.h"
 #include "SString.h"
-#include "ContainerRanges.h"
 #include "VisualProfiler.h"
+
+#include "Graphics_private.h"
 
 #include "binary_embed.h"
 
@@ -297,10 +298,10 @@ void SDLGPUInterface::createPipeline() {
         .vertexShader = m_activeShader->getVertexShader(),
         .fragmentShader = m_activeShader->getFragmentShader(),
         .primitiveType = m_currentPrimitiveType,
-        .blendMode = this->currentBlendMode,
+        .blendMode = m_data->currentBlendMode,
         .sampleCount = m_curRTState.sampleCount,
         .stencilState = (u8)m_stencilState,
-        .blendingEnabled = this->bBlendingEnabled,
+        .blendingEnabled = m_data->bBlendingEnabled,
         .depthTestEnabled = m_depthTestEnabled,
         .depthWriteEnabled = m_depthWriteEnabled,
         .wireframe = m_wireframeEnabled,
@@ -340,11 +341,11 @@ void SDLGPUInterface::createPipeline() {
 
     // blend state
     SDL_GPUColorTargetBlendState blendState{};
-    blendState.enable_blend = this->bBlendingEnabled;
+    blendState.enable_blend = m_data->bBlendingEnabled;
     blendState.color_write_mask = m_colorWriteMask;
 
-    if(this->bBlendingEnabled) {
-        switch(this->currentBlendMode) {
+    if(m_data->bBlendingEnabled) {
+        switch(m_data->currentBlendMode) {
             case DrawBlendMode::ALPHA:
                 blendState.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
                 blendState.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
@@ -671,7 +672,7 @@ void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float ed
         m_smoothClipShader->setUniform2f("rect_max", clipMaxX, clipMaxY);
         m_smoothClipShader->setUniform1f("edge_softness", edgeSoftness);
         m_smoothClipShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
-        m_smoothClipShader->setMVP(this->MP);
+        m_smoothClipShader->setMVP(m_data->MP);
     }
 
     static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
@@ -885,7 +886,7 @@ void SDLGPUInterface::recordDraw(SDL_GPUBuffer *bakedBuffer, u32 vertexOffset, u
     }
 
     // update shader mvp with current transformation matrix
-    m_activeShader->setMVP(this->MP);
+    m_activeShader->setMVP(m_data->MP);
 
     // snapshot uniform blocks from active shader
     cmd.numUniformBlocks = 0;
@@ -1196,7 +1197,7 @@ void SDLGPUInterface::popClipRect() {
 
 void SDLGPUInterface::pushViewport() {
     // SDL_gpu doesn't have a GetViewport query, so we track it ourselves
-    this->viewportStack.push_back(
+    m_data->viewportStack.push_back(
         {(int)m_viewport.pos.x, (int)m_viewport.pos.y, (int)m_viewport.size.x, (int)m_viewport.size.y});
 }
 
@@ -1206,17 +1207,17 @@ void SDLGPUInterface::setViewport(int x, int y, int width, int height) {
 }
 
 void SDLGPUInterface::popViewport() {
-    if(this->viewportStack.empty()) {
+    if(m_data->viewportStack.empty()) {
         debugLog("WARNING: viewport stack underflow!");
         return;
     }
 
-    const auto &vp = this->viewportStack.back();
+    const auto &vp = m_data->viewportStack.back();
     m_viewport.pos = {(float)vp[0], (float)vp[1]};
     m_viewport.size = {(float)vp[2], (float)vp[3]};
 
     // viewport is captured per-draw in recordDraw();
-    this->viewportStack.pop_back();
+    m_data->viewportStack.pop_back();
 }
 
 // stencil buffer
@@ -1265,16 +1266,16 @@ void SDLGPUInterface::setAlphaTestFunc(DrawCompareFunc /*alphaFunc*/, float /*re
 }
 
 void SDLGPUInterface::setBlending(bool enabled) {
-    if(this->bBlendingEnabled != enabled) {
-        this->bBlendingEnabled = enabled;
+    if(m_data->bBlendingEnabled != enabled) {
+        m_data->bBlendingEnabled = enabled;
         m_isPipelineDirty = true;
     }
     Graphics::setBlending(enabled);
 }
 
 void SDLGPUInterface::setBlendMode(DrawBlendMode blendMode) {
-    if(this->currentBlendMode != blendMode) {
-        this->currentBlendMode = blendMode;
+    if(m_data->currentBlendMode != blendMode) {
+        m_data->currentBlendMode = blendMode;
         m_isPipelineDirty = true;
     }
     Graphics::setBlendMode(blendMode);

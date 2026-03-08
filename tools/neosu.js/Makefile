@@ -17,7 +17,8 @@ SOURCES = \
 	$(SRCDIR)/App/Neomod/GameRules.cpp \
 	$(SRCDIR)/App/Neomod/Replay.cpp \
 	$(SRCDIR)/App/Neomod/SliderCurves.cpp \
-	$(SRCDIR)/Util/SString.cpp
+	$(SRCDIR)/Util/SString.cpp \
+	$(SRCDIR)/Util/Vectors.cpp
 
 neomod.js: $(SOURCES)
 	@mkdir -p bin

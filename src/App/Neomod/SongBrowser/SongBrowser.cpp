@@ -70,6 +70,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include "fmt/chrono.h"
+
 #define WANT_PDQSORT
 #include "Sorting.h"
 

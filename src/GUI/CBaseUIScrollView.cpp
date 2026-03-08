@@ -640,7 +640,7 @@ void CBaseUIScrollView::updateClipping() {
     {
         const vec2 oldPos = expandedMe.getPos();
         const vec2 oldSize = expandedMe.getSize();
-        const vec2 newSize = oldSize * 1.15;
+        const vec2 newSize = oldSize * 1.15f;
         const vec2 newPos = oldPos - ((newSize - oldSize) / 2.f);
         expandedMe.setSize(newSize);
         expandedMe.setPos(newPos);

@@ -1977,7 +1977,7 @@ void HUD::drawTargetHeatmap(f32 hitcircleDiameter) {
 
         g->setColor(Color(color).setA(std::clamp<f32>((target.time - engine->getTime()) / 3.5f, 0.0f, 1.0f)));
 
-        const f32 theta = glm::radians(target.angle);
+        const f32 theta = vec::radians(target.angle);
         const f32 cs = std::cos(theta);
         const f32 sn = std::sin(theta);
 

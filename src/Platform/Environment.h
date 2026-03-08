@@ -10,6 +10,7 @@
 #include "Cursors.h"
 #include "KeyboardEvent.h"
 #include "Rect.h"
+#include "Vectors.h"
 
 #include <unordered_map>
 #include <vector>
@@ -262,7 +263,7 @@ class Environment {
     [[nodiscard]] bool isCursorVisible() const;
     [[nodiscard]] constexpr bool isCursorClipped() const { return m_bCursorClipped; }
     [[nodiscard]] constexpr vec2 getMousePos() const { return m_vLastAbsMousePos; }
-    [[nodiscard]] constexpr const McRect &getCursorClip() const { return m_cursorClipRect; }
+    [[nodiscard]] forceinline const McRect &getCursorClip() const { return m_cursorClipRect; }
     [[nodiscard]] constexpr CURSORTYPE getCursor() const { return m_cursorType; }
     [[nodiscard]] constexpr bool isOSMouseInputRaw() const {
         return !m_bForceAbsCursor && flags::has<WinFlags::F_MOUSE_RELATIVE_MODE>(m_winflags);
