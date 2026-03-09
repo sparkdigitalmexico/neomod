@@ -23,8 +23,6 @@ typedef struct SDL_Cursor SDL_Cursor;
 typedef struct SDL_Environment SDL_Environment;
 typedef struct SDL_Rect SDL_Rect;
 
-class DatabaseBeatmap;
-using BeatmapSet = DatabaseBeatmap;
 class Graphics;
 class UString;
 class Engine;
@@ -78,11 +76,9 @@ class Environment {
         Interop() = delete;
         Interop(Environment *env_ptr) : env_p(env_ptr) {}
         virtual ~Interop() { env_p = nullptr; }
-        void handle_cmdline_args() { handle_cmdline_args(this->env_p->getCommandLine()); }
+        bool handle_cmdline_args() { return handle_cmdline_args(this->env_p->getCommandLine()); }
 
-        virtual void handle_cmdline_args(const std::vector<std::string> & /*args*/) {}
-        virtual bool handle_osk(const char * /*osk_path*/) { return false; }
-        virtual bool handle_osz(const std::string_view /*osz_path*/, BeatmapSet ** /*out*/) { return false; }
+        virtual bool handle_cmdline_args(const std::vector<std::string> & /*args*/) { return true; }
         virtual void setup_system_integrations() {}
 
         Environment *env_p;

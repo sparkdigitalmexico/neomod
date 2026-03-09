@@ -34,7 +34,7 @@
 #define NOT_LOOPING false
 #define LOOPING true
 
-bool Skin::unpack(const char *filepath) {
+bool Skin::unpack(std::string_view filepath) {
     auto skin_name = Environment::getFileNameFromFilePath(filepath);
     debugLog("Extracting {:s}...", skin_name.c_str());
     skin_name.erase(skin_name.size() - 4);  // remove .osk extension

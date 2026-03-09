@@ -24,9 +24,7 @@ struct NeomodEnvInterop : public Environment::Interop {
     NeomodEnvInterop(Environment *env_ptr) : Interop(env_ptr) {}
     ~NeomodEnvInterop() override = default;
 
-    void handle_cmdline_args(const std::vector<std::string> &args) override;
-    bool handle_osk(const char *osk_path) override;
-    bool handle_osz(std::string_view osz_path, BeatmapSet **out = nullptr) override;
+    bool handle_cmdline_args(const std::vector<std::string> &args) override;
     void setup_system_integrations() override;
 };
 
@@ -36,10 +34,9 @@ void *createInterop(void *void_envptr) {
     auto *envptr = static_cast<Environment *>(void_envptr);
     return new NeomodEnvInterop(envptr);
 }
-}  // namespace neomod
 
 // drag-drop/file associations/registry stuff below
-bool NeomodEnvInterop::handle_osk(const char *osk_path) {
+bool handle_osk(std::string_view osk_path) {
     if(!ui || !osu || !Skin::unpack(osk_path)) return false;
 
     auto folder_name = Environment::getFileNameFromFilePath(osk_path);
@@ -51,16 +48,16 @@ bool NeomodEnvInterop::handle_osk(const char *osk_path) {
     return true;
 }
 
-bool NeomodEnvInterop::handle_osz(std::string_view osz_path, BeatmapSet **out) {
-    if(!osu) return false;
+const BeatmapSet *handle_osz(std::string_view osz_path) {
+    if(!osu) return nullptr;
 
     if(osu->isInPlayMode()) {
         ui->getNotificationOverlay()->addToast(fmt::format("Can't import {} while playing.", osz_path), ERROR_TOAST);
-        return false;
+        return nullptr;
     } else if(!db->isFinished() || db->isCancelled()) {
         ui->getNotificationOverlay()->addToast(fmt::format("Can't import {} before songs have been loaded.", osz_path),
                                                ERROR_TOAST);
-        return false;
+        return nullptr;
     }
 
     FixedSizeArray<u8> osz_data;
@@ -70,7 +67,7 @@ bool NeomodEnvInterop::handle_osz(std::string_view osz_path, BeatmapSet **out) {
         osz_data = FixedSizeArray{osz.takeFileBuffer(), osz_filesize};
         if(!osz.canRead() || !osz_filesize || !osz_data.data()) {
             ui->getNotificationOverlay()->addToast(fmt::format("Failed to import {}", osz_path), ERROR_TOAST);
-            return false;
+            return nullptr;
         }
     }
 
@@ -87,31 +84,29 @@ bool NeomodEnvInterop::handle_osz(std::string_view osz_path, BeatmapSet **out) {
     }
     if(set_id == -1) {
         ui->getNotificationOverlay()->addToast(US_("Beatmapset doesn't have a valid ID."), ERROR_TOAST);
-        return false;
+        return nullptr;
     }
 
     std::string mapset_dir = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
     Environment::createDirectory(mapset_dir);
     if(!Downloader::extract_beatmapset(osz_data.data(), osz_data.size(), mapset_dir)) {
         ui->getNotificationOverlay()->addToast(US_("Failed to extract beatmapset"), ERROR_TOAST);
-        return false;
+        return nullptr;
     }
 
-    BeatmapSet *set = db->addBeatmapSet(mapset_dir, set_id);
+    const BeatmapSet *set = db->addBeatmapSet(mapset_dir, set_id);
     if(!set) {
         ui->getNotificationOverlay()->addToast(US_("Failed to import beatmapset"), ERROR_TOAST);
-        return false;
+        return nullptr;
     }
 
-    if(out != nullptr) {
-        *out = set;
-    }
-
-    return true;
+    return set;
 }
+}  // namespace neomod
 
-void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args) {
-    if(!osu || !db) return;
+bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args) {
+    if(!osu || !db) return false;
+    using namespace neomod;
 
     std::vector<std::string> db_dependent_imports;
     bool need_to_reload_database = false;
@@ -144,13 +139,15 @@ void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
     // TODO: bug prone since there are many other possible edge cases...
     if(!osu->isInPlayMode()) {
         auto finish_importing = [db_dependent_imports] {
-            BeatmapSet *last_imported_set = nullptr;
+            const BeatmapSet *last_imported_set = nullptr;
             FinishedScore last_imported_replay;
 
             for(const auto &path : db_dependent_imports) {
                 auto extension = Environment::getFileExtensionFromFilePath(path);
                 if(extension == "osz"sv) {
-                    env->getEnvInterop().handle_osz(path, &last_imported_set);
+                    if(const auto *imported = handle_osz(path)) {
+                        last_imported_set = imported;
+                    }
                 } else if(extension == "osr") {
                     FinishedScore replay;
                     if(LegacyReplay::load_osr(path, replay)) {
@@ -183,6 +180,7 @@ void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
             finish_importing();
         }
     }
+    return true;
 }
 
 #ifdef MCENGINE_PLATFORM_WINDOWS

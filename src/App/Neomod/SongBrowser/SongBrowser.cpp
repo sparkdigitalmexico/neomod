@@ -62,6 +62,7 @@
 #include "RoomScreen.h"
 #include "Chat.h"
 #include "ContainerRanges.h"
+#include "NeomodEnvInterop.h"
 
 #include <algorithm>
 #include <memory>
@@ -2431,8 +2432,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
     for(const auto &file : oszs) {
         if(env->getFileExtensionFromFilePath(file) != "osz") continue;
         auto path = NEOMOD_MAPS_PATH "/" + file;
-        bool extracted = env->getEnvInterop().handle_osz(path, nullptr);
-        if(extracted) env->deleteFile(path);
+        if(neomod::handle_osz(path)) env->deleteFile(path);
     }
 
     Timer t;
@@ -2518,9 +2518,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
         logRaw("[DirectoryWatcher] Importing new beatmap {}: type {}", ev.path, (u32)ev.type);
         if(env->getFileExtensionFromFilePath(ev.path) != "osz") return;
 
-        BeatmapSet *set = nullptr;
-        const bool extracted = env->getEnvInterop().handle_osz(ev.path, &set);
-        if(extracted) {
+        if(const BeatmapSet *set = neomod::handle_osz(ev.path)) {
             env->deleteFile(ev.path);
             ui->getSongBrowser()->selectBeatmapset(set);
         }

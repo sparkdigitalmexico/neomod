@@ -88,7 +88,7 @@ struct Skin final {
     void load();
 
    public:
-    static bool unpack(const char *filepath);
+    static bool unpack(std::string_view filepath);
 
     Skin(std::string name, std::string filepath, std::string fallbackDir = "");
     inline ~Skin() { this->destroy(); }

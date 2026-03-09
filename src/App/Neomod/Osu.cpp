@@ -72,6 +72,7 @@
 #include "Logging.h"
 
 #include "score.h"
+#include "NeomodEnvInterop.h"
 
 #include <algorithm>
 
@@ -415,7 +416,7 @@ void Osu::doDeferredInitTasks() {
         for(const auto &file : osks) {
             if(env->getFileExtensionFromFilePath(file) != "osk") continue;
             auto path = NEOMOD_SKINS_PATH "/" + file;
-            const bool extracted = env->getEnvInterop().handle_osk(path.c_str());
+            const bool extracted = neomod::handle_osk(path);
             if(extracted) env->deleteFile(path);
         }
 
@@ -423,7 +424,7 @@ void Osu::doDeferredInitTasks() {
             if(ev.type != FileChangeType::CREATED) return;
             logRaw("[DirectoryWatcher] Importing new skin {}: type {}", ev.path, static_cast<u32>(ev.type));
             if(env->getFileExtensionFromFilePath(ev.path) != "osk") return;
-            const bool extracted = env->getEnvInterop().handle_osk(ev.path.c_str());
+            const bool extracted = neomod::handle_osk(ev.path);
             if(extracted) env->deleteFile(ev.path);
         });
     }
