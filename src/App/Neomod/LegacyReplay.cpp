@@ -189,7 +189,7 @@ Info from_bytes(u8* data, uSz s_data) {
     info.perfect = replay.read<u8>();
     info.mod_flags = replay.read<LegacyFlags>();
     info.life_bar_graph = replay.read_stdstring();
-    info.timestamp = replay.read<i64>() / 10LL;
+    info.timestamp = (replay.read<i64>() - UNIX_EPOCH_TICKS) / TICKS_PER_SECOND;
 
     i32 replay_size = replay.read<i32>();
     if(replay_size <= 0) return info;
@@ -237,7 +237,7 @@ bool load_osr(std::string_view osr_path, FinishedScore& score_out) {
     score_out.beatmap_hash = info.map_md5;
     score_out.perfect = info.perfect;
     score_out.comboMax = info.comboMax;
-    score_out.unixTimestamp = info.timestamp;  // TODO @kiwec: not sure if correct
+    score_out.unixTimestamp = info.timestamp;
     score_out.bancho_score_id = info.bancho_score_id;
 
     return true;

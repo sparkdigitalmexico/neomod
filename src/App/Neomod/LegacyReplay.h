@@ -6,6 +6,10 @@
 struct FinishedScore;
 
 namespace LegacyReplay {
+
+constexpr i64 TICKS_PER_SECOND = 10'000'000;
+constexpr i64 UNIX_EPOCH_TICKS = 621'355'968'000'000'000;  // ticks from 0001-01-01 to 1970-01-01
+
 struct Frame {
     i32 cur_music_pos;
     i32 milliseconds_since_last_frame;

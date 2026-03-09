@@ -980,10 +980,6 @@ void Database::scheduleLoadRaw() {
 
     this->is_first_load = false;
 }
-namespace {
-constexpr i64 TICKS_PER_SECOND = 10'000'000;
-constexpr i64 UNIX_EPOCH_TICKS = 621'355'968'000'000'000;  // ticks from 0001-01-01 to 1970-01-01
-}  // namespace
 
 MD5Hash Database::recalcMD5(std::string osu_path) {
     // avoid hashmap corruption, we somehow fail to read some entries' md5 hashes
@@ -1135,7 +1131,8 @@ void Database::loadMaps(std::string_view neomod_maps_path, std::string_view pepp
                     // we don't really need to update db format for this because it was only used for sorting
                     // so just fix it up here
                     if(maybe_dotnettime > 1'000'000'000'000'000 /* 100% .net timestamp from non-updated db */) {
-                        last_modification_time = (maybe_dotnettime - UNIX_EPOCH_TICKS) / TICKS_PER_SECOND;
+                        last_modification_time =
+                            (maybe_dotnettime - LegacyReplay::UNIX_EPOCH_TICKS) / LegacyReplay::TICKS_PER_SECOND;
                     }
                     i16 iLocalOffset = neomod_maps.read<i16>();
                     i16 iOnlineOffset = neomod_maps.read<i16>();
@@ -1471,7 +1468,7 @@ void Database::loadMaps(std::string_view neomod_maps_path, std::string_view pepp
                 const i64 modification_time_dotnet_ticks = dbr.read<i64>();
                 // convert to unix time (peppy db 100% stores these in .NET timestamp form)
                 const i64 last_modification_time =
-                    (modification_time_dotnet_ticks - UNIX_EPOCH_TICKS) / TICKS_PER_SECOND;
+                    (modification_time_dotnet_ticks - LegacyReplay::UNIX_EPOCH_TICKS) / LegacyReplay::TICKS_PER_SECOND;
 
                 f32 AR, CS, HP, OD;
                 if(osu_db_version < 20140609) {
@@ -2495,7 +2492,7 @@ void Database::loadPeppyScores(std::string_view dbPath) {
             dbr.skip_string();  // hp graph
 
             u64 full_tms = dbr.read<u64>();
-            sc.unixTimestamp = (full_tms - UNIX_EPOCH_TICKS) / TICKS_PER_SECOND;
+            sc.unixTimestamp = (full_tms - LegacyReplay::UNIX_EPOCH_TICKS) / LegacyReplay::TICKS_PER_SECOND;
             sc.peppy_replay_tms = full_tms - 504911232000000000;
 
             // Always -1, but let's skip it properly just in case
