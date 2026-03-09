@@ -479,7 +479,7 @@ void Database::save() {
 // NOTE: Should currently only be used for neomod beatmapsets! e.g. from maps/ folder
 //       See loadRawBeatmap()
 //       (unless is_peppy is specified, in which case we're loading a raw osu folder and not saving the things we loaded)
-const BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override, bool is_peppy) {
+BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override, bool is_peppy) {
     std::unique_ptr<BeatmapSet> mapset = this->loadRawBeatmap(beatmapFolderPath, is_peppy);
     if(mapset == nullptr) return nullptr;
 
@@ -519,7 +519,7 @@ const BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, 
     if(mapset->difficulties->empty()) {
         debugLog("WARNING: didn't add new mapset {} id {}, only had duplicate difficulties!", mapset->getFolder(),
                  real_set_id);
-        if(const auto *existing_mapset = this->getBeatmapSet(real_set_id)) {
+        if(auto *existing_mapset = this->getBeatmapSet(real_set_id)) {
             return existing_mapset;
         } else {
             assert(false);  // should be unreachable

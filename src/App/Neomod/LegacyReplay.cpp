@@ -240,6 +240,10 @@ bool load_osr(std::string_view osr_path, FinishedScore& score_out) {
     score_out.unixTimestamp = info.timestamp;
     score_out.bancho_score_id = info.bancho_score_id;
 
+    // Prevent saving score to db
+    score_out.is_online_score = true;
+    score_out.is_online_replay_available = true;
+
     return true;
 }
 

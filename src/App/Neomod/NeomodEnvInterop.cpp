@@ -26,7 +26,7 @@ struct NeomodEnvInterop : public Environment::Interop {
 
     void handle_cmdline_args(const std::vector<std::string> &args) override;
     bool handle_osk(const char *osk_path) override;
-    bool handle_osz(std::string_view osz_path) override;
+    bool handle_osz(std::string_view osz_path, BeatmapSet **out = nullptr) override;
     void setup_system_integrations() override;
 };
 
@@ -51,7 +51,7 @@ bool NeomodEnvInterop::handle_osk(const char *osk_path) {
     return true;
 }
 
-bool NeomodEnvInterop::handle_osz(std::string_view osz_path) {
+bool NeomodEnvInterop::handle_osz(std::string_view osz_path, BeatmapSet **out) {
     if(!osu) return false;
 
     if(osu->isInPlayMode()) {
@@ -97,14 +97,15 @@ bool NeomodEnvInterop::handle_osz(std::string_view osz_path) {
         return false;
     }
 
-    const BeatmapSet *set = db->addBeatmapSet(mapset_dir, set_id);
+    BeatmapSet *set = db->addBeatmapSet(mapset_dir, set_id);
     if(!set) {
         ui->getNotificationOverlay()->addToast(US_("Failed to import beatmapset"), ERROR_TOAST);
         return false;
     }
 
-    // FIXME: dont call this here
-    ui->getSongBrowser()->selectBeatmapset(set);
+    if(out != nullptr) {
+        *out = set;
+    }
 
     return true;
 }
@@ -143,28 +144,36 @@ void NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
     // TODO: bug prone since there are many other possible edge cases...
     if(!osu->isInPlayMode()) {
         auto finish_importing = [db_dependent_imports] {
+            BeatmapSet *last_imported_set = nullptr;
+            FinishedScore last_imported_replay;
+
             for(const auto &path : db_dependent_imports) {
                 auto extension = Environment::getFileExtensionFromFilePath(path);
                 if(extension == "osz"sv) {
-                    env->getEnvInterop().handle_osz(path);
+                    env->getEnvInterop().handle_osz(path, &last_imported_set);
                 } else if(extension == "osr") {
-                    FinishedScore replay_score;
-                    if(LegacyReplay::load_osr(path, replay_score)) {
-                        BeatmapDifficulty *map = db->getBeatmapDifficulty(replay_score.beatmap_hash);
-                        if(map) {
-                            replay_score.map = map;
-                            ui->getSongBrowser()->onDifficultySelected(map, false);
-                            ui->getRankingScreen()->setScore(replay_score);
-                            ui->setScreen(ui->getRankingScreen());
-                        } else {
-                            // TODO: auto-download
-                            ui->getNotificationOverlay()->addToast(US_("This replay's beatmap is not installed."),
-                                                                   ERROR_TOAST);
-                        }
+                    FinishedScore replay;
+                    if(LegacyReplay::load_osr(path, replay)) {
+                        last_imported_replay = replay;
                     } else {
                         ui->getNotificationOverlay()->addToast(US_("Failed to load replay."), ERROR_TOAST);
                     }
                 }
+            }
+
+            if(last_imported_replay != FinishedScore{}) {
+                BeatmapDifficulty *map = db->getBeatmapDifficulty(last_imported_replay.beatmap_hash);
+                if(map) {
+                    last_imported_replay.map = map;
+                    ui->getSongBrowser()->onDifficultySelected(map, false);
+                    ui->getRankingScreen()->setScore(last_imported_replay);
+                    ui->setScreen(ui->getRankingScreen());
+                } else {
+                    // TODO: auto-download
+                    ui->getNotificationOverlay()->addToast(US_("This replay's beatmap is not installed."), ERROR_TOAST);
+                }
+            } else if(last_imported_set != nullptr) {
+                ui->getSongBrowser()->selectBeatmapset(last_imported_set);
             }
         };
 
