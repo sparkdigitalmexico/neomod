@@ -1,8 +1,6 @@
 // Copyright (c) 2016, PG, All rights reserved.
 #include "NotificationOverlay.h"
 
-#include <utility>
-
 #include "AnimationHandler.h"
 #include "OsuConVars.h"
 #include "Engine.h"
@@ -14,6 +12,9 @@
 #include "PauseOverlay.h"
 #include "Logging.h"
 #include "UI.h"
+
+#include <ranges>
+#include <utility>
 
 namespace {
 

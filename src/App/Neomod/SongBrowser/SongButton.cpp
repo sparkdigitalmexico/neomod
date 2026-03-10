@@ -1,9 +1,6 @@
 // Copyright (c) 2016, PG, All rights reserved.
 #include "SongButton.h"
 
-#include <algorithm>
-#include <utility>
-
 #include "Font.h"
 #include "ScoreButton.h"
 #include "SongBrowser.h"
@@ -26,6 +23,10 @@
 #include "UIContextMenu.h"
 #include "Graphics.h"
 #include "score.h"
+
+#include <algorithm>
+#include <utility>
+#include <ranges>
 
 using namespace neomod::sbr;
 

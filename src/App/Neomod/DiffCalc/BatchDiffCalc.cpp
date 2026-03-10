@@ -21,6 +21,7 @@
 #include "SyncJthread.h"
 #include "SyncStoptoken.h"
 #include "ContainerRanges.h"
+#include "UString.h"
 
 #include <atomic>
 #include <memory>

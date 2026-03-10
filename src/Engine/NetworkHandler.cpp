@@ -13,6 +13,7 @@
 #include "SyncJthread.h"
 #include "SyncCV.h"
 #include "ContainerRanges.h"
+#include "UString.h"
 
 #include "binary_embed.h"
 #include <curl/curl.h>

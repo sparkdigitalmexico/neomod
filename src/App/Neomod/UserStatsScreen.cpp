@@ -24,6 +24,8 @@
 #include "SongDifficultyButton.h"
 #include "score.h"
 
+#include <ranges>
+
 UserStatsScreen::UserStatsScreen() : ScreenBackable() {
     this->m_userCard = new UserCard(0);
     this->addBaseUIElement(this->m_userCard);
