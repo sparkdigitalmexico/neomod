@@ -38,6 +38,7 @@
 #include "VolumeOverlay.h"
 
 #include <ranges>
+
 namespace {
 class NullScreen final : public UIScreen {
     NOCOPY_NOMOVE(NullScreen)

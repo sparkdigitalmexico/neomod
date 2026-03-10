@@ -6,10 +6,11 @@
 
 #include "OsuConfig.h"
 #include "Vectors_fwd.h"
-#include "CDynArray.h"
 
 #include <memory>
 #include <array>
+#include <vector>
+#include <string_view>
 
 class CWindowManager;
 class KeyboardEvent;
@@ -135,7 +136,7 @@ struct UI final {
     std::array<UIScreen*, NUM_SCREENS> screens{};
 
     // additional overlays added by pushOverlay (owned by UI)
-    Mc::CDynArray<UIOverlay*> extra_overlays;
+    std::vector<UIOverlay*> extra_overlays;
 
     // interfaces (debugging)
     // std::unique_ptr<CWindowManager> windowManager{nullptr};
