@@ -109,6 +109,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
     if(!osu || !db) return false;
     using namespace neomod;
 
+    bool got_db_related_import = false;
     std::vector<std::string> db_dependent_imports;
     bool need_to_reload_database = false;
 
@@ -118,23 +119,33 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
         if(arg.length() < 4) continue;
 
         if(arg.starts_with(NEOMOD_URL_SCHEME) || arg.starts_with("neosu://")) {
+            debugLog("Handling {}...", arg);
+
             neomod::handle_neomod_url(arg.c_str());
+            got_db_related_import = true;  // ?
         } else {
             auto extension = Environment::getFileExtensionFromFilePath(arg);
             SString::lower_inplace(extension);
 
-            debugLog("Handling {}...", arg);
-            if(extension == "osz" || extension == "osr") {
-                db_dependent_imports.push_back(arg);
-                need_to_reload_database |= (!db->isFinished() || db->isCancelled());
-            } else if(extension == "osk" || extension == "zip") {
-                handle_osk(arg.c_str());
-            } else if(extension == "db") {
-                db->addPathToImport(arg);
-                need_to_reload_database = true;
+            if(!extension.empty()) {
+                debugLog("Handling {}...", arg);
+
+                if(extension == "osz" || extension == "osr") {
+                    db_dependent_imports.push_back(arg);
+                    need_to_reload_database |= (!db->isFinished() || db->isCancelled());
+                    got_db_related_import = true;
+                } else if(extension == "osk" || extension == "zip") {
+                    handle_osk(arg.c_str());
+                } else if(extension == "db") {
+                    db->addPathToImport(arg);
+                    need_to_reload_database = true;
+                    got_db_related_import = true;
+                }
             }
         }
     }
+
+    if(!got_db_related_import) return false;
 
     // Don't import maps, replays or reload database while playing
     // TODO: bug prone since there are many other possible edge cases...
