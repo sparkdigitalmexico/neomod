@@ -7,6 +7,8 @@
 #include "Engine.h"
 #include "Logging.h"
 
+#include <algorithm>
+
 namespace AnimationHandler {
 static bool s_doLogging{false};
 
