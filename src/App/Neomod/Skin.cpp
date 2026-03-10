@@ -22,6 +22,7 @@
 #include "crypto.h"
 #include "ContainerRanges.h"
 #include "score.h"
+#include "UniString.h"
 
 #include <cstring>
 #include <utility>
@@ -745,7 +746,7 @@ void Skin::reloadSounds() {
 }
 
 bool Skin::parseSkinINI(std::string filepath) {
-    UString fileContent;
+    std::string fileContent;
 
     size_t fileSize{0};
     {
@@ -755,7 +756,7 @@ bool Skin::parseSkinINI(std::string filepath) {
             return false;
         }
         // convert possible non-UTF8 file to UTF8
-        fileContent = {file.readToString().c_str(), static_cast<int>(fileSize)};
+        fileContent = UniString::to_utf8(file.readToString());
         // close the file here
     }
 
@@ -774,7 +775,7 @@ bool Skin::parseSkinINI(std::string filepath) {
     SkinSection curBlock = SkinSection::GENERAL;
     using enum SkinSection;
 
-    for(const auto curLine : SString::split_newlines(fileContent.utf8View())) {
+    for(const auto curLine : SString::split_newlines(fileContent)) {
         // ignore comments, but only if at the beginning of a line
         if(curLine.empty() || SString::is_comment(curLine)) continue;
         hasNonEmptyLines = true;
@@ -913,10 +914,10 @@ void Skin::parseFallbackPrefixes(const std::string &iniPath) {
     File file(iniPath);
     if(!file.canRead() || !file.getFileSize()) return;
 
-    UString content{file.readToString().c_str(), static_cast<int>(file.getFileSize())};
+    std::string content = UniString::to_utf8(file.readToString());
 
     bool inFonts = false;
-    for(const auto curLine : SString::split_newlines(content.utf8View())) {
+    for(const auto curLine : SString::split_newlines(content)) {
         if(curLine.empty() || SString::is_comment(curLine)) continue;
         if(curLine.find("[Fonts]") != std::string::npos) {
             inFonts = true;
