@@ -32,7 +32,7 @@ class ConsoleBoxTextbox : public CBaseUITextbox {
    protected:
     void drawText() override {
         if(cv::consolebox_draw_preview.getBool()) {
-            if(this->sSuggestion.length() > 0 && this->sSuggestion.starts_with(this->sText)) {
+            if(this->sSuggestion.length() > 0 && this->sSuggestion.starts_with(this->text)) {
                 g->setColor(0xff444444);
                 g->pushTransform();
                 {

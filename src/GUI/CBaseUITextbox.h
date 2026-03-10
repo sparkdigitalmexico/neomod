@@ -21,7 +21,7 @@ class CBaseUITextbox : public CBaseUIElement {
     void onKeyDown(KeyboardEvent &e) override;
 
     std::string getVisibleText();
-    [[nodiscard]] inline std::string_view getText() const { return this->sText; }
+    [[nodiscard]] inline std::string_view getText() const { return this->text; }
     [[nodiscard]] inline McFont *getFont() const { return this->font; }
 
     CBaseUITextbox *setDrawFrame(bool drawFrame) {
@@ -69,7 +69,7 @@ class CBaseUITextbox : public CBaseUIElement {
     }
     CBaseUITextbox *setTextJustification(TEXT_JUSTIFICATION textJustification) {
         this->textJustification = textJustification;
-        this->setText(this->sText);
+        this->setText(this->text);
         return this;
     }
 
@@ -82,10 +82,11 @@ class CBaseUITextbox : public CBaseUIElement {
     void clear();
     void focus(bool move_caret = true);
 
+    // TODO: these should not just be modifiable by anyone
     bool is_password = false;
 
-    std::string sText;
-    int iCaretPosition;
+    std::string text;
+    int caretPosition;
     void tickCaret();
     void updateTextPos();
 

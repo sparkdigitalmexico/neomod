@@ -740,14 +740,14 @@ void Chat::onKeyDown(KeyboardEvent &key) {
         key.consume();
 
         auto text = this->input_box->getText();
-        i32 username_start_idx = text.find_last_of(' ', this->input_box->iCaretPosition) + 1;
-        i32 username_end_idx = this->input_box->iCaretPosition;
+        i32 username_start_idx = text.find_last_of(' ', this->input_box->caretPosition) + 1;
+        i32 username_end_idx = this->input_box->caretPosition;
         i32 username_len = username_end_idx - username_start_idx;
 
         if(this->tab_completion_prefix.length() == 0) {
             this->tab_completion_prefix = text.substr(username_start_idx, username_len);
         } else {
-            username_start_idx = this->input_box->iCaretPosition - this->tab_completion_match.length();
+            username_start_idx = this->input_box->caretPosition - this->tab_completion_match.length();
             username_len = username_end_idx - username_start_idx;
         }
 
@@ -759,11 +759,11 @@ void Chat::onKeyDown(KeyboardEvent &key) {
             // Remove current username, add new username
             // TODO(spec): these should be internal fields, why are we manipulating them directly like this?
             //             makes it so much more difficult to refactor things uniformly...
-            this->input_box->sText.erase(this->input_box->iCaretPosition - username_len, username_len);
-            this->input_box->iCaretPosition -= username_len;
-            this->input_box->sText.insert(this->input_box->iCaretPosition, this->tab_completion_match);
-            this->input_box->iCaretPosition += this->tab_completion_match.length();
-            this->input_box->setText(this->input_box->sText);
+            this->input_box->text.erase(this->input_box->caretPosition - username_len, username_len);
+            this->input_box->caretPosition -= username_len;
+            this->input_box->text.insert(this->input_box->caretPosition, this->tab_completion_match);
+            this->input_box->caretPosition += this->tab_completion_match.length();
+            this->input_box->setText(this->input_box->text);
             this->input_box->tickCaret();
 
             soundEngine->play(osu->getSound((ActionSound)((prand() % 4) + (size_t)ActionSound::TYPING1)));

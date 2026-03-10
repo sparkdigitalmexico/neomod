@@ -53,8 +53,23 @@ class u16codepoint_view {
     [[nodiscard]] iterator end() const;
 };
 
+// assumes valid utf-8
 [[nodiscard]] u8codepoint_view codepoints(std::string_view sv);
+// assumes valid utf-16
 [[nodiscard]] u16codepoint_view codepoints(std::u16string_view sv);
 
+// byte offset of the start of the previous codepoint (assumes valid utf-8)
+[[nodiscard]] inline uSz prev(std::string_view sv, uSz pos) {
+    if(pos == 0) return 0;
+    do { pos--; } while(pos > 0 && (static_cast<u8>(sv[pos]) & 0xC0) == 0x80);
+    return pos;
+}
+
+// byte offset past the end of the current codepoint (assumes valid utf-8)
+[[nodiscard]] inline uSz next(std::string_view sv, uSz pos) {
+    if(pos >= sv.size()) return sv.size();
+    do { pos++; } while(pos < sv.size() && (static_cast<u8>(sv[pos]) & 0xC0) == 0x80);
+    return pos;
+}
 
 }  // namespace UniString
