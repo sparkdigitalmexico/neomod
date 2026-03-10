@@ -270,6 +270,9 @@ class SongBrowser final : public ScreenBackable {
 
     // TODO: make more stuff private
    private:
+    // returns true if we drew anything
+    bool drawBeatmapOrMenuBackground();
+
     void rebuildScoreButtons();
     CollBtnContainer *getCollectionButtonsForGroup(GroupType group);
 
@@ -335,7 +338,8 @@ class SongBrowser final : public ScreenBackable {
 
    private:
     std::vector<CarouselButton *> visibleSongButtons;
-
+    class BeatmapLoadingOverlay;
+    friend BeatmapLoadingOverlay;
     UIOverlay *loadingOverlay{nullptr};
 
     // to avoid transitive includes

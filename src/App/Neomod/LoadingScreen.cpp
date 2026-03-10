@@ -17,30 +17,35 @@ void LoadingScreen::update(CBaseUIEventCtx& /*c*/) {
         return;
     }
 
-    this->progress = this->get_progress_fn(this);
-    if(this->progress >= 1.f) {
-        this->finish();
+    this->progress = this->updateProgress();
+    if(this->isFinished()) {
+        this->onFinished();
     }
 }
 
-void LoadingScreen::draw() {
-    if(!this->isVisible()) return;
-
-    // background
+void LoadingScreen::drawBackground() {
+    // black background
     g->setColor(0xff000000);
     g->fillRect(0, 0, osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
+}
+
+void LoadingScreen::drawProgress() {
+    auto* font = osu->getSubTitleFont();
+    const f32 shadowOffset = std::round(1.0f * Osu::getUIScale());
 
     // progress message
-    g->setColor(0xffffffff);
-    UString loadingMessage = fmt::format("Loading ... ({} %)", (int)(this->progress * 100.0f));
+    const UString loadingMessage = fmt::format("Loading ... ({} %)", (int)(this->progress * 100.0f));
     g->pushTransform();
     {
-        g->translate((int)(osu->getVirtScreenWidth() / 2 - osu->getSubTitleFont()->getStringWidth(loadingMessage) / 2),
+        g->translate((int)(osu->getVirtScreenWidth() / 2 - font->getStringWidth(loadingMessage) / 2),
                      osu->getVirtScreenHeight() - 15);
-        g->drawString(osu->getSubTitleFont(), loadingMessage);
+        g->drawString(font, loadingMessage,
+                      TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(0, 0, 0), .offs_px = shadowOffset});
     }
     g->popTransform();
+}
 
+void LoadingScreen::drawLoadingSpinner() {
     // spinner
     const float scale = Osu::getImageScale(osu->getSkin()->i_beatmap_import_spinner, 100);
     g->pushTransform();
@@ -54,22 +59,10 @@ void LoadingScreen::draw() {
 }
 
 void LoadingScreen::onKeyDown(KeyboardEvent& e) {
-    if(this->isFinished()) return;
     if(e.isConsumed()) return;
 
     if(e == KEY_ESCAPE || e == cv::GAME_PAUSE.getVal<SCANCODE>()) {
         e.consume();
-        this->finish();
+        this->onFinished();
     }
-}
-
-void LoadingScreen::finish() {
-    if(!this->on_finished_fn) return;
-    auto finishfunc = std::move(this->on_finished_fn);
-
-    this->progress = 1.f;
-    this->get_progress_fn = {};
-    this->on_finished_fn = {};
-
-    finishfunc(this);
 }

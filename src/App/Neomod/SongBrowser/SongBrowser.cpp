@@ -504,12 +504,10 @@ SongBrowser::~SongBrowser() {
     cv::songbrowser_search_hardcoded_filter.reset();
 }
 
-void SongBrowser::draw() {
-    if(!this->bVisible) return;
-
-    // draw background
+bool SongBrowser::drawBeatmapOrMenuBackground() {
     g->setColor(0xff000000);
     g->fillRect(0, 0, osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
+    bool drew = false;
 
     // draw background image
     if(cv::draw_songbrowser_background_image.getBool()) {
@@ -521,6 +519,8 @@ void SongBrowser::draw() {
         if(cv::songbrowser_background_fade_in_duration.getFloat() > 0.0f) {
             // handle fadein trigger after bgHandler is finished loading
             const bool ready = loadedImage && loadedImage->isReady();
+
+            drew = ready;
 
             if(!ready)
                 this->fBackgroundFadeInTime = engine->getTime();
@@ -537,6 +537,8 @@ void SongBrowser::draw() {
         // menu-background
         Image *backgroundImage = osu->getSkin()->i_menu_bg;
         if(backgroundImage != nullptr && backgroundImage != MISSING_TEXTURE && backgroundImage->isReady()) {
+            drew = true;
+
             const float scale = Osu::getImageScaleToFillResolution(backgroundImage, osu->getVirtScreenSize());
 
             g->setColor(0xffffffff);
@@ -549,6 +551,15 @@ void SongBrowser::draw() {
             g->popTransform();
         }
     }
+
+    return drew;
+}
+
+void SongBrowser::draw() {
+    if(!this->bVisible) return;
+
+    // draw background
+    this->drawBeatmapOrMenuBackground();
 
     {
         f32 mode_osu_scale = SongBrowser::getSkinScale(osu->getSkin()->i_mode_osu);
@@ -1390,6 +1401,66 @@ void SongBrowser::onDifficultySelected(DatabaseBeatmap *map, bool play) {
     this->webButton->setVisible(this->songInfo->getBeatmapID() > 0);
 }
 
+class SongBrowser::BeatmapLoadingOverlay final : public LoadingScreen {
+    NOCOPY_NOMOVE(BeatmapLoadingOverlay)
+   public:
+    BeatmapLoadingOverlay() = delete;
+    BeatmapLoadingOverlay(SongBrowser *songbrowser, BGImageHandler *bghandler, UIScreen *parent,
+                          std::function<void()> on_refreshed)
+        : LoadingScreen(parent), sbr(songbrowser), bgih(bghandler), on_refreshed(std::move(on_refreshed)) {}
+    ~BeatmapLoadingOverlay() override = default;
+
+    [[nodiscard]] bool isFinished() const override { return this->progress >= 1.f || db->isFinished(); }
+
+   protected:
+    void drawBackground() override {
+        if(!this->bgih->drawLastImage(0.5f)) {
+            LoadingScreen::drawBackground();
+        }
+    }
+
+    f32 updateProgress() override {
+        if(!db->isFinished()) {
+            db->update();  // raw load logic
+        }
+        return db->getProgress();
+    }
+
+    void finish() override {
+        this->progress = 1.f;
+
+        if(!db->isFinished()) {
+            db->cancel();
+        }
+
+        assert(db->isFinished());
+
+        assert(this->sbr->loadingOverlay && "BeatmapLoadingOverlay::finish: SongBrowser was in an invalid state");
+
+        this->sbr->loadingOverlay = nullptr;
+
+        // finish loading
+        this->sbr->onDatabaseLoadingFinished();
+
+        auto on_refresh_cb = std::move(this->on_refreshed);
+        // kill ourselves
+        {
+            auto tmp = ui->popOverlay(this);
+            // (tmp == this) is deleted here
+        }
+
+        // call callback (if it exists)
+        if(on_refresh_cb) {
+            on_refresh_cb();
+        }
+    }
+
+   private:
+    SongBrowser *sbr;
+    BGImageHandler *bgih;
+    std::function<void()> on_refreshed;
+};
+
 void SongBrowser::refreshBeatmaps() { return this->refreshBeatmaps(this); }
 
 void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> on_refreshed) {
@@ -1463,37 +1534,8 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> o
     //     this->groupByNothingBtn->setTextBrightColor(highlightColor);
     // }
 
-    auto loading_screen = std::make_unique<LoadingScreen>(
-        next_screen,
-        (LoadingProgressFn)[](LoadingScreen * /*ldscr*/) {
-            if(!db->isFinished()) {
-                db->update();  // raw load logic
-            }
-            return db->getProgress();
-        },
-        (LoadingFinishedFn)[on_refreshed = std::move(on_refreshed)](LoadingScreen * ldscr) mutable {
-            if(!db->isFinished()) {
-                db->cancel();
-            }
-
-            assert(db->isFinished());
-
-            SongBrowser *sb = ui->getSongBrowser();
-            assert(sb && sb->loadingOverlay &&
-                   "LoadingScreen::cancel_fn: canceled while SongBrowser was in an invalid state");
-
-            sb->loadingOverlay = nullptr;
-
-            // finish loading
-            sb->onDatabaseLoadingFinished();
-
-            // kill ourselves
-            ui->popOverlay(ldscr);
-
-            // call callback (if it exists)
-            if(on_refreshed) on_refreshed();
-        });
-
+    auto loading_screen = std::make_unique<BeatmapLoadingOverlay>(this, osu->getBackgroundImageHandler(), next_screen,
+                                                                  std::move(on_refreshed));
     this->loadingOverlay = ui->pushOverlay(std::move(loading_screen));
 
     // start loading

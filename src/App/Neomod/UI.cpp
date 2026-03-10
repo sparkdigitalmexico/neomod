@@ -38,8 +38,8 @@
 #include "VolumeOverlay.h"
 
 #include <ranges>
-
-class UI::NullScreen final : public UIScreen {
+namespace {
+class NullScreen final : public UIScreen {
     NOCOPY_NOMOVE(NullScreen)
    public:
     NullScreen() : UIScreen() {}
@@ -51,6 +51,7 @@ class UI::NullScreen final : public UIScreen {
     }
     forceinline bool isVisible() final { return false; }
 };
+}  // namespace
 
 namespace cv {
 // callback only set after initialized
@@ -166,27 +167,13 @@ bool UI::init() {
     return true;
 }
 
-#define FOR_EACH_OVERLAY_SAFE                                                           \
-    do {                                                                                \
-        auto overlayit = this->extra_overlays.begin();                                  \
-        bool it_ended = (overlayit == this->extra_overlays.end());                      \
-        while(!it_ended) {                                                              \
-            UIOverlay *overlay = *overlayit;                                            \
-            ++overlayit; /* increment before update (in case it's deleted in update) */ \
-            it_ended = overlayit == this->extra_overlays.end();
-
-#define END_FOR_EACH_OVERLAY_SAFE \
-    }                             \
-    }                             \
-    while(false);
-
 void UI::update() {
     CBaseUIEventCtx c;
 
-    // iterate over each overlay in the set without blowing up if an element is removed during iteration
-    FOR_EACH_OVERLAY_SAFE
-    overlay->update(c);
-    END_FOR_EACH_OVERLAY_SAFE
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->update(c);
+    }
 
     bool updated_active_screen = false;
     for(auto *screen : this->screens) {
@@ -211,9 +198,10 @@ void UI::draw() {
     this->active_screen->draw();
 
     // draw any extra overlays (TODO: draw order, this shouldn't be hardcoded at the start)
-    FOR_EACH_OVERLAY_SAFE
-    overlay->draw();
-    END_FOR_EACH_OVERLAY_SAFE
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->draw();
+    }
 
     f32 fadingCursorAlpha = 1.f;
     const bool isFPoSu = (cv::mod_fposu.getBool());
@@ -340,10 +328,11 @@ void UI::draw() {
 void UI::onKeyDown(KeyboardEvent &key) {
     if(key.isConsumed()) return;
 
-    FOR_EACH_OVERLAY_SAFE
-    overlay->onKeyDown(key);
-    if(key.isConsumed()) return;
-    END_FOR_EACH_OVERLAY_SAFE
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->onKeyDown(key);
+        if(key.isConsumed()) return;
+    }
 
     for(auto *screen : this->screens) {
         screen->onKeyDown(key);
@@ -354,10 +343,11 @@ void UI::onKeyDown(KeyboardEvent &key) {
 void UI::onKeyUp(KeyboardEvent &key) {
     if(key.isConsumed()) return;
 
-    FOR_EACH_OVERLAY_SAFE
-    overlay->onKeyUp(key);
-    if(key.isConsumed()) return;
-    END_FOR_EACH_OVERLAY_SAFE
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->onKeyUp(key);
+        if(key.isConsumed()) return;
+    }
 
     for(auto *screen : this->screens) {
         screen->onKeyUp(key);
@@ -368,10 +358,11 @@ void UI::onKeyUp(KeyboardEvent &key) {
 void UI::onChar(KeyboardEvent &e) {
     if(e.isConsumed()) return;
 
-    FOR_EACH_OVERLAY_SAFE
-    overlay->onChar(e);
-    if(e.isConsumed()) return;
-    END_FOR_EACH_OVERLAY_SAFE
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->onChar(e);
+        if(e.isConsumed()) return;
+    }
 
     for(auto *screen : this->screens) {
         screen->onChar(e);
@@ -380,9 +371,10 @@ void UI::onChar(KeyboardEvent &e) {
 }
 
 void UI::onResolutionChange(vec2 newResolution) {
-    FOR_EACH_OVERLAY_SAFE
-    overlay->onResolutionChange(newResolution);
-    END_FOR_EACH_OVERLAY_SAFE
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->onResolutionChange(newResolution);
+    }
 
     for(auto *screen : this->screens) {
         screen->onResolutionChange(newResolution);
@@ -390,9 +382,10 @@ void UI::onResolutionChange(vec2 newResolution) {
 }
 
 void UI::stealFocus() {
-    FOR_EACH_OVERLAY_SAFE
-    overlay->stealFocus();
-    END_FOR_EACH_OVERLAY_SAFE
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->stealFocus();
+    }
 
     for(auto *screen : this->screens) {
         screen->stealFocus();
@@ -435,23 +428,23 @@ UIOverlay *UI::pushOverlay(std::unique_ptr<UIOverlay> overlay) {
     assert(overlay);
 
     UIOverlay *raw = overlay.release();
-    auto [it, added] = this->extra_overlays.insert(raw);
-    assert(added);
+    assert(!std::ranges::contains(this->extra_overlays, raw));
+    this->extra_overlays.push_back(raw);
 
     // set the overlay visible immediately
-    (*it)->setVisible(true);
-    return *it;
+    raw->setVisible(true);
+    return raw;
 }
 
 bool UI::peekOverlay(UIOverlay *overlay) const {
-    if(auto it = this->extra_overlays.find(overlay); it != this->extra_overlays.end()) {
+    if(auto it = std::ranges::find(this->extra_overlays, overlay); it != this->extra_overlays.end()) {
         return true;
     }
     return false;
 }
 
 std::unique_ptr<UIOverlay> UI::popOverlay(UIOverlay *overlay) {
-    if(auto it = this->extra_overlays.find(overlay); it != this->extra_overlays.end()) {
+    if(auto it = std::ranges::find(this->extra_overlays, overlay); it != this->extra_overlays.end()) {
         std::unique_ptr<UIOverlay> overlay_out;
         overlay_out.reset(*it);
 

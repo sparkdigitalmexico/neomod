@@ -6,34 +6,45 @@
 #include <functional>
 
 class LoadingScreen;
-using LoadingProgressFn = std::function<f32(LoadingScreen *)>;
-using LoadingFinishedFn = std::function<void(LoadingScreen *)>;
+class Image;
 
-class LoadingScreen final : public UIOverlay {
+class LoadingScreen : public UIOverlay {
     NOCOPY_NOMOVE(LoadingScreen)
    public:
-    LoadingScreen(UIScreen *parent, LoadingProgressFn get_progress_fn, LoadingFinishedFn on_finished_fn)
-        : UIOverlay(parent), on_finished_fn(std::move(on_finished_fn)), get_progress_fn(std::move(get_progress_fn)) {}
+    LoadingScreen() = delete;
+    LoadingScreen(UIScreen *parent) : UIOverlay(parent) {}
+    ~LoadingScreen() override { this->onFinished(); }
 
-    ~LoadingScreen() final { this->finish(); }
+    void update(CBaseUIEventCtx &c) override;
 
-    void update(CBaseUIEventCtx &c) final;
-    void draw() final;
+    inline void draw() final {
+        if(!this->isVisible()) return;
+        this->drawBackground();
+        this->drawProgress();
+        this->drawLoadingSpinner();
+    }
 
-    void onKeyDown(KeyboardEvent &e) final;
+    void onKeyDown(KeyboardEvent &e) override;
 
-    inline bool isVisible() final { return UIOverlay::isVisible() && this->get_progress_fn && this->on_finished_fn; }
-    inline bool isFinished() { return this->progress >= 1.f || !this->get_progress_fn || !this->on_finished_fn; }
+    inline bool isVisible() final { return UIOverlay::isVisible() && !this->onFinishedCalled; }
+    [[nodiscard]] virtual inline bool isFinished() const { return this->progress >= 1.f; }
+
+   protected:
+    virtual void drawBackground();
+    virtual void drawProgress();
+    virtual void drawLoadingSpinner();
+
+    virtual f32 updateProgress() { return this->progress; }
+    virtual void finish() { this->progress = 1.f; }
+    f32 progress{0.f};
 
    private:
-    friend LoadingFinishedFn;
-    friend LoadingProgressFn;
+    void onFinished() {
+        if(this->onFinishedCalled) return;
+        this->onFinishedCalled = true;
+        this->finish();
+        return;
+    }
 
-    // private so you can't put LoadingScreen::finish inside the callback
-    void finish();
-
-    LoadingFinishedFn on_finished_fn;
-    LoadingProgressFn get_progress_fn;
-
-    f32 progress{0.f};
+    bool onFinishedCalled{false};
 };

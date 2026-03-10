@@ -17,7 +17,9 @@ class BGImageHandler final {
     BGImageHandler();
     ~BGImageHandler();
 
-    static void draw(const Image *backgroundImage, f32 alpha = 1.f);
+    [[nodiscard]] bool drawLastImage(f32 alpha = 1.f) const;  // at least attempt to
+    void draw(const Image *backgroundImage, f32 alpha = 1.f) const;
+    // try to load and draw
     void draw(const DatabaseBeatmap *beatmap, f32 alpha = 1.f);
     void update(bool allowEviction);
     const Image *getLoadBackgroundImage(const DatabaseBeatmap *beatmap, bool load_immediately = false,

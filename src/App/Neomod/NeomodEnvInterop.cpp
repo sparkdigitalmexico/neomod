@@ -139,7 +139,9 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
     // Don't import maps, replays or reload database while playing
     // TODO: bug prone since there are many other possible edge cases...
     if(!osu->isInPlayMode()) {
-        auto finish_importing = [db_dependent_imports] {
+        SongBrowser *sbr = ui->getSongBrowser();
+        RankingScreen *rankingscreen = ui->getRankingScreen();
+        auto finish_importing = [sbr, rankingscreen, notif = ui->getNotificationOverlay(), db_dependent_imports] {
             const BeatmapSet *last_imported_set = nullptr;
             FinishedScore last_imported_replay;
 
@@ -154,7 +156,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
                     if(LegacyReplay::load_osr(path, replay)) {
                         last_imported_replay = replay;
                     } else {
-                        ui->getNotificationOverlay()->addToast(US_("Failed to load replay."), ERROR_TOAST);
+                        notif->addToast(US_("Failed to load replay."), ERROR_TOAST);
                     }
                 }
             }
@@ -163,20 +165,20 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
                 BeatmapDifficulty *map = db->getBeatmapDifficulty(last_imported_replay.beatmap_hash);
                 if(map) {
                     last_imported_replay.map = map;
-                    ui->getSongBrowser()->onDifficultySelected(map, false);
-                    ui->getRankingScreen()->setScore(last_imported_replay);
-                    ui->setScreen(ui->getRankingScreen());
+                    sbr->onDifficultySelected(map, false);
+                    rankingscreen->setScore(last_imported_replay);
+                    ui->setScreen(rankingscreen);
                 } else {
                     // TODO: auto-download
-                    ui->getNotificationOverlay()->addToast(US_("This replay's beatmap is not installed."), ERROR_TOAST);
+                    notif->addToast(US_("This replay's beatmap is not installed."), ERROR_TOAST);
                 }
             } else if(last_imported_set != nullptr) {
-                ui->getSongBrowser()->selectBeatmapset(last_imported_set);
+                sbr->selectBeatmapset(last_imported_set);
             }
         };
 
         if(need_to_reload_database) {
-            ui->getSongBrowser()->refreshBeatmaps(ui->getActiveScreen(), std::move(finish_importing));
+            sbr->refreshBeatmaps(ui->getActiveScreen(), std::move(finish_importing));
         } else {
             finish_importing();
         }

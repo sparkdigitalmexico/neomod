@@ -167,9 +167,11 @@ struct BGImageHandlerImpl final {
     BGImageHandlerImpl();
     ~BGImageHandlerImpl();
 
+    [[nodiscard]] bool drawLastImage(f32 alpha = 1.f) const;
+    void draw(const Image *image, f32 alpha = 1.f) const;
     void draw(const DatabaseBeatmap *beatmap, f32 alpha = 1.f);
     void update(bool allowEviction);
-    const Image *getLoadBackgroundImage(const DatabaseBeatmap *beatma, bool load_immediately = false,
+    const Image *getLoadBackgroundImage(const DatabaseBeatmap *beatmap, bool load_immediately = false,
                                         bool allow_menubg_fallback = true);
 
     struct ENTRY {
@@ -227,6 +229,7 @@ struct BGImageHandlerImpl final {
     Hash::unstable_stringmap<ENTRY> cache;
     Hash::unstable_stringmap<ImageRef> shared_images;  // keyed by full image path
     std::string last_requested_entry;
+    const Image *last_drawn_image{nullptr};
 
     u32 max_cache_size;
     u32 eviction_delay_frames;
@@ -254,6 +257,7 @@ BGImageHandlerImpl::BGImageHandlerImpl() {
 }
 
 BGImageHandlerImpl::~BGImageHandlerImpl() {
+    this->last_drawn_image = nullptr;
     for(auto &[_, entry] : this->cache) {
         this->releaseImageRef(entry);
     }
@@ -271,9 +275,16 @@ BGImageHandlerImpl::~BGImageHandlerImpl() {
     cv::load_beatmap_background_images.removeCallback();
 }
 
-// static method
-void BGImageHandler::draw(const Image *image, f32 alpha) {
+bool BGImageHandlerImpl::drawLastImage(f32 alpha) const {
+    if(!this->last_drawn_image) return false;
+    this->draw(this->last_drawn_image, alpha);
+    return true;
+}
+
+void BGImageHandlerImpl::draw(const Image *image, f32 alpha) const {
     if(!image || !image->isReady()) return;
+    // harmless const_cast here
+    const_cast<BGImageHandlerImpl *>(this)->last_drawn_image = image;
 
     f32 scale = Osu::getImageScaleToFillResolution(image, osu->getVirtScreenSize());
     g->pushTransform();
@@ -288,8 +299,7 @@ void BGImageHandler::draw(const Image *image, f32 alpha) {
 
 void BGImageHandlerImpl::draw(const DatabaseBeatmap *beatmap, f32 alpha) {
     if(beatmap == nullptr) return;
-    const Image *backgroundImage = this->getLoadBackgroundImage(beatmap);
-    return BGImageHandler::draw(backgroundImage, alpha);
+    return this->draw(this->getLoadBackgroundImage(beatmap), alpha);
 }
 
 void BGImageHandlerImpl::update(bool allow_eviction) {
@@ -487,6 +497,9 @@ void BGImageHandlerImpl::releaseImageRef(ENTRY &entry) {
 
         if(img_ref.ref_count == 0) {
             if(img_ref.image) {
+                if(this->last_drawn_image == img_ref.image) {
+                    this->last_drawn_image = nullptr;
+                }
                 img_ref.image->interruptLoad();
                 resourceManager->destroyResource(img_ref.image, ResourceDestroyFlags::RDF_FORCE_ASYNC);
             }
@@ -516,6 +529,8 @@ u32 BGImageHandlerImpl::getMaxEvictions() const {
 BGImageHandler::BGImageHandler() : pImpl() {}
 BGImageHandler::~BGImageHandler() = default;
 
+bool BGImageHandler::drawLastImage(f32 alpha) const { return pImpl->drawLastImage(alpha); }
+void BGImageHandler::draw(const Image *backgroundImage, f32 alpha) const { return pImpl->draw(backgroundImage, alpha); }
 void BGImageHandler::draw(const DatabaseBeatmap *beatmap, f32 alpha) { return pImpl->draw(beatmap, alpha); }
 void BGImageHandler::update(bool allowEviction) { return pImpl->update(allowEviction); }
 const Image *BGImageHandler::getLoadBackgroundImage(const DatabaseBeatmap *beatmap, bool load_immediately,

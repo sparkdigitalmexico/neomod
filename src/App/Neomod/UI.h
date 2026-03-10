@@ -6,7 +6,7 @@
 
 #include "OsuConfig.h"
 #include "Vectors_fwd.h"
-#include "Hashing.h"
+#include "CDynArray.h"
 
 #include <memory>
 #include <array>
@@ -45,9 +45,6 @@ extern UI* ui;
 
 struct UI final {
     NOCOPY_NOMOVE(UI)
-
-   private:
-    class NullScreen;
 
    public:
     UI();
@@ -107,7 +104,7 @@ struct UI final {
     // for debugging
     void setScreenByName(std::string_view screenGetterNameWithoutGet);
 
-    NullScreen* dummy;
+    UIScreen* dummy;
     NotificationOverlay* notificationOverlay;
     static constexpr const size_t EARLY_SCREENS{2};  // dummy+notificationOverlay
 
@@ -138,7 +135,7 @@ struct UI final {
     std::array<UIScreen*, NUM_SCREENS> screens{};
 
     // additional overlays added by pushOverlay (owned by UI)
-    Hash::flat::set<UIOverlay*> extra_overlays;
+    Mc::CDynArray<UIOverlay*> extra_overlays;
 
     // interfaces (debugging)
     // std::unique_ptr<CWindowManager> windowManager{nullptr};
