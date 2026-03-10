@@ -9,7 +9,7 @@ class McFont;
 class CBaseUITextbox : public CBaseUIElement {
     NOCOPY_NOMOVE(CBaseUITextbox)
    public:
-    CBaseUITextbox(float xPos = 0.0f, float yPos = 0.0f, float xSize = 0.0f, float ySize = 0.0f, UString name = {});
+    CBaseUITextbox(float xPos = 0.0f, float yPos = 0.0f, float xSize = 0.0f, float ySize = 0.0f, std::string name = {});
     ~CBaseUITextbox() override = default;
 
     void draw() override;
@@ -20,8 +20,8 @@ class CBaseUITextbox : public CBaseUIElement {
     void onChar(KeyboardEvent &e) override;
     void onKeyDown(KeyboardEvent &e) override;
 
-    UString getVisibleText();
-    [[nodiscard]] inline const UString &getText() const { return this->sText; }
+    std::string getVisibleText();
+    [[nodiscard]] inline std::string_view getText() const { return this->sText; }
     [[nodiscard]] inline McFont *getFont() const { return this->font; }
 
     CBaseUITextbox *setDrawFrame(bool drawFrame) {
@@ -73,7 +73,7 @@ class CBaseUITextbox : public CBaseUIElement {
         return this;
     }
 
-    virtual CBaseUITextbox *setText(UString text);
+    virtual CBaseUITextbox *setText(std::string text);
 
     void setCursorPosRight();
 
@@ -84,7 +84,7 @@ class CBaseUITextbox : public CBaseUIElement {
 
     bool is_password = false;
 
-    UString sText;
+    std::string sText;
     int iCaretPosition;
     void tickCaret();
     void updateTextPos();
@@ -109,7 +109,7 @@ class CBaseUITextbox : public CBaseUIElement {
     void handleDeleteSelectedText();
     void insertTextFromClipboard();
     void deselectText();
-    UString getSelectedText();
+    std::string getSelectedText();
 
     McFont *font;
 

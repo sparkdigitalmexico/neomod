@@ -246,7 +246,7 @@ class LiveScore final {
 
     [[nodiscard]] int getKeyCount(GameplayKeys key_flag) const;
     [[nodiscard]] LegacyFlags getModsLegacy() const;
-    [[nodiscard]] UString getModsStringForRichPresence() const;
+    [[nodiscard]] std::string getModsStringForRichPresence() const;
     Replay::Mods mods;
     bool simulating;
 

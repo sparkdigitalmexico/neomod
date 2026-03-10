@@ -4,7 +4,6 @@
 #include "AnimationHandler.h"
 #include "CBaseUIElement.h"
 #include "SyncMutex.h"
-#include "UString.h"
 #include "Color.h"
 
 #include <atomic>
@@ -33,7 +32,7 @@ class ConsoleBox : public CBaseUIElement {
 
     void onResolutionChange(vec2 newResolution);
 
-    void processCommand(const UString &command);
+    void processCommand(std::string_view command);
 
     // set
     void setRequireShiftToActivate(bool requireShiftToActivate) {
@@ -46,10 +45,10 @@ class ConsoleBox : public CBaseUIElement {
 
    private:
     friend class Logger::ConsoleBoxSink;
-    void log(const UString &text, Color textColor = 0xffffffff);
+    void log(std::string_view text, Color textColor = 0xffffffff);
 
     struct LOG_ENTRY {
-        UString text;
+        std::string text;
         Color textColor;
     };
 
@@ -59,7 +58,7 @@ class ConsoleBox : public CBaseUIElement {
 
     void onSuggestionClicked(CBaseUIButton *suggestion);
 
-    void addSuggestion(const UString &text, const UString &helpText, const UString &command);
+    void addSuggestion(std::string text, std::string helpText, std::string command);
     void clearSuggestions();
 
     void show();
@@ -95,7 +94,7 @@ class ConsoleBox : public CBaseUIElement {
     std::vector<LOG_ENTRY> log_entries;
     McFont *logFont;
 
-    std::vector<UString> commandHistory;
+    std::vector<std::string> commandHistory;
     int iSelectedHistory{-1};
     bool bClearPending{false};
 

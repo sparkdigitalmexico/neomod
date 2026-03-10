@@ -2,21 +2,26 @@
 #ifndef CONVAR_H
 #define CONVAR_H
 
-#include <atomic>
-#include <cassert>
-#include <string>
-#include <variant>
-#include <type_traits>
+#include "BaseEnvironment.h"
 
 #include "Delegate.h"
-#include "UString.h"
+
+#include <atomic>
+#include <cassert>
+#include <charconv>
+#include <string>
+#include <string_view>
+#include <variant>
+#include <type_traits>
 
 #ifndef DEFINE_CONVARS
 #include "ConVarDefs.h"
 #endif
 
-// use a more compact string representation for each ConVar object, instead of UString
+#include "fmt/format.h"
+
 using std::string_view_literals::operator""sv;
+using std::string_literals::operator""s;
 
 namespace cv {
 enum CvarFlags : uint8_t {
@@ -380,7 +385,7 @@ class ConVar {
 
         if constexpr((std::is_convertible_v<std::decay_t<T>, double> || std::is_convertible_v<std::decay_t<T>, float> ||
                       std::is_same_v<T, bool>) &&
-                     !std::is_same_v<std::decay_t<T>, UString> && !std::is_same_v<std::decay_t<T>, std::string_view> &&
+                     !std::is_same_v<std::decay_t<T>, std::string_view> &&
                      !std::is_same_v<std::decay_t<T>, const char *>) {
             // T is double-like
             this->setDefaultDouble(static_cast<double>(std::forward<T>(defaultValue)));
@@ -423,8 +428,7 @@ class ConVar {
         // called
         const auto [newDouble, newString] = [&]() -> std::pair<double, std::string> {
             if constexpr(((std::is_convertible_v<std::decay_t<T>, double> ||
-                           std::is_convertible_v<std::decay_t<T>, float>) &&
-                          !std::is_same_v<std::decay_t<T>, UString>) &&
+                           std::is_convertible_v<std::decay_t<T>, float>)) &&
                          !std::is_same_v<std::decay_t<T>, std::string_view> &&
                          !std::is_same_v<std::decay_t<T>, const char *>) {
                 const auto f = static_cast<double>(std::forward<T>(value));
@@ -432,12 +436,6 @@ class ConVar {
             } else if constexpr(std::is_same_v<T, bool>) {
                 const auto f = static_cast<double>(std::forward<T>(value) ? 1. : 0.);
                 return std::make_pair(f, f > 0 ? "true" : "false");
-            } else if constexpr(std::is_same_v<std::decay_t<T>, UString>) {
-                const std::string s{std::forward<T>(value).toUtf8()};
-                double dbl{};
-                const auto [ptr, err] = std::from_chars(s.data(), s.data() + s.size(), dbl);
-                if(err != std::errc()) return std::make_pair(this->dDefaultValue, s);
-                return std::make_pair(dbl, s);
             } else {
                 const std::string s{std::forward<T>(value)};
                 double dbl{};

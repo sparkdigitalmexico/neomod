@@ -288,7 +288,7 @@ void RoomScreen::update(CBaseUIEventCtx &c) {
     const bool room_name_changed = this->room_name_ipt->getText() != BanchoState::room.name;
     if(BanchoState::room.is_host() && room_name_changed) {
         // XXX: should only update 500ms after last input
-        BanchoState::room.name = this->room_name_ipt->getText().toUtf8();
+        BanchoState::room.name = this->room_name_ipt->getText();
 
         Packet packet;
         packet.id = OUTP_MATCH_CHANGE_SETTINGS;
@@ -386,12 +386,12 @@ void RoomScreen::updateSettingsLayout(vec2 newResolution) {
 
     // Host name
     if(!is_host) {
-        UString host_str = "Host: None";
+        std::string host_str = "Host: None";
         if(BanchoState::room.host_id != 0) {
             const auto *host = BANCHO::User::get_user_info(BanchoState::room.host_id, true);
             host_str = fmt::format("Host: {}", host->name.c_str());
         }
-        this->host->setText(host_str);
+        this->host->setText(std::move(host_str));
         ADD_ELEMENT(this->host);
     }
 
@@ -416,7 +416,7 @@ void RoomScreen::updateSettingsLayout(vec2 newResolution) {
         this->win_condition->setText("Win condition: ???");
     }
     if(is_host) {
-        this->change_win_condition_btn->setText(this->win_condition->getText());
+        this->change_win_condition_btn->setText(std::string{this->win_condition->getText()});
         this->change_win_condition_btn->setSizeToContent(button_padding, button_padding);
         ADD_ELEMENT(this->change_win_condition_btn);
     } else {
@@ -734,7 +734,7 @@ void RoomScreen::on_match_started(const Room &room) {
 
         soundEngine->play(osu->getSkin()->s_match_start);
     } else {
-        ui->getNotificationOverlay()->addToast(US_("Failed to load map"), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Failed to load map", ERROR_TOAST);
         this->ragequit();  // map failed to load
     }
 }
@@ -930,7 +930,7 @@ void RoomScreen::onChangeWinConditionClicked() {
     this->contextMenu->setVisible(true);
 }
 
-void RoomScreen::onWinConditionSelected(const UString & /*win_condition_str*/, int win_condition) {
+void RoomScreen::onWinConditionSelected(std::string_view  /*win_condition_str*/, int win_condition) {
     assert(win_condition >= 0 && win_condition <= 255);
 
     BanchoState::room.win_condition = (WinCondition)win_condition;
@@ -943,9 +943,9 @@ void RoomScreen::onWinConditionSelected(const UString & /*win_condition_str*/, i
     this->updateLayout(osu->getVirtScreenSize());
 }
 
-void RoomScreen::set_new_password(const UString &new_password) {
-    BanchoState::room.has_password = new_password.lengthUtf8() > 0;
-    BanchoState::room.password = new_password.toUtf8();
+void RoomScreen::set_new_password(std::string_view new_password) {
+    BanchoState::room.has_password = new_password.length() > 0;
+    BanchoState::room.password = new_password;
 
     Packet packet;
     packet.id = OUTP_CHANGE_ROOM_PASSWORD;

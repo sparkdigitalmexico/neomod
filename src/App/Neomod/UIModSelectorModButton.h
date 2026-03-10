@@ -12,7 +12,7 @@ class UIModSelectorModButton final : public CBaseUIButton {
     NOCOPY_NOMOVE(UIModSelectorModButton);
 
    public:
-    UIModSelectorModButton(ModSelector *osuModSelector, float xPos, float yPos, float xSize, float ySize, UString name);
+    UIModSelectorModButton(ModSelector *osuModSelector, float xPos, float yPos, float xSize, float ySize, std::string name);
     ~UIModSelectorModButton() override;
 
     using SkinImageGetter = SA::delegate<const SkinImage *(const Skin *)>;
@@ -24,12 +24,12 @@ class UIModSelectorModButton final : public CBaseUIButton {
     void resetState();
 
     void setState(int state);
-    void setState(unsigned int state, bool initialState, ConVar *cvar, UString modName, const UString &tooltipText,
+    void setState(unsigned int state, bool initialState, ConVar *cvar, std::string modName, std::string_view tooltipText,
                   SkinImageGetter skinImageGetter);
     void setBaseScale(float xScale, float yScale);
     void setAvailable(bool available) { this->bAvailable = available; }
 
-    [[nodiscard]] const UString &getActiveModName() const;
+    [[nodiscard]] std::string_view getActiveModName() const;
     [[nodiscard]] inline int getState() const { return this->iState; }
     [[nodiscard]] inline bool isOn() const { return this->bOn; }
     void onFocusStolen() override;
@@ -50,8 +50,8 @@ class UIModSelectorModButton final : public CBaseUIButton {
 
     struct STATE {
         ConVar *cvar;
-        UString modName;
-        std::vector<UString> tooltipTextLines;
+        std::string modName;
+        std::vector<std::string> tooltipTextLines;
         SkinImageGetter skinImageGetFunc{nullptr};
     };
     std::vector<STATE> states;

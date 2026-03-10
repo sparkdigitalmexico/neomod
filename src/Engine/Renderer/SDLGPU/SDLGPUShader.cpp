@@ -163,7 +163,7 @@ void SDLGPUShader::enable() {
     SDLGPUShader *currentShader = m_gpu->getActiveShader();
 
     if(currentShader == this) {
-        engine->showMessageErrorFatal(US_("Programmer Error"), US_("Tried to enable() the same shader twice!"));
+        engine->showMessageErrorFatal("Programmer Error", "Tried to enable() the same shader twice!");
         engine->shutdown();
     }
 

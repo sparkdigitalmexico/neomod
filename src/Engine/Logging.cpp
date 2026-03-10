@@ -185,7 +185,7 @@ class ConsoleBoxSink final : public spdlog::sinks::base_sink<custom_spdmtx> {
     // size is a tradeoff for efficiency vs console update latency
     static constexpr size_t CONSOLE_BUFFER_SIZE{64};
 
-    std::array<UString, CONSOLE_BUFFER_SIZE> message_buffer_{};
+    std::array<std::string, CONSOLE_BUFFER_SIZE> message_buffer_{};
     size_t buffer_head_{0};   // next write position
     size_t buffer_count_{0};  // current number of messages
 
@@ -242,13 +242,13 @@ class ConsoleBoxSink final : public spdlog::sinks::base_sink<custom_spdmtx> {
         }
 
         // the formatter doesn't append newlines, but the engine console doesn't like having them, so doing this just in case
-        auto end_pos{static_cast<int>(formatted.size())};
+        auto end_pos{formatted.size()};
         while(end_pos > 0 && (formatted[end_pos - 1] == '\r' || formatted[end_pos - 1] == '\n')) {
             --end_pos;
         }
 
         // store as UString in the circular buffer
-        message_buffer_[buffer_head_] = UString{formatted.data(), end_pos};
+        message_buffer_[buffer_head_] = std::string{formatted.data(), end_pos};
         buffer_head_ = (buffer_head_ + 1) % CONSOLE_BUFFER_SIZE;
 
         if(buffer_count_ < CONSOLE_BUFFER_SIZE) {

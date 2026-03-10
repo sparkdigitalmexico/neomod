@@ -322,7 +322,7 @@ void HUD::draw() {
         BanchoState::spectating ? BanchoState::fellow_spectators.size() : BanchoState::spectators.size();
     if(nb_spectators > 0 && cv::draw_spectator_list.getBool()) {
         // XXX: maybe draw player names? avatars?
-        const UString str = fmt::format("{} spectators", nb_spectators);
+        const std::string str = fmt::format("{} spectators", nb_spectators);
 
         g->pushTransform();
         McFont *font = osu->getSongBrowserFont();
@@ -709,10 +709,10 @@ void HUD::drawFps() {
     }
 
     fps = std::round(fps);
-    const UString fpsString = fmt::format("{} fps", (i32)(fps));
+    const std::string fpsString = fmt::format("{} fps", (i32)(fps));
 
     const double frametime_ms = old_worst_frametime * 1000.0;
-    const UString msString = fmt::format("{:.{}f} ms", frametime_ms, frametime_ms < 0.1 ? 2 : 1);
+    const std::string msString = fmt::format("{:.{}f} ms", frametime_ms, frametime_ms < 0.1 ? 2 : 1);
 
     const f32 dpiScale = Osu::getUIScale();
 
@@ -867,7 +867,7 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
     g->popTransform();
 }
 
-void HUD::drawLoadingSmall(const UString &text) {
+void HUD::drawLoadingSmall(std::string_view text) {
     const f32 scale = Osu::getImageScale(osu->getSkin()->i_loading_spinner, 29);
 
     g->setColor(0xffffffff);
@@ -1691,7 +1691,7 @@ void HUD::drawHitErrorBarInt2(vec2 center, i32 ur) {
     if(cv::draw_hiterrorbar_ur.getBool()) {
         g->pushTransform();
         {
-            UString urText = fmt::format("{} UR", ur);
+            std::string urText = fmt::format("{} UR", ur);
             McFont *urTextFont = osu->getSongBrowserFont();
 
             const f32 hitErrorBarScale = cv::hud_scale.getFloat() * cv::hud_hiterrorbar_scale.getFloat();
@@ -1801,7 +1801,7 @@ void HUD::drawProgressBar(f32 percent, bool waiting) {
 }
 
 void HUD::drawStatistics(const HUDStats &s) {
-    static const auto getOffsetStatText = []() -> UString {
+    static const auto getOffsetStatText = []() -> std::string {
         const auto *bmi = osu->getMapInterface();
         if(!bmi || !bmi->getMusic() || !bmi->getBeatmap()) return "";
 
@@ -1844,7 +1844,7 @@ void HUD::drawStatistics(const HUDStats &s) {
         g->translate(cv::hud_statistics_offset_x.getInt(),
                      (i32)(font->getHeight() * scale) + (cv::hud_statistics_offset_y.getInt() * offsetScale));
 
-        auto addStatistic = [font, yDelta](const UString &text, f32 xOffset, f32 yOffset) {
+        auto addStatistic = [font, yDelta](const std::string &text, f32 xOffset, f32 yOffset) {
             if(text.length() < 1) return;
 
             g->translate(xOffset, yOffset);
@@ -2160,7 +2160,7 @@ void HUD::drawScrubbingTimeline(u32 beatmapTime, u32 beatmapLengthPlayable, u32 
     g->popTransform();
 
     // current time text
-    UString currentTimeText = fmt::format("{}:{:02d}", (beatmapTime / 1000) / 60, (beatmapTime / 1000) % 60);
+    std::string currentTimeText = fmt::format("{}:{:02d}", (beatmapTime / 1000) / 60, (beatmapTime / 1000) % 60);
     g->pushTransform();
     {
         g->translate(std::clamp<f32>(triangleTip.x - timeFont->getStringWidth(currentTimeText) / 2.0f,
@@ -2180,7 +2180,7 @@ void HUD::drawScrubbingTimeline(u32 beatmapTime, u32 beatmapLengthPlayable, u32 
     g->popTransform();
 
     // start time text
-    UString startTimeText =
+    std::string startTimeText =
         fmt::format("({}:{:02d})", (beatmapStartTimePlayable / 1000) / 60, (beatmapStartTimePlayable / 1000) % 60);
     g->pushTransform();
     {
@@ -2197,7 +2197,7 @@ void HUD::drawScrubbingTimeline(u32 beatmapTime, u32 beatmapLengthPlayable, u32 
     g->popTransform();
 
     // end time text
-    UString endTimeText = fmt::format("{}:{:02d}", (endTimeMS / 1000) / 60, (endTimeMS / 1000) % 60);
+    std::string endTimeText = fmt::format("{}:{:02d}", (endTimeMS / 1000) / 60, (endTimeMS / 1000) % 60);
     g->pushTransform();
     {
         g->translate(
@@ -2233,7 +2233,8 @@ void HUD::drawScrubbingTimeline(u32 beatmapTime, u32 beatmapLengthPlayable, u32 
 
         // end time text
         u32 quickSaveTimeMS = osu->getQuickSaveTimeMS();
-        UString endTimeText = fmt::format("{}:{:02d}", (quickSaveTimeMS / 1000) / 60, (quickSaveTimeMS / 1000) % 60);
+        std::string endTimeText =
+            fmt::format("{}:{:02d}", (quickSaveTimeMS / 1000) / 60, (quickSaveTimeMS / 1000) % 60);
         g->pushTransform();
         {
             g->translate((i32)(std::clamp<f32>(triangleTip.x - timeFont->getStringWidth(currentTimeText) / 2.0f,
@@ -2258,7 +2259,7 @@ void HUD::drawScrubbingTimeline(u32 beatmapTime, u32 beatmapLengthPlayable, u32 
 
     // current time hover text
     u32 hoverTimeMS = std::clamp<f32>((cursorPos.x / (f32)osu->getVirtScreenWidth()), 0.0f, 1.0f) * endTimeMS;
-    UString hoverTimeText = fmt::format("{}:{:02d}", (hoverTimeMS / 1000) / 60, (hoverTimeMS / 1000) % 60);
+    std::string hoverTimeText = fmt::format("{}:{:02d}", (hoverTimeMS / 1000) / 60, (hoverTimeMS / 1000) % 60);
     triangleTip = vec2(cursorPos.x, cursorPos.y);
     g->pushTransform();
     {
@@ -2330,7 +2331,7 @@ void HUD::drawInputOverlay(i32 numK1, i32 numK2, i32 numM1, i32 numM2) {
         for(i32 i = 0; i < 4; i++) {
             textFont = osu->getSongBrowserFont();  // reset
 
-            UString text;
+            std::string text;
             Color color = colorIdle;
             f32 animScale = 1.0f;
             f32 animColor = 0.0f;
@@ -2651,7 +2652,7 @@ void HUD::drawRuntimeInfo() {
     // this information shouldn't scale with DPI
     McFont *font = engine->getConsoleFont();
 
-    static const UString infoString = []() -> UString {
+    static const std::string infoString = []() -> std::string {
         const char *osstr;
         switch(Env::getOS()) {
             case OS::WINDOWS:

@@ -20,8 +20,8 @@ bool BeatmapCarousel::songButtonComparator(const CBaseUIElement *a, const CBaseU
     return a->getRelPos().y < b->getRelPos().y;
 }
 
-BeatmapCarousel::BeatmapCarousel(float xPos, float yPos, float xSize, float ySize, const UString &name)
-    : CBaseUIScrollView(xPos, yPos, xSize, ySize, name) {
+BeatmapCarousel::BeatmapCarousel(float xPos, float yPos, float xSize, float ySize, std::string name)
+    : CBaseUIScrollView(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setDrawBackground(false);
     this->setDrawFrame(false);
     this->setHorizontalScrolling(false);

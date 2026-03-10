@@ -89,8 +89,8 @@ class RoomScreen final : public UIScreen {
     void onDownloadMapsClicked();
     void onChangePasswordClicked();
     void onChangeWinConditionClicked();
-    void onWinConditionSelected(const UString& win_condition_str, int win_condition);
-    void set_new_password(const UString& new_password);
+    void onWinConditionSelected(std::string_view win_condition_str, int win_condition);
+    void set_new_password(std::string_view new_password);
     void set_current_map(const DatabaseBeatmap* map);
     void onFreemodCheckboxChanged(CBaseUICheckbox* checkbox);
 

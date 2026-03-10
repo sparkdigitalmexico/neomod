@@ -84,20 +84,20 @@ const BeatmapSet *handle_osz(std::string_view osz_path) {
         }
     }
     if(set_id == -1) {
-        ui->getNotificationOverlay()->addToast(US_("Beatmapset doesn't have a valid ID."), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Beatmapset doesn't have a valid ID.", ERROR_TOAST);
         return nullptr;
     }
 
     std::string mapset_dir = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
     Environment::createDirectory(mapset_dir);
     if(!Downloader::extract_beatmapset(osz_data.data(), osz_data.size(), mapset_dir)) {
-        ui->getNotificationOverlay()->addToast(US_("Failed to extract beatmapset"), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Failed to extract beatmapset", ERROR_TOAST);
         return nullptr;
     }
 
     const BeatmapSet *set = db->addBeatmapSet(mapset_dir, set_id);
     if(!set) {
-        ui->getNotificationOverlay()->addToast(US_("Failed to import beatmapset"), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Failed to import beatmapset", ERROR_TOAST);
         return nullptr;
     }
 
@@ -167,7 +167,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
                     if(LegacyReplay::load_osr(path, replay)) {
                         last_imported_replay = replay;
                     } else {
-                        notif->addToast(US_("Failed to load replay."), ERROR_TOAST);
+                        notif->addToast("Failed to load replay.", ERROR_TOAST);
                     }
                 }
             }
@@ -181,7 +181,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
                     ui->setScreen(rankingscreen);
                 } else {
                     // TODO: auto-download
-                    notif->addToast(US_("This replay's beatmap is not installed."), ERROR_TOAST);
+                    notif->addToast("This replay's beatmap is not installed.", ERROR_TOAST);
                 }
             } else if(last_imported_set != nullptr) {
                 sbr->selectBeatmapset(last_imported_set);

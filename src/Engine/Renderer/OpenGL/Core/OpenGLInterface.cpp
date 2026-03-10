@@ -408,7 +408,7 @@ void OpenGLInterface::drawImage(const Image *image, AnchorPoint anchor, float ed
     }
 }
 
-void OpenGLInterface::drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow) {
+void OpenGLInterface::drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow) {
     if(font == nullptr || text.length() < 1 || !font->isReady()) return;
 
     updateTransform();

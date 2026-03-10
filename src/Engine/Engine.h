@@ -42,7 +42,6 @@ class CBaseUIContainer;
 class VisualProfiler;
 class ConsoleBox;
 class Console;
-class UString;
 class Image;
 
 class Engine final : public KeyboardListener {
@@ -84,10 +83,10 @@ class Engine final : public KeyboardListener {
     // UI focus hacks (passthrough to app + engine UI)
     void stealUIFocus();
 
-    void showMessageInfo(const UString &title, const UString &message);
-    void showMessageWarning(const UString &title, const UString &message);
-    void showMessageError(const UString &title, const UString &message);
-    void showMessageErrorFatal(const UString &title, const UString &message);
+    void showMessageInfo(const std::string &title, const std::string &message);
+    void showMessageWarning(const std::string &title, const std::string &message);
+    void showMessageError(const std::string &title, const std::string &message);
+    void showMessageErrorFatal(const std::string &title, const std::string &message);
 
     // engine specifics
     [[nodiscard]] inline bool isShuttingDown() const { return this->bShuttingDown; }

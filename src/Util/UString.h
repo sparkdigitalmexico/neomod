@@ -1,4 +1,5 @@
 // Copyright (c) 2009, 2D Boy & PG & 2025, WH, All rights reserved.
+// DEPRECATED (mostly), use UniString helpers
 #pragma once
 #include <algorithm>
 #include <cassert>
@@ -24,6 +25,7 @@
 
 using fmt::literals::operator""_cf;
 using std::string_view_literals::operator""sv;
+using std::string_literals::operator""s;
 
 #ifndef MCENGINE_PLATFORM_WINDOWS
 #define delete_if_not_windows = delete
@@ -385,6 +387,9 @@ struct hash<UString> {
 
 // forward decls to avoid including simdutf here
 namespace simdutf {
+extern size_t utf8_length_from_utf32(const char32_t *input, size_t length) noexcept;
+extern size_t convert_utf32_to_utf8(const char32_t *input, size_t length, char *utf8_output) noexcept;
+
 extern size_t utf8_length_from_utf16le(const char16_t *input, size_t length) noexcept;
 extern size_t convert_utf16le_to_utf8(const char16_t *input, size_t length, char *utf8_output) noexcept;
 }  // namespace simdutf
@@ -408,6 +413,25 @@ struct formatter<std::u16string_view> : formatter<string_view> {
         std::string result;
         result.resize_and_overwrite(utf8_length, [&](char *data, size_t /* size */) -> size_t {
             return simdutf::convert_utf16le_to_utf8(str.data(), str.size(), data);
+        });
+        return formatter<string_view>::format(result, ctx);
+    }
+};
+
+// u32string_view support
+template <>
+struct formatter<std::u32string_view> : formatter<string_view> {
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext &ctx) const {
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    auto format(std::u32string_view str, FormatContext &ctx) const noexcept {
+        size_t utf8_length = simdutf::utf8_length_from_utf32(str.data(), str.size());
+        std::string result;
+        result.resize_and_overwrite(utf8_length, [&](char *data, size_t /* size */) -> size_t {
+            return simdutf::convert_utf32_to_utf8(str.data(), str.size(), data);
         });
         return formatter<string_view>::format(result, ctx);
     }

@@ -69,9 +69,9 @@ class SDLGLInterface final : public BackendGLInterface {
     void setVSync(bool vsync) override;
 
     // device info
-    UString getVendor() override;
-    UString getModel() override;
-    UString getVersion() override;
+    std::string getVendor() override;
+    std::string getModel() override;
+    std::string getVersion() override;
     int getVRAMRemaining() override;
     int getVRAMTotal() override;
 

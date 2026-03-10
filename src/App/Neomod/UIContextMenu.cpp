@@ -17,9 +17,10 @@
 #include "SoundEngine.h"
 #include "TooltipOverlay.h"
 #include "UI.h"
+#include "SString.h"
 
-UIContextMenuButton::UIContextMenuButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text,
-                                         int id)
+UIContextMenuButton::UIContextMenuButton(float xPos, float yPos, float xSize, float ySize, std::string name,
+                                         std::string text, int id)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {
     this->iID = id;
 }
@@ -53,16 +54,18 @@ void UIContextMenuButton::onMouseDownInside(bool /*left*/, bool /*right*/) {
     soundEngine->play(osu->getSkin()->s_click_button);
 }
 
-void UIContextMenuButton::setTooltipText(const UString &text) { this->tooltipTextLines = text.split(US_("\n")); }
+void UIContextMenuButton::setTooltipText(std::string_view text) {
+    this->tooltipTextLines = SString::split_newlines<std::string>(text);
+}
 
-UIContextMenuTextbox::UIContextMenuTextbox(float xPos, float yPos, float xSize, float ySize, UString name, int id)
+UIContextMenuTextbox::UIContextMenuTextbox(float xPos, float yPos, float xSize, float ySize, std::string name, int id)
     : CBaseUITextbox(xPos, yPos, xSize, ySize, std::move(name)) {
     this->iID = id;
 }
 
-UIContextMenu::UIContextMenu(float xPos, float yPos, float xSize, float ySize, const UString &name,
+UIContextMenu::UIContextMenu(float xPos, float yPos, float xSize, float ySize, std::string name,
                              CBaseUIScrollView *parent)
-    : CBaseUIScrollView(xPos, yPos, xSize, ySize, name) {
+    : CBaseUIScrollView(xPos, yPos, xSize, ySize, std::move(name)) {
     this->parent = parent;
 
     this->backgroundColor = defaultBGColor;
@@ -70,7 +73,6 @@ UIContextMenu::UIContextMenu(float xPos, float yPos, float xSize, float ySize, c
 
     this->setPos(xPos, yPos);
     this->setSize(xSize, ySize);
-    this->setName(name);
 
     this->setHorizontalScrolling(false);
     this->setDrawBackground(false);
@@ -190,11 +192,12 @@ void UIContextMenu::begin(int minWidth, bool bigStyle) {
     this->containedTextbox = nullptr;
 }
 
-UIContextMenuButton *UIContextMenu::addButtonJustified(const UString &text, TEXT_JUSTIFICATION j, int id) {
+UIContextMenuButton *UIContextMenu::addButtonJustified(std::string text, TEXT_JUSTIFICATION j, int id) {
     const int buttonHeight = 30 * Osu::getUIScale() * (this->bBigStyle ? 1.27f : 1.0f);
     const int margin = 9 * Osu::getUIScale();
 
-    auto *button = new UIContextMenuButton(margin, this->iYCounter + margin, 0, buttonHeight, text, text, id);
+    auto *button =
+        new UIContextMenuButton(margin, this->iYCounter + margin, 0, buttonHeight, text, std::move(text), id);
     {
         if(this->bBigStyle) button->setFont(osu->getSubTitleFont());
 
@@ -217,13 +220,13 @@ UIContextMenuButton *UIContextMenu::addButtonJustified(const UString &text, TEXT
     return button;
 }
 
-UIContextMenuTextbox *UIContextMenu::addTextbox(const UString &text, int id) {
+UIContextMenuTextbox *UIContextMenu::addTextbox(std::string text, int id) {
     const int buttonHeight = 30 * Osu::getUIScale() * (this->bBigStyle ? 1.27f : 1.0f);
     const int margin = 9 * Osu::getUIScale();
 
     auto *textbox = new UIContextMenuTextbox(margin, this->iYCounter + margin, 0, buttonHeight, text, id);
     {
-        textbox->setText(text);
+        textbox->setText(std::move(text));
 
         if(this->bBigStyle) textbox->setFont(osu->getSubTitleFont());
 

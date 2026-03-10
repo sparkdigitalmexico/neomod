@@ -354,7 +354,7 @@ Osu::Osu()
     this->fonts.push_back(this->fontIcons);
 
     float averageIconHeight = 0.0f;
-    for(char16_t icon : Icons::icons) {
+    for(char32_t icon : Icons::icons) {
         const float height = this->fontIcons->getGlyphHeight(icon);
         if(height > averageIconHeight) averageIconHeight = height;
     }
@@ -743,7 +743,7 @@ void Osu::update() {
 
                 ui->getNotificationOverlay()->addNotification(
                     this->skin->name.length() > 0 ? fmt::format("Skin reloaded! ({})", this->skin->name.c_str())
-                                                  : US_("Skin reloaded!"),
+                                                  : "Skin reloaded!",
                     0xffffffff, false, 0.75f);
             }
         }
@@ -1551,7 +1551,7 @@ void Osu::reloadFonts() {
             resourceManager->reloadResource(font);
             if(font == this->fontIcons) {
                 float averageIconHeight = 0.0f;
-                for(char16_t icon : Icons::icons) {
+                for(char32_t icon : Icons::icons) {
                     const float height = font->getGlyphHeight(icon);
                     if(height > averageIconHeight) averageIconHeight = height;
                 }
@@ -1995,7 +1995,7 @@ void Osu::onLetterboxingOffsetChange() {
 
 void Osu::onUserCardChange(std::string_view new_username) {
     // NOTE: force update options textbox to avoid shutdown inconsistency
-    ui->getOptionsOverlay()->setUsername(UString{new_username.data(), static_cast<int>(new_username.length())});
+    ui->getOptionsOverlay()->setUsername(std::string{new_username});
     this->userButton->setID(BanchoState::get_uid());
 }
 

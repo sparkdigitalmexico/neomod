@@ -25,6 +25,7 @@
 #include "GPUDriverConfigurator.h"
 #include "Graphics.h"
 #include "SString.h"
+#include "UniString.h"
 #include "Parsing.h"
 
 #ifdef MCENGINE_PLATFORM_WASM
@@ -183,8 +184,7 @@ SDL_AppResult SDLMain::initialize() {
     // delay info until we know what gpu we're running
     // currently this only does anything for nvidia
     if(!m_gpuConfigurator->getInitInfo().empty()) {
-        std::string graphicsVendor{g->getModel().toUtf8()};
-        if(SString::contains_ncase(graphicsVendor, "nvidia")) {
+        if(SString::contains_ncase(g->getModel(), "nvidia")) {
             logRaw("[GPUDriverConfigurator]: {}", m_gpuConfigurator->getInitInfo());
         }
     }
@@ -481,12 +481,12 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
 
         // keyboard events
         case SDL_EVENT_KEY_DOWN:
-            keyboard->onKeyDown({static_cast<SCANCODE>(event->key.scancode), static_cast<char16_t>(event->key.key),
+            keyboard->onKeyDown({static_cast<SCANCODE>(event->key.scancode), static_cast<char32_t>(event->key.key),
                                  event->key.timestamp, event->key.repeat});
             break;
 
         case SDL_EVENT_KEY_UP:
-            keyboard->onKeyUp({static_cast<SCANCODE>(event->key.scancode), static_cast<char16_t>(event->key.key),
+            keyboard->onKeyUp({static_cast<SCANCODE>(event->key.scancode), static_cast<char32_t>(event->key.key),
                                event->key.timestamp, event->key.repeat});
             break;
 
@@ -495,11 +495,11 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
             if(unlikely(!evtextstr || *evtextstr == '\0'))
                 break;  // probably should be assert() but there's no point in microoptimizing that hard
 
-            int length;
-            if(likely((length = strlen(evtextstr)) == 1)) {
-                keyboard->onChar({0, static_cast<char16_t>(evtextstr[0]), event->text.timestamp, false});
+            size_t length = strlen(evtextstr);
+            if(likely(length == 1)) {
+                keyboard->onChar({0, static_cast<char32_t>(evtextstr[0]), event->text.timestamp, false});
             } else {
-                for(const auto &chr : UString(evtextstr, length))
+                for(char32_t chr : UniString::codepoints(std::string_view{evtextstr}))
                     keyboard->onChar({0, chr, event->text.timestamp, false});
             }
         } break;

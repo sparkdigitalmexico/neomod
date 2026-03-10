@@ -493,8 +493,7 @@ void BanchoState::reconnect() {
     };
 
     if(std::ranges::contains(server_blacklist, BanchoState::endpoint)) {
-        ui->getNotificationOverlay()->addToast(US_("This server does not allow " PACKAGE_NAME " clients."),
-                                               ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("This server does not allow " PACKAGE_NAME " clients.", ERROR_TOAST);
         return;
     }
 

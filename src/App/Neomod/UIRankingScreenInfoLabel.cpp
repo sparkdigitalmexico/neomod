@@ -15,7 +15,7 @@
 #include "Timing.h"
 #include "UI.h"
 
-UIRankingScreenInfoLabel::UIRankingScreenInfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, UString name)
+UIRankingScreenInfoLabel::UIRankingScreenInfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->font = osu->getSubTitleFont();
 
@@ -34,9 +34,9 @@ UIRankingScreenInfoLabel::UIRankingScreenInfoLabel(f32 xPos, f32 yPos, f32 xSize
 
 void UIRankingScreenInfoLabel::draw() {
     // build strings
-    const UString titleText{fmt::format("{} - {} [{}]", this->sArtist, this->sTitle, this->sDiff)};
-    const UString subTitleText{fmt::format("Beatmap by {}", this->sMapper)};
-    const UString playerText{this->buildPlayerString()};
+    const std::string titleText{fmt::format("{} - {} [{}]", this->sArtist, this->sTitle, this->sDiff)};
+    const std::string subTitleText{fmt::format("Beatmap by {}", this->sMapper)};
+    const std::string playerText{this->buildPlayerString()};
 
     const f32 globalScale = std::max((this->getSize().y / this->getMinimumHeight()) * 0.741f, 1.0f);
     const f32 fontHeight = this->font->getHeight();
@@ -131,7 +131,7 @@ void UIRankingScreenInfoLabel::setDate(std::string_view date) {
     this->sDate.assign(date);
 }
 
-UString UIRankingScreenInfoLabel::buildPlayerString() const {
+std::string UIRankingScreenInfoLabel::buildPlayerString() const {
     return fmt::format("Played by {} on {}", this->sPlayer, this->sDate);
 }
 

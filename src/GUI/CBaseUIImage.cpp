@@ -9,7 +9,7 @@
 #include "Graphics.h"
 
 CBaseUIImage::CBaseUIImage(const std::string& imageResourceName, float xPos, float yPos, float xSize, float ySize,
-                           UString name)
+                           std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->bScaleToFit = true;  // must be up here because it's used in setImage()
 

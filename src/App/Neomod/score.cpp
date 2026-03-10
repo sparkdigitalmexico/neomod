@@ -399,8 +399,8 @@ int LiveScore::getKeyCount(GameplayKeys key_flag) const {
 
 LegacyFlags LiveScore::getModsLegacy() const { return this->mods.to_legacy(); }
 
-UString LiveScore::getModsStringForRichPresence() const {
-    UString modsString;
+std::string LiveScore::getModsStringForRichPresence() const {
+    std::string modsString;
 
     if(osu->getModNF()) modsString.append("NF");
     if(osu->getModEZ()) modsString.append("EZ");

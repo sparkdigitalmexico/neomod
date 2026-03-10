@@ -12,6 +12,7 @@
 #include "Font.h"
 #include "File.h"
 #include "Timing.h"
+#include "UniString.h"
 #include "crypto.h"
 #include "SString.h"
 #include "MakeDelegateWrapper.h"
@@ -105,9 +106,9 @@ vec2 SongBrowser::getSkinDimensions(const SkinImage &img) {
 namespace {
 class ScoresStillLoadingElement final : public CBaseUILabel {
    public:
-    ScoresStillLoadingElement(const UString &text) : CBaseUILabel(0, 0, 0, 0, "", text) {
-        this->sIconString.insert(0, Icons::GLOBE);
-    }
+    ScoresStillLoadingElement(std::string text)
+        : CBaseUILabel(0, 0, 0, 0, "", std::move(text)),
+          sIconString(UniString::to_utf8(std::u32string_view{&Icons::GLOBE, 1})) {}
 
     void drawText() override {
         // draw icon
@@ -149,14 +150,14 @@ class ScoresStillLoadingElement final : public CBaseUILabel {
     }
 
    private:
-    UString sIconString;
+    std::string sIconString;
 };
 
 class NoRecordsSetElement final : public CBaseUILabel {
    public:
-    NoRecordsSetElement(const UString &text) : CBaseUILabel(0, 0, 0, 0, "", text) {
-        this->sIconString.insert(0, Icons::TROPHY);
-    }
+    NoRecordsSetElement(std::string text)
+        : CBaseUILabel(0, 0, 0, 0, "", std::move(text)),
+          sIconString(UniString::to_utf8(std::u32string_view{&Icons::TROPHY, 1})) {}
 
     void drawText() override {
         // draw icon
@@ -198,7 +199,7 @@ class NoRecordsSetElement final : public CBaseUILabel {
     }
 
    private:
-    UString sIconString;
+    std::string sIconString;
 };
 }  // namespace
 
@@ -361,16 +362,16 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
     this->topbarLeft->addBaseUIElement(this->webButton);
 
     // build topbar right
-    this->topbarRight = new CBaseUIContainer(0, 0, 0, 0, US_("SongBrowser::topbarRight"));
+    this->topbarRight = new CBaseUIContainer(0, 0, 0, 0, "SongBrowser::topbarRight");
     {
-        this->groupLabel = (new CBaseUILabel(0, 0, 0, 0, US_("SongBrowser::groupLabel"), ""))
+        this->groupLabel = (new CBaseUILabel(0, 0, 0, 0, "SongBrowser::groupLabel", ""))
                                ->setFont(osu->getSongBrowserFont())
                                ->setScale(0.75f)
                                ->setTextColor(rgba(200, 200, 255, 255))
                                ->setDrawTextShadow(true)
                                ->setDrawBackground(false)
                                ->setDrawFrame(false)
-                               ->setText(US_("Group:"))  // setting text later so string metrics get applied...
+                               ->setText("Group:")  // setting text later so string metrics get applied...
                                ->setSizeToContent(-1, 0);
         this->groupLabel->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->groupLabel);
@@ -380,14 +381,14 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
         this->groupButton->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->groupButton);
 
-        this->sortLabel = (new CBaseUILabel(0, 0, 0, 0, US_("SongBrowser::sortLabel"), ""))
+        this->sortLabel = (new CBaseUILabel(0, 0, 0, 0, "SongBrowser::sortLabel", ""))
                               ->setFont(osu->getSongBrowserFont())
                               ->setScale(0.75f)
                               ->setTextColor(rgba(225, 255, 225, 255))
                               ->setDrawTextShadow(true)
                               ->setDrawBackground(false)
                               ->setDrawFrame(false)
-                              ->setText(US_("Sort:"))
+                              ->setText("Sort:")
                               ->setSizeToContent(-1, 0);
         this->sortLabel->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->sortLabel);
@@ -744,9 +745,9 @@ void SongBrowser::draw() {
 
     // no beatmaps found (osu folder is probably invalid)
     if(db->getBeatmapSets().size() == 0) {
-        UString errorMessage1 = "Invalid osu! folder (or no beatmaps found): ";
+        std::string errorMessage1 = "Invalid osu! folder (or no beatmaps found): ";
         errorMessage1.append(this->sLastOsuFolder);
-        UString errorMessage2 = "Go to Options -> osu!folder";
+        std::string errorMessage2 = "Go to Options -> osu!folder";
 
         if constexpr(Env::cfg(OS::WASM)) {
             errorMessage1 = "Drop .osz beatmaps onto this window to import them";
@@ -818,7 +819,7 @@ bool SongBrowser::selectBeatmapset(const BeatmapSet *set) {
     }
 
     if(best_diff == nullptr) {
-        ui->getNotificationOverlay()->addToast(US_("Beatmapset has no difficulties"), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Beatmapset has no difficulties", ERROR_TOAST);
         return false;
     } else {
         this->onSelectionChange((*this->hashToDiffButton)[best_diff->getMD5()], false);
@@ -1012,20 +1013,20 @@ void SongBrowser::onKeyDown(KeyboardEvent &key) {
     if(key.isConsumed()) return;
 
     // searching text delete & escape key handling
-    UString uSearch{this->sSearchString};
+    std::u32string uSearch{UniString::to_utf32(this->sSearchString)};
 
-    if(!uSearch.isEmpty()) {
+    if(!uSearch.empty()) {
         switch(key.getScanCode()) {
             case KEY_DELETE:
             case KEY_BACKSPACE:
                 key.consume();
-                if(!uSearch.isEmpty()) {
+                if(!uSearch.empty()) {
                     if(keyboard->isControlDown()) {
                         // delete everything from the current caret position to the left, until after the first
                         // non-space character (but including it)
                         bool foundNonSpaceChar = false;
-                        while(!uSearch.isEmpty()) {
-                            const auto &curChar = uSearch.back();
+                        while(!uSearch.empty()) {
+                            const auto curChar = uSearch.back();
 
                             const bool whitespace = std::iswspace(static_cast<wint_t>(curChar)) != 0;
                             if(foundNonSpaceChar && whitespace) break;
@@ -1038,7 +1039,7 @@ void SongBrowser::onKeyDown(KeyboardEvent &key) {
                         uSearch.pop_back();
                     }
 
-                    this->sSearchString = uSearch.utf8View();
+                    this->sSearchString = UniString::to_utf8(uSearch);
                     this->scheduleSearchUpdate(uSearch.length() == 0);
                 }
                 break;
@@ -1058,10 +1059,9 @@ void SongBrowser::onKeyDown(KeyboardEvent &key) {
     // paste clipboard support
     if(key == KEY_V) {
         if(keyboard->isControlDown()) {
-            const auto &clipstring = env->getClipBoardText();
-            if(!clipstring.isEmpty()) {
-                uSearch.append(clipstring);
-                this->sSearchString = uSearch.utf8View();
+            const auto clipstring = env->getClipBoardText();
+            if(!clipstring.empty()) {
+                this->sSearchString.append(clipstring);
                 this->scheduleSearchUpdate(false);
             }
         }
@@ -1117,9 +1117,9 @@ void SongBrowser::onChar(KeyboardEvent &e) {
     if(this->bF1Pressed || this->bF2Pressed || this->bF3Pressed) return;
 
     // handle searching
-    UString uChar;
-    uChar.append(e.getCharCode());
-    this->sSearchString.append(uChar.utf8View());
+    char32_t ch = e.getCharCode();
+    std::u32string_view uChar{&ch, 1};
+    this->sSearchString.append(UniString::to_utf8(uChar));
 
     this->scheduleSearchUpdate();
 }
@@ -2410,7 +2410,7 @@ void SongBrowser::initializeGroupingButtons() {
 
         // 0-9
         {
-            coll->at(0) = MKCBTN(US_("0-9"));
+            coll->at(0) = MKCBTN("0-9");
         }
 
         // A-Z
@@ -2420,7 +2420,7 @@ void SongBrowser::initializeGroupingButtons() {
 
         // Other
         {
-            coll->at(27) = MKCBTN(US_("Other"));
+            coll->at(27) = MKCBTN("Other");
         }
     }
 
@@ -2428,27 +2428,27 @@ void SongBrowser::initializeGroupingButtons() {
     if(auto &diffbtns = this->difficultyCollectionButtons; diffbtns.size() != 12) {
         diffbtns.resize(12);
         for(size_t i = 0; i < 12; i++) {
-            UString difficultyCollectionName;
+            std::string difficultyCollectionName;
             if(i < 1)
-                difficultyCollectionName = US_("Below 1 star");
+                difficultyCollectionName = "Below 1 star";
             else if(i > 10)
-                difficultyCollectionName = US_("Above 10 stars");
+                difficultyCollectionName = "Above 10 stars";
             else
                 difficultyCollectionName = fmt::format("{:d} star{:s}", i, i == 1 ? "" : "s");
 
-            diffbtns[i] = MKCBTN(difficultyCollectionName);
+            diffbtns[i] = MKCBTN(std::move(difficultyCollectionName));
         }
     }
 
     // bpm
     if(auto &bpmbtns = this->bpmCollectionButtons; bpmbtns.size() != 6) {
         bpmbtns.resize(6);
-        bpmbtns[0] = MKCBTN(US_("Under 60 BPM"));
-        bpmbtns[1] = MKCBTN(US_("Under 120 BPM"));
-        bpmbtns[2] = MKCBTN(US_("Under 180 BPM"));
-        bpmbtns[3] = MKCBTN(US_("Under 240 BPM"));
-        bpmbtns[4] = MKCBTN(US_("Under 300 BPM"));
-        bpmbtns[5] = MKCBTN(US_("Over 300 BPM"));
+        bpmbtns[0] = MKCBTN("Under 60 BPM");
+        bpmbtns[1] = MKCBTN("Under 120 BPM");
+        bpmbtns[2] = MKCBTN("Under 180 BPM");
+        bpmbtns[3] = MKCBTN("Under 240 BPM");
+        bpmbtns[4] = MKCBTN("Under 300 BPM");
+        bpmbtns[5] = MKCBTN("Over 300 BPM");
     }
 
     // dateadded
@@ -2459,13 +2459,13 @@ void SongBrowser::initializeGroupingButtons() {
     // length
     if(auto &lenbtns = this->lengthCollectionButtons; lenbtns.size() != 7) {
         lenbtns.resize(7);
-        lenbtns[0] = MKCBTN(US_("1 minute or less"));
-        lenbtns[1] = MKCBTN(US_("2 minutes or less"));
-        lenbtns[2] = MKCBTN(US_("3 minutes or less"));
-        lenbtns[3] = MKCBTN(US_("4 minutes or less"));
-        lenbtns[4] = MKCBTN(US_("5 minutes or less"));
-        lenbtns[5] = MKCBTN(US_("10 minutes or less"));
-        lenbtns[6] = MKCBTN(US_("Over 10 minutes"));
+        lenbtns[0] = MKCBTN("1 minute or less");
+        lenbtns[1] = MKCBTN("2 minutes or less");
+        lenbtns[2] = MKCBTN("3 minutes or less");
+        lenbtns[3] = MKCBTN("4 minutes or less");
+        lenbtns[4] = MKCBTN("5 minutes or less");
+        lenbtns[5] = MKCBTN("10 minutes or less");
+        lenbtns[6] = MKCBTN("Over 10 minutes");
     }
 #undef MKCBTN
 }
@@ -2741,8 +2741,7 @@ void SongBrowser::rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(
 }
 
 void SongBrowser::onFilterScoresClicked(CBaseUIButton *button) {
-    static const std::array filters{US_("Local"),   US_("Global"),  US_("Selected mods"),
-                                    US_("Country"), US_("Friends"), US_("Team")};
+    static const std::array filters{"Local"s, "Global"s, "Selected mods"s, "Country"s, "Friends"s, "Team"s};
 
     this->contextMenu->setPos(button->getPos());
     this->contextMenu->setRelPos(button->getRelPos());
@@ -2756,7 +2755,7 @@ void SongBrowser::onFilterScoresClicked(CBaseUIButton *button) {
                 }
             }
         } else {
-            CBaseUIButton *button = this->contextMenu->addButton(US_("Local"));
+            CBaseUIButton *button = this->contextMenu->addButton("Local");
             button->setTextBrightColor(0xff00ff00);
         }
     }
@@ -2770,7 +2769,7 @@ void SongBrowser::onSortScoresClicked(CBaseUIButton *button) {
     this->contextMenu->begin(button->getSize().x);
     {
         for(const auto &scoreSortingMethod : Database::SCORE_SORTING_METHODS) {
-            CBaseUIButton *button = this->contextMenu->addButton(UString{scoreSortingMethod.name});
+            CBaseUIButton *button = this->contextMenu->addButton(std::string{scoreSortingMethod.name});
             if(scoreSortingMethod.name == cv::songbrowser_scores_sortingtype.getString())
                 button->setTextBrightColor(0xff00ff00);
         }
@@ -2779,8 +2778,8 @@ void SongBrowser::onSortScoresClicked(CBaseUIButton *button) {
     this->contextMenu->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortScoresChange>(this));
 }
 
-void SongBrowser::onFilterScoresChange(const UString &text, int id) {
-    UString text_to_set{text};
+void SongBrowser::onFilterScoresChange(std::string_view text, int id) {
+    std::string text_to_set{text};
     const auto &type_cv = &cv::songbrowser_scores_filteringtype;
     const auto &manual_type_cv = &cv::songbrowser_scores_filteringtype_manual;
 
@@ -2792,7 +2791,7 @@ void SongBrowser::onFilterScoresChange(const UString &text, int id) {
     // always change for manual setting, otherwise allow login state to affect filtering (if it was never manually set)
     const bool should_change = id != LOGIN_STATE_FILTER_ID || (manual_type_cv->isDefault());
     if(!should_change) {
-        text_to_set = UString{manual_type_cv->getString()};
+        text_to_set = std::string{manual_type_cv->getString()};
     }
     type_cv->setValue(text_to_set);  // NOTE: remember
 
@@ -2802,9 +2801,9 @@ void SongBrowser::onFilterScoresChange(const UString &text, int id) {
     this->scoreBrowser->scrollToTop();
 }
 
-void SongBrowser::onSortScoresChange(const UString &text, int /*id*/) {
+void SongBrowser::onSortScoresChange(std::string_view text, int /*id*/) {
     cv::songbrowser_scores_sortingtype.setValue(text);  // NOTE: remember
-    this->sortScoresDropdown->setText(text);
+    this->sortScoresDropdown->setText(std::string{text});
     this->rebuildScoreButtons();
     this->scoreBrowser->scrollToTop();
     ui->getHUD()->updateScoringMetric();
@@ -2820,8 +2819,8 @@ void SongBrowser::onWebClicked(CBaseUIButton * /*button*/) {
 }
 
 void SongBrowser::onQuickGroupClicked(CBaseUIButton *button, bool /*left*/, bool right) {
-    if(right || button->getText().isEmpty()) return;
-    const std::string_view btntxt = button->getText().utf8View();
+    if(right || button->getText().empty()) return;
+    const std::string_view btntxt = button->getText();
 
     for(int gid = -1; const auto &gname : GROUP_NAMES) {
         ++gid;
@@ -2839,7 +2838,7 @@ void SongBrowser::onGroupClicked(CBaseUIButton *button) {
     {
         for(int gid = -1; const auto &gname : GROUP_NAMES) {
             ++gid;
-            CBaseUIButton *button = this->contextMenu->addButton(gname, gid);
+            CBaseUIButton *button = this->contextMenu->addButton(std::string{gname}, gid);
             if(gid == this->curGroup) button->setTextBrightColor(0xff00ff00);
         }
     }
@@ -2847,14 +2846,14 @@ void SongBrowser::onGroupClicked(CBaseUIButton *button) {
     this->contextMenu->setClickCallback(SA::MakeDelegate<&SongBrowser::onGroupChange>(this));
 }
 
-void SongBrowser::onGroupChange(const UString &text, int id) {
+void SongBrowser::onGroupChange(std::string_view text, int id) {
     auto group_id = this->curGroup;
     if(id >= 0 && id < GroupType::MAX) {
         group_id = (GroupType)id;
-    } else if(!text.isEmpty()) {
+    } else if(!text.empty()) {
         for(int gid = -1; const auto &gname : GROUP_NAMES) {
             ++gid;
-            if(text.utf8View() == gname) {
+            if(text == gname) {
                 group_id = (GroupType)gid;
                 break;
             }
@@ -2862,7 +2861,7 @@ void SongBrowser::onGroupChange(const UString &text, int id) {
     }
 
     // update group combobox button text
-    this->groupButton->setText(GROUP_NAMES[group_id]);
+    this->groupButton->setText(std::string{GROUP_NAMES[group_id]});
 
     // set highlighted colour
     this->groupByCollectionBtn->setTextBrightColor(defaultColor);
@@ -2896,7 +2895,7 @@ void SongBrowser::onSortClicked(CBaseUIButton *button) {
     {
         for(int stype = -1; const auto &sortmeth : SORTING_METHODS) {
             ++stype;
-            CBaseUIButton *button = this->contextMenu->addButton(sortmeth.name, stype);
+            CBaseUIButton *button = this->contextMenu->addButton(std::string{sortmeth.name}, stype);
             if(stype == this->curSortMethod) button->setTextBrightColor(0xff00ff00);
         }
     }
@@ -2904,14 +2903,14 @@ void SongBrowser::onSortClicked(CBaseUIButton *button) {
     this->contextMenu->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortChange>(this));
 }
 
-void SongBrowser::onSortChange(const UString &text, int id) {
+void SongBrowser::onSortChange(std::string_view text, int id) {
     auto sort_id = this->curSortMethod;
     if(id >= 0 && id < SortType::MAX) {
         sort_id = (SortType)id;
-    } else if(!text.isEmpty()) {
+    } else if(!text.empty()) {
         for(int sid = -1; const auto &sortmeth : SORTING_METHODS) {
             ++sid;
-            if(text.utf8View() == sortmeth.name) {
+            if(text == sortmeth.name) {
                 sort_id = (SortType)sid;
                 break;
             }
@@ -2922,7 +2921,7 @@ void SongBrowser::onSortChange(const UString &text, int id) {
 
     const bool sortChanged = sort_id != this->curSortMethod;
 
-    this->sortButton->setText(newMethod.name);
+    this->sortButton->setText(std::string{newMethod.name});
     cv::songbrowser_sortingtype.setValue(newMethod.name);
 
     // reuse the group update logic instead of duplicating it
@@ -3047,10 +3046,10 @@ void SongBrowser::rebuildAfterGroupOrSortChange(GroupType group, const std::opti
 void SongBrowser::onSelectionMode() {
     if(cv::mod_fposu.getBool()) {
         cv::mod_fposu.setValue(false);
-        ui->getNotificationOverlay()->addToast(US_("Disabled FPoSu mode."), INFO_TOAST);
+        ui->getNotificationOverlay()->addToast("Disabled FPoSu mode.", INFO_TOAST);
     } else {
         cv::mod_fposu.setValue(true);
-        ui->getNotificationOverlay()->addToast(US_("Enabled FPoSu mode."), SUCCESS_TOAST);
+        ui->getNotificationOverlay()->addToast("Enabled FPoSu mode.", SUCCESS_TOAST);
     }
 }
 
@@ -3103,7 +3102,7 @@ void SongBrowser::onScoreContextMenu(ScoreButton *scoreButton, int id) {
     }
 }
 
-void SongBrowser::onSongButtonContextMenu(SongButton *songButton, const UString &text, int id) {
+void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_view text, int id) {
     // debugLog("SongBrowser::onSongButtonContextMenu({:p}, {:s}, {:d})", songButton, text.toUtf8(), id);
 
     struct CollectionManagementHelper {
@@ -3133,15 +3132,13 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, const UString 
     {
         if(id == 1) {
             // add diff to collection
-            std::string name = text.toUtf8();
-            auto &collection = Collections::get_or_create_collection(name);
+            auto &collection = Collections::get_or_create_collection(text);
             collection.add_map(songButton->getDatabaseBeatmap()->getMD5());
             Collections::save_collections();
             updateUI = true;
         } else if(id == 2) {
             // add set to collection
-            std::string name = text.toUtf8();
-            auto &collection = Collections::get_or_create_collection(name);
+            auto &collection = Collections::get_or_create_collection(text);
             const std::vector<MD5Hash> beatmapSetHashes =
                 CollectionManagementHelper::getBeatmapSetHashesForSongButton(songButton);
             for(const auto &hash : beatmapSetHashes) {
@@ -3191,8 +3188,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, const UString 
             updateUI = true;
         } else if(id == -2 || id == -4) {
             // add beatmap(set) to new collection
-            std::string name = text.toUtf8();
-            auto &collection = Collections::get_or_create_collection(name);
+            auto &collection = Collections::get_or_create_collection(text);
 
             if(id == -2) {
                 // id == -2 means beatmap
@@ -3243,8 +3239,8 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, const UString 
     }
 }
 
-void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButton, const UString &text, int id) {
-    std::string collection_name = text.toUtf8();
+void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButton, std::string_view text, int id) {
+    std::string collection_name{text};
 
     if(id == 2) {  // delete collection
         if(const auto &it =

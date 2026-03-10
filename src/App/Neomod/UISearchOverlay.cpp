@@ -8,8 +8,9 @@
 #include "ResourceManager.h"
 #include "Font.h"
 #include "Graphics.h"
+#include "UniString.h"
 
-UISearchOverlay::UISearchOverlay(float xPos, float yPos, float xSize, float ySize, UString name)
+UISearchOverlay::UISearchOverlay(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->font = engine->getDefaultFont();
 
@@ -31,18 +32,19 @@ void UISearchOverlay::draw() {
     const float searchTextScale = 1.0f;
     McFont *searchTextFont = this->font;
 
-    const UString searchText1 = "Search: ";
-    const UString searchText2 = "Type to search!";
-    const UString noMatchesFoundText1 = "No matches found. Hit ESC to reset.";
-    const UString noMatchesFoundText2 = "Hit ESC to reset.";
-    const UString searchingText2 = "Searching, please wait ...";
+    const std::string searchText1 = "Search: ";
+    const std::string searchText2 = "Type to search!";
+    const std::string noMatchesFoundText1 = "No matches found. Hit ESC to reset.";
+    const std::string noMatchesFoundText2 = "Hit ESC to reset.";
+    const std::string searchingText2 = "Searching, please wait ...";
 
-    UString combinedSearchText = searchText1;
+    std::string combinedSearchText = searchText1;
     combinedSearchText.append(searchText2);
 
-    UString offsetText = (this->iNumFoundResults < 0 ? combinedSearchText : noMatchesFoundText1);
-
-    bool hasSearchSubTextVisible = this->sSearchString.length() > 0 && this->bDrawNumResults;
+    std::string offsetText = (this->iNumFoundResults < 0 ? combinedSearchText : noMatchesFoundText1);
+    const uSz hardcodedSearchCodepoints = UniString::num_codepoints(this->sHardcodedSearchString);
+    const uSz searchCodepoints = UniString::num_codepoints(this->sSearchString);
+    bool hasSearchSubTextVisible = searchCodepoints > 0 && this->bDrawNumResults;
 
     const float searchStringWidth = searchTextFont->getStringWidth(this->sSearchString);
     const float offsetTextStringWidth = searchTextFont->getStringWidth(offsetText);
@@ -70,12 +72,12 @@ void UISearchOverlay::draw() {
             else
                 numLines = 3.0f;
 
-            if(this->sHardcodedSearchString.length() > 0) numLines += 1.5f;
+            if(hardcodedSearchCodepoints > 0) numLines += 1.5f;
         }
         const float height = lineHeight * numLines;
         const int offsetTextWidthWithOverflow = offsetTextWidthWithoutOverflow + textOverflowXOffset;
 
-        g->setColor(argb(this->sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
+        g->setColor(argb(searchCodepoints > 0 ? 100 : 30, 0, 0, 0));
         g->fillRect(this->getPos().x + this->getSize().x - offsetTextWidthWithOverflow, this->getPos().y,
                     offsetTextWidthWithOverflow, height);
     }
@@ -101,7 +103,7 @@ void UISearchOverlay::draw() {
             g->setColor(0xff00ff00);
             g->drawString(searchTextFont, searchText1);
 
-            if(this->sHardcodedSearchString.length() > 0) {
+            if(hardcodedSearchCodepoints > 0) {
                 const float searchText1Width = searchTextFont->getStringWidth(searchText1) * searchTextScale;
 
                 g->pushTransform();
@@ -123,14 +125,14 @@ void UISearchOverlay::draw() {
             g->translate((int)(searchTextFont->getStringWidth(searchText1) * searchTextScale), 0);
             g->translate(1, 1);
             g->setColor(0xff000000);
-            if(this->sSearchString.length() < 1)
+            if(searchCodepoints < 1)
                 g->drawString(searchTextFont, searchText2);
             else
                 g->drawString(searchTextFont, this->sSearchString);
 
             g->translate(-1, -1);
             g->setColor(0xffffffff);
-            if(this->sSearchString.length() < 1)
+            if(searchCodepoints < 1)
                 g->drawString(searchTextFont, searchText2);
             else
                 g->drawString(searchTextFont, this->sSearchString);
@@ -140,7 +142,7 @@ void UISearchOverlay::draw() {
         // draw number of matches
         if(hasSearchSubTextVisible) {
             g->translate(0, (int)((searchTextFont->getHeight() * searchTextScale) * 1.5f *
-                                  (this->sHardcodedSearchString.length() > 0 ? 2.0f : 1.0f)));
+                                  (hardcodedSearchCodepoints > 0 ? 2.0f : 1.0f)));
             g->translate(1, 1);
 
             if(this->bSearching) {

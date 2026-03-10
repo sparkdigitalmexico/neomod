@@ -16,12 +16,11 @@ CBaseUIButton::CBaseUIButton(std::nullptr_t notext, float xPos, float yPos, floa
     this->font = engine->getDefaultFont();
 }
 
-CBaseUIButton::CBaseUIButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+CBaseUIButton::CBaseUIButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
-
     this->font = engine->getDefaultFont();
 
-    if(!text.isEmpty()) {
+    if(!text.empty()) {
         this->setText(std::move(text));
     }
 }

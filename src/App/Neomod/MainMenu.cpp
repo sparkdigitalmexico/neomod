@@ -56,7 +56,7 @@
 
 class MainMenu::CubeButton final : public CBaseUIButton {
    public:
-    CubeButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    CubeButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm_ptr(parent) {}
 
     void draw() override {
@@ -93,7 +93,7 @@ class MainMenu::CubeButton final : public CBaseUIButton {
 
 class MainMenu::MainButton final : public CBaseUIButton {
    public:
-    MainButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    MainButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm_ptr(parent) {}
 
     void update(CBaseUIEventCtx &c) override {
@@ -107,8 +107,8 @@ class MainMenu::MainButton final : public CBaseUIButton {
             auto *ttoverlay = ui->getTooltipOverlay();
             ttoverlay->begin();
             {
-                ttoverlay->addLine(US_("Save everything from this session."));
-                ttoverlay->addLine(US_("(Optional, automatic on tab close.)"));
+                ttoverlay->addLine("Save everything from this session.");
+                ttoverlay->addLine("(Optional, automatic on tab close.)");
             }
             ttoverlay->end();
         }
@@ -131,20 +131,20 @@ class MainMenu::MainButton final : public CBaseUIButton {
     void onMouseInside() override {
         if(this->mm_ptr->cube->isMouseInside()) return;
         CBaseUIButton::onMouseInside();
-        const bool isSave = this->getText() == US_("Save");
+        const bool isSave = this->getText() == "Save";
         if(isSave) {
             this->bShowSaveTooltip = true;
         }
 
         if(this->mm_ptr->button_sound_cooldown + 0.05f < engine->getTime()) {
             this->mm_ptr->button_sound_cooldown = engine->getTime();
-            if(this->getText() == US_("Singleplayer")) {
+            if(this->getText() == "Singleplayer") {
                 soundEngine->play(osu->getSkin()->s_hover_sp);
-            } else if(this->getText() == US_("Multiplayer")) {
+            } else if(this->getText() == "Multiplayer") {
                 soundEngine->play(osu->getSkin()->s_hover_mp);
-            } else if(this->getText() == US_("Options (CTRL + O)") || isSave) {
+            } else if(this->getText() == "Options (CTRL + O)" || isSave) {
                 soundEngine->play(osu->getSkin()->s_hover_options);
-            } else if(this->getText() == US_("Exit")) {
+            } else if(this->getText() == "Exit") {
                 soundEngine->play(osu->getSkin()->s_hover_exit);
             }
         }
@@ -312,8 +312,8 @@ MainMenu::MainMenu() : UIScreen() {
     this->addMainMenuButton("Options (CTRL + O)")
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
 
-    static const UString lastButtonText = Env::cfg(OS::WASM) ? US_("Save") : US_("Exit");
-    this->addMainMenuButton(lastButtonText)
+    std::string lastButtonText = Env::cfg(OS::WASM) ? "Save" : "Exit";
+    this->addMainMenuButton(std::move(lastButtonText))
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onSaveOrExitButtonPressed>(this));
 
     this->pauseButton = new PauseButton(0, 0, 0, 0, "", "");
@@ -905,7 +905,7 @@ void MainMenu::draw() {
                                    osu->getVirtScreenHeight() - this->versionButton->getSize().y * 2 -
                                        this->versionButton->getSize().y * scale);
 
-        UString notificationText = "Changelog";
+        std::string notificationText = "Changelog";
         g->setColor(0xffffffff);
         g->pushTransform();
         {
@@ -966,12 +966,12 @@ void MainMenu::update(CBaseUIEventCtx &c) {
     }
 
     if(Osu::isBleedingEdge()) {
-        static UString versionString =
+        static std::string versionString =
             fmt::format("Version {:.2f} ({:s})", cv::version.getFloat(), cv::build_timestamp.getString());
         this->versionButton->setTextColor(rgb(255, 220, 220));
         this->versionButton->setText(versionString);
     } else {
-        static UString versionString = fmt::format("Version {:.2f}", cv::version.getFloat());
+        static std::string versionString = fmt::format("Version {:.2f}", cv::version.getFloat());
         this->versionButton->setTextColor(rgb(255, 255, 255));
         this->versionButton->setText(versionString);
     }
@@ -1087,7 +1087,7 @@ void MainMenu::update(CBaseUIEventCtx &c) {
                     this->updateAvailableButton->setTextColor(0xffffffff);
                     this->updateAvailableButton->setVisible(true);
 
-                    if(this->updateAvailableButton->getText().find("ready") != -1)
+                    if(this->updateAvailableButton->getText().find("ready") != std::string::npos)
                         this->updateAvailableButton->setText("Click here to install the update!");
                     else
                         this->updateAvailableButton->setText("A new version of " PACKAGE_NAME " is ready!");
@@ -1516,7 +1516,7 @@ void MainMenu::writeVersionFile() {
               });
 }
 
-MainMenu::MainButton *MainMenu::addMainMenuButton(UString text) {
+MainMenu::MainButton *MainMenu::addMainMenuButton(std::string text) {
     auto *button = new MainButton(this, this->vSize.x, 0, 1, 1, "", std::move(text));
     button->setFont(osu->getSubTitleFont());
     button->setVisible(false);

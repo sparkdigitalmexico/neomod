@@ -6,7 +6,6 @@
 
 #include "BaseEnvironment.h"
 
-#include "UString.h"
 #include "Cursors.h"
 #include "KeyboardEvent.h"
 #include "Rect.h"
@@ -144,7 +143,7 @@ class Environment {
     [[nodiscard]] inline const std::vector<std::string> &getCommandLine() const { return m_vCmdLine; }
 
     // user
-    [[nodiscard]] const UString &getUsername() const noexcept;
+    [[nodiscard]] std::string_view getUsername() const noexcept;
     [[nodiscard]] const std::string &getUserDataPath() const noexcept;
     [[nodiscard]] const std::string &getLocalDataPath() const noexcept;
     [[nodiscard]] const std::string &getCacheDir() const noexcept;
@@ -177,17 +176,17 @@ class Environment {
     [[nodiscard]] static std::string encodeStringToURI(std::string_view unencodedString) noexcept;
 
     // clipboard
-    [[nodiscard]] const UString &getClipBoardText();
-    void setClipBoardText(const UString &text);
+    [[nodiscard]] std::string_view getClipBoardText();
+    void setClipBoardText(std::string text);
 
     // dialogs & message boxes
     static void showDialog(const char *title, const char *message,
                            unsigned int flags = 0x00000010u /* SDL_MESSAGEBOX_ERROR */,
                            void /*SDL_Window*/ *modalWindow = nullptr);
-    void showMessageInfo(const UString &title, const UString &message) const;
-    void showMessageWarning(const UString &title, const UString &message) const;
-    void showMessageError(const UString &title, const UString &message) const;
-    void showMessageErrorFatal(const UString &title, const UString &message) const;
+    void showMessageInfo(const std::string &title, const std::string &message) const;
+    void showMessageWarning(const std::string &title, const std::string &message) const;
+    void showMessageError(const std::string &title, const std::string &message) const;
+    void showMessageErrorFatal(const std::string &title, const std::string &message) const;
 
     using FileDialogCallback = std::function<void(const std::vector<UString> &paths)>;
     void openFileWindow(FileDialogCallback callback, const char *filetypefilters, std::string_view title,
@@ -203,7 +202,7 @@ class Environment {
     void enableFullscreen();
     void disableFullscreen();
     void syncWindow();
-    void setWindowTitle(const UString &title);
+    void setWindowTitle(const std::string &title);
     bool setWindowPos(int x, int y);
     bool setWindowSize(int width, int height);
     void setWindowResizable(bool resizable);
@@ -279,7 +278,7 @@ class Environment {
     inline void setOSMousePos(float x, float y) { setOSMousePos(vec2{x, y}); }
 
     // keyboard
-    [[nodiscard]] UString keyCodeToString(SCANCODE keyCode) const;
+    [[nodiscard]] std::string keyCodeToString(SCANCODE keyCode) const;
     void listenToTextInput(bool listen);
     bool setWindowsKeyDisabled(bool disable);
     void setRawKeyboardInput(bool raw);  // enable/disable OS-level rawinput
@@ -316,7 +315,7 @@ class Environment {
     bool m_bMinimizeSupported;
 
     // cache
-    mutable UString m_sUsername;
+    mutable std::string m_sUsername;
     mutable std::string m_sProgDataPath;
     mutable std::string m_sAppDataPath;
     mutable std::string m_sCacheDir;
@@ -419,7 +418,7 @@ class Environment {
     bool m_bWinKeyDisabled;
 
     // clipboard
-    UString m_sCurrClipboardText;
+    std::string m_sCurrClipboardText;
 
     // misc platform
     bool m_bIsX11;

@@ -106,7 +106,7 @@ void UIUserContextMenuScreen::open(i32 user_id, bool is_song_browser_button) {
 
 void UIUserContextMenuScreen::close() { this->menu->setVisible(false); }
 
-void UIUserContextMenuScreen::on_action(const UString& /*text*/, int user_action) {
+void UIUserContextMenuScreen::on_action(std::string_view /*text*/, int user_action) {
     UserInfo* user_info = BANCHO::User::get_user_info(this->user_id);
     int slot_number = -1;
     if(BanchoState::is_in_a_multi_room()) {
@@ -169,9 +169,9 @@ void UIUserContextMenuScreen::on_action(const UString& /*text*/, int user_action
     this->menu->setVisible(false);
 }
 
-UIUserLabel::UIUserLabel(i32 user_id, const UString& username) : CBaseUILabel() {
+UIUserLabel::UIUserLabel(i32 user_id, std::string username) : CBaseUILabel() {
     this->user_id = user_id;
-    this->setText(username);
+    this->setText(std::move(username));
     this->setDrawFrame(false);
     this->setDrawBackground(false);
 }

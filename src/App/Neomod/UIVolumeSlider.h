@@ -11,7 +11,7 @@ class UIVolumeSlider final : public CBaseUISlider {
     enum class TYPE : uint8_t { MASTER, MUSIC, EFFECTS };
 
    public:
-    UIVolumeSlider(float xPos, float yPos, float xSize, float ySize, UString name);
+    UIVolumeSlider(float xPos, float yPos, float xSize, float ySize, std::string name);
     ~UIVolumeSlider() override;
 
     void setType(TYPE type) { this->type = type; }

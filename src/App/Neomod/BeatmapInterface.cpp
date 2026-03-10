@@ -175,8 +175,8 @@ void BeatmapInterface::drawDebug() {
         // TODO: draw current TIMING_INFO in green (not timingpoint)
         // next to (to the right) the closest timingpoint with an offset < (this->iCurMusicPos + cv::timingpoints_offset.getInt())
 
-        const UString curtpString = fmt::format("{},{},{},{},{},{},{}", (i32)t.offset, t.msPerBeat, t.sampleSet,
-                                                t.sampleIndex, t.volume, (i32)t.uninherited, (i32)t.kiai);
+        const std::string curtpString = fmt::format("{},{},{},{},{},{},{}", (i32)t.offset, t.msPerBeat, t.sampleSet,
+                                                    t.sampleIndex, t.volume, (i32)t.uninherited, (i32)t.kiai);
 
         g->drawString(debugFont, curtpString,
                       TextShadow{.col_text = textColor, .col_shadow = shadowColor, .offs_px = 1.f});
@@ -585,7 +585,7 @@ bool BeatmapInterface::start() {
         DatabaseBeatmap::LOAD_GAMEPLAY_RESULT result = DatabaseBeatmap::loadGameplay(this->beatmap, this);
         if(result.error.errc) {
             using enum DatabaseBeatmap::LoadError::code;
-            UString errorMessage;
+            std::string errorMessage;
             switch(result.error.errc) {
                 case METADATA:
                 case LOADMETADATA_ON_BEATMAPSET:
@@ -622,7 +622,7 @@ bool BeatmapInterface::start() {
                 } break;
             }
 
-            if(!errorMessage.isEmpty()) {
+            if(!errorMessage.empty()) {
                 ui->getNotificationOverlay()->addToast(errorMessage, ERROR_TOAST);
             }
 
@@ -1090,7 +1090,7 @@ void BeatmapInterface::seekMS(u32 ms) {
 
     if(!this->is_watching && !BanchoState::spectating) {  // score submission already disabled when watching replay
         if(was_submittable && BanchoState::can_submit_scores()) {
-            ui->getNotificationOverlay()->addToast(US_("Score will not submit due to seeking"), ERROR_TOAST);
+            ui->getNotificationOverlay()->addToast("Score will not submit due to seeking", ERROR_TOAST);
         }
         this->bTempSeekNF = true;
     }
@@ -2649,7 +2649,7 @@ void BeatmapInterface::update2() {
 
     // handle music loading fail
     if(!this->music->isReady()) {
-        ui->getNotificationOverlay()->addToast(US_("Couldn't load music file :("), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Couldn't load music file :(", ERROR_TOAST);
         this->stop(true);
         return;
     }
@@ -3954,7 +3954,7 @@ FinishedScore BeatmapInterface::saveAndSubmitScore(bool quit) {
 
         if(score.passed || cv::save_failed_scores.getBool()) {
             if(!db->addScore(score)) {
-                ui->getNotificationOverlay()->addToast(US_("Failed saving score!"), ERROR_TOAST);
+                ui->getNotificationOverlay()->addToast("Failed saving score!", ERROR_TOAST);
             }
         }
     }

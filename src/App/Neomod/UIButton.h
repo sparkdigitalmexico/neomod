@@ -5,7 +5,7 @@
 
 class UIButton : public CBaseUIButton {
    public:
-    UIButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    UIButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
     void draw() override;
@@ -20,7 +20,7 @@ class UIButton : public CBaseUIButton {
         return this;
     }
 
-    UIButton *setTooltipText(const UString &text);
+    UIButton *setTooltipText(std::string_view text);
 
     void onMouseInside() override;
     void onMouseOutside() override;
@@ -40,7 +40,7 @@ class UIButton : public CBaseUIButton {
     AnimFloat fClickAnim;
     float fHoverAlpha{0.f};
 
-    std::vector<UString> tooltipTextLines;
+    std::vector<std::string> tooltipTextLines;
     bool bFocusStolenDelay{false};
 };
 
@@ -48,7 +48,7 @@ class UIButton : public CBaseUIButton {
 // I tried inheriting UIButton but it didn't like getting rotated :(
 class UIButtonVertical : public CBaseUIButton {
    public:
-    UIButtonVertical(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    UIButtonVertical(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
     UIButtonVertical *setSizeToContent(int horizontalBorderSize = 1, int verticalBorderSize = 1) override;

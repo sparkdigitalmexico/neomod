@@ -24,7 +24,7 @@ class ToastElement final : public CBaseUIButton {
 
     static constexpr f64 DEFAULT_TOAST_TIMEOUT{10.};
 
-    ToastElement(UString text, Color borderColor, TYPE type);
+    ToastElement(std::string text, Color borderColor, TYPE type);
     ~ToastElement() override = default;
 
     void draw() override;
@@ -38,7 +38,7 @@ class ToastElement final : public CBaseUIButton {
     void freezeTimeout();  // stop the timeout at the currently remaining time
 
    private:
-    std::vector<UString> lines;
+    std::vector<std::string> lines;
 
     f64 creation_time;
     f64 timeout{DEFAULT_TOAST_TIMEOUT};  // relative to creation time
@@ -68,20 +68,20 @@ class NotificationOverlay final : public UIScreen {
 
     using ToastClickCallback = std::function<void()>;
     struct ToastOpts {
-        UString text;
+        std::string text;
         ToastClickCallback callback{};
         f64 timeout{ToastElement::DEFAULT_TOAST_TIMEOUT};
         Color borderColor;
         ToastElement::TYPE type{ToastElement::TYPE::SYSTEM};
     };
     void addToast(ToastOpts opts);
-    inline void addToast(UString text, Color borderColor, ToastClickCallback callback = {},
+    inline void addToast(std::string text, Color borderColor, ToastClickCallback callback = {},
                          ToastElement::TYPE type = ToastElement::TYPE::SYSTEM) {
         return this->addToast(
             {.text = std::move(text), .callback = std::move(callback), .borderColor = borderColor, .type = type});
     }
 
-    void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
+    void addNotification(std::string text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
     void setDisallowWaitForKeyLeftClick(bool disallowWaitForKeyLeftClick) {
         this->bWaitForKeyDisallowsLeftClick = disallowWaitForKeyLeftClick;
     }
@@ -100,7 +100,7 @@ class NotificationOverlay final : public UIScreen {
     void onNotificationCallback(std::string_view args);
 
     struct NOTIFICATION {
-        UString text = "";
+        std::string text = "";
         Color textColor = argb(255, 255, 255, 255);
 
         float time = 0.f;

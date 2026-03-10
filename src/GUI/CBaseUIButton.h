@@ -15,8 +15,8 @@ class CBaseUIButton : public CBaseUIElement {
     NOCOPY_NOMOVE(CBaseUIButton)
    public:
     CBaseUIButton(std::nullptr_t notext, float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0);
-    CBaseUIButton(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = {},
-                  UString text = {});
+    CBaseUIButton(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {},
+                  std::string text = {});
     ~CBaseUIButton() override = default;
 
     void draw() override;
@@ -107,16 +107,8 @@ class CBaseUIButton : public CBaseUIElement {
         return this;
     }
 
-    CBaseUIButton *setText(UString text) {
-        if(!text.isEmpty()) {
-            if(this->sText) {
-                *this->sText = std::move(text);
-            } else {
-                this->sText = std::make_unique<UString>(std::move(text));
-            }
-        } else {
-            this->sText.reset();
-        }
+    CBaseUIButton *setText(std::string text) {
+        this->sText = std::move(text);
         this->updateStringMetrics();
         return this;
     }
@@ -140,9 +132,7 @@ class CBaseUIButton : public CBaseUIElement {
     [[nodiscard]] inline Color getFrameColor() const { return this->frameColor; }
     [[nodiscard]] inline Color getBackgroundColor() const { return this->backgroundColor; }
     [[nodiscard]] inline Color getTextColor() const { return this->textColor; }
-    [[nodiscard]] inline const UString &getText() const {
-        return this->sText ? *this->sText : CBaseUIElement::emptyUString;
-    }
+    [[nodiscard]] inline std::string_view getText() const { return this->sText; }
     [[nodiscard]] inline McFont *getFont() const { return this->font; }
 
     // events
@@ -158,9 +148,7 @@ class CBaseUIButton : public CBaseUIElement {
 
     void updateStringMetrics();
 
-    // same as CBaseUIElement::sName, only store if non-empty
-    // UStrings have a lot of overhead (~64 bytes) even if empty
-    std::unique_ptr<UString> sText{nullptr};
+    std::string sText;
 
     // callbacks, either void, with ourself as the argument, or with the held left/right buttons
     std::unique_ptr<CBaseUIButtonClickCB> clickCallback{nullptr};

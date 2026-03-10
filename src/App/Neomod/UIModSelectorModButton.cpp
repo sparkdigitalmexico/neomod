@@ -18,10 +18,11 @@
 #include "SoundEngine.h"
 #include "TooltipOverlay.h"
 #include "UI.h"
+#include "SString.h"
 #include "Graphics.h"
 
 UIModSelectorModButton::UIModSelectorModButton(ModSelector *osuModSelector, float xPos, float yPos, float xSize,
-                                               float ySize, UString name)
+                                               float ySize, std::string name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {
     this->osuModSelector = osuModSelector;
     this->iState = 0;
@@ -53,7 +54,7 @@ void UIModSelectorModButton::draw() {
 
             g->setColor(0xffffffff);
             // HACK: For "Actual Flashlight" mod, I'm too lazy to add a new skin element
-            bool draw_inverted_colors = this->getActiveModName() == US_("afl");
+            bool draw_inverted_colors = this->getActiveModName() == "afl";
             if(draw_inverted_colors) {
                 g->setColorInversion(true);
             }
@@ -109,7 +110,7 @@ void UIModSelectorModButton::onClicked(bool /*left*/, bool /*right*/) {
         this->iState = (this->iState + 1) % this->states.size();
 
         // HACK: In multi, skip "Actual Flashlight" mod
-        if(BanchoState::is_in_a_multi_room() && this->states[0].modName == US_("fl")) {
+        if(BanchoState::is_in_a_multi_room() && this->states[0].modName == "fl") {
             this->iState = this->iState % this->states.size() - 1;
         }
 
@@ -270,8 +271,8 @@ void UIModSelectorModButton::setState(int state) {
     this->osuModSelector->updateOverrideSliderLabels();
 }
 
-void UIModSelectorModButton::setState(unsigned int state, bool initialState, ConVar *cvar, UString modName,
-                                      const UString &tooltipText, SkinImageGetter skinImageGetter) {
+void UIModSelectorModButton::setState(unsigned int state, bool initialState, ConVar *cvar, std::string modName,
+                                      std::string_view tooltipText, SkinImageGetter skinImageGetter) {
     // dynamically add new state
     while(this->states.size() < state + 1) {
         STATE t{};
@@ -280,7 +281,7 @@ void UIModSelectorModButton::setState(unsigned int state, bool initialState, Con
     }
     this->states[state].cvar = cvar;
     this->states[state].modName = std::move(modName);
-    this->states[state].tooltipTextLines = tooltipText.split(US_("\n"));
+    this->states[state].tooltipTextLines = SString::split_newlines<std::string>(tooltipText);
     this->states[state].skinImageGetFunc = std::move(skinImageGetter);
 
     // set initial state image
@@ -296,11 +297,11 @@ void UIModSelectorModButton::setState(unsigned int state, bool initialState, Con
     }
 }
 
-const UString &UIModSelectorModButton::getActiveModName() const {
+std::string_view UIModSelectorModButton::getActiveModName() const {
     if(this->states.size() > 0 && this->iState < this->states.size())
         return this->states[this->iState].modName;
     else
-        return CBaseUIElement::emptyUString;
+        return {};
 }
 
 const SkinImage *UIModSelectorModButton::getActiveSkinImage() const {

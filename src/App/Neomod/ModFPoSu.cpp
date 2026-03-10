@@ -24,6 +24,7 @@
 #include "MakeDelegateWrapper.h"
 #include "Graphics.h"
 
+#include "UniString.h"
 #include "VertexArrayObject.h"
 #include "RenderTarget.h"
 
@@ -37,9 +38,9 @@ namespace {
 class ModFPoSu3DModel {
     NOCOPY_NOMOVE(ModFPoSu3DModel)
    public:
-    ModFPoSu3DModel(const UString &objFilePath, Image *texture = nullptr)
+    ModFPoSu3DModel(std::string_view objFilePath, Image *texture = nullptr)
         : ModFPoSu3DModel(objFilePath, texture, false) {}
-    ModFPoSu3DModel(const UString &objFilePathOrContents, Image *texture, bool source);
+    ModFPoSu3DModel(std::string_view objFilePathOrContents, Image *texture, bool source);
     ~ModFPoSu3DModel();
 
     void draw3D();
@@ -848,7 +849,7 @@ vec3 ModFPoSu::FPoSuImpl::normalFromTriangle(vec3 p1, vec3 p2, vec3 p3) {
     return vec::normalize(vec::cross(u, v));
 }
 
-ModFPoSu3DModel::ModFPoSu3DModel(const UString &objFilePathOrContents, Image *texture, bool source) {
+ModFPoSu3DModel::ModFPoSu3DModel(std::string_view objFilePathOrContents, Image *texture, bool source) {
     this->texture = texture;
 
     this->vao = resourceManager->createVertexArrayObject(DrawPrimitive::TRIANGLES);
@@ -886,14 +887,14 @@ ModFPoSu3DModel::ModFPoSu3DModel(const UString &objFilePathOrContents, Image *te
         std::vector<vec3> rawNormals;
         std::vector<RAW_FACE> rawFaces;
         {
-            UString fileContents;
+            std::string fileContents;
             if(!source) {
-                UString filePath = "models/";
+                std::string filePath = "models/";
                 filePath.append(objFilePathOrContents);
 
                 std::string stdFileContents;
                 {
-                    std::ifstream f(filePath.toUtf8(), std::ios::in | std::ios::binary);
+                    std::ifstream f(filePath, std::ios::in | std::ios::binary);
                     if(f.good()) {
                         f.seekg(0, std::ios::end);
                         const std::streampos numBytes = f.tellg();
@@ -902,12 +903,12 @@ ModFPoSu3DModel::ModFPoSu3DModel(const UString &objFilePathOrContents, Image *te
                         stdFileContents.resize(numBytes);
                         f.read(&stdFileContents[0], numBytes);
                     } else
-                        debugLog("Failed to load {:s}", objFilePathOrContents.toUtf8());
+                        debugLog("Failed to load {:s}", objFilePathOrContents);
                 }
-                fileContents = UString(stdFileContents.c_str(), stdFileContents.size());
+                fileContents = UniString::to_utf8(stdFileContents.c_str(), stdFileContents.size());
             }
 
-            std::istringstream iss(source ? objFilePathOrContents.toUtf8() : fileContents.toUtf8());
+            std::istringstream iss(source ? std::string{objFilePathOrContents} : fileContents);
             std::string line;
             while(std::getline(iss, line)) {
                 if(line.starts_with("v ")) {

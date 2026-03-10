@@ -7,7 +7,7 @@ class CBaseUILabel;
 
 class UIButtonWithIcon : public CBaseUIContainer {
    public:
-    UIButtonWithIcon(const UString& text, char16_t icon);
+    UIButtonWithIcon(std::string text, char32_t icon);
 
     void draw() override;
     void onResized() override;

@@ -12,6 +12,7 @@
 #include "Graphics.h"
 #include "TooltipOverlay.h"
 #include "UI.h"
+#include "SString.h"
 #include "Font.h"
 
 void UIButton::draw() {
@@ -128,8 +129,8 @@ void UIButton::animateClickColor() {
     this->fClickAnim.set(0.0f, 0.5f, anim::Linear);
 }
 
-UIButton *UIButton::setTooltipText(const UString &text) {
-    this->tooltipTextLines = text.split(US_("\n"));
+UIButton *UIButton::setTooltipText(std::string_view text) {
+    this->tooltipTextLines = SString::split_newlines<std::string>(text);
     return this;
 }
 

@@ -11,7 +11,7 @@
 #include "SoundEngine.h"
 #include "Graphics.h"
 
-CBaseUISlider::CBaseUISlider(float xPos, float yPos, float xSize, float ySize, UString name)
+CBaseUISlider::CBaseUISlider(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setGrabClicks(true);
 

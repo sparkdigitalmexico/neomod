@@ -8,7 +8,6 @@
 #include "NullVertexArrayObject.h"
 
 #include "Font.h"
-#include "UString.h"
 
 // scene
 void NullGraphics::beginScene() {}
@@ -40,7 +39,7 @@ void NullGraphics::drawQuad(vec2 /*topLeft*/, vec2 /*topRight*/, vec2 /*bottomRi
 // 2d resource drawing
 void NullGraphics::drawImage(const Image * /*image*/, AnchorPoint /*anchor*/, float /*edgeSoftness*/,
                              McRect /*clipRect*/) {}
-void NullGraphics::drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow) {
+void NullGraphics::drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow) {
     updateTransform();
 
     font->drawString(text, shadow);
@@ -83,9 +82,9 @@ std::vector<u8> NullGraphics::getScreenshot(bool /*withAlpha*/) { return {}; }
 // renderer info
 const char *NullGraphics::getName() const { return "NullGraphics"; }
 [[nodiscard]] vec2 NullGraphics::getResolution() const { return {1280.f, 720.f}; }
-UString NullGraphics::getVendor() { return ""; }
-UString NullGraphics::getModel() { return ""; }
-UString NullGraphics::getVersion() { return ""; }
+std::string NullGraphics::getVendor() { return ""; }
+std::string NullGraphics::getModel() { return ""; }
+std::string NullGraphics::getVersion() { return ""; }
 int NullGraphics::getVRAMTotal() { return 0; }
 int NullGraphics::getVRAMRemaining() { return 0; }
 

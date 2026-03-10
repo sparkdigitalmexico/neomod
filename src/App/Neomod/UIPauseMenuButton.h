@@ -13,7 +13,7 @@ class UIPauseMenuButton final : public CBaseUIButton {
    public:
     using BasicSkinImageGetter = SA::delegate<const Image *(const Skin *)>;
 
-    UIPauseMenuButton(BasicSkinImageGetter imageGetter, float xPos, float yPos, float xSize, float ySize, UString name);
+    UIPauseMenuButton(BasicSkinImageGetter imageGetter, float xPos, float yPos, float xSize, float ySize, std::string name);
     ~UIPauseMenuButton() override;
 
     void draw() override;

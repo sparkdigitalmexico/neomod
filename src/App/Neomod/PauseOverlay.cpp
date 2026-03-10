@@ -30,7 +30,7 @@ PauseOverlay::PauseOverlay() : UIScreen() {
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
     using ImageGetter = UIPauseMenuButton::BasicSkinImageGetter;
 
-    auto addButton = [this](ImageGetter imageGetter, UString btn_name) -> UIPauseMenuButton * {
+    auto addButton = [this](ImageGetter imageGetter, std::string btn_name) -> UIPauseMenuButton * {
         auto *button = new UIPauseMenuButton(std::move(imageGetter), 0, 0, 0, 0, std::move(btn_name));
         this->addBaseUIElement(button);
         this->buttons.push_back(button);
@@ -38,11 +38,11 @@ PauseOverlay::PauseOverlay() : UIScreen() {
     };
 #define MKIMGGETR(sipmr) SA::MakeDelegate([](const Skin *skin) -> const Image * { return (skin->*&Skin::sipmr).img; })
 
-    addButton(MKIMGGETR(i_pause_continue), US_("Resume"))
+    addButton(MKIMGGETR(i_pause_continue), "Resume")
         ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onContinueClicked>(this));
-    addButton(MKIMGGETR(i_pause_retry), US_("Retry"))
+    addButton(MKIMGGETR(i_pause_retry), "Retry")
         ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onRetryClicked>(this));
-    addButton(MKIMGGETR(i_pause_back), US_("Quit"))
+    addButton(MKIMGGETR(i_pause_back), "Quit")
         ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onBackClicked>(this));
 
 #undef MKIMGGETR

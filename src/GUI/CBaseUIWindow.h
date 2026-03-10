@@ -12,7 +12,7 @@ class McFont;
 
 class CBaseUIWindow : public CBaseUIElement {
    public:
-    CBaseUIWindow(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, const UString &name = {});
+    CBaseUIWindow(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {});
     ~CBaseUIWindow() override;
 
     void draw() override;
@@ -39,7 +39,7 @@ class CBaseUIWindow : public CBaseUIElement {
         this->updateTitleBarMetrics();
         return this;
     }
-    CBaseUIWindow *setTitle(UString text);
+    CBaseUIWindow *setTitle(std::string text);
     CBaseUIWindow *setTitleFont(McFont *titleFont) {
         this->titleFont = titleFont;
         this->updateTitleBarMetrics();
@@ -133,7 +133,7 @@ class CBaseUIWindow : public CBaseUIElement {
     // title bar
     CBaseUIContainer *titleBarContainer;
     McFont *titleFont;
-    UString sTitle;
+    std::string sTitle;
     float fTitleFontWidth;
     float fTitleFontHeight;
     int iTitleBarHeight;

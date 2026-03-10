@@ -98,8 +98,8 @@ void UserCard::draw() {
         const float performanceScale = 0.3f;
         g->pushTransform();
         {
-            UString performanceString = fmt::format("Performance:{}pp", (int)std::round(this->fPP));
-            UString accuracyString = fmt::format("Accuracy:{:.2f}%", this->fAcc * 100.0f);
+            std::string performanceString = fmt::format("Performance:{}pp", (int)std::round(this->fPP));
+            std::string accuracyString = fmt::format("Accuracy:{:.2f}%", this->fAcc * 100.0f);
 
             const float height = this->getSize().y * 0.5f;
             const float paddingTopPercent = (1.0f - performanceScale) * 0.2f;
@@ -127,7 +127,7 @@ void UserCard::draw() {
         const float scoreScale = 0.3f;
         g->pushTransform();
         {
-            UString scoreString = fmt::format("Lv{}", this->iLevel);
+            std::string scoreString = fmt::format("Lv{}", this->iLevel);
 
             const float height = this->getSize().y * 0.5f;
             const float paddingTopPercent = (1.0f - scoreScale) * 0.2f;
@@ -165,8 +165,8 @@ void UserCard::draw() {
         McFont *deltaFont = performanceFont;
         const float deltaScale = 0.4f;
         if(this->fPPDeltaAnim > 0.0f) {
-            UString performanceDeltaString = fmt::format("{:.1f}pp", this->fPPDelta);
-            if(this->fPPDelta > 0.0f) performanceDeltaString.insert(0, L'+');
+            std::string performanceDeltaString = fmt::format("{:.1f}pp", this->fPPDelta);
+            if(this->fPPDelta > 0.0f) performanceDeltaString.insert(0, "+");
 
             const float border = 1.f;
 
@@ -230,7 +230,7 @@ void UserCard::updateUserStats() {
 
     const bool is_self = (this->user_id == BanchoState::get_uid()) || !BANCHO::User::is_online_id(this->user_id);
     if(is_self && !BanchoState::can_submit_scores()) {
-        stats = db->calculatePlayerStats(this->getText().toUtf8());
+        stats = db->calculatePlayerStats(this->getText());
     } else {
         const UserInfo *my = BANCHO::User::get_user_info(this->user_id, true);
 

@@ -2,7 +2,6 @@
 #include "Keyboard.h"
 
 #include "Engine.h"
-#include "UString.h"
 
 void Keyboard::update() {
     // std::vector<char16_t> charEventsConsumed;
@@ -59,7 +58,7 @@ void Keyboard::reset() {
 
 void Keyboard::addListener(KeyboardListener *keyboardListener, bool insertOnTop) {
     if(keyboardListener == nullptr) {
-        engine->showMessageError(u"Keyboard Error", u"addListener(NULL)!");
+        engine->showMessageError("Keyboard Error", "addListener(NULL)!");
         return;
     }
 

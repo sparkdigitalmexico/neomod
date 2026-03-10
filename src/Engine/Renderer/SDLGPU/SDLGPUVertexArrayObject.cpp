@@ -42,8 +42,8 @@ void SDLGPUVertexArrayObject::init() {
             const u32 bufSize = static_cast<u32>(sizeof(SDLGPUSimpleVertex) * m_convertedVertices.size());
             SDL_GPUTransferBuffer *transferBuffer = m_gpu->acquireUploadTransferBuffer(bufSize, pooledSize);
             if(!transferBuffer) {
-                engine->showMessageError(US_("SDLGPUVertexArrayObject ERROR"),
-                                         US_("Failed to acquire vertex upload transfer buffer!"));
+                engine->showMessageError("SDLGPUVertexArrayObject ERROR",
+                                         "Failed to acquire vertex upload transfer buffer!");
                 this->partialUpdateVertexIndices.clear();
                 this->partialUpdateColorIndices.clear();
                 return;
@@ -208,8 +208,8 @@ void SDLGPUVertexArrayObject::init() {
     u32 pooledSize = 0;
     SDL_GPUTransferBuffer *transferBuffer = m_gpu->acquireUploadTransferBuffer(bufSize, pooledSize);
     if(!transferBuffer) {
-        engine->showMessageError(US_("SDLGPUVertexArrayObject ERROR"),
-                                 US_("Failed to acquire vertex upload transfer buffer!"));
+        engine->showMessageError("SDLGPUVertexArrayObject ERROR",
+                                 "Failed to acquire vertex upload transfer buffer!");
         return;
     }
 

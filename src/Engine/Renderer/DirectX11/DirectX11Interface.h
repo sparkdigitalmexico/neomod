@@ -78,7 +78,7 @@ class DirectX11Interface final : public ModernGraphicsShared {
     // 2d resource drawing
     void drawImage(const Image *image, AnchorPoint anchor = AnchorPoint::CENTER, float edgeSoftness = 0.0f,
                    McRect clipRect = {}) final;
-    void drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow = std::nullopt) override;
+    void drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) override;
 
     // 3d type drawing
     void drawVAO(VertexArrayObject *vao) override;
@@ -117,9 +117,9 @@ class DirectX11Interface final : public ModernGraphicsShared {
     // renderer info
     inline const char *getName() const override { return "DirectX11"; }
     vec2 getResolution() const override { return this->vResolution; }
-    UString getVendor() override;
-    UString getModel() override;
-    UString getVersion() override;
+    std::string getVendor() override;
+    std::string getModel() override;
+    std::string getVersion() override;
     int getVRAMTotal() override;
     int getVRAMRemaining() override;
 

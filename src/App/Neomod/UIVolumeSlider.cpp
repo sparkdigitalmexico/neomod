@@ -14,7 +14,7 @@
 UIVolumeSlider::Resources UIVolumeSlider::imageResources{};  // shared
 bool UIVolumeSlider::resourcesReady = false;
 
-UIVolumeSlider::UIVolumeSlider(float xPos, float yPos, float xSize, float ySize, UString name)
+UIVolumeSlider::UIVolumeSlider(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUISlider(xPos, yPos, xSize, ySize, std::move(name)) {
     this->type = TYPE::MASTER;
     this->bSelected = false;

@@ -57,6 +57,7 @@ enum : u8 {
 #include <functional>
 
 using std::string_view_literals::operator""sv;
+using std::string_literals::operator""s;
 
 // purpose:
 // 1) contain all infos which are ALWAYS kept in memory for beatmaps

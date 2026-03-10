@@ -49,9 +49,9 @@ RoomUIElement::RoomUIElement(Lobby* multi, const Room& room, float x, float y, f
     title_ui->setDrawBackground(false);
     this->container.addBaseUIElement(title_ui);
 
-    const UString player_count_str = fmt::format("Players: {:d}/{:d}", room.nb_players, room.nb_open_slots);
+    std::string player_count_str = fmt::format("Players: {:d}/{:d}", room.nb_players, room.nb_open_slots);
     const float player_count_width = multi->font->getStringWidth(player_count_str) + 20.f;
-    auto* slots_ui = new CBaseUILabel(10.f, 33.f, player_count_width, 30.f, {}, player_count_str);
+    auto* slots_ui = new CBaseUILabel(10.f, 33.f, player_count_width, 30.f, {}, std::move(player_count_str));
     slots_ui->setDrawFrame(false);
     slots_ui->setDrawBackground(false);
     this->container.addBaseUIElement(slots_ui);
@@ -212,11 +212,11 @@ void Lobby::updateLayout(vec2 newResolution) {
     this->list->setScrollSizeToContent();
 }
 
-void Lobby::joinRoom(u32 id, const UString& password) {
+void Lobby::joinRoom(u32 id, std::string_view password) {
     Packet packet;
     packet.id = OUTP_JOIN_ROOM;
     packet.write<u32>(id);
-    packet.write_string(password.utf8View());
+    packet.write_string(password);
     BANCHO::Net::send_packet(packet);
 
     for(CBaseUIElement* elm : this->list->container.getElements()) {
@@ -227,7 +227,7 @@ void Lobby::joinRoom(u32 id, const UString& password) {
         break;
     }
 
-    debugLog("Joining room #{:d} with password '{:s}'", id, password.toUtf8());
+    debugLog("Joining room #{:d} with password '{:s}'", id, password);
     ui->getNotificationOverlay()->addNotification("Joining room...");
 }
 
@@ -274,7 +274,7 @@ void Lobby::on_create_room_clicked() {
     ui->getNotificationOverlay()->addNotification("Creating room...");
 }
 
-void Lobby::on_room_join_with_password(const UString& password) { this->joinRoom(this->room_to_join, password); }
+void Lobby::on_room_join_with_password(std::string_view password) { this->joinRoom(this->room_to_join, password); }
 
 void Lobby::on_room_join_failed() {
     // Updating layout will reset is_loading to false

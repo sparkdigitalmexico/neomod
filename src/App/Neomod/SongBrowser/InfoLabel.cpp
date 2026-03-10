@@ -27,7 +27,7 @@
 #include "TooltipOverlay.h"
 #include "UI.h"
 
-InfoLabel::InfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, UString name)
+InfoLabel::InfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {
     // font for non-title parts (song info)
     this->setFont(osu->getSubTitleFont());
@@ -75,12 +75,12 @@ void InfoLabel::draw() {
     }
 
     // build strings
-    const UString titleText{fmt::format("{} - {} [{}]", this->sArtist, this->sTitle, this->sDiff)};
-    const UString subTitleText{fmt::format("Mapped by {}", this->sMapper)};
+    const std::string titleText{fmt::format("{} - {} [{}]", this->sArtist, this->sTitle, this->sDiff)};
+    const std::string subTitleText{fmt::format("Mapped by {}", this->sMapper)};
 
-    const UString songInfoText{this->buildSongInfoString()};
-    const UString diffInfoText{this->buildDiffInfoString()};
-    const UString offsetInfoText{this->buildOffsetInfoString()};
+    const std::string songInfoText{this->buildSongInfoString()};
+    const std::string diffInfoText{this->buildDiffInfoString()};
+    const std::string offsetInfoText{this->buildOffsetInfoString()};
 
     const f32 globalScale = std::max((this->getSize().y / this->getMinimumHeight()) * 0.91f, 1.0f);
 
@@ -334,7 +334,7 @@ void InfoLabel::setMapper(std::string_view mapper) {
     this->sMapper.assign(mapper);
 }
 
-UString InfoLabel::buildSongInfoString() const {
+std::string InfoLabel::buildSongInfoString() const {
     const u32 lengthMS = this->iLengthMS;
     const f32 speed = osu->getMapInterface()->getSpeedMultiplier();
 
@@ -355,7 +355,7 @@ UString InfoLabel::buildSongInfoString() const {
     }
 }
 
-UString InfoLabel::buildDiffInfoString() const {
+std::string InfoLabel::buildDiffInfoString() const {
     const auto *pf = osu->getMapInterface();
     const auto *map = pf->getBeatmap();
     if(!map) return "";
@@ -384,7 +384,7 @@ UString InfoLabel::buildDiffInfoString() const {
     const f32 starComparisonEpsilon = 0.01f;
     const bool starsAndModStarsAreEqual = (std::abs(nomodStars - modStars) < starComparisonEpsilon);
 
-    UString finalString;
+    std::string finalString;
     if(pp_available) {
         const i32 clampedModPp = static_cast<i32>(
             std::round<i32>((std::isfinite(modPp) && modPp >= static_cast<f32>(std::numeric_limits<i32>::min()) &&
@@ -406,7 +406,7 @@ UString InfoLabel::buildDiffInfoString() const {
     return finalString;
 }
 
-UString InfoLabel::buildOffsetInfoString() const {
+std::string InfoLabel::buildOffsetInfoString() const {
     return fmt::format("Your Offset: {:d} ms / Online Offset: {:d} ms", this->iLocalOffset, this->iOnlineOffset);
 }
 

@@ -49,49 +49,49 @@ void UserCard2::draw() {
 
     g->pushClipRect(McRect(this->getPos(), this->getSize()));
 
-    UString status_text = {};
+    std::string status_text;
     switch(this->info->action) {
         using enum Action;
         case IDLE:
-            status_text = US_("Idle ");
+            status_text = "Idle ";
             break;
         case AFK:
-            status_text = US_("Afk ");
+            status_text = "Afk ";
             break;
         case PLAYING:
-            status_text = US_("Playing ");
+            status_text = "Playing ";
             break;
         case EDITING:
-            status_text = US_("Editing ");
+            status_text = "Editing ";
             break;
         case MODDING:
-            status_text = US_("Modding ");
+            status_text = "Modding ";
             break;
         case MULTIPLAYER:
-            status_text = US_("Multiplaying ");
+            status_text = "Multiplaying ";
             break;
         case WATCHING:
-            status_text = US_("Watching ");
+            status_text = "Watching ";
             break;
         case TESTING:
         case TESTING2:
-            status_text = US_("Testing ");
+            status_text = "Testing ";
             break;
         case SUBMITTING:
-            status_text = US_("Submitting ");
+            status_text = "Submitting ";
             break;
         case PAUSED:
-            status_text = US_("Paused ");
+            status_text = "Paused ";
             break;
         case MULTIPLAYING:
-            status_text = US_("Multiplaying ");
+            status_text = "Multiplaying ";
             break;
         default:
             break;
     }
 
     if(this->info->irc_user) {
-        status_text = US_("IRC user");
+        status_text = "IRC user";
     } else {
         status_text.append(this->info->info_text);
     }

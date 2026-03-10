@@ -6,7 +6,7 @@
 class UIBackButton final : public CBaseUIButton {
     NOCOPY_NOMOVE(UIBackButton)
    public:
-    UIBackButton(float xPos, float yPos, float xSize, float ySize, UString name);
+    UIBackButton(float xPos, float yPos, float xSize, float ySize, std::string name);
     ~UIBackButton() override;
 
     void draw() override;

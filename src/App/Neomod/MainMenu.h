@@ -26,7 +26,7 @@ class UIButtonVertical;
 
 class PauseButton final : public CBaseUIButton {
    public:
-    PauseButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    PauseButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
     void draw() override;
@@ -81,7 +81,7 @@ class MainMenu final : public UIScreen, public MouseListener {
 
     void writeVersionFile();
 
-    MainButton *addMainMenuButton(UString text);
+    MainButton *addMainMenuButton(std::string text);
 
     void onPlayButtonPressed();
     void onMultiplayerButtonPressed();

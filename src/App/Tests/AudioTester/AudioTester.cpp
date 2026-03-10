@@ -11,7 +11,6 @@
 #include "Graphics.h"
 #include "Font.h"
 #include "File.h"
-#include "UString.h"
 #include "Sound.h"
 #include "Timing.h"
 #include "Environment.h"
@@ -842,16 +841,16 @@ void AudioTesterImpl::drawCorrelation(float startY) {
     {
         g->translate(20.0f, startY + font->getHeight());
 
-        g->drawString(font, US_("=== SoundTouch Cross-Correlation Test ==="));
+        g->drawString(font, "=== SoundTouch Cross-Correlation Test ===");
         g->translate(0, lineH * 1.2f);
 
         if(!m_corrDone) {
             g->setColor(0xffaaaaaa);
-            g->drawString(font, US_("Press C to run (offline NCC, measures formula accuracy vs chirp signal)"));
+            g->drawString(font, "Press C to run (offline NCC, measures formula accuracy vs chirp signal)");
         } else {
-            g->drawString(font, US_("Speed | (IL-OS)*spd/sr  | (IS-2*OS)/sr   | -OL/2 variant  | NCC"));
+            g->drawString(font, "Speed | (IL-OS)*spd/sr  | (IS-2*OS)/sr   | -OL/2 variant  | NCC");
             g->translate(0, lineH);
-            g->drawString(font, US_("------+-----------------+----------------+----------------+------"));
+            g->drawString(font, "------+-----------------+----------------+----------------+------");
             g->translate(0, lineH);
 
             for(const auto &r : m_corrResults) {
@@ -870,7 +869,7 @@ void AudioTesterImpl::drawCorrelation(float startY) {
 
             g->translate(0, lineH * 0.5f);
             g->setColor(0xffaaaaaa);
-            g->drawString(font, US_("Press C to re-run | Format: avg (maxAbs) in ms | OL = overlap samples"));
+            g->drawString(font, "Press C to re-run | Format: avg (maxAbs) in ms | OL = overlap samples");
         }
     }
     g->popTransform();
@@ -887,12 +886,12 @@ void AudioTesterImpl::drawBassComparison(float startY) {
     {
         g->translate(20.0f, startY + font->getHeight());
 
-        g->drawString(font, US_("=== BASS vs SoLoud Position Comparison ==="));
+        g->drawString(font, "=== BASS vs SoLoud Position Comparison ===");
         g->translate(0, lineH * 1.2f);
 
         if(m_compState == COMP_IDLE) {
             g->setColor(0xffaaaaaa);
-            g->drawString(font, US_("Press B to start (plays muted audio through both engines, ~20s)"));
+            g->drawString(font, "Press B to start (plays muted audio through both engines, ~20s)");
         } else if(!m_compDone) {
             g->setColor(0xffffff66);
             if(m_compSpeedIdx < static_cast<int>(std::size(COMP_SPEEDS))) {
@@ -901,7 +900,7 @@ void AudioTesterImpl::drawBassComparison(float startY) {
                                           m_compState == COMP_WARMUP ? "warming up" : "sampling");
                 g->drawString(font, status);
             } else {
-                g->drawString(font, US_("Finishing..."));
+                g->drawString(font, "Finishing...");
             }
         } else {
             // find 1.0x baseline to subtract engine-constant offset
@@ -913,9 +912,9 @@ void AudioTesterImpl::drawBassComparison(float startY) {
                 }
             }
 
-            g->drawString(font, US_("Speed | SoLoud-BASS | Baselined  | Impulse   | Match?"));
+            g->drawString(font, "Speed | SoLoud-BASS | Baselined  | Impulse   | Match?");
             g->translate(0, lineH);
-            g->drawString(font, US_("------+-------------+------------+-----------+-------"));
+            g->drawString(font, "------+-------------+------------+-----------+-------");
             g->translate(0, lineH);
 
             for(const auto &cr : m_compResults) {
@@ -963,8 +962,7 @@ void AudioTesterImpl::drawBassComparison(float startY) {
             g->drawString(
                 font, fmt::format("Baseline (1.0x raw diff): {:>+.2f}ms | Press B to re-run"_cf, baseline * 1000.0));
             g->translate(0, lineH);
-            g->drawString(font,
-                          US_("Baselined = raw diff minus 1.0x constant | Impulse = impulse test relative to 1.0x"));
+            g->drawString(font, "Baselined = raw diff minus 1.0x constant | Impulse = impulse test relative to 1.0x");
         }
     }
     g->popTransform();
@@ -983,18 +981,20 @@ void AudioTesterImpl::draw() {
     {
         g->translate(startX, startY + font->getHeight());
 
-        g->drawString(font, US_("=== SoundTouch Impulse Latency Test ==="));
+        g->drawString(font, "=== SoundTouch Impulse Latency Test ===");
         g->translate(0, lineH * 1.2f);
 
         if(!m_bTestsRun) {
-            g->drawString(font, US_("Press R to run tests"));
+            g->drawString(font, "Press R to run tests");
         } else {
-            g->drawString(font, US_("Speed | AvgOffset | Jitter    | Hits | ST Algo   | ST*spd    | InSeq     | "
-                                    "InSeq*spd | InitLat | InSeq | OutSeq"));
+            g->drawString(font,
+                          "Speed | AvgOffset | Jitter    | Hits | ST Algo   | ST*spd    | InSeq     | "
+                          "InSeq*spd | InitLat | InSeq | OutSeq");
             g->translate(0, lineH);
 
-            g->drawString(font, US_("------+-----------+-----------+------+-----------+-----------+-----------+--------"
-                                    "---+---------+-------+-------"));
+            g->drawString(font,
+                          "------+-----------+-----------+------+-----------+-----------+-----------+--------"
+                          "---+---------+-------+-------");
             g->translate(0, lineH);
 
             for(const auto &r : m_results) {
@@ -1019,7 +1019,7 @@ void AudioTesterImpl::draw() {
             g->translate(0, lineH * 0.5f);
 
             g->setColor(0xffaaaaaa);
-            g->drawString(font, US_("Press R to re-run impulse | Negative = mStreamPosition BEHIND actual audio"));
+            g->drawString(font, "Press R to re-run impulse | Negative = mStreamPosition BEHIND actual audio");
         }
     }
     g->popTransform();

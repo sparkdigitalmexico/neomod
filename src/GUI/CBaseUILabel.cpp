@@ -8,10 +8,10 @@
 #include "Font.h"
 #include "Graphics.h"
 
-CBaseUILabel::CBaseUILabel(float xPos, float yPos, float xSize, float ySize, UString name, const UString& text)
+CBaseUILabel::CBaseUILabel(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->font = engine->getDefaultFont();
-    this->setText(text);
+    this->setText(std::move(text));
 }
 
 void CBaseUILabel::draw() {

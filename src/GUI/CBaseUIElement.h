@@ -4,7 +4,9 @@
 #include "KeyboardListener.h"
 #include "Vectors.h"
 #include "Rect.h"
-#include "UString.h"
+
+#include <string>
+#include <string_view>
 
 #include <utility>
 #include <memory>
@@ -37,14 +39,11 @@ struct CBaseUIEventCtx {
 class CBaseUIElement : public KeyboardListener {
     NOCOPY_NOMOVE(CBaseUIElement)
    public:
-    static inline const UString emptyUString{US_("")};
     CBaseUIElement(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::nullptr_t = {})
         : rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
 
-    CBaseUIElement(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = {})
-        : sName(likely(name.isEmpty()) ? nullptr : std::make_unique<UString>(std::move(name))),
-          rect(xPos, yPos, xSize, ySize),
-          relRect(this->rect) {}
+    CBaseUIElement(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {})
+        : sName(std::move(name)), rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
     ~CBaseUIElement() override = default;
 
     // main
@@ -57,7 +56,7 @@ class CBaseUIElement : public KeyboardListener {
     void onChar(KeyboardEvent &e) override { (void)e; }
 
     // getters
-    [[nodiscard]] constexpr const UString &getName() const { return this->sName ? *this->sName : emptyUString; }
+    [[nodiscard]] constexpr std::string_view getName() const { return this->sName; }
 
     [[nodiscard]] forceinline const McRect &getRect() const { return this->rect; }
 
@@ -159,16 +158,8 @@ class CBaseUIElement : public KeyboardListener {
         this->bBusy = busy;
         return this;
     }
-    virtual CBaseUIElement *setName(UString name) {
-        if(!name.isEmpty()) {
-            if(this->sName) {
-                *this->sName = std::move(name);
-            } else {
-                this->sName = std::make_unique<UString>(std::move(name));
-            }
-        } else {
-            this->sName.reset();
-        }
+    virtual CBaseUIElement *setName(std::string name) {
+        this->sName = std::move(name);
         return this;
     }
     virtual CBaseUIElement *setHandleLeftMouse(bool handle) {
@@ -209,7 +200,7 @@ class CBaseUIElement : public KeyboardListener {
     virtual void onMouseUpOutside(bool /*left*/ = true, bool /*right*/ = false) { ; }
 
     // vars
-    std::unique_ptr<UString> sName{nullptr};  // not worth storing a full name for each element when it's usually empty
+    std::string sName;
 
     // position and size
     McRect rect;

@@ -9,7 +9,7 @@
 #include "Graphics.h"
 
 CBaseUIImageButton::CBaseUIImageButton(std::string imageResourceName, float xPos, float yPos, float xSize, float ySize,
-                                       UString name)
+                                       std::string name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {
     this->setImageResourceName(std::move(imageResourceName));
 

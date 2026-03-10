@@ -319,30 +319,30 @@ void load_and_watch(FinishedScore score) {
                                   if(success) {
                                       LegacyReplay::load_and_watch(score);
                                   } else {
-                                      ui->getNotificationOverlay()->addToast(US_("Failed to save replay"), ERROR_TOAST);
+                                      ui->getNotificationOverlay()->addToast("Failed to save replay", ERROR_TOAST);
                                   }
                               });
                 } else {
                     // Most likely, 404
-                    ui->getNotificationOverlay()->addToast(US_("Failed to download replay"), ERROR_TOAST);
+                    ui->getNotificationOverlay()->addToast("Failed to download replay", ERROR_TOAST);
                 }
             });
 
-            ui->getNotificationOverlay()->addNotification(u"Downloading replay...");
+            ui->getNotificationOverlay()->addNotification("Downloading replay...");
             return;
         }
     }
 
     // We tried loading from memory, we tried loading from file, we tried loading from server... RIP
     if(score.replay.empty()) {
-        ui->getNotificationOverlay()->addToast(US_("Failed to load replay"), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Failed to load replay", ERROR_TOAST);
         return;
     }
 
     auto* map = db->getBeatmapDifficulty(score.beatmap_hash);
     if(map == nullptr) {
         // XXX: Auto-download beatmap
-        ui->getNotificationOverlay()->addToast(US_("Missing beatmap for this replay"), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Missing beatmap for this replay", ERROR_TOAST);
     } else {
         ui->getSongBrowser()->onDifficultySelected(map, false);
         ui->getSongBrowser()->selectSelectedBeatmapSongButton();

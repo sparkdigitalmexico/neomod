@@ -49,7 +49,6 @@ using fmt::literals::operator""_cf;
 // print the call stack immediately
 // TODO: some portable way to do this
 #if defined(MCENGINE_HAVE_STDSTACKTRACE) && defined(__has_include) && (__has_include(<stacktrace>))
-#include "SString.h"
 #include "fmt/ostream.h"
 
 #include <stacktrace>

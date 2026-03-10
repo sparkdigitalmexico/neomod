@@ -30,12 +30,12 @@ class UserStatsScreen final : public ScreenBackable {
     void updateLayout() override;
 
     void onMenuClicked(CBaseUIButton *button);
-    void onMenuSelected(UString text, int id);
+    void onMenuSelected(std::string_view text, int id);
     void onCopyAllScoresClicked();
-    void onCopyAllScoresUserSelected(UString text, int id);
-    void onCopyAllScoresConfirmed(UString text, int id);
+    void onCopyAllScoresUserSelected(std::string_view text, int id);
+    void onCopyAllScoresConfirmed(std::string_view text, int id);
     void onDeleteAllScoresClicked();
-    void onDeleteAllScoresConfirmed(UString text, int id);
+    void onDeleteAllScoresConfirmed(std::string_view text, int id);
 
     UserCard *m_userCard = nullptr;
     std::unique_ptr<UIContextMenu> m_contextMenu{nullptr};

@@ -101,7 +101,7 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
     // Draw index
     g->pushTransform();
     {
-        UString indexString = fmt::format("{:d}"_cf, this->index + 1);
+        const std::string indexString = fmt::format("{:d}"_cf, this->index + 1);
         const float scale = (avatar_height / font_bold->getHeight()) * 0.5f;
 
         g->scale(scale, scale);
@@ -157,7 +157,7 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
     // draw combo
     g->pushTransform();
     {
-        const UString comboString{fmt::format("{}x", SString::thousands(this->score.maxCombo))};
+        const std::string comboString{fmt::format("{:s}x", SString::thousands(this->score.maxCombo))};
         const float stringWidth = font_normal->getStringWidth(comboString);
 
         g->scale(scoreScale, scoreScale);
@@ -180,7 +180,7 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
 
     // draw win condition score text
     {
-        UString wincond_based_scoretext;
+        std::string wincond_based_scoretext;
         SlotColType wincond_based_coltype = OTHER;
         switch(scoring_metric) {
             case WinCondition::ACCURACY: {

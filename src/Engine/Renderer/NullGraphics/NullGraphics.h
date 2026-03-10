@@ -34,7 +34,7 @@ class NullGraphics : public Graphics {
     // 2d resource drawing
     void drawImage(const Image *image, AnchorPoint anchor = AnchorPoint::CENTER, float edgeSoftness = 0.0f,
                    McRect clipRect = {}) final;
-    void drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow = std::nullopt) final;
+    void drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) final;
 
     // 3d type drawing
     void drawVAO(VertexArrayObject *vao) override;
@@ -72,9 +72,9 @@ class NullGraphics : public Graphics {
     // renderer info
     const char *getName() const override;
     [[nodiscard]] vec2 getResolution() const override;
-    UString getVendor() override;
-    UString getModel() override;
-    UString getVersion() override;
+    std::string getVendor() override;
+    std::string getModel() override;
+    std::string getVersion() override;
     int getVRAMTotal() override;
     int getVRAMRemaining() override;
 

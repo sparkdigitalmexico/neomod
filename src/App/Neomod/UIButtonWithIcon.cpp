@@ -3,18 +3,17 @@
 #include "CBaseUILabel.h"
 #include "Graphics.h"
 #include "Osu.h"
+#include "UniString.h"
 
-UIButtonWithIcon::UIButtonWithIcon(const UString& text, char16_t icon) : CBaseUIContainer(0, 0, 0, 0, "") {
-    UString iconString;
-    iconString.insert(0, icon);
-    this->icon = new CBaseUILabel(0, 0, 0, 0, "", iconString);
+UIButtonWithIcon::UIButtonWithIcon(std::string text, char32_t icon) : CBaseUIContainer(0, 0, 0, 0, "") {
+    this->icon = new CBaseUILabel(0, 0, 0, 0, "", UniString::to_utf8(std::u32string_view{&icon, 1}));
     this->icon->setDrawBackground(false);
     this->icon->setDrawFrame(false);
     this->icon->setDrawTextShadow(true);
     this->icon->setFont(osu->getFontIcons());
     this->addBaseUIElement(this->icon);
 
-    this->text = new CBaseUILabel(0, 0, 0, 0, "", text);
+    this->text = new CBaseUILabel(0, 0, 0, 0, "", std::move(text));
     this->text->setDrawBackground(false);
     this->text->setDrawFrame(false);
     this->text->setDrawTextShadow(true);

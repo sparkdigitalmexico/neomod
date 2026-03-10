@@ -14,20 +14,20 @@ class UserCard2;
 struct ChatMessage final {
     time_t tms;
     i32 author_id;
-    UString author_name;
-    UString text;
+    std::string author_name;
+    std::string text;
 };
 
 struct ChatChannel final {
     NOCOPY_NOMOVE(ChatChannel)
    public:
-    ChatChannel(Chat *chat, UString name_arg);
+    ChatChannel(Chat *chat, std::string name_arg);
     ~ChatChannel();
 
     Chat *chat;
     CBaseUIScrollView *ui;
     UIButton *btn;
-    UString name;
+    std::string name;
     std::vector<ChatMessage> messages;
     float y_total{.0f};
     bool read = true;
@@ -57,20 +57,20 @@ class Chat final : public UIScreen {
 
     void mark_as_read(ChatChannel *chan);
     void switchToChannel(ChatChannel *chan);
-    void addChannel(const UString &channel_name, bool switch_to = false);
-    void openChannel(const UString &channel_name);
-    void addMessage(UString channel_name, const ChatMessage &msg, bool mark_unread = true);
-    void addSystemMessage(UString msg);
-    void removeChannel(const UString &channel_name);
+    void addChannel(std::string_view channel_name, bool switch_to = false);
+    void openChannel(std::string_view channel_name);
+    void addMessage(std::string channel_name, const ChatMessage &msg, bool mark_unread = true);
+    void addSystemMessage(std::string msg);
+    void removeChannel(std::string_view channel_name);
     void updateLayout(vec2 newResolution);
     void updateButtonLayout(vec2 screen);
     void updateTickerLayout(vec2 screen);
     void updateUserList();
 
-    void join(const UString &channel_name);
-    void leave(const UString &channel_name);
-    void handle_command(const UString &msg);
-    void send_message(const UString &msg);
+    void join(std::string_view channel_name);
+    void leave(std::string_view channel_name);
+    void handle_command(std::string_view msg);
+    void send_message(std::string_view msg);
     void onDisconnect();
 
     CBaseUIContainer *setVisible(bool visible) override;
@@ -98,9 +98,9 @@ class Chat final : public UIScreen {
     f32 input_box_height = 30.f;
     f32 button_height = 26.f;
 
-    UString away_msg;
-    UString tab_completion_prefix;
-    UString tab_completion_match;
+    std::string away_msg;
+    std::string tab_completion_prefix;
+    std::string tab_completion_match;
 
     ChatChannel *ticker = nullptr;
     f64 ticker_tms = 0.0;

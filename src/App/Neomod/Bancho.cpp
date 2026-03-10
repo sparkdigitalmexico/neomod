@@ -211,7 +211,7 @@ void BanchoState::check_and_notify_nonsubmittable() {
 
     if(!currently_submittable && !BanchoState::nonsubmittable_notification_clicked) {
         ui->getNotificationOverlay()->addToast(
-            US_("Score will not submit with current mods/settings"), ERROR_TOAST,
+            "Score will not submit with current mods/settings", ERROR_TOAST,
             []() -> void { BanchoState::nonsubmittable_notification_clicked = true; });
     }
 }
@@ -245,7 +245,7 @@ void BanchoState::handle_packet(Packet &packet) {
                 BanchoState::print_new_channels = true;
 
                 osu->onUserCardChange(BanchoState::username);
-                ui->getSongBrowser()->onFilterScoresChange(US_("Global"), SongBrowser::LOGIN_STATE_FILTER_ID);
+                ui->getSongBrowser()->onFilterScoresChange("Global", SongBrowser::LOGIN_STATE_FILTER_ID);
 
                 // If server sent a score submission policy, update options menu to hide the checkbox
                 ui->getOptionsOverlay()->scheduleLayoutUpdate();
@@ -254,37 +254,37 @@ void BanchoState::handle_packet(Packet &packet) {
                 cv::mp_oauth_token.setValue("");
 
                 debugLog("Failed to log in, server returned code {:d}.", BanchoState::get_uid());
-                UString errmsg =
-                    fmt::format("Failed to log in: {} (code {})\n", BanchoState::cho_token, BanchoState::get_uid());
+                std::string errmsg =
+                    fmt::format("Failed to log in: {:s} (code {:d})\n", BanchoState::cho_token, BanchoState::get_uid());
                 if(new_user_id == -1) {
-                    errmsg = US_("Incorrect username/password.");
+                    errmsg = "Incorrect username/password.";
                 } else if(new_user_id == -2) {
-                    errmsg = US_("Client version is too old to connect to this server.");
+                    errmsg = "Client version is too old to connect to this server.";
                 } else if(new_user_id == -3 || new_user_id == -4) {
-                    errmsg = US_("You are banned from this server.");
+                    errmsg = "You are banned from this server.";
                 } else if(new_user_id == -5) {
-                    errmsg = US_("Server had an error while trying to log you in.");
+                    errmsg = "Server had an error while trying to log you in.";
                 } else if(new_user_id == -6) {
-                    errmsg = US_("You need to buy supporter to connect to this server.");
+                    errmsg = "You need to buy supporter to connect to this server.";
                 } else if(new_user_id == -7) {
-                    errmsg = US_("You need to reset your password to connect to this server.");
+                    errmsg = "You need to reset your password to connect to this server.";
                 } else if(new_user_id == -8) {
                     if(BanchoState::is_oauth) {
-                        errmsg = US_("osu! session expired, please log in again.");
+                        errmsg = "osu! session expired, please log in again.";
                     } else {
-                        errmsg = US_("Open the verification link sent to your email, then log in again.");
+                        errmsg = "Open the verification link sent to your email, then log in again.";
                     }
                 } else {
                     if(BanchoState::cho_token == "user-already-logged-in") {
-                        errmsg = US_("Already logged in on another client.");
+                        errmsg = "Already logged in on another client.";
                     } else if(BanchoState::cho_token == "unknown-username") {
                         errmsg = fmt::format("No account by the username '{}' exists.", BanchoState::username);
                     } else if(BanchoState::cho_token == "incorrect-credentials") {
-                        errmsg = US_("Incorrect username/password.");
+                        errmsg = "Incorrect username/password.";
                     } else if(BanchoState::cho_token == "incorrect-password") {
-                        errmsg = US_("Incorrect password.");
+                        errmsg = "Incorrect password.";
                     } else if(BanchoState::cho_token == "contact-staff") {
-                        errmsg = US_("Please contact an administrator of the server.");
+                        errmsg = "Please contact an administrator of the server.";
                     }
                 }
                 ui->getNotificationOverlay()->addToast(errmsg, ERROR_TOAST);
@@ -565,7 +565,7 @@ void BanchoState::handle_packet(Packet &packet) {
         }
 
         case INP_ROOM_JOIN_FAIL: {
-            ui->getNotificationOverlay()->addToast(US_("Failed to join room."), ERROR_TOAST);
+            ui->getNotificationOverlay()->addToast("Failed to join room.", ERROR_TOAST);
             ui->getLobby()->on_room_join_failed();
             break;
         }
@@ -636,7 +636,7 @@ void BanchoState::handle_packet(Packet &packet) {
                 .tms = time(nullptr),
                 .author_id = 0,
                 .author_name = {},
-                .text = US_("Joined channel."),
+                .text = "Joined channel.",
             };
             ui->getChat()->addChannel(name, true);
             ui->getChat()->addMessage(name, msg, false);
@@ -818,7 +818,7 @@ void BanchoState::handle_packet(Packet &packet) {
 
         case INP_VERSION_UPDATE_FORCED: {
             BanchoState::disconnect();
-            ui->getNotificationOverlay()->addToast(US_("This server requires a newer client version."), ERROR_TOAST);
+            ui->getNotificationOverlay()->addToast("This server requires a newer client version.", ERROR_TOAST);
             break;
         }
 
@@ -827,7 +827,7 @@ void BanchoState::handle_packet(Packet &packet) {
         }
 
         case INP_ACCOUNT_RESTRICTED: {
-            ui->getNotificationOverlay()->addToast(US_("Account restricted."), ERROR_TOAST);
+            ui->getNotificationOverlay()->addToast("Account restricted.", ERROR_TOAST);
             BanchoState::disconnect();
             break;
         }
@@ -910,7 +910,8 @@ void BanchoState::handle_packet(Packet &packet) {
             }
 
             // craft submission url now, file read may complete after auth params changed
-            std::string url = fmt::format("osu.{}/web/" PACKAGE_NAME "-submit-map.php?hash={}", BanchoState::endpoint, md5);
+            std::string url =
+                fmt::format("osu.{}/web/" PACKAGE_NAME "-submit-map.php?hash={}", BanchoState::endpoint, md5);
             BANCHO::Api::append_auth_params(url);
 
             std::string file_path{map->getFilePath()};

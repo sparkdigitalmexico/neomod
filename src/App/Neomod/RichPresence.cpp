@@ -258,7 +258,7 @@ void onPlayEnd(bool quit) {
     // e.g.: 230pp 900x 95.50% HDHRDT 6*
 
     // pp
-    UString scoreInfo = fmt::format("{}pp", (int)(std::round(osu->getScore()->getPPv2())));
+    std::string scoreInfo = fmt::format("{}pp", (int)(std::round(osu->getScore()->getPPv2())));
 
     // max combo
     scoreInfo.append(fmt::format(" {}x", osu->getScore()->getComboMax()));
@@ -267,7 +267,7 @@ void onPlayEnd(bool quit) {
     scoreInfo.append(fmt::format(" {:.2f}%", osu->getScore()->getAccuracy() * 100.0f));
 
     // mods
-    UString mods = osu->getScore()->getModsStringForRichPresence();
+    std::string mods = osu->getScore()->getModsStringForRichPresence();
     if(mods.length() > 0) {
         scoreInfo.append(" ");
         scoreInfo.append(mods);
@@ -276,7 +276,7 @@ void onPlayEnd(bool quit) {
     // stars
     scoreInfo.append(fmt::format(" {:.2f}*", osu->getScore()->getStarsTomTotal()));
 
-    setBanchoStatus(scoreInfo.toUtf8(), Action::SUBMITTING);
+    setBanchoStatus(scoreInfo.c_str(), Action::SUBMITTING);
 }
 
 void onMultiplayerLobby() {

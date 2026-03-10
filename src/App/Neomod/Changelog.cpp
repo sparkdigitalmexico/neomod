@@ -10,6 +10,7 @@
 #include "Logging.h"
 #include "MainMenu.h"
 #include "NotificationOverlay.h"
+#include "Parsing.h"
 #include "UIBackButton.h"
 #include "Osu.h"
 #include "SoundEngine.h"
@@ -1002,7 +1003,7 @@ namespace {
 class ChangelogLabel final : public CBaseUIButton {
     NOCOPY_NOMOVE(ChangelogLabel)
    public:
-    ChangelogLabel(UString text) : CBaseUIButton(0, 0, 0, 0, "", std::move(text)) {}
+    ChangelogLabel(std::string text) : CBaseUIButton(0, 0, 0, 0, "", std::move(text)) {}
     ~ChangelogLabel() override = default;
 
     void draw() override {
@@ -1035,15 +1036,14 @@ class ChangelogLabel final : public CBaseUIButton {
 class ChangelogTitleLabel final : public CBaseUILabel {
     NOCOPY_NOMOVE(ChangelogTitleLabel)
    private:
-    static std::pair<std::string, double> parseVerFromText(const UString &text) {
+    static std::pair<std::string, double> parseVerFromText(std::string_view text) {
         std::pair<std::string, double> ret;
 
-        if(const int firstWhitespace = text.find(u' '); firstWhitespace != -1) {
+        if(const size_t firstWhitespace = text.find(' '); firstWhitespace != std::string::npos) {
             const auto versionSubstr = text.substr(0, firstWhitespace);
-            const auto [versionDbl, err] = versionSubstr.to<f64>();
-            const bool good = err == std::errc();
-            if(good && versionDbl >= 38.00) {
-                ret.first = versionSubstr.utf8View();
+            f64 versionDbl{};
+            if(Parsing::strto_s<f64>(versionSubstr, versionDbl) && versionDbl >= 38.00) {
+                ret.first = versionSubstr;
                 ret.second = versionDbl;
             }
         }
@@ -1052,8 +1052,9 @@ class ChangelogTitleLabel final : public CBaseUILabel {
     }
 
    public:
-    ChangelogTitleLabel(const UString &text, const UString &previousText) : CBaseUILabel(0, 0, 0, 0, "", text) {
-        if(text.isEmpty()) return;
+    ChangelogTitleLabel(std::string_view text, std::string_view previousText)
+        : CBaseUILabel(0, 0, 0, 0, "", std::string{text}) {
+        if(text.empty()) return;
 
         const auto [curVerStr, curVerNum] = parseVerFromText(text);
 
@@ -1185,16 +1186,17 @@ void Changelog::updateLayout() {
 void Changelog::onBack() { ui->setScreen(ui->getMainMenu()); }
 
 void Changelog::onChangeClicked(CBaseUIButton *button) {
-    const UString &changeTextMaybeContainingClickableURL = button->getText();
+    const std::string changeTextMaybeContainingClickableURL{button->getText()};
 
     const int maybeURLBeginIndex = changeTextMaybeContainingClickableURL.find("http");
-    if(maybeURLBeginIndex != -1 && changeTextMaybeContainingClickableURL.find("://") != -1) {
-        UString url = changeTextMaybeContainingClickableURL.substr(maybeURLBeginIndex);
-        if(url.length() > 0 && url[url.length() - 1] == L')') url = url.substr(0, url.length() - 1);
+    if(maybeURLBeginIndex != std::string::npos &&
+       changeTextMaybeContainingClickableURL.find("://") != std::string::npos) {
+        std::string url = changeTextMaybeContainingClickableURL.substr(maybeURLBeginIndex);
+        if(url.length() > 0 && url[url.length() - 1] == ')') url = url.substr(0, url.length() - 1);
 
-        debugLog("url = {:s}", url.toUtf8());
+        debugLog("url = {:s}", url);
 
         ui->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
-        env->openURLInDefaultBrowser(url.toUtf8());
+        env->openURLInDefaultBrowser(url);
     }
 }

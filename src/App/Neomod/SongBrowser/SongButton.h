@@ -44,9 +44,9 @@ class SongButton : public CarouselButton {
     void onSelected(bool wasSelected, SelOpts opts) override;
     void onRightMouseUpInside() override;
 
-    void onContextMenu(const UString &text, int id = -1);
-    void onAddToCollectionConfirmed(const UString &text, int id = -1);
-    void onCreateNewCollectionConfirmed(const UString &text, int id = -1);
+    void onContextMenu(std::string_view text, int id = -1);
+    void onAddToCollectionConfirmed(std::string_view text, int id = -1);
+    void onCreateNewCollectionConfirmed(std::string_view text, int id = -1);
 
     void drawBeatmapBackgroundThumbnail(const Image *image);
     void drawGrade();

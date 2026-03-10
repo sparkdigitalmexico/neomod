@@ -2,6 +2,7 @@
 #include "UILabel.h"
 
 #include "Osu.h"
+#include "SString.h"
 #include "TooltipOverlay.h"
 #include "UI.h"
 
@@ -26,4 +27,6 @@ void UILabel::onFocusStolen() {
     this->bFocusStolenDelay = true;
 }
 
-void UILabel::setTooltipText(const UString& text) { this->tooltipTextLines = text.split(US_("\n")); }
+void UILabel::setTooltipText(std::string_view text) { this->tooltipTextLines = SString::split_newlines<std::string>(text); }
+
+std::string UILabel::getTooltipText() const { return SString::join(this->tooltipTextLines, '\n'); }

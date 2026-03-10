@@ -13,7 +13,7 @@ MD5String::MD5String(const char *str) {
 
     if(len != 32) {
         engine->showMessageErrorFatal(
-            u"Programmer Error",
+            "Programmer Error",
             fmt::format("Tried to construct an MD5String from\na string with length != 32.\n{} length {}", str, len));
         fubar_abort();
         return;

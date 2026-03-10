@@ -34,6 +34,7 @@
 #include "Font.h"
 #include "Image.h"
 #include "Console.h"
+#include "UString.h"
 #include "Thread.h"
 
 #include <iostream>
@@ -563,23 +564,23 @@ void Engine::toggleFullscreen() {
 
 void Engine::disableFullscreen() { env->disableFullscreen(); }
 
-void Engine::showMessageInfo(const UString &title, const UString &message) {
+void Engine::showMessageInfo(const std::string &title, const std::string &message) {
     debugLog("INFO: [{:s}] | {:s}", title, message);
     env->showMessageInfo(title, message);
 }
 
-void Engine::showMessageWarning(const UString &title, const UString &message) {
+void Engine::showMessageWarning(const std::string &title, const std::string &message) {
     debugLog("WARNING: [{:s}] | {:s}", title, message);
     env->showMessageWarning(title, message);
 }
 
-void Engine::showMessageError(const UString &title, const UString &message) {
+void Engine::showMessageError(const std::string &title, const std::string &message) {
     debugLog("ERROR: [{:s}] | {:s}", title, message);
     Logger::flush();
     env->showMessageError(title, message);
 }
 
-void Engine::showMessageErrorFatal(const UString &title, const UString &message) {
+void Engine::showMessageErrorFatal(const std::string &title, const std::string &message) {
     debugLog("FATAL ERROR: [{:s}] | {:s}", title, message);
     Logger::flush();
     env->showMessageErrorFatal(title, message);

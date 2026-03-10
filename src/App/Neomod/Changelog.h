@@ -23,8 +23,8 @@ class Changelog final : public ScreenBackable {
     void onChangeClicked(CBaseUIButton *button);
 
     struct CHANGELOG {
-        UString title;
-        std::vector<UString> changes;
+        std::string title;
+        std::vector<std::string> changes;
     };
 
     struct CHANGELOG_UI {

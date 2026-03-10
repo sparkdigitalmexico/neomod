@@ -21,10 +21,9 @@
 
 using namespace neomod::sbr;
 
-CollectionButton::CollectionButton(float xPos, float yPos, float xSize, float ySize, UString name,
-                                   const UString &collectionName, std::vector<SongButton *> children)
-    : CarouselButton(xPos, yPos, xSize, ySize, std::move(name)) {
-    this->sCollectionName = collectionName.utf8View();
+CollectionButton::CollectionButton(float xPos, float yPos, float xSize, float ySize, std::string name,
+                                   std::string collectionName, std::vector<SongButton *> children)
+    : CarouselButton(xPos, yPos, xSize, ySize, std::move(name)), sCollectionName(std::move(collectionName)) {
     this->setChildren(std::move(children));
 
     this->fTitleScale = 0.35f;
@@ -44,7 +43,7 @@ void CollectionButton::draw() {
     const vec2 size = this->getActualSize();
 
     // draw title
-    UString titleString{this->sCollectionName};
+    std::string titleString{this->sCollectionName};
     titleString.append(fmt::format(" ({} map{})", this->numVisibleChildren, this->numVisibleChildren == 1 ? "" : "s"));
     int textXOffset = size.x * 0.02f;
     float titleScale = (size.y * this->fTitleScale) / this->font->getHeight();
@@ -99,7 +98,7 @@ void CollectionButton::triggerContextMenu(vec2 pos) {
     cmenu->clampToBottomScreenEdge();
 }
 
-void CollectionButton::onContextMenu(const UString &text, int id) {
+void CollectionButton::onContextMenu(std::string_view text, int id) {
     assert(g_songbrowser->contextMenu);
     auto *cmenu{g_songbrowser->contextMenu};
 
@@ -154,14 +153,14 @@ void CollectionButton::onContextMenu(const UString &text, int id) {
     }
 }
 
-void CollectionButton::onRenameCollectionConfirmed(const UString &text, int /*id*/) {
-    if(text.lengthUtf8() > 0) {
+void CollectionButton::onRenameCollectionConfirmed(std::string_view text, int /*id*/) {
+    if(text.length() > 0) {
         // forward it
         g_songbrowser->onCollectionButtonContextMenu(this, text, 3);
     }
 }
 
-void CollectionButton::onDeleteCollectionConfirmed(const UString & /*text*/, int id) {
+void CollectionButton::onDeleteCollectionConfirmed(std::string_view /*text*/, int id) {
     if(id != 2) return;
 
     // just forward it

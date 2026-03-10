@@ -13,14 +13,14 @@
 #include "TooltipOverlay.h"
 #include "UI.h"
 #include "UIUserContextMenu.h"
-
+#include "UniString.h"
 #include "ctre.hpp"
 
 #include <utility>
 
-ChatLink::ChatLink(float xPos, float yPos, float xSize, float ySize, const UString& link, const UString& label)
-    : CBaseUILabel(xPos, yPos, xSize, ySize, link, label) {
-    this->link = link;
+ChatLink::ChatLink(float xPos, float yPos, float xSize, float ySize, std::string link, std::string label)
+    : CBaseUILabel(xPos, yPos, xSize, ySize, link, std::move(label)) {
+    this->link = std::move(link);
     this->setDrawFrame(false);
     this->setDrawBackground(true);
     this->setBackgroundColor(0xff2e3784);
@@ -31,7 +31,7 @@ void ChatLink::update(CBaseUIEventCtx& c) {
 
     if(this->isMouseInside()) {
         ui->getTooltipOverlay()->begin();
-        ui->getTooltipOverlay()->addLine(fmt::format("link: {}", this->link.toUtf8()));
+        ui->getTooltipOverlay()->addLine(fmt::format("link: {}", this->link));
         ui->getTooltipOverlay()->end();
 
         this->setBackgroundColor(0xff3d48ac);
@@ -49,15 +49,15 @@ void ChatLink::open_beatmap_link(i32 map_id, i32 set_id) {
         ui->getSongBrowser()->map_autodl = map_id;
         ui->getSongBrowser()->set_autodl = set_id;
     } else {
-        env->openURLInDefaultBrowser(this->link.toUtf8());
+        env->openURLInDefaultBrowser(this->link);
     }
 }
 
 void ChatLink::onMouseUpInside(bool /*left*/, bool /*right*/) {
-    std::wstring link_wstr = this->link.to_wstring();
+    std::wstring link_wstr = UniString::to_wide(this->link);
 
     // Detect multiplayer invite links
-    if(this->link.startsWith(US_("osump://"))) {
+    if(this->link.starts_with("osump://")) {
         if(ui->getRoom()->isVisible()) {
             ui->getNotificationOverlay()->addNotification("You are already in a multiplayer room.");
             return;
@@ -67,15 +67,15 @@ void ChatLink::onMouseUpInside(bool /*left*/, bool /*right*/) {
         // osu!stable also considers anything after a space to be part of the lobby title :(
         static constexpr ctll::fixed_string osump_pattern{LR"(osump://(\d+)/(\S*))"};
         if(auto match = ctre::search<osump_pattern>(link_wstr)) {
-            const UString match_ustr = match.get<1>().to_view();
-            u32 invite_id = Parsing::strto<u32>(match_ustr.utf8View());
-            UString password = match.get<2>().to_view();
-            ui->getLobby()->joinRoom(invite_id, password);
+            std::wstring_view match_wstr = match.get<1>().to_view();
+            u32 invite_id = Parsing::strto<u32>(UniString::to_utf8(match_wstr));
+            std::wstring_view password = match.get<2>().to_view();
+            ui->getLobby()->joinRoom(invite_id, UniString::to_utf8(password));
         }
         return;
     }
 
-    const std::wstring endpoint_wstr{UString{BanchoState::endpoint}.to_wstring()};
+    const std::wstring endpoint_wstr{UniString::to_wide(BanchoState::endpoint)};
 
     // Helper to check if domain matches the configured endpoint (with optional "osu." prefix)
     auto matches_endpoint = [&endpoint_wstr](std::wstring_view domain) {
@@ -91,8 +91,8 @@ void ChatLink::onMouseUpInside(bool /*left*/, bool /*right*/) {
     if(auto match = ctre::search<user_pattern>(link_wstr)) {
         auto domain = match.get<1>().to_view();
         if(matches_endpoint(domain)) {
-            const UString match_ustr = match.get<2>().to_view();
-            i32 user_id = Parsing::strto<i32>(match_ustr.utf8View());
+            std::wstring_view match_wstr = match.get<2>().to_view();
+            i32 user_id = Parsing::strto<i32>(UniString::to_utf8(match_wstr));
             ui->getUserActions()->open(user_id);
             return;
         }
@@ -104,8 +104,8 @@ void ChatLink::onMouseUpInside(bool /*left*/, bool /*right*/) {
     if(auto match = ctre::search<map_pattern>(link_wstr)) {
         auto domain = match.get<1>().to_view();
         if(matches_endpoint(domain) || domain == L"osu.ppy.sh") {
-            const UString match_ustr = match.get<2>().to_view();
-            i32 map_id = Parsing::strto<i32>(match_ustr.utf8View());
+            std::wstring_view match_wstr = match.get<2>().to_view();
+            i32 map_id = Parsing::strto<i32>(UniString::to_utf8(match_wstr));
             this->open_beatmap_link(map_id, 0);
             return;
         }
@@ -117,17 +117,17 @@ void ChatLink::onMouseUpInside(bool /*left*/, bool /*right*/) {
     if(auto match = ctre::search<set_pattern>(link_wstr)) {
         auto domain = match.get<1>().to_view();
         if(matches_endpoint(domain) || domain == L"osu.ppy.sh") {
-            const UString match_ustr = match.get<2>().to_view();
-            i32 set_id = Parsing::strto<i32>(match_ustr.utf8View());
+            std::wstring_view match_wstr = match.get<2>().to_view();
+            i32 set_id = Parsing::strto<i32>(UniString::to_utf8(match_wstr));
             i32 map_id = 0;
             if(auto map_group = match.get<3>(); map_group) {
-                const UString uGroup = map_group.to_view();
-                map_id = Parsing::strto<i32>(uGroup.utf8View());
+                std::wstring_view group_wstr = map_group.to_view();
+                map_id = Parsing::strto<i32>(UniString::to_utf8(group_wstr));
             }
             this->open_beatmap_link(map_id, set_id);
             return;
         }
     }
 
-    env->openURLInDefaultBrowser(this->link.toUtf8());
+    env->openURLInDefaultBrowser(this->link);
 }

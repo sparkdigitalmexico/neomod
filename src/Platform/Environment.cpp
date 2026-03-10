@@ -12,6 +12,8 @@
 #include "Logging.h"
 #include "ConVar.h"
 #include "Thread.h"
+#include "UString.h"
+#include "UniString.h"
 
 #include "AppDescriptor.h"
 
@@ -248,14 +250,14 @@ void Environment::openURLInDefaultBrowser(std::string_view url) noexcept {
     }
 }
 
-const UString &Environment::getUsername() const noexcept {
-    if(!m_sUsername.isEmpty()) return m_sUsername;
+std::string_view Environment::getUsername() const noexcept {
+    if(!m_sUsername.empty()) return m_sUsername;
 #if defined(MCENGINE_PLATFORM_WINDOWS)
     DWORD username_len = UNLEN + 1;
     std::array<wchar_t, UNLEN + 1> username{};
 
     if(GetUserNameW(username.data(), &username_len)) {
-        m_sUsername = UString{username.data(), std::max(0, (int)username_len - 1)};
+        m_sUsername = UniString::to_utf8(std::wstring_view{username.data(), (size_t)std::max(0, (int)username_len - 1)});
     }
 #elif defined(__APPLE__) || defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_WASM)
     std::string user = getEnvVariable("USER");
@@ -263,12 +265,12 @@ const UString &Environment::getUsername() const noexcept {
 #ifndef MCENGINE_PLATFORM_WASM
     else {
         struct passwd *pwd = getpwuid(getuid());
-        if(pwd != nullptr) m_sUsername = {pwd->pw_name};
+        if(pwd != nullptr) m_sUsername = std::string{pwd->pw_name};
     }
 #endif
 #endif
     // fallback
-    if(m_sUsername.isEmpty()) m_sUsername = {PACKAGE_NAME "-user"};
+    if(m_sUsername.empty()) m_sUsername = std::string{PACKAGE_NAME "-user"};
     return m_sUsername;
 }
 
@@ -419,12 +421,12 @@ std::string manualDirectoryFixup(std::string_view input) {
     } else {
         ret = fsPath.string().c_str();
     }
-    UString endSep{US_("/")};
+    UString endSep{"/"};
 
     if constexpr(Env::cfg(OS::WINDOWS)) {
         // for UNC/long paths, make sure we use a backslash as the last separator
-        if(ret.startsWith(US_(R"(\\?\)")) || ret.startsWith(US_(R"(\\.\)"))) {
-            endSep = US_("\\");
+        if(ret.startsWith(R"(\\?\)") || ret.startsWith(R"(\\.\)")) {
+            endSep = "\\";
         }
     }
 
@@ -657,7 +659,7 @@ std::string Environment::filesystemPathToURI(const std::filesystem::path &path) 
     return uri;
 }
 
-const UString &Environment::getClipBoardText() {
+std::string_view Environment::getClipBoardText() {
     char *newClip = SDL_GetClipboardText();
     if(newClip) m_sCurrClipboardText = newClip;
 
@@ -666,9 +668,9 @@ const UString &Environment::getClipBoardText() {
     return m_sCurrClipboardText;
 }
 
-void Environment::setClipBoardText(const UString &text) {
-    m_sCurrClipboardText = text;
-    SDL_SetClipboardText(text.toUtf8());
+void Environment::setClipBoardText(std::string text) {
+    m_sCurrClipboardText = std::move(text);
+    SDL_SetClipboardText(m_sCurrClipboardText.c_str());
 }
 
 // static helper for class methods below (defaults to flags = error, modalWindow = null)
@@ -701,20 +703,20 @@ void Environment::showDialog(const char *title, const char *message, unsigned in
     }
 }
 
-void Environment::showMessageInfo(const UString &title, const UString &message) const {
-    showDialog(title.toUtf8(), message.toUtf8(), SDL_MESSAGEBOX_INFORMATION, m_window);
+void Environment::showMessageInfo(const std::string &title, const std::string &message) const {
+    showDialog(title.c_str(), message.c_str(), SDL_MESSAGEBOX_INFORMATION, m_window);
 }
 
-void Environment::showMessageWarning(const UString &title, const UString &message) const {
-    showDialog(title.toUtf8(), message.toUtf8(), SDL_MESSAGEBOX_WARNING, m_window);
+void Environment::showMessageWarning(const std::string &title, const std::string &message) const {
+    showDialog(title.c_str(), message.c_str(), SDL_MESSAGEBOX_WARNING, m_window);
 }
 
-void Environment::showMessageError(const UString &title, const UString &message) const {
-    showDialog(title.toUtf8(), message.toUtf8(), SDL_MESSAGEBOX_ERROR, m_window);
+void Environment::showMessageError(const std::string &title, const std::string &message) const {
+    showDialog(title.c_str(), message.c_str(), SDL_MESSAGEBOX_ERROR, m_window);
 }
 
 // what is the point of this exactly?
-void Environment::showMessageErrorFatal(const UString &title, const UString &message) const {
+void Environment::showMessageErrorFatal(const std::string &title, const std::string &message) const {
     showMessageError(title, message);
 }
 
@@ -927,7 +929,7 @@ void Environment::disableFullscreen() {
     }
 }
 
-void Environment::setWindowTitle(const UString &title) { SDL_SetWindowTitle(m_window, title.toUtf8()); }
+void Environment::setWindowTitle(const std::string &title) { SDL_SetWindowTitle(m_window, title.c_str()); }
 
 void Environment::syncWindow() { SDL_SyncWindow(m_window); }
 
@@ -1156,16 +1158,15 @@ void Environment::setOSMousePos(vec2 pos) {
     m_vLastAbsMousePos = pos;
 }
 
-UString Environment::keyCodeToString(SCANCODE keyCode) const {
+std::string Environment::keyCodeToString(SCANCODE keyCode) const {
     const char *name = SDL_GetScancodeName((SDL_Scancode)keyCode);
     if(name == nullptr)
         return fmt::format("{}", keyCode);
     else {
-        UString uName = UString(name);
-        if(uName.length() < 1)
+        if(strlen(name) < 1)
             return fmt::format("{}", keyCode);
         else
-            return uName;
+            return name;
     }
 }
 

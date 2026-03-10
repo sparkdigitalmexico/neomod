@@ -33,7 +33,7 @@ class RankingScreen final : public ScreenBackable {
     void setGrade(ScoreGrade grade);
     void setIndex(int index);
 
-    [[nodiscard]] UString getPPString() const;
+    [[nodiscard]] std::string getPPString() const;
     [[nodiscard]] vec2 getPPPosRaw() const;
 
     struct RankingScreenImpl;

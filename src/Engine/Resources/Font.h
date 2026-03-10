@@ -24,7 +24,6 @@ class DirectX11Interface;
 class NullGraphics;
 class SDLGPUInterface;
 struct TextShadow;
-class UString;
 
 struct McFontImpl;
 class McFont final : public Resource {
@@ -36,11 +35,11 @@ class McFont final : public Resource {
     friend DirectX11Interface;
     friend NullGraphics;
     friend SDLGPUInterface;
-    void drawString(const UString &text, std::optional<TextShadow> shadow);
+    void drawString(std::string_view text, std::optional<TextShadow> shadow);
 
    public:
     McFont(std::string filepath, int fontSize = 16, bool antialiasing = true, int fontDPI = 96);
-    McFont(std::string filepath, const std::span<const char16_t> &characters, int fontSize = 16,
+    McFont(std::string filepath, const std::span<const char32_t> &characters, int fontSize = 16,
            bool antialiasing = true, int fontDPI = 96);
     ~McFont() override;
 
@@ -58,11 +57,11 @@ class McFont final : public Resource {
     [[nodiscard]] int getDPI() const;
     [[nodiscard]] float getHeight() const;  // precomputed average height (fast)
 
-    [[nodiscard]] float getGlyphWidth(char16_t character) const;
-    [[nodiscard]] float getGlyphHeight(char16_t character) const;
-    [[nodiscard]] float getStringWidth(const UString &text) const;
-    [[nodiscard]] float getStringHeight(const UString &text) const;
-    [[nodiscard]] std::vector<UString> wrap(const UString &text, f64 max_width) const;
+    [[nodiscard]] float getGlyphWidth(char32_t character) const;
+    [[nodiscard]] float getGlyphHeight(char32_t character) const;
+    [[nodiscard]] float getStringWidth(std::string_view text) const;
+    [[nodiscard]] float getStringHeight(std::string_view text) const;
+    [[nodiscard]] std::vector<std::string> wrap(std::string_view text, f64 max_width) const;
 
    public:
     McFont *asFont() override { return this; }

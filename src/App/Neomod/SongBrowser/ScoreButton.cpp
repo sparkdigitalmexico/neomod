@@ -33,6 +33,7 @@
 #include "UI.h"
 #include "UIAvatar.h"
 #include "UIContextMenu.h"
+#include "UniString.h"
 #include "UserStatsScreen.h"
 #include "Logging.h"
 #include "SongDifficultyButton.h"
@@ -45,7 +46,7 @@ namespace {
 inline const char *comboBasedSuffix(bool perfect, bool FC) { return perfect ? " PFC" : (FC ? " FC" : ""); }
 }  // namespace
 
-UString ScoreButton::recentScoreIconString;
+std::string ScoreButton::recentScoreIconString;
 
 u64 ScoreButton::getScoreUnixTimestamp() const { return this->storedScore->unixTimestamp; }
 u64 ScoreButton::getScoreScore() const { return this->storedScore->score; }
@@ -56,7 +57,9 @@ ScoreButton::ScoreButton(UIContextMenu *contextMenu, float xPos, float yPos, flo
       storedScore(new FinishedScore()),
       scoreGrade(ScoreGrade::D),
       style(style) {
-    if(recentScoreIconString.length() < 1) recentScoreIconString.insert(0, Icons::ARROW_CIRCLE_UP);
+    if(recentScoreIconString.length() < 1) {
+        recentScoreIconString = UniString::to_utf8(std::u32string_view{&Icons::ARROW_CIRCLE_UP, 1});
+    }
 }
 
 ScoreButton::~ScoreButton() = default;
@@ -101,7 +104,7 @@ void ScoreButton::draw() {
     McFont *indexNumberFont = osu->getSongBrowserFontBold();
     g->pushTransform();
     {
-        UString indexNumberString = fmt::format("{}", this->iScoreIndexNumber);
+        std::string indexNumberString = fmt::format("{}", this->iScoreIndexNumber);
         const float scale = (this->getSize().y / indexNumberFont->getHeight()) * indexNumberScale;
 
         g->scale(scale, scale);
@@ -150,7 +153,7 @@ void ScoreButton::draw() {
         const float paddingTop = height * paddingTopPercent;
         const float scale = (height / usernameFont->getHeight()) * usernameScale;
 
-        UString &string = (this->style == STYLE::TOP_RANKS ? this->sScoreTitle : this->sScoreUsername);
+        std::string &string = (this->style == STYLE::TOP_RANKS ? this->sScoreTitle : this->sScoreUsername);
 
         g->scale(scale, scale);
         g->translate(
@@ -188,7 +191,7 @@ void ScoreButton::draw() {
                           .col_shadow = textShadowColor,
                           .offs_px = 0.75f};
 
-        const UString &mainString = [&]() {
+        const std::string &mainString = [&]() {
             // top ranks: draw pp + weight % and weighted pp
             if(this->style == STYLE::TOP_RANKS) {
                 // misleading name, this is just pp but formatted differently...
@@ -264,7 +267,7 @@ void ScoreButton::draw() {
     McFont *accFont = osu->getSubTitleFont();
     g->pushTransform();
     {
-        const UString &scoreAccuracy =
+        const std::string &scoreAccuracy =
             (this->style == STYLE::TOP_RANKS ? this->sScoreAccuracyFC : this->sScoreAccuracy);
 
         const float height = rightSideThirdHeight;
@@ -614,7 +617,7 @@ void ScoreButton::onRightMouseUpInside() {
     }
 }
 
-void ScoreButton::onContextMenu(const UString &text, int id) {
+void ScoreButton::onContextMenu(std::string_view text, int id) {
     auto &sc = *this->storedScore;
 
     if(ui->getUserStatsScreen()->isVisible()) {
@@ -674,7 +677,7 @@ void ScoreButton::onDeleteScoreClicked() {
     }
 }
 
-void ScoreButton::onDeleteScoreConfirmed(const UString & /*text*/, int id) {
+void ScoreButton::onDeleteScoreConfirmed(std::string_view /*text*/, int id) {
     if(id != 1) return;
 
     debugLog("Deleting score");
@@ -686,7 +689,7 @@ void ScoreButton::onDeleteScoreConfirmed(const UString & /*text*/, int id) {
 }
 
 void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap *map, int index,
-                           const UString &titleString, float weight) {
+                           std::string titleString, float weight) {
     *this->storedScore = newscore;
     auto &sc = *this->storedScore;
 
@@ -737,7 +740,7 @@ void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap 
     this->sScoreAccuracyFC = fmt::format("{}{:.2f}%", sc.perfect ? "PFC " : (fullCombo ? "FC " : ""), accuracy);
 
     this->sScoreMods = getModsStringForDisplay(sc.mods);
-    this->sCustom = (sc.mods.speed != 1.0f ? fmt::format("Spd: {:g}x", sc.mods.speed) : US_(""));
+    this->sCustom = (sc.mods.speed != 1.0f ? fmt::format("Spd: {:g}x", sc.mods.speed) : "");
     if(map != nullptr) {
         const LegacyReplay::BEATMAP_VALUES beatmapValuesForModsLegacy = LegacyReplay::getBeatmapValuesForModsLegacy(
             sc.mods.to_legacy(), map->getAR(), map->getCS(), map->getOD(), map->getHP());
@@ -779,12 +782,12 @@ void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap 
     localtime_x(&timestamp, &tm);
 
     std::array<char, 64> dateString{};
-    int written = std::strftime(dateString.data(), dateString.size(), "%d-%b-%y %H:%M:%S", &tm);
+    const size_t written = std::strftime(dateString.data(), dateString.size(), "%d-%b-%y %H:%M:%S", &tm);
 
-    this->sScoreDateTime = UString{dateString.data(), written};
+    this->sScoreDateTime = std::string{dateString.data(), written};
     this->iScoreUnixTimestamp = sc.unixTimestamp;
 
-    UString achievedOn = "Achieved on ";
+    std::string achievedOn = "Achieved on ";
     achievedOn.append(this->sScoreDateTime);
 
     // tooltip
@@ -796,7 +799,7 @@ void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap 
 
     this->tooltipLines.emplace_back(fmt::format("Accuracy: {:.2f}%", accuracy));
 
-    UString tooltipMods = "Mods: ";
+    std::string tooltipMods = "Mods: ";
     if(this->sScoreMods.length() > 0)
         tooltipMods.append(this->sScoreMods);
     else
@@ -856,11 +859,11 @@ void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap 
 
 bool ScoreButton::isContextMenuVisible() { return (this->contextMenu != nullptr && this->contextMenu->isVisible()); }
 
-UString ScoreButton::getModsStringForDisplay(const Replay::Mods &mods) {
+std::string ScoreButton::getModsStringForDisplay(const Replay::Mods &mods) {
     using enum ModFlags;
     using namespace flags::operators;
 
-    UString modsString;
+    std::string modsString;
 
     // only for exact values
     const bool nc = mods.speed == 1.5f && flags::has<NoPitchCorrection>(mods.flags);

@@ -8,7 +8,7 @@
 #include "Graphics.h"
 #include "Image.h"
 
-UISlider::UISlider(float xPos, float yPos, float xSize, float ySize, UString name)
+UISlider::UISlider(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUISlider(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setBlockSize(20, 20);
 }

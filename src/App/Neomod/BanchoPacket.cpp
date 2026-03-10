@@ -2,11 +2,14 @@
 
 #include "BanchoPacket.h"
 #include "BanchoProtocol.h"
-#include "UString.h"
 
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <string_view>
+#include <string>
+
+using std::string_view_literals::operator""sv;
 
 void Packet::read_bytes(u8 *bytes, size_t n) {
     if(this->pos + n > this->size) {

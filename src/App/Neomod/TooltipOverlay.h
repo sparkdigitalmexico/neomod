@@ -12,12 +12,12 @@ class TooltipOverlay final : public UIScreen {
     void draw() override;
 
     void begin();
-    void addLine(UString text);
+    void addLine(std::string text);
     void end();
 
    private:
     AnimFloat fAnim;
-    std::vector<UString> lines;
+    std::vector<std::string> lines;
 
     bool bDelayFadeout;
 };

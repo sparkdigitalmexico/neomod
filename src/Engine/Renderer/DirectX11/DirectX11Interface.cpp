@@ -24,6 +24,7 @@
 
 #include "ResourceManager.h"
 #include "VisualProfiler.h"
+#include "UniString.h"
 
 #include "DirectX11Image.h"
 #include "DirectX11RenderTarget.h"
@@ -165,8 +166,8 @@ bool DirectX11Interface::init() {
         hr = this->dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&this->dxgiFactory);
     }
     if(FAILED(hr)) {
-        UString errorTitle = "DirectX Error";
-        UString errorMessage =
+        std::string errorTitle = "DirectX Error";
+        std::string errorMessage =
             fmt::format("{} failed! HR: {:#x} DXGI_HR: {:#x})", error, (u32)hr, (u32)MAKE_DXGI_HRESULT(hr));
 
         errorMessage.append("\nThe engine will quit now.");
@@ -560,7 +561,7 @@ void DirectX11Interface::drawImage(const Image *image, AnchorPoint anchor, float
     }
 }
 
-void DirectX11Interface::drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow) {
+void DirectX11Interface::drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow) {
     if(font == nullptr || text.length() < 1 || !font->isReady()) return;
 
     this->updateTransform();
@@ -973,7 +974,7 @@ std::vector<u8> DirectX11Interface::getScreenshot(bool withAlpha) {
     return result;
 }
 
-UString DirectX11Interface::getVendor() {
+std::string DirectX11Interface::getVendor() {
     DXGI_ADAPTER_DESC desc;
     if(this->dxgiAdapter && SUCCEEDED(this->dxgiAdapter->GetDesc(&desc))) {
         return fmt::format("0x{:x}", desc.VendorId);
@@ -982,17 +983,17 @@ UString DirectX11Interface::getVendor() {
     return "<UNKNOWN>";
 }
 
-UString DirectX11Interface::getModel() {
+std::string DirectX11Interface::getModel() {
     DXGI_ADAPTER_DESC desc;
     if(this->dxgiAdapter && SUCCEEDED(this->dxgiAdapter->GetDesc(&desc))) {
         const std::wstring description = std::wstring(desc.Description, 128);
-        return {description.c_str()};
+        return UniString::to_utf8(description);
     }
 
     return "<UNKNOWN>";
 }
 
-UString DirectX11Interface::getVersion() {
+std::string DirectX11Interface::getVersion() {
     DXGI_ADAPTER_DESC desc;
     if(this->dxgiAdapter && SUCCEEDED(this->dxgiAdapter->GetDesc(&desc))) {
         return fmt::format("0x{:x}/{:x}/{:x}", desc.DeviceId, desc.SubSysId, desc.Revision);

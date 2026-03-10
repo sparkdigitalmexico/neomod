@@ -4,10 +4,11 @@
 #include <utility>
 
 #include "Engine.h"
+#include "SString.h"
 #include "TooltipOverlay.h"
 #include "UI.h"
 
-UICheckbox::UICheckbox(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+UICheckbox::UICheckbox(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
     : CBaseUICheckbox(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {
     this->bFocusStolenDelay = false;
 }
@@ -36,4 +37,6 @@ void UICheckbox::onFocusStolen() {
     this->bFocusStolenDelay = true;
 }
 
-void UICheckbox::setTooltipText(const UString& text) { this->tooltipTextLines = text.split(US_("\n")); }
+void UICheckbox::setTooltipText(std::string_view text) {
+    this->tooltipTextLines = SString::split_newlines<std::string>(text);
+}

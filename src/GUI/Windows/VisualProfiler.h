@@ -27,8 +27,8 @@ class VisualProfiler : public CBaseUIElement {
     void incrementInfoBladeDisplayMode();
     void decrementInfoBladeDisplayMode();
 
-    void addInfoBladeEngineTextLine(const UString &text);
-    void addInfoBladeAppTextLine(const UString &text);
+    void addInfoBladeEngineTextLine(std::string text);
+    void addInfoBladeAppTextLine(std::string text);
 
     void setProfile(ProfilerProfile *profile);
     void setRequiresAltShiftKeysToFreeze(bool requiresAltShiftKeysToFreeze) {
@@ -50,7 +50,7 @@ class VisualProfiler : public CBaseUIElement {
     };
 
     struct TEXT_LINE {
-        UString textLeftAligned, textRightAligned;
+        std::string textLeftAligned, textRightAligned;
         int widthLeft, widthRight;
         [[nodiscard]] int width() const { return widthLeft + widthRight; }
     };
@@ -81,8 +81,8 @@ class VisualProfiler : public CBaseUIElement {
     static int getGraphWidth();
     static int getGraphHeight();
 
-    static void addTextLine(const UString &text, McFont *font, std::vector<TEXT_LINE> &textLines);
-    static void addTextLine(const UString &textLeft, const UString &textRight, McFont *font,
+    static void addTextLine(std::string text, McFont *font, std::vector<TEXT_LINE> &textLines);
+    static void addTextLine(std::string textLeft, std::string textRight, McFont *font,
                             std::vector<TEXT_LINE> &textLines);
 
     int iPrevVaoWidth;
@@ -113,8 +113,8 @@ class VisualProfiler : public CBaseUIElement {
     bool bRequiresAltShiftKeysToFreeze;
 
     std::vector<TEXT_LINE> textLines;
-    std::vector<UString> engineTextLines;
-    std::vector<UString> appTextLines;
+    std::vector<std::string> engineTextLines;
+    std::vector<std::string> appTextLines;
 
     std::unique_ptr<VProfGatherer> infoGatherer;
 };

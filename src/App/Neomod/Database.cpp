@@ -687,7 +687,7 @@ void Database::sortScores(const MD5Hash &beatmapMD5Hash) {
     return;
 }
 
-Database::PlayerPPScores Database::getPlayerPPScores(const std::string &playerName) {
+Database::PlayerPPScores Database::getPlayerPPScores(std::string_view playerName) {
     PlayerPPScores ppScores;
     ppScores.totalScore = 0;
     if(this->getProgress() < 1.0f) return ppScores;
@@ -744,7 +744,7 @@ Database::PlayerPPScores Database::getPlayerPPScores(const std::string &playerNa
     return ppScores;
 }
 
-Database::PlayerStats Database::calculatePlayerStats(const std::string &playerName) {
+Database::PlayerStats Database::calculatePlayerStats(std::string_view playerName) {
     // FIXME: returning cached statistics even if we got new scores
     // this is makes this function a "sneaky" API that might return stale stats
     // done for performance to not tank FPS during score recalc where this is done on the main thread
@@ -754,7 +754,7 @@ Database::PlayerStats Database::calculatePlayerStats(const std::string &playerNa
     // cached inside Database...
     const bool scoresChanged = this->scores_changed.load(std::memory_order_acquire);
     const bool returnCached =
-        playerName == this->prevPlayerStats.name.utf8View() &&
+        playerName == this->prevPlayerStats.name &&
         (!scoresChanged || (!BatchDiffCalc::scores_finished() && !engine->throttledShouldRun(120)));
     if(returnCached) {
         return this->prevPlayerStats;
@@ -962,7 +962,7 @@ void Database::scheduleLoadRaw() {
                             this->num_beatmaps_to_load == 1 ? "" : "s"),
                 0xff00ff00);
         else
-            ui->getNotificationOverlay()->addNotification(US_("No new beatmaps detected."), 0xff00ff00);
+            ui->getNotificationOverlay()->addNotification("No new beatmaps detected.", 0xff00ff00);
     }
 
     debugLog("Database: Building beatmap database ...");
@@ -2062,7 +2062,7 @@ void Database::loadScores(std::string_view dbPath) {
     u32 nb_neomod_scores = 0;
     u8 magic_bytes[6] = {0};
     if(dbr.read_bytes(magic_bytes, 5) != 5 || memcmp(magic_bytes, "NEOSC", 5) != 0) {
-        ui->getNotificationOverlay()->addToast(US_("Failed to load " PACKAGE_NAME "_scores.db!"), ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast("Failed to load " PACKAGE_NAME "_scores.db!", ERROR_TOAST);
         this->bytes_processed += dbr.total_size;
         return;
     }

@@ -5,6 +5,8 @@
 #include "SString.h"
 
 #include "SongButton.h"
+#include "UString.h"
+
 #include "DatabaseBeatmap.h"
 namespace AsyncSongButtonMatcher {
 

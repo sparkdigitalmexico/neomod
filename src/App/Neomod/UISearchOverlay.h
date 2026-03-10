@@ -8,14 +8,14 @@ class McFont;
 
 class UISearchOverlay final : public CBaseUIElement {
    public:
-    UISearchOverlay(float xPos, float yPos, float xSize, float ySize, UString name);
+    UISearchOverlay(float xPos, float yPos, float xSize, float ySize, std::string name);
 
     void draw() override;
 
     void setDrawNumResults(bool drawNumResults) { this->bDrawNumResults = drawNumResults; }
     void setOffsetRight(int offsetRight) { this->iOffsetRight = offsetRight; }
 
-    inline void setSearchString(UString searchString, UString hardcodedSearchString = {}) {
+    inline void setSearchString(std::string searchString, std::string hardcodedSearchString = {}) {
         this->sSearchString = std::move(searchString);
         this->sHardcodedSearchString = std::move(hardcodedSearchString);
     }
@@ -29,8 +29,8 @@ class UISearchOverlay final : public CBaseUIElement {
     int iOffsetRight;
     bool bDrawNumResults;
 
-    UString sSearchString{u""};
-    UString sHardcodedSearchString{u""};
+    std::string sSearchString;
+    std::string sHardcodedSearchString;
     int iNumFoundResults;
 
     bool bSearching;

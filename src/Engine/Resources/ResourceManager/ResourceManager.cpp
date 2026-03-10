@@ -491,7 +491,7 @@ McFont *ResourceManager::loadFont(std::string filepath, const std::string &resou
 }
 
 McFont *ResourceManager::loadFont(std::string filepath, const std::string &resourceName,
-                                  const std::span<const char16_t> &characters, int fontSize, bool antialiasing,
+                                  const std::span<const char32_t> &characters, int fontSize, bool antialiasing,
                                   int fontDPI) {
     auto res = pImpl->checkIfExistsAndHandle<McFont>(resourceName);
     if(res != nullptr) return res;

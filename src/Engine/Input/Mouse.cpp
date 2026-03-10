@@ -84,7 +84,7 @@ void Mouse::drawDebug() {
     g->drawRect(pos.x - rectSize.x / 2.0f, pos.y - rectSize.y / 2.0f, rectSize.x, rectSize.y);
 
     McFont *posFont = engine->getDefaultFont();
-    UString posString = fmt::format("[{:.2f}, {:.2f}]", pos.x, pos.y);
+    const std::string posString = fmt::format("[{:.2f}, {:.2f}]", pos.x, pos.y);
     float stringWidth = posFont->getStringWidth(posString);
     float stringHeight = posFont->getHeight();
     vec2 textOffset = vec2(

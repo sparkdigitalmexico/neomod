@@ -27,7 +27,7 @@ class UIUserContextMenuScreen final : public UIScreen {
 
     void open(i32 user_id, bool is_song_browser_button = false);
     void close();
-    void on_action(const UString& text, int user_action);
+    void on_action(std::string_view text, int user_action);
 
     i32 user_id{0};
     UIContextMenu* menu{nullptr};
@@ -35,7 +35,7 @@ class UIUserContextMenuScreen final : public UIScreen {
 
 class UIUserLabel final : public CBaseUILabel {
    public:
-    UIUserLabel(i32 user_id, const UString& username);
+    UIUserLabel(i32 user_id, std::string username);
 
     void onMouseUpInside(bool left = true, bool right = false) override;
 

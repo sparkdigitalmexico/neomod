@@ -8,7 +8,7 @@
 #include "Graphics.h"
 #include "ContainerRanges.h"
 
-CBaseUIContainer::CBaseUIContainer(float Xpos, float Ypos, float Xsize, float Ysize, UString name)
+CBaseUIContainer::CBaseUIContainer(float Xpos, float Ypos, float Xsize, float Ysize, std::string name)
     : CBaseUIElement(Xpos, Ypos, Xsize, Ysize, std::move(name)) {}
 
 CBaseUIContainer::~CBaseUIContainer() { this->freeElements(); }
@@ -147,11 +147,11 @@ CBaseUIContainer *CBaseUIContainer::deleteBaseUIElement(CBaseUIElement *element)
     return this;
 }
 
-CBaseUIElement *CBaseUIContainer::getBaseUIElement(const UString &name) {
+CBaseUIElement *CBaseUIContainer::getBaseUIElement(std::string_view name) {
     for(size_t i = 0; i < this->vElements.size(); i++) {
         if(this->vElements[i]->getName() == name) return this->vElements[i];
     }
-    debugLog("CBaseUIContainer ERROR: GetBaseUIElement() \"{:s}\" does not exist!!!", name.toUtf8());
+    debugLog("CBaseUIContainer ERROR: GetBaseUIElement() \"{:s}\" does not exist!!!", name);
     return nullptr;
 }
 

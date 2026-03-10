@@ -14,7 +14,7 @@
 #include "UI.h"
 #include "Graphics.h"
 
-UIBackButton::UIBackButton(float xPos, float yPos, float xSize, float ySize, UString name)
+UIBackButton::UIBackButton(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {}
 
 UIBackButton::~UIBackButton() = default;

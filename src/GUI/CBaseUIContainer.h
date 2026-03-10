@@ -7,7 +7,7 @@
 class CBaseUIContainer : public CBaseUIElement {
     NOCOPY_NOMOVE(CBaseUIContainer)
    public:
-    CBaseUIContainer(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = {});
+    CBaseUIContainer(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {});
     ~CBaseUIContainer() override;
 
     virtual void freeElements();
@@ -43,7 +43,7 @@ class CBaseUIContainer : public CBaseUIElement {
     CBaseUIContainer *removeBaseUIElement(CBaseUIElement *element);
     CBaseUIContainer *deleteBaseUIElement(CBaseUIElement *element);
 
-    CBaseUIElement *getBaseUIElement(const UString &name);
+    CBaseUIElement *getBaseUIElement(std::string_view name);
 
     bool isBusy() override;
     bool isActive() override;

@@ -194,7 +194,7 @@ void SongButton::drawTitle(float deselectedAlpha, bool forceSelectedStyle) {
                                                         : osu->getSkin()->c_song_select_inactive_text);
     if(!(this->bSelected || forceSelectedStyle)) g->setAlpha(deselectedAlpha);
 
-    const UString title{this->databaseBeatmap ? this->databaseBeatmap->getTitle() : US_("")};
+    const std::string_view title{this->databaseBeatmap ? this->databaseBeatmap->getTitle() : ""sv};
 
     g->pushTransform();
     {
@@ -222,7 +222,7 @@ void SongButton::drawSubTitle(float deselectedAlpha, bool forceSelectedStyle) {
 
     g->pushTransform();
     {
-        const UString subTitleString{fmt::format("{} // {}", artist, mapper)};
+        const std::string subTitleString{fmt::format("{} // {}", artist, mapper)};
 
         g->scale(subTitleScale, subTitleScale);
         g->translate(pos.x + this->fTextOffset,
@@ -353,7 +353,7 @@ void SongButton::triggerContextMenu(vec2 pos) {
     cmenu->clampToBottomScreenEdge();
 }
 
-void SongButton::onContextMenu(const UString &text, int id) {
+void SongButton::onContextMenu(std::string_view text, int id) {
     assert(g_songbrowser->contextMenu);
     auto *cmenu{g_songbrowser->contextMenu};
 
@@ -420,7 +420,7 @@ void SongButton::onContextMenu(const UString &text, int id) {
     }
 }
 
-void SongButton::onAddToCollectionConfirmed(const UString &text, int id) {
+void SongButton::onAddToCollectionConfirmed(std::string_view text, int id) {
     assert(g_songbrowser->contextMenu);
     auto *cmenu{g_songbrowser->contextMenu};
 
@@ -456,7 +456,7 @@ void SongButton::onAddToCollectionConfirmed(const UString &text, int id) {
     }
 }
 
-void SongButton::onCreateNewCollectionConfirmed(const UString &text, int id) {
+void SongButton::onCreateNewCollectionConfirmed(std::string_view text, int id) {
     if(id == -2 || id == -4) {
         // just forward it
         g_songbrowser->onSongButtonContextMenu(this, text, id);

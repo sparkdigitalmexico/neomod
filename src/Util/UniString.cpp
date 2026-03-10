@@ -10,6 +10,7 @@
 #include <cassert>
 #include <utility>
 #include <new>
+#include <type_traits>
 
 namespace UniString {
 
@@ -78,18 +79,19 @@ inline std::pair<uSz, simdutf::encoding_type> get_bom_and_encoding(const u8 *dat
 
 }  // namespace
 
-std::string to_utf8(const u8 *arbitrarily_encoded_data, uSz size) {
+std::string to_utf8(const char *arbitrarily_encoded_data, uSz size) {
     if(unlikely(!arbitrarily_encoded_data || size == 0)) return {};
 
     // detect encoding with BOM support
-    const auto [bom_pfx_bytes, detected] = get_bom_and_encoding(arbitrarily_encoded_data, size);
+    const auto [bom_pfx_bytes, detected] =
+        get_bom_and_encoding(reinterpret_cast<const u8 *>(arbitrarily_encoded_data), size);
 
     const uSz in_bytes = size - bom_pfx_bytes;
     if(in_bytes == 0) {
         return {};
     }
 
-    const u8 *src_start = &(arbitrarily_encoded_data[bom_pfx_bytes]);
+    const u8 *src_start = &(reinterpret_cast<const u8 *>(arbitrarily_encoded_data)[bom_pfx_bytes]);
 
     std::string ret;
     if(detected == simdutf::encoding_type::unspecified || detected == simdutf::encoding_type::UTF8) {
@@ -153,9 +155,7 @@ std::string to_utf8(const u8 *arbitrarily_encoded_data, uSz size) {
     return ret;
 }
 
-std::string to_utf8(std::string_view maybe_utf8) {
-    return to_utf8(reinterpret_cast<const u8 *>(maybe_utf8.data()), maybe_utf8.size());
-}
+std::string to_utf8(std::string_view maybe_utf8) { return to_utf8(maybe_utf8.data(), maybe_utf8.size()); }
 
 std::string to_utf8(std::u16string_view utf16) {
     if(utf16.empty()) return {};
@@ -216,5 +216,96 @@ std::u32string to_utf32(std::u16string_view utf16) {
     });
     return ret;
 }
+
+std::string to_utf8(std::wstring_view wide) {
+    if(wide.empty()) return {};
+    std::string ret;
+#if WCHAR_MAX <= 0xFFFF
+    const uSz out_u8_len =
+        simdutf::utf8_length_from_utf16(reinterpret_cast<const char16_t *>(wide.data()), wide.size());
+    ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
+        return simdutf::convert_utf16_to_utf8(reinterpret_cast<const char16_t *>(wide.data()), wide.size(), data);
+    });
+#else
+    const uSz out_u8_len =
+        simdutf::utf8_length_from_utf32(reinterpret_cast<const char32_t *>(wide.data()), wide.size());
+    ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
+        return simdutf::convert_utf32_to_utf8(reinterpret_cast<const char32_t *>(wide.data()), wide.size(), data);
+    });
+#endif
+    return ret;
+}
+
+std::wstring to_wide(std::string_view utf8) {
+    if(utf8.empty()) return {};
+    std::wstring ret;
+#if WCHAR_MAX <= 0xFFFF
+    const uSz out_u16_len = simdutf::utf16_length_from_utf8(utf8.data(), utf8.size());
+    ret.resize_and_overwrite(out_u16_len, [&](wchar_t *data, uSz /* size */) -> uSz {
+        return simdutf::convert_utf8_to_utf16(utf8.data(), utf8.size(), reinterpret_cast<char16_t *>(data));
+    });
+#else
+    const uSz out_u32_len = simdutf::utf32_length_from_utf8(utf8.data(), utf8.size());
+    ret.resize_and_overwrite(out_u32_len, [&](wchar_t *data, uSz /* size */) -> uSz {
+        return simdutf::convert_utf8_to_utf32(utf8.data(), utf8.size(), reinterpret_cast<char32_t *>(data));
+    });
+#endif
+    return ret;
+}
+
+u8codepoint_view::u8codepoint_view(std::string_view sv) : m_sv(sv) {}
+
+char32_t u8codepoint_view::iterator::operator*() const {
+    char32_t c = pos[0];
+    if(c < 0x80) return c;
+    if(c < 0xE0) return (c & 0x1F) << 6 | (pos[1] & 0x3F);
+    if(c < 0xF0) return (c & 0x0F) << 12 | (pos[1] & 0x3F) << 6 | (pos[2] & 0x3F);
+    return (c & 0x07) << 18 | (pos[1] & 0x3F) << 12 | (pos[2] & 0x3F) << 6 | (pos[3] & 0x3F);
+}
+
+u8codepoint_view::iterator &u8codepoint_view::iterator::operator++() {
+    if(pos[0] < 0x80)
+        pos += 1;
+    else if(pos[0] < 0xE0)
+        pos += 2;
+    else if(pos[0] < 0xF0)
+        pos += 3;
+    else
+        pos += 4;
+
+    return *this;
+}
+
+bool u8codepoint_view::iterator::operator==(const iterator &o) const { return pos == o.pos; }
+
+u8codepoint_view::iterator u8codepoint_view::begin() const { return {reinterpret_cast<const u8 *>(m_sv.data())}; }
+
+u8codepoint_view::iterator u8codepoint_view::end() const {
+    return {reinterpret_cast<const u8 *>(m_sv.data() + m_sv.size())};
+}
+
+u16codepoint_view::u16codepoint_view(std::u16string_view sv) : m_sv(sv) {}
+
+char32_t u16codepoint_view::iterator::operator*() const {
+    if(*pos >= 0xD800 && *pos <= 0xDBFF) return 0x10000 + (char32_t(*pos - 0xD800) << 10) + (pos[1] - 0xDC00);
+    return *pos;
+}
+
+u16codepoint_view::iterator &u16codepoint_view::iterator::operator++() {
+    pos += (*pos >= 0xD800 && *pos <= 0xDBFF) ? 2 : 1;
+    return *this;
+}
+
+bool u16codepoint_view::iterator::operator==(const iterator &o) const { return pos == o.pos; }
+
+u16codepoint_view::iterator u16codepoint_view::begin() const {
+    return {m_sv.data() /* NOLINT(bugprone-suspicious-stringview-data-usage) */};
+}
+
+u16codepoint_view::iterator u16codepoint_view::end() const { return {m_sv.data() + m_sv.size()}; }
+
+[[nodiscard]] u8codepoint_view codepoints(std::string_view sv) { return u8codepoint_view{sv}; }
+
+[[nodiscard]] u16codepoint_view codepoints(std::u16string_view sv) { return u16codepoint_view{sv}; }
 
 }  // namespace UniString

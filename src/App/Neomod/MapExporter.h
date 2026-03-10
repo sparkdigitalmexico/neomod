@@ -4,7 +4,6 @@
 
 #include "AsyncCancellable.h"
 #include "AsyncChannel.h"
-#include "UString.h"
 
 #include <functional>
 #include <vector>
@@ -38,7 +37,7 @@ struct ExportContext {
 };
 
 struct Notification {
-    UString msg;
+    std::string msg;
     bool success;
     std::function<void()> click_cb;
 };

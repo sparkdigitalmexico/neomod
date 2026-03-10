@@ -23,7 +23,6 @@
 #include "Engine.h"
 #include "Logging.h"
 #include "Font.h"
-#include "UString.h"
 #include "VertexArrayObject.h"
 #include "Environment.h"
 #include "SString.h"
@@ -706,7 +705,7 @@ void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float ed
     }
 }
 
-void SDLGPUInterface::drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow) {
+void SDLGPUInterface::drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow) {
     if(font == nullptr || text.length() < 1 || !font->isReady()) return;
 
     this->updateTransform();

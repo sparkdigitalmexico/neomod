@@ -4,7 +4,6 @@
 #include "AsyncCancellable.h"
 #include "LegacyReplay.h"
 #include "Overrides.h"
-#include "UString.h"
 #include "SyncMutex.h"
 
 #include "Hashing.h"
@@ -58,7 +57,7 @@ class Database final {
     NOCOPY_NOMOVE(Database)
    public:
     struct PlayerStats {
-        UString name;
+        std::string name;
         float pp;
         float accuracy;
         int level;
@@ -111,8 +110,8 @@ class Database final {
     void deleteScore(const FinishedScore &scoreToDelete);
     static void sortScoresInPlace(std::vector<FinishedScore> &scores);
 
-    PlayerPPScores getPlayerPPScores(const std::string &playerName);
-    PlayerStats calculatePlayerStats(const std::string &playerName);
+    PlayerPPScores getPlayerPPScores(std::string_view playerName);
+    PlayerStats calculatePlayerStats(std::string_view playerName);
     static float getWeightForIndex(int i);
     static float getBonusPPForNumScores(size_t numScores);
     static u64 getRequiredScoreForLevel(int level);

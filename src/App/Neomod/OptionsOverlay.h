@@ -30,7 +30,7 @@ class OptionsOverlay final : public ScreenBackable, public NotificationOverlayKe
 
     void openAndScrollToSkinSection();
 
-    void setUsername(UString username);
+    void setUsername(std::string username);
 
     bool isMouseInside() override;
     bool isBusy() override;

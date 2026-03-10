@@ -103,9 +103,7 @@ OnlineMapListing::OnlineMapListing(OsuDirectScreen* parent, Downloader::BeatmapS
     osu->getThumbnailManager()->request_image(this->thumb_id);
 }
 
-OnlineMapListing::~OnlineMapListing() {
-    osu->getThumbnailManager()->discard_image(this->thumb_id);
-}
+OnlineMapListing::~OnlineMapListing() { osu->getThumbnailManager()->discard_image(this->thumb_id); }
 
 void OnlineMapListing::onMouseDownInside(bool /*left*/, bool /*right*/) { this->mousedown_coords = mouse->getPos(); }
 
@@ -196,7 +194,7 @@ void OnlineMapListing::update(CBaseUIEventCtx& c) {
             this->downloading = false;
 
             std::string mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", this->meta.set_id);
-            const auto *set = db->addBeatmapSet(mapset_path, this->meta.set_id);
+            const auto* set = db->addBeatmapSet(mapset_path, this->meta.set_id);
             if(set) {
                 this->installed = true;
 
@@ -394,13 +392,13 @@ void OsuDirectScreen::update(CBaseUIEventCtx& c) {
     ScreenBackable::update(c);
 
     if(this->search_bar->hitEnter()) {
-        if(this->current_query == this->search_bar->getText().utf8View() && this->loading) {
+        if(this->current_query == this->search_bar->getText() && this->loading) {
             // We're already searching for the current query, don't cancel the request
             return;
         }
 
         this->reset();
-        this->search(this->search_bar->getText().utf8View());
+        this->search(this->search_bar->getText());
         return;
     }
 
@@ -540,7 +538,7 @@ void OsuDirectScreen::search(std::string_view query) {
 
                     if(nb_results == -1 && set_lines.size() >= 2) {
                         // Relay server's error message to the player
-                        ui->getNotificationOverlay()->addToast(set_lines[1], ERROR_TOAST);
+                        ui->getNotificationOverlay()->addToast(std::string{set_lines[1]}, ERROR_TOAST);
                     }
 
                     return;

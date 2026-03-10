@@ -1,10 +1,15 @@
 #pragma once
 // Copyright (c) 2014, PG, All rights reserved.
-#include "Delegate.h"
-#include "UString.h"
 #include "types.h"
+#include "noinclude.h"
+
+#include "Delegate.h"
 
 #include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <array>
 
 #define SOUND_ENGINE_TYPE(ClassName, TypeID, ParentClass)               \
     static constexpr TypeId TYPE_ID = TypeID;                           \
@@ -38,7 +43,7 @@ class SoundEngine {
         bool isInit{false};
         bool enabled{true};
         bool isDefault{false};
-        UString name{"Default"};
+        std::string name{"Default"};
         OutputDriver driver{OutputDriver::NONE};
     };
 
@@ -102,7 +107,7 @@ class SoundEngine {
     // call this once app init is done, i.e. configs are read, so convar callbacks aren't spuriously fired during init
     virtual void allowInternalCallbacks() { ; }
 
-    [[nodiscard]] inline const UString &getOutputDeviceName() const { return this->currentOutputDevice.name; }
+    [[nodiscard]] inline std::string_view getOutputDeviceName() const { return this->currentOutputDevice.name; }
     [[nodiscard]] constexpr auto getOutputDriverType() const { return this->currentOutputDevice.driver; }
     [[nodiscard]] constexpr float getVolume() const { return this->fMasterVolume; }
 

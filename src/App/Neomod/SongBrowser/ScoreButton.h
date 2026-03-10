@@ -24,7 +24,7 @@ class UIContextMenu;
 class ScoreButton final : public CBaseUIButton {
     NOCOPY_NOMOVE(ScoreButton)
    public:
-    static UString getModsStringForDisplay(const Replay::Mods &mods);
+    static std::string getModsStringForDisplay(const Replay::Mods &mods);
 
     enum class STYLE : uint8_t { SONG_BROWSER, TOP_RANKS };
     ScoreButton() = delete;
@@ -39,14 +39,14 @@ class ScoreButton final : public CBaseUIButton {
     void resetHighlight();
 
     void setScore(const FinishedScore &score, const DatabaseBeatmap *map, int index = 1,
-                  const UString &titleString = {}, float weight = 1.0f);
+                  std::string titleString = {}, float weight = 1.0f);
     void setIndex(int index) { this->iScoreIndexNumber = index; }
 
     [[nodiscard]] inline const FinishedScore &getScore() const { return *this->storedScore; }
     [[nodiscard]] u64 getScoreUnixTimestamp() const;
     [[nodiscard]] u64 getScoreScore() const;
 
-    [[nodiscard]] inline const UString &getDateTime() const { return this->sScoreDateTime; }
+    [[nodiscard]] inline std::string_view getDateTime() const { return this->sScoreDateTime; }
     [[nodiscard]] inline int getIndex() const { return this->iScoreIndexNumber; }
 
     void onMouseInside() override;
@@ -58,15 +58,15 @@ class ScoreButton final : public CBaseUIButton {
     void onClicked(bool left = true, bool right = false) override;
 
    private:
-    static UString recentScoreIconString;
+    static std::string recentScoreIconString;
 
     void updateElapsedTimeString();
 
     void onRightMouseUpInside();
-    void onContextMenu(const UString &text, int id = -1);
+    void onContextMenu(std::string_view text, int id = -1);
     void onUseModsClicked();
     void onDeleteScoreClicked();
-    void onDeleteScoreConfirmed(const UString &text, int id);
+    void onDeleteScoreConfirmed(std::string_view text, int id);
 
     bool isContextMenuVisible();
 
@@ -75,24 +75,24 @@ class ScoreButton final : public CBaseUIButton {
 
     // STYLE::SCORE_BROWSER
     // TODO: clean up this mess of confusing variable/names
-    UString sScoreTime;
-    UString sScoreUsername;
-    UString sFmtedScoreScoreWithCombo;
-    UString sFmtedScorePPWithCombo;
-    UString sScoreAccuracy;
-    UString sScoreAccuracyFC;
-    UString sFmtedScoreAccuracyWithCombo;
-    UString sScoreMods;
-    UString sCustom;
+    std::string sScoreTime;
+    std::string sScoreUsername;
+    std::string sFmtedScoreScoreWithCombo;
+    std::string sFmtedScorePPWithCombo;
+    std::string sScoreAccuracy;
+    std::string sScoreAccuracyFC;
+    std::string sFmtedScoreAccuracyWithCombo;
+    std::string sScoreMods;
+    std::string sCustom;
 
     // STYLE::TOP_RANKS
-    UString sScoreTitle;
-    UString sScoreScorePPWeightedPP;
-    UString sScoreScorePPWeightedWeight;
-    UString sScoreWeight;
+    std::string sScoreTitle;
+    std::string sScoreScorePPWeightedPP;
+    std::string sScoreScorePPWeightedWeight;
+    std::string sScoreWeight;
 
-    std::vector<UString> tooltipLines;
-    UString sScoreDateTime;
+    std::vector<std::string> tooltipLines;
+    std::string sScoreDateTime;
 
     // score data
     std::unique_ptr<FinishedScore> storedScore;

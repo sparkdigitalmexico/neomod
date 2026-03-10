@@ -42,7 +42,7 @@ CarouselButton::CarouselButton(float xPos, float yPos, float xSize, float ySize,
     this->rect.setSize(vec::ceil(baseSize * scale));
 }
 
-CarouselButton::CarouselButton(float xPos, float yPos, float xSize, float ySize, UString name)
+CarouselButton::CarouselButton(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setHandleRightMouse(true);
 
@@ -318,9 +318,12 @@ void CarouselButton::setMoveAwayState(CarouselButton::MOVE_AWAY_STATE moveAwaySt
                 this->fHoverMoveAwayAnimation = 0.0f;
             else {
                 this->bWasAnimationEverStarted = true;
-                this->fHoverMoveAwayAnimation.set(0.f, 0.7f, anim::QuartOut,
-                                                 this->isMouseInside() ? 0.0f : 0.05f);  // add a tiny bit of delay to avoid jerky movement if the cursor is briefly
-                                           // between songbuttons while moving
+                this->fHoverMoveAwayAnimation.set(
+                    0.f, 0.7f, anim::QuartOut,
+                    this->isMouseInside()
+                        ? 0.0f
+                        : 0.05f);  // add a tiny bit of delay to avoid jerky movement if the cursor is briefly
+                                   // between songbuttons while moving
             }
         } break;
 

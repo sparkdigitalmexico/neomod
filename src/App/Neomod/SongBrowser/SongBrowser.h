@@ -146,8 +146,8 @@ class SongBrowser final : public ScreenBackable {
     void onDifficultySelected(DatabaseBeatmap *map, bool play = false);
 
     void onScoreContextMenu(ScoreButton *scoreButton, int id);
-    void onSongButtonContextMenu(SongButton *songButton, const UString &text, int id);
-    void onCollectionButtonContextMenu(CollectionButton *collectionButton, const UString &text, int id);
+    void onSongButtonContextMenu(SongButton *songButton, std::string_view text, int id);
+    void onCollectionButtonContextMenu(CollectionButton *collectionButton, std::string_view text, int id);
 
     void highlightScore(const FinishedScore &scoreToHighlight);
     void selectRandomBeatmap();
@@ -242,17 +242,17 @@ class SongBrowser final : public ScreenBackable {
 
     void onFilterScoresClicked(CBaseUIButton *button);
     static constexpr int LOGIN_STATE_FILTER_ID{100};
-    void onFilterScoresChange(const UString &text, int id = -1);
+    void onFilterScoresChange(std::string_view text, int id = -1);
     void onSortScoresClicked(CBaseUIButton *button);
-    void onSortScoresChange(const UString &text, int id = -1);
+    void onSortScoresChange(std::string_view text, int id = -1);
     void onWebClicked(CBaseUIButton *button);
 
     void onQuickGroupClicked(CBaseUIButton *button, bool left = true, bool right = false);
     void onGroupClicked(CBaseUIButton *button);
-    void onGroupChange(const UString &text, int id = -1);
+    void onGroupChange(std::string_view text, int id = -1);
 
     void onSortClicked(CBaseUIButton *button);
-    void onSortChange(const UString &text, int id = -1);
+    void onSortChange(std::string_view text, int id = -1);
 
     void rebuildAfterGroupOrSortChange(GroupType group, const std::optional<SortType> &sortMethod = std::nullopt);
     void rebucketDifficultyCollections();
@@ -357,7 +357,7 @@ class SongBrowser final : public ScreenBackable {
 
     CollBtnContainer collectionButtons;
 
-    UString sLastOsuFolder;
+    std::string sLastOsuFolder;
 
     // keys
     bool bF1Pressed;

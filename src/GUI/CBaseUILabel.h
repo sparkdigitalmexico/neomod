@@ -2,14 +2,13 @@
 // Copyright (c) 2014, PG, All rights reserved.
 #include "CBaseUIElement.h"
 #include "Color.h"
-#include "UString.h"
 class McFont;
 
 class CBaseUILabel : public CBaseUIElement {
     NOCOPY_NOMOVE(CBaseUILabel)
    public:
-    CBaseUILabel(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = {},
-                 const UString &text = {});
+    CBaseUILabel(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {},
+                 std::string text = {});
     ~CBaseUILabel() override = default;
 
     void draw() override;
@@ -47,8 +46,8 @@ class CBaseUILabel : public CBaseUIElement {
         this->shadowColor = shadowColor;
         return this;
     }
-    CBaseUILabel *setText(const UString &text) {
-        this->sText = text;
+    CBaseUILabel *setText(std::string text) {
+        this->sText = std::move(text);
         this->updateStringMetrics();
         return this;
     }
@@ -80,7 +79,7 @@ class CBaseUILabel : public CBaseUIElement {
     [[nodiscard]] inline Color getBackgroundColor() const { return this->backgroundColor; }
     [[nodiscard]] inline Color getTextColor() const { return this->textColor; }
     [[nodiscard]] inline McFont *getFont() const { return this->font; }
-    [[nodiscard]] inline const UString &getText() const { return this->sText; }
+    [[nodiscard]] inline std::string_view getText() const { return this->sText; }
 
     void onResized() override { this->updateStringMetrics(); }
 
@@ -89,7 +88,7 @@ class CBaseUILabel : public CBaseUIElement {
 
     void updateStringMetrics();
 
-    UString sText;
+    std::string sText;
     McFont *font;
 
     float fStringWidth{0.f};

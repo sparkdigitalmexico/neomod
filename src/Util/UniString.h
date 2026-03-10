@@ -10,7 +10,7 @@ namespace UniString {
 [[nodiscard]] uSz num_codepoints(std::u16string_view utf16);
 [[nodiscard]] uSz num_codepoints(std::u32string_view utf32);
 
-[[nodiscard]] std::string to_utf8(const u8* arbitrarily_encoded_data, uSz size);
+[[nodiscard]] std::string to_utf8(const char *arbitrarily_encoded_data, uSz size);
 [[nodiscard]] std::string to_utf8(std::string_view maybe_utf8);
 [[nodiscard]] std::string to_utf8(std::u16string_view utf16);
 [[nodiscard]] std::string to_utf8(std::u32string_view utf32);
@@ -20,5 +20,41 @@ namespace UniString {
 
 [[nodiscard]] std::u32string to_utf32(std::string_view utf8);
 [[nodiscard]] std::u32string to_utf32(std::u16string_view utf16);
+
+[[nodiscard]] std::string to_utf8(std::wstring_view wide);
+[[nodiscard]] std::wstring to_wide(std::string_view utf8);
+
+// codepoint iteration (input must be valid)
+class u8codepoint_view {
+    std::string_view m_sv;
+   public:
+    explicit u8codepoint_view(std::string_view sv);
+    struct iterator {
+        const u8 *pos;
+        char32_t operator*() const;
+        iterator &operator++();
+        [[nodiscard]] bool operator==(const iterator &o) const;
+    };
+    [[nodiscard]] iterator begin() const;
+    [[nodiscard]] iterator end() const;
+};
+
+class u16codepoint_view {
+    std::u16string_view m_sv;
+   public:
+    explicit u16codepoint_view(std::u16string_view sv);
+    struct iterator {
+        const char16_t *pos;
+        char32_t operator*() const;
+        iterator &operator++();
+        [[nodiscard]] bool operator==(const iterator &o) const;
+    };
+    [[nodiscard]] iterator begin() const;
+    [[nodiscard]] iterator end() const;
+};
+
+[[nodiscard]] u8codepoint_view codepoints(std::string_view sv);
+[[nodiscard]] u16codepoint_view codepoints(std::u16string_view sv);
+
 
 }  // namespace UniString

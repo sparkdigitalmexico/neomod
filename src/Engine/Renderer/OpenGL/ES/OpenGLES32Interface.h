@@ -41,7 +41,7 @@ class OpenGLES32Interface : public ModernGraphicsShared {
     // 2d resource drawing
     void drawImage(const Image *image, AnchorPoint anchor = AnchorPoint::CENTER, float edgeSoftness = 0.0f,
                    McRect clipRect = {}) final;
-    void drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow = std::nullopt) final;
+    void drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) final;
 
     // 3d type drawing
     void drawVAO(VertexArrayObject *vao) final;

@@ -12,7 +12,7 @@
 #include "Graphics.h"
 
 UIPauseMenuButton::UIPauseMenuButton(BasicSkinImageGetter imageGetter, float xPos, float yPos, float xSize, float ySize,
-                                     UString name)
+                                     std::string name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name)), imageGetter(std::move(imageGetter)) {}
 
 UIPauseMenuButton::~UIPauseMenuButton() = default;
@@ -53,12 +53,12 @@ void UIPauseMenuButton::onMouseInside() {
 
     if(auto *skin = osu->getSkin()) {
         Sound *toPlay = nullptr;
-        const UString &name = this->getName();
-        if(name == US_("Resume")) {
+        std::string_view name = this->getName();
+        if(name == "Resume") {
             toPlay = skin->s_hover_pause_continue;
-        } else if(name == US_("Retry")) {
+        } else if(name == "Retry") {
             toPlay = skin->s_hover_pause_retry;
-        } else if(name == US_("Quit")) {
+        } else if(name == "Quit") {
             toPlay = skin->s_hover_pause_back;
         }
         soundEngine->play(toPlay);

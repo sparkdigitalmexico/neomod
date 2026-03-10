@@ -42,10 +42,12 @@
 #include "UICheckbox.h"
 #include "UIModSelectorModButton.h"
 #include "UISlider.h"
+#include "UniString.h"
 
 class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
    public:
-    ModSelectorOverrideSliderDescButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    ModSelectorOverrideSliderDescButton(float xPos, float yPos, float xSize, float ySize, std::string name,
+                                        std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
     void update(CBaseUIEventCtx &c) override {
@@ -62,7 +64,7 @@ class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
         }
     }
 
-    void setTooltipText(UString tooltipText) { this->sTooltipText = std::move(tooltipText); }
+    void setTooltipText(std::string tooltipText) { this->sTooltipText = std::move(tooltipText); }
 
    private:
     void drawText() override {
@@ -84,14 +86,15 @@ class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
         }
     }
 
-    UString sTooltipText;
+    std::string sTooltipText;
 };
 
 namespace {
 
 class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
    public:
-    ModSelectorOverrideSliderLockButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    ModSelectorOverrideSliderLockButton(float xPos, float yPos, float xSize, float ySize, std::string name,
+                                        std::string text)
         : CBaseUICheckbox(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {
         this->fAnim = 1.0f;
     }
@@ -100,8 +103,10 @@ class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
         if(!this->bVisible) return;
 
         const auto icon = (this->bChecked ? Icons::LOCK : Icons::UNLOCK);
-        UString iconString;
-        iconString.insert(0, icon);
+
+        std::string iconString;
+        const char32_t charray[]{icon, U'\0'};
+        iconString.append(UniString::to_utf8(std::u32string_view{&charray[0]}));
 
         McFont *iconFont = osu->getFontIcons();
         const float scale = (this->getSize().y / iconFont->getHeight()) * this->fAnim;
@@ -269,10 +274,10 @@ ModSelector::ModSelector() : UIScreen() {
     this->addBaseUIElement(this->scoreMultiplierLabel);
 
     // build action buttons
-    this->resetModsButton = this->addActionButton(US_("1. Reset All Mods"));
+    this->resetModsButton = this->addActionButton("1. Reset All Mods");
     this->resetModsButton->setColor(0xffc62b00);
     this->resetModsButton->setClickCallback(SA::MakeDelegate<&ModSelector::resetModsUserInitiated>(this));
-    this->closeButton = this->addActionButton(US_("2. Close"));
+    this->closeButton = this->addActionButton("2. Close");
     this->closeButton->setClickCallback(SA::MakeDelegate<&ModSelector::close>(this));
     this->closeButton->setColor(0xff636363);
 
@@ -283,7 +288,7 @@ ModSelector::ModSelector() : UIScreen() {
 void ModSelector::updateButtons(bool initial) {
     using SkinImageGetter = UIModSelectorModButton::SkinImageGetter;
     static auto setGridModbtn = [](UIModSelectorModButton *modButton, int state, bool initialState, ConVar *modCvar,
-                                   UString modName, const UString &tooltipText,
+                                   std::string modName, std::string_view tooltipText,
                                    SkinImageGetter skinImageGetter) -> UIModSelectorModButton * {
         if(modButton != nullptr) {
             modButton->setState(state, initialState, modCvar, std::move(modName), tooltipText,
@@ -320,22 +325,22 @@ void ModSelector::updateButtons(bool initial) {
     {
         const bool nce = cv::nightcore_enjoyer.getBool();
         // clang-format off
-        const UString HTTooltip            = nce ? US_("A E S T H E T I C") : US_("Less zoom.");
-        const UString HTName               = nce ? US_("dc")                : US_("ht");
+        std::string_view HTTooltip          = nce ? "A E S T H E T I C" : "Less zoom.";
+        std::string HTName             = nce ? "dc"                : "ht";
         const SkinImageGetter HTMember = nce ?
                                          MKIMGGETR(i_modselect_dc) :
                                          MKIMGGETR(i_modselect_ht);
 
-        const UString DTTooltip            = nce ? US_("uguuuuuuuu")     : US_("Zoooooooooom.");
-        const UString DTName               = nce ? US_("nc")             : US_("dt");
+        std::string_view DTTooltip          = nce ? "uguuuuuuuu"     : "Zoooooooooom.";
+        std::string DTName             = nce ? "nc"             : "dt";
         const SkinImageGetter DTMember = nce ?
                                          MKIMGGETR(i_modselect_nc) :
                                          MKIMGGETR(i_modselect_dt);
         // clang-format on
         this->modButtonHT = setGridModbtn(this->getGridButton(HT_POS), 0, initial && cv::mod_halftime_dummy.getBool(),
-                                          &cv::mod_halftime_dummy, HTName, HTTooltip, HTMember);
+                                          &cv::mod_halftime_dummy, std::move(HTName), HTTooltip, HTMember);
         this->modButtonDT = setGridModbtn(this->getGridButton(DT_POS), 0, initial && cv::mod_doubletime_dummy.getBool(),
-                                          &cv::mod_doubletime_dummy, DTName, DTTooltip, DTMember);
+                                          &cv::mod_doubletime_dummy, std::move(DTName), DTTooltip, DTMember);
     }
 
     this->modButtonHD = setGridModbtn(this->getGridButton(HD_POS), 0, initial && osu->getModHD(), &cv::mod_hidden, "hd",
@@ -513,7 +518,7 @@ void ModSelector::draw() {
         {
             const float dpiScale = Osu::getUIScale();
 
-            static const UString experimentalText = US_("Experimental Mods");
+            static constexpr std::string_view experimentalText = "Experimental Mods";
             McFont *experimentalFont = osu->getSubTitleFont();
 
             const float experimentalTextWidth = experimentalFont->getStringWidth(experimentalText);
@@ -1022,8 +1027,8 @@ void ModSelector::updateExperimentalLayout() {
     expCont->setVisible(!BanchoState::is_in_a_multi_room());
 }
 
-ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(UString text, const UString &labelText, ConVar *cvar,
-                                                            float min, float max, UString tooltipText,
+ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(std::string text, std::string labelText, ConVar *cvar,
+                                                            float min, float max, std::string tooltipText,
                                                             ConVar *lockCvar) {
     const float height = 25;
 
@@ -1035,7 +1040,7 @@ ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(UString text, const 
     os.desc = new ModSelectorOverrideSliderDescButton(0.f, 0.f, 100.f, height, "", std::move(text));
     os.desc->setTooltipText(std::move(tooltipText));
     os.slider = new UISlider(0.f, 0.f, 100.f, height, "");
-    os.label = new CBaseUILabel(0.f, 0.f, 100.f, height, labelText, labelText);
+    os.label = new CBaseUILabel(0.f, 0.f, 100.f, height, labelText, std::move(labelText));
     os.cvar = cvar;
     os.lockCvar = lockCvar;
 
@@ -1069,16 +1074,16 @@ ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(UString text, const 
     return os;
 }
 
-UIButton *ModSelector::addActionButton(const UString &text) {
-    auto *actionButton = new UIButton(50, 50, 100, 100, text, text);
+UIButton *ModSelector::addActionButton(std::string text) {
+    auto *actionButton = new UIButton(50, 50, 100, 100, text, std::move(text));
     this->actionButtons.push_back(actionButton);
     this->addBaseUIElement(actionButton);
 
     return actionButton;
 }
 
-CBaseUILabel *ModSelector::addExperimentalLabel(const UString &text) {
-    auto *label = new CBaseUILabel(0, 0, 0, 25, text, text);
+CBaseUILabel *ModSelector::addExperimentalLabel(std::string text) {
+    auto *label = new CBaseUILabel(0, 0, 0, 25, text, std::move(text));
     label->setFont(osu->getSubTitleFont());
     label->setWidthToContent(0);
     label->setDrawBackground(false);
@@ -1093,8 +1098,8 @@ CBaseUILabel *ModSelector::addExperimentalLabel(const UString &text) {
     return label;
 }
 
-UICheckbox *ModSelector::addExperimentalCheckbox(const UString &text, const UString &tooltipText, ConVar *cvar) {
-    auto *checkbox = new UICheckbox(0, 0, 0, 35, text, text);
+UICheckbox *ModSelector::addExperimentalCheckbox(std::string text, std::string_view tooltipText, ConVar *cvar) {
+    auto *checkbox = new UICheckbox(0, 0, 0, 35, text, std::move(text));
     checkbox->setTooltipText(tooltipText);
     checkbox->setWidthToContent(0);
     if(cvar != nullptr) {
@@ -1248,7 +1253,7 @@ void ModSelector::onOverrideSliderChange(CBaseUISlider *slider) {
 
             // HACKHACK: dirty
             if(beatmap) {
-                if(overrideSlider.label->getName().find(US_("BPM")) != -1) {
+                if(overrideSlider.label->getName().find("BPM") != std::string_view::npos) {
                     // reset AR and OD override sliders if the bpm slider was reset
                     if(!this->ARLock->isChecked()) this->ARSlider->setValue(0.0f, false);
                     if(!this->ODLock->isChecked()) this->ODSlider->setValue(0.0f, false);
@@ -1262,7 +1267,7 @@ void ModSelector::onOverrideSliderChange(CBaseUISlider *slider) {
             }
         } else {
             // HACKHACK: dirty
-            if(overrideSlider.label->getName().find(US_("BPM")) != -1) {
+            if(overrideSlider.label->getName().find("BPM") != std::string_view::npos) {
                 // HACKHACK: force Speed/BPM slider to have a min value of 0.05 instead of 0 (because that's the
                 // minimum for BASS) note that the BPM slider is just a 'fake' slider, it directly controls the
                 // speed slider to do its thing (thus it needs the same limits)
@@ -1374,11 +1379,11 @@ void ModSelector::updateOverrideSliderLabels() {
     }
 }
 
-UString ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLIDER &s, bool active) {
+std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLIDER &s, bool active) {
     float convarValue = s.cvar->getFloat();
     const auto *mapIface = osu->getMapInterface();
 
-    UString newLabelText = s.label->getName();
+    std::string newLabelText{s.label->getName()};
     if(const BeatmapDifficulty *beatmap = mapIface->getBeatmap()) {
         // for relevant values (AR/OD), any non-1.0x speed multiplier should show the fractional parts caused by such a
         // speed multiplier (same for non-1.0x difficulty multiplier)
@@ -1389,10 +1394,10 @@ UString ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLID
         // HACKHACK: dirty
         bool wasSpeedSlider = false;
         float beatmapValue = 1.0f;
-        if(s.label->getName().find(US_("CS")) != -1) {
+        if(s.label->getName().find("CS") != std::string_view::npos) {
             beatmapValue = std::clamp<float>(beatmap->getCS() * Osu::getCSDifficultyMultiplier(), 0.0f, 10.0f);
             convarValue = mapIface->getCS();
-        } else if(s.label->getName().find(US_("AR")) != -1) {
+        } else if(s.label->getName().find("AR") != std::string_view::npos) {
             beatmapValue =
                 active ? mapIface->getRawARForSpeedMultiplier() : mapIface->getApproachRateForSpeedMultiplier();
 
@@ -1402,7 +1407,7 @@ UString ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLID
                 convarValue = std::round(convarValue * 10.0f) / 10.0f;
             else
                 convarValue = std::round(convarValue * 100.0f) / 100.0f;
-        } else if(s.label->getName().find(US_("OD")) != -1) {
+        } else if(s.label->getName().find("OD") != std::string_view::npos) {
             beatmapValue =
                 active ? mapIface->getRawODForSpeedMultiplier() : mapIface->getOverallDifficultyForSpeedMultiplier();
 
@@ -1412,10 +1417,10 @@ UString ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLID
                 convarValue = std::round(convarValue * 10.0f) / 10.0f;
             else
                 convarValue = std::round(convarValue * 100.0f) / 100.0f;
-        } else if(s.label->getName().find(US_("HP")) != -1) {
+        } else if(s.label->getName().find("HP") != std::string_view::npos) {
             beatmapValue = std::clamp<float>(beatmap->getHP() * Osu::getDifficultyMultiplier(), 0.0f, 10.0f);
             convarValue = mapIface->getHP();
-        } else if(s.desc->getText().find(US_("Speed")) != -1) {
+        } else if(s.desc->getText().find("Speed") != std::string_view::npos) {
             beatmapValue = active ? 1.f : mapIface->getSpeedMultiplier();
 
             wasSpeedSlider = true;
@@ -1454,7 +1459,7 @@ UString ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLID
 
         // always round beatmapValue to 1 decimal digit, except for the speed slider, and except for non-1.0x speed
         // multipliers, and except for non-1.0x difficulty multipliers HACKHACK: dirty
-        if(s.desc->getText().find(US_("Speed")) == -1) {
+        if(s.desc->getText().find("Speed") == std::string_view::npos) {
             if(forceDisplayTwoDecimalDigits)
                 beatmapValue = std::round(beatmapValue * 100.0f) / 100.0f;
             else

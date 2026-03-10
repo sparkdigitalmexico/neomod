@@ -4,18 +4,18 @@
 
 class UIIcon final : public CBaseUILabel {
    public:
-    UIIcon(char16_t icon);
+    UIIcon(char32_t icon);
 
     void update(CBaseUIEventCtx &c) override;
-    void setTooltipText(const UString& text);
+    void setTooltipText(std::string_view text);
 
     // debugging
-    [[nodiscard]] inline UString getTooltipText() const { return UString::join(this->tooltipTextLines, "\n"); }
+    [[nodiscard]] std::string getTooltipText() const;
 
    private:
     void onFocusStolen() override;
 
-    std::vector<UString> tooltipTextLines;
+    std::vector<std::string> tooltipTextLines;
 
     bool bFocusStolenDelay{false};
 };

@@ -70,19 +70,19 @@ class ModSelector final : public UIScreen {
         ConVar *cvar{nullptr};
     };
 
-    OVERRIDE_SLIDER addOverrideSlider(UString text, const UString &labelText, ConVar *cvar, float min, float max,
-                                      UString tooltipText = {}, ConVar *lockCvar = nullptr);
+    OVERRIDE_SLIDER addOverrideSlider(std::string text, std::string labelText, ConVar *cvar, float min, float max,
+                                      std::string tooltipText = {}, ConVar *lockCvar = nullptr);
     void onOverrideSliderChange(CBaseUISlider *slider);
     void onOverrideSliderLockChange(CBaseUICheckbox *checkbox);
     void onOverrideARSliderDescClicked(CBaseUIButton *button);
     void onOverrideODSliderDescClicked(CBaseUIButton *button);
-    UString getOverrideSliderLabelText(const OVERRIDE_SLIDER &s, bool active);
+    std::string getOverrideSliderLabelText(const OVERRIDE_SLIDER &s, bool active);
 
-    CBaseUILabel *addExperimentalLabel(const UString &text);
-    UICheckbox *addExperimentalCheckbox(const UString &text, const UString &tooltipText, ConVar *cvar = nullptr);
+    CBaseUILabel *addExperimentalLabel(std::string text);
+    UICheckbox *addExperimentalCheckbox(std::string text, std::string_view tooltipText, ConVar *cvar = nullptr);
     void onCheckboxChange(CBaseUICheckbox *checkbox);
 
-    UIButton *addActionButton(const UString &text);
+    UIButton *addActionButton(std::string text);
 
     void close(bool force);
 

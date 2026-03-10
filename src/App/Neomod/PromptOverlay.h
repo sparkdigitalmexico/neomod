@@ -19,8 +19,8 @@ class PromptOverlay final : public UIScreen {
     void onKeyUp(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;
 
-    using PromptResponseCallback = SA::delegate<void(const UString &)>;
-    void prompt(const UString &msg, const PromptResponseCallback &callback);
+    using PromptResponseCallback = SA::delegate<void(std::string_view )>;
+    void prompt(std::string msg, const PromptResponseCallback &callback);
 
    private:
     void on_ok();

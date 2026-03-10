@@ -181,7 +181,7 @@ class Graphics {
     // 2d resource drawing
     virtual void drawImage(const Image *image, AnchorPoint anchor = AnchorPoint::CENTER, float edgeSoftness = 0.0f,
                            McRect clipRect = {}) = 0;
-    virtual void drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow = std::nullopt) = 0;
+    virtual void drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) = 0;
 
     // 3d type drawing
     virtual void drawVAO(VertexArrayObject *vao) = 0;
@@ -231,9 +231,9 @@ class Graphics {
     // renderer info
     [[nodiscard]] virtual const char *getName() const = 0;
     [[nodiscard]] virtual vec2 getResolution() const = 0;
-    virtual UString getVendor() = 0;
-    virtual UString getModel() = 0;
-    virtual UString getVersion() = 0;
+    virtual std::string getVendor() = 0;
+    virtual std::string getModel() = 0;
+    virtual std::string getVersion() = 0;
     virtual int getVRAMTotal() = 0;
     virtual int getVRAMRemaining() = 0;
 

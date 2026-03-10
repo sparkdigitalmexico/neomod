@@ -4,16 +4,16 @@
 
 class UICheckbox final : public CBaseUICheckbox {
    public:
-    UICheckbox(float xPos, float yPos, float xSize, float ySize, UString name, UString text);
+    UICheckbox(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text);
 
     void update(CBaseUIEventCtx &c) override;
 
-    void setTooltipText(const UString& text);
+    void setTooltipText(std::string_view text);
 
    private:
     void onFocusStolen() override;
 
-    std::vector<UString> tooltipTextLines;
+    std::vector<std::string> tooltipTextLines;
 
     bool bFocusStolenDelay;
 };

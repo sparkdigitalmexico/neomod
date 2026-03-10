@@ -28,7 +28,7 @@ u32 layeredScrollsHandledInFrame{0};
 using ScrollContainer = CBaseUIScrollView::CBaseUIScrollView::CBaseUIScrollViewContainer;
 }  // namespace
 
-ScrollContainer::CBaseUIScrollViewContainer(float Xpos, float Ypos, float Xsize, float Ysize, UString name)
+ScrollContainer::CBaseUIScrollViewContainer(float Xpos, float Ypos, float Xsize, float Ysize, std::string name)
     : CBaseUIContainer(Xpos, Ypos, Xsize, Ysize, std::move(name)) {}
 
 ScrollContainer::~CBaseUIScrollViewContainer() = default;
@@ -137,8 +137,8 @@ bool ScrollContainer::isActive() {
     return false;
 }
 
-CBaseUIScrollView::CBaseUIScrollView(f32 xPos, f32 yPos, f32 xSize, f32 ySize, const UString &name)
-    : CBaseUIElement(xPos, yPos, xSize, ySize, name), container(xPos, yPos, xSize, ySize, name) {
+CBaseUIScrollView::CBaseUIScrollView(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name)
+    : CBaseUIElement(xPos, yPos, xSize, ySize, name), container(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setGrabClicks(true);
 
     this->iScrollResistance = cv::ui_scrollview_resistance.getInt();  // TODO: dpi handling

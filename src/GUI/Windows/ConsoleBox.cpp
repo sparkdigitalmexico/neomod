@@ -17,21 +17,22 @@
 #include "Environment.h"
 #include "Keyboard.h"
 #include "Graphics.h"
+#include "SString.h"
 #include "MakeDelegateWrapper.h"
 #include "Mouse.h"
 #include "Timing.h"
 
 class ConsoleBoxTextbox : public CBaseUITextbox {
    public:
-    ConsoleBoxTextbox(float xPos, float yPos, float xSize, float ySize, UString name)
+    ConsoleBoxTextbox(float xPos, float yPos, float xSize, float ySize, std::string name)
         : CBaseUITextbox(xPos, yPos, xSize, ySize, std::move(name)) {}
 
-    void setSuggestion(UString suggestion) { this->sSuggestion = std::move(suggestion); }
+    void setSuggestion(std::string suggestion) { this->sSuggestion = std::move(suggestion); }
 
    protected:
     void drawText() override {
         if(cv::consolebox_draw_preview.getBool()) {
-            if(this->sSuggestion.length() > 0 && this->sSuggestion.startsWith(this->sText)) {
+            if(this->sSuggestion.length() > 0 && this->sSuggestion.starts_with(this->sText)) {
                 g->setColor(0xff444444);
                 g->pushTransform();
                 {
@@ -47,13 +48,13 @@ class ConsoleBoxTextbox : public CBaseUITextbox {
     }
 
    private:
-    UString sSuggestion;
+    std::string sSuggestion;
 };
 
 class ConsoleBoxSuggestionButton : public CBaseUIButton {
    public:
-    ConsoleBoxSuggestionButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text,
-                               UString helpText, const ConsoleBoxTextbox *const textbox)
+    ConsoleBoxSuggestionButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text,
+                               std::string helpText, const ConsoleBoxTextbox *const textbox)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), cboxtbox(textbox) {
         this->sHelpText = std::move(helpText);
     }
@@ -64,7 +65,7 @@ class ConsoleBoxSuggestionButton : public CBaseUIButton {
 
         if(cv::consolebox_draw_helptext.getBool()) {
             if(this->sHelpText.length() > 0) {
-                const UString helpTextSeparator = "-";
+                const std::string helpTextSeparator = "-";
                 const int helpTextOffset = std::round(2.0f * this->font->getStringWidth(helpTextSeparator) *
                                                       ((float)this->font->getDPI() / 96.0f));  // NOTE: abusing font dpi
                 const int helpTextSeparatorStringWidth =
@@ -97,7 +98,7 @@ class ConsoleBoxSuggestionButton : public CBaseUIButton {
 
    private:
     const ConsoleBoxTextbox *const cboxtbox;
-    UString sHelpText;
+    std::string sHelpText;
 };
 
 ConsoleBox::ConsoleBox() : CBaseUIElement(0, 0, 0, 0, ""), fConsoleDelay(engine->getTime() + 0.2f) {
@@ -235,7 +236,7 @@ void ConsoleBox::update(CBaseUIEventCtx &c) {
     const bool mleft = mouse->isLeftDown();
 
     if(this->textbox->hitEnter()) {
-        this->processCommand(this->textbox->getText().toUtf8());
+        this->processCommand(this->textbox->getText());
         Logger::flush();  // make sure it's output immediately
         this->textbox->clear();
         this->textbox->setSuggestion("");
@@ -335,13 +336,13 @@ void ConsoleBox::update(CBaseUIEventCtx &c) {
 }
 
 void ConsoleBox::onSuggestionClicked(CBaseUIButton *suggestion) {
-    UString text = suggestion->getName();
+    std::string text{suggestion->getName()};
 
-    ConVar *temp = cvars().getConVarByName(text.toUtf8(), false);
+    ConVar *temp = cvars().getConVarByName(text, false);
     if(temp != nullptr && (temp->canHaveValue() || temp->hasAnyNonVoidCallback())) text.append(" ");
 
     this->textbox->setSuggestion("");
-    this->textbox->setText(text);
+    this->textbox->setText(std::move(text));
     this->textbox->setCursorPosRight();
     this->textbox->setActive(true);
 }
@@ -370,13 +371,13 @@ void ConsoleBox::onKeyDown(KeyboardEvent &e) {
                 this->iSelectedSuggestion--;
 
             if(this->iSelectedSuggestion > -1 && this->iSelectedSuggestion < this->vSuggestionButtons.size()) {
-                UString command = this->vSuggestionButtons[this->iSelectedSuggestion]->getName();
+                std::string command{this->vSuggestionButtons[this->iSelectedSuggestion]->getName()};
 
-                ConVar *temp = cvars().getConVarByName(command.toUtf8(), false);
+                ConVar *temp = cvars().getConVarByName(command, false);
                 if(temp != nullptr && (temp->canHaveValue() || temp->hasAnyNonVoidCallback())) command.append(" ");
 
                 this->textbox->setSuggestion("");
-                this->textbox->setText(command);
+                this->textbox->setText(std::move(command));
                 this->textbox->setCursorPosRight();
                 this->suggestion->scrollToElement(this->vSuggestionButtons[this->iSelectedSuggestion]);
 
@@ -397,13 +398,13 @@ void ConsoleBox::onKeyDown(KeyboardEvent &e) {
                 this->iSelectedSuggestion++;
 
             if(this->iSelectedSuggestion > -1 && this->iSelectedSuggestion < this->vSuggestionButtons.size()) {
-                UString command = this->vSuggestionButtons[this->iSelectedSuggestion]->getName();
+                std::string command{this->vSuggestionButtons[this->iSelectedSuggestion]->getName()};
 
-                ConVar *temp = cvars().getConVarByName(command.toUtf8(), false);
+                ConVar *temp = cvars().getConVarByName(command, false);
                 if(temp != nullptr && (temp->canHaveValue() || temp->hasAnyNonVoidCallback())) command.append(" ");
 
                 this->textbox->setSuggestion("");
-                this->textbox->setText(command);
+                this->textbox->setText(std::move(command));
                 this->textbox->setCursorPosRight();
                 this->suggestion->scrollToElement(this->vSuggestionButtons[this->iSelectedSuggestion]);
 
@@ -428,9 +429,9 @@ void ConsoleBox::onKeyDown(KeyboardEvent &e) {
                 this->iSelectedHistory++;
 
             if(this->iSelectedHistory > -1 && this->iSelectedHistory < this->commandHistory.size()) {
-                UString text{this->commandHistory[this->iSelectedHistory]};
+                std::string text{this->commandHistory[this->iSelectedHistory]};
                 this->textbox->setSuggestion("");
-                this->textbox->setText(text);
+                this->textbox->setText(std::move(text));
                 this->textbox->setCursorPosRight();
             }
 
@@ -442,9 +443,9 @@ void ConsoleBox::onKeyDown(KeyboardEvent &e) {
                 this->iSelectedHistory--;
 
             if(this->iSelectedHistory > -1 && this->iSelectedHistory < this->commandHistory.size()) {
-                UString text{this->commandHistory[this->iSelectedHistory]};
+                std::string text{this->commandHistory[this->iSelectedHistory]};
                 this->textbox->setSuggestion("");
-                this->textbox->setText(text);
+                this->textbox->setText(std::move(text));
                 this->textbox->setCursorPosRight();
             }
 
@@ -463,9 +464,9 @@ void ConsoleBox::onChar(KeyboardEvent &e) {
         // rebuild suggestion list
         this->clearSuggestions();
 
-        std::vector<ConVar *> suggestions = cvars().getConVarByLetter(this->textbox->getText().toUtf8());
+        std::vector<ConVar *> suggestions = cvars().getConVarByLetter(this->textbox->getText());
         for(const auto *suggestion : suggestions) {
-            UString suggestionText{suggestion->getName()};
+            std::string suggestionText{suggestion->getName()};
 
             if(suggestion->canHaveValue()) {
                 switch(suggestion->getType()) {
@@ -493,7 +494,7 @@ void ConsoleBox::onChar(KeyboardEvent &e) {
                         break;
                 }
             }
-            this->addSuggestion(suggestionText, suggestion->getHelpstring(), suggestion->getName());
+            this->addSuggestion(std::move(suggestionText), suggestion->getHelpstring(), suggestion->getName());
         }
         this->suggestion->setVisible(suggestions.size() > 0);
 
@@ -501,7 +502,7 @@ void ConsoleBox::onChar(KeyboardEvent &e) {
             this->suggestion->scrollToElement(this->suggestion->container.getElements()[0]);
             this->textbox->setSuggestion(suggestions[0]->getName());
         } else
-            this->textbox->setSuggestion(u"");
+            this->textbox->setSuggestion(""s);
 
         this->iSelectedSuggestion = -1;
     }
@@ -519,14 +520,14 @@ void ConsoleBox::onResolutionChange(vec2 newResolution) {
     this->suggestion->setSizeX(newResolution.x - 10 * dpiScale);
 }
 
-void ConsoleBox::processCommand(const UString &command) {
+void ConsoleBox::processCommand(std::string_view command) {
     this->clearSuggestions();
     this->iSelectedHistory = -1;
 
     if(command.length() > 0) {
-        this->commandHistory.push_back(command);
+        this->commandHistory.emplace_back(command);
 
-        Console::processCommand(command.utf8View());
+        Console::processCommand(command);
     }
 }
 
@@ -538,7 +539,7 @@ bool ConsoleBox::isActive() {
     return (this->textbox->isActive() || this->suggestion->isActive()) && this->textbox->isVisible();
 }
 
-void ConsoleBox::addSuggestion(const UString &text, const UString &helpText, const UString &command) {
+void ConsoleBox::addSuggestion(std::string text, std::string helpText, std::string command) {
     const float dpiScale = this->getDPIScale();
 
     const int vsize = this->vSuggestionButtons.size() + 1;
@@ -618,25 +619,25 @@ void ConsoleBox::toggle(KeyboardEvent &e) {
     this->onResolutionChange(engine->getScreenSize());
 }
 
-void ConsoleBox::log(const UString &text, Color textColor) {
+void ConsoleBox::log(std::string_view text, Color textColor) {
     // lock is held by Logger::ConsoleBoxSink::flush_buffer_to_console
 
     // newlines must be stripped before being sent here (see Logging.cpp)
-    assert(!text.endsWith(u'\n') && !text.endsWith(u'\r') && "Console log strings can't end with a newline.");
+    assert(!text.ends_with('\n') && !text.ends_with('\r') && "Console log strings can't end with a newline.");
 
     // add log entry(ies, split on any newlines inside the string)
-    if(text.find(u'\n') != -1) {
-        auto stringVec = text.split(US_("\n"));
+    if(text.find('\n') != std::string_view::npos) {
+        auto stringVec = SString::split_newlines(text);
         this->log_entries.reserve(this->log_entries.size() + stringVec.size());
-        for(const auto &entry : stringVec) {
-            auto trimmed = entry.trim();
-            if(trimmed.isEmpty()) {
+        for(auto &entry : stringVec) {
+            SString::trim_inplace(entry);
+            if(entry.empty()) {
                 continue;
             }
-            this->log_entries.push_back({trimmed, textColor});
+            this->log_entries.emplace_back(std::string{entry}, textColor);
         }
     } else {
-        this->log_entries.push_back({text, textColor});
+        this->log_entries.emplace_back(std::string{text}, textColor);
     }
 
     const auto maxLines = cv::console_overlay_lines.getVal<size_t>();

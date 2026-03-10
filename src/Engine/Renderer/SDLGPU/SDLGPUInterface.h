@@ -15,7 +15,6 @@
 #include "ModernGraphicsShared.h"
 #include "Hashing.h"
 #include "SyncMutex.h"
-#include "UString.h"
 #include "CDynArray.h"
 
 #include <array>
@@ -73,7 +72,7 @@ class SDLGPUInterface final : public ModernGraphicsShared {
 
     // 2d resource drawing
     void drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) override;
-    void drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow = std::nullopt) override;
+    void drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) override;
 
     // 3d type drawing
     void drawVAO(VertexArrayObject *vao) override;
@@ -114,9 +113,9 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     [[nodiscard]] inline vec2 getResolution() const override { return m_viewport.size; }
 
     [[nodiscard]] inline const char *getName() const override { return m_rendererName.c_str(); }
-    [[nodiscard]] inline UString getVendor() override { return m_gpuVendor; }
-    [[nodiscard]] inline UString getModel() override { return m_gpuModel; }
-    [[nodiscard]] inline UString getVersion() override { return m_gpuDriverVersion; }
+    [[nodiscard]] inline std::string getVendor() override { return m_gpuVendor; }
+    [[nodiscard]] inline std::string getModel() override { return m_gpuModel; }
+    [[nodiscard]] inline std::string getVersion() override { return m_gpuDriverVersion; }
 
     // TODO? (how)
     [[nodiscard]] inline int getVRAMTotal() override { return 0; }
@@ -190,9 +189,9 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     SDL_PropertiesID m_devProps{0};
 
     std::string m_rendererName{"SDLGPUInterface"};
-    UString m_gpuVendor{US_("?")};
-    UString m_gpuModel{US_("?")};
-    UString m_gpuDriverVersion{US_("?")};
+    std::string m_gpuVendor{"?"};
+    std::string m_gpuModel{"?"};
+    std::string m_gpuDriverVersion{"?"};
 
     // shaders
     std::unique_ptr<SDLGPUShader> m_defaultShader{nullptr};

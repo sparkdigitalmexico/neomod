@@ -4,7 +4,6 @@
 #include "UIScreen.h"
 #include "MD5Hash.h"
 #include "types.h"
-#include "UString.h"
 
 #include <memory>
 #include <cassert>
@@ -28,7 +27,7 @@ using GameplayKeys = LegacyReplay::KeyFlags;
 enum class WinCondition : uint8_t;
 
 struct SCORE_ENTRY {
-    UString name;
+    std::string name;
     i32 entry_id = 0;
     i32 player_id = 0;
 
@@ -61,7 +60,7 @@ class HUD final : public UIScreen {
     void drawHitErrorBar(BeatmapInterface *pf);
     void drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitcircleDiameter);
     void drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitcircleDiameter, f32 borderSize);
-    void drawLoadingSmall(const UString &text);
+    void drawLoadingSmall(std::string_view text);
 
     struct SkinDigitDrawOpts {  // NOLINT
         u64 number;

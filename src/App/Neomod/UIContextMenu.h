@@ -18,7 +18,7 @@ class UIContextMenu final : public CBaseUIScrollView {
     void clampToRightScreenEdge();
 
    public:
-    UIContextMenu(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, const UString &name = {},
+    UIContextMenu(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {},
                   CBaseUIScrollView *parent = nullptr);
     ~UIContextMenu() override;
 
@@ -29,16 +29,16 @@ class UIContextMenu final : public CBaseUIScrollView {
     void onKeyDown(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;
 
-    using ButtonClickCallback = SA::delegate<void(const UString &, int)>;
+    using ButtonClickCallback = SA::delegate<void(std::string_view, int)>;
     void setClickCallback(ButtonClickCallback clickCallback) { this->clickCallback = std::move(clickCallback); }
 
     void begin(int minWidth = 0, bool bigStyle = false);
-    UIContextMenuButton *addButtonJustified(const UString &text, TEXT_JUSTIFICATION j = TEXT_JUSTIFICATION::CENTERED,
+    UIContextMenuButton *addButtonJustified(std::string text, TEXT_JUSTIFICATION j = TEXT_JUSTIFICATION::CENTERED,
                                             int id = -1);
-    inline UIContextMenuButton *addButton(const UString &text, int id = -1) {
-        return this->addButtonJustified(text, TEXT_JUSTIFICATION::LEFT, id);
+    inline UIContextMenuButton *addButton(std::string text, int id = -1) {
+        return this->addButtonJustified(std::move(text), TEXT_JUSTIFICATION::LEFT, id);
     };
-    UIContextMenuTextbox *addTextbox(const UString &text, int id = -1);
+    UIContextMenuTextbox *addTextbox(std::string text, int id = -1);
 
     enum class EndStyle : u8 {
         CLAMP_TOP = (1 << 0),
@@ -101,7 +101,7 @@ MAKE_FLAG_ENUM(UIContextMenu::EndStyle)
 class UIContextMenuButton final : public CBaseUIButton {
     NOCOPY_NOMOVE(UIContextMenuButton)
    public:
-    UIContextMenuButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text, int id);
+    UIContextMenuButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text, int id);
     ~UIContextMenuButton() override { ; }
 
     void update(CBaseUIEventCtx &c) override;
@@ -111,18 +111,18 @@ class UIContextMenuButton final : public CBaseUIButton {
 
     [[nodiscard]] inline int getID() const { return this->iID; }
 
-    void setTooltipText(const UString &text);
+    void setTooltipText(std::string_view text);
 
    private:
     int iID;
 
-    std::vector<UString> tooltipTextLines;
+    std::vector<std::string> tooltipTextLines;
 };
 
 class UIContextMenuTextbox final : public CBaseUITextbox {
     NOCOPY_NOMOVE(UIContextMenuTextbox)
    public:
-    UIContextMenuTextbox(float xPos, float yPos, float xSize, float ySize, UString name, int id);
+    UIContextMenuTextbox(float xPos, float yPos, float xSize, float ySize, std::string name, int id);
     ~UIContextMenuTextbox() override { ; }
 
     [[nodiscard]] inline int getID() const { return this->iID; }

@@ -17,8 +17,8 @@
 #include "MakeDelegateWrapper.h"
 #include "Graphics.h"
 
-CBaseUIWindow::CBaseUIWindow(float xPos, float yPos, float xSize, float ySize, const UString &name)
-    : CBaseUIElement(xPos, yPos, xSize, ySize, name) {
+CBaseUIWindow::CBaseUIWindow(float xPos, float yPos, float xSize, float ySize, std::string name)
+    : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     const float dpiScale = env->getDPIScale();
 
     int titleBarButtonSize = 13 * dpiScale;
@@ -30,8 +30,8 @@ CBaseUIWindow::CBaseUIWindow(float xPos, float yPos, float xSize, float ySize, c
     this->iTitleBarHeight = this->titleFont->getHeight() + 12 * dpiScale;
     if(this->iTitleBarHeight < titleBarButtonSize) this->iTitleBarHeight = titleBarButtonSize + 4 * dpiScale;
 
-    this->titleBarContainer =
-        new CBaseUIContainer(this->getPos().x, this->getPos().y, this->getSize().x, this->iTitleBarHeight, "titlebarcontainer");
+    this->titleBarContainer = new CBaseUIContainer(this->getPos().x, this->getPos().y, this->getSize().x,
+                                                   this->iTitleBarHeight, "titlebarcontainer");
 
     this->closeButton = new CBaseUIButton(
         this->getSize().x - titleBarButtonSize - (this->iTitleBarHeight - titleBarButtonSize) / 2.0f,
@@ -51,9 +51,9 @@ CBaseUIWindow::CBaseUIWindow(float xPos, float yPos, float xSize, float ySize, c
     this->titleBarContainer->addBaseUIElement(this->closeButton);
 
     // main container
-    this->container =
-        new CBaseUIContainer(this->getPos().x, this->getPos().y + this->titleBarContainer->getSize().y, this->getSize().x,
-                             this->getSize().y - this->titleBarContainer->getSize().y, "maincontainer");
+    this->container = new CBaseUIContainer(this->getPos().x, this->getPos().y + this->titleBarContainer->getSize().y,
+                                           this->getSize().x, this->getSize().y - this->titleBarContainer->getSize().y,
+                                           "maincontainer");
 
     // colors
     this->frameColor = 0xffffffff;
@@ -135,8 +135,8 @@ void CBaseUIWindow::draw() {
         // draw frame
         if(this->bDrawFrame) {
             if(this->frameDarkColor != 0 || this->frameBrightColor != 0)
-                g->drawRect(this->getPos(), this->getSize(), this->frameDarkColor,
-                            this->frameBrightColor, this->frameBrightColor, this->frameDarkColor);
+                g->drawRect(this->getPos(), this->getSize(), this->frameDarkColor, this->frameBrightColor,
+                            this->frameBrightColor, this->frameDarkColor);
             else {
                 g->setColor(/*m_bEnabled ? 0xffffff00 : */ this->frameColor);
                 g->drawRect(this->getPos(), this->getSize());
@@ -144,10 +144,12 @@ void CBaseUIWindow::draw() {
         }
 
         // draw window contents
-        g->pushClipRect(McRect(this->getPos().x + 1, this->getPos().y + 2, this->getSize().x - 1, this->getSize().y - 1));
+        g->pushClipRect(
+            McRect(this->getPos().x + 1, this->getPos().y + 2, this->getSize().x - 1, this->getSize().y - 1));
         {
             // draw main container
-            g->pushClipRect(McRect(this->getPos().x + 1, this->getPos().y + 2, this->getSize().x - 1, this->getSize().y - 1));
+            g->pushClipRect(
+                McRect(this->getPos().x + 1, this->getPos().y + 2, this->getSize().x - 1, this->getSize().y - 1));
             {
                 this->container->draw();
                 this->drawCustomContent();
@@ -163,8 +165,8 @@ void CBaseUIWindow::draw() {
             // draw title bar line
             if(this->bDrawTitleBarLine) {
                 g->setColor(this->frameColor);
-                g->drawLine(this->getPos().x, this->getPos().y + this->iTitleBarHeight, this->getPos().x + this->getSize().x,
-                            this->getPos().y + this->iTitleBarHeight);
+                g->drawLine(this->getPos().x, this->getPos().y + this->iTitleBarHeight,
+                            this->getPos().x + this->getSize().x, this->getPos().y + this->iTitleBarHeight);
             }
 
             // draw title
@@ -178,7 +180,8 @@ void CBaseUIWindow::draw() {
             g->popTransform();
 
             // draw title bar container
-            g->pushClipRect(McRect(this->getPos().x + 1, this->getPos().y + 2, this->getSize().x - 1, this->iTitleBarHeight));
+            g->pushClipRect(
+                McRect(this->getPos().x + 1, this->getPos().y + 2, this->getSize().x - 1, this->iTitleBarHeight));
             {
                 this->titleBarContainer->draw();
             }
@@ -247,10 +250,10 @@ void CBaseUIWindow::update(CBaseUIEventCtx &c) {
                 break;
             case RESIZETYPE::TOPLEFT:
                 this->setPos(
-                    std::clamp<float>(this->vLastPos.x + (mouse->getPos().x - this->vMousePosBackup.x), -this->getSize().x,
-                                      this->vLastPos.x + this->vLastSize.x - this->vResizeLimit.x),
-                    std::clamp<float>(this->vLastPos.y + (mouse->getPos().y - this->vMousePosBackup.y), -this->getSize().y,
-                                      this->vLastPos.y + this->vLastSize.y - this->vResizeLimit.y));
+                    std::clamp<float>(this->vLastPos.x + (mouse->getPos().x - this->vMousePosBackup.x),
+                                      -this->getSize().x, this->vLastPos.x + this->vLastSize.x - this->vResizeLimit.x),
+                    std::clamp<float>(this->vLastPos.y + (mouse->getPos().y - this->vMousePosBackup.y),
+                                      -this->getSize().y, this->vLastPos.y + this->vLastSize.y - this->vResizeLimit.y));
                 this->setSize(std::clamp<float>(this->vLastSize.x + (this->vMousePosBackup.x - mouse->getPos().x),
                                                 this->vResizeLimit.x, engine->getScreenWidth()),
                               std::clamp<float>(this->vLastSize.y + (this->vMousePosBackup.y - mouse->getPos().y),
@@ -328,7 +331,7 @@ void CBaseUIWindow::onChar(KeyboardEvent &e) {
     this->container->onChar(e);
 }
 
-CBaseUIWindow *CBaseUIWindow::setTitle(UString text) {
+CBaseUIWindow *CBaseUIWindow::setTitle(std::string text) {
     this->sTitle = std::move(text);
     this->updateTitleBarMetrics();
     return this;
@@ -361,17 +364,17 @@ void CBaseUIWindow::udpateResizeAndMoveLogic(bool captureMouse) {
         int resizeHandleSize = 5;
         McRect resizeTopLeft = McRect(this->getPos().x, this->getPos().y, resizeHandleSize, resizeHandleSize);
         McRect resizeLeft = McRect(this->getPos().x, this->getPos().y, resizeHandleSize, this->getSize().y);
-        McRect resizeBottomLeft =
-            McRect(this->getPos().x, this->getPos().y + this->getSize().y - resizeHandleSize, resizeHandleSize, resizeHandleSize);
-        McRect resizeBottom =
-            McRect(this->getPos().x, this->getPos().y + this->getSize().y - resizeHandleSize, this->getSize().x, resizeHandleSize);
+        McRect resizeBottomLeft = McRect(this->getPos().x, this->getPos().y + this->getSize().y - resizeHandleSize,
+                                         resizeHandleSize, resizeHandleSize);
+        McRect resizeBottom = McRect(this->getPos().x, this->getPos().y + this->getSize().y - resizeHandleSize,
+                                     this->getSize().x, resizeHandleSize);
         McRect resizeBottomRight =
-            McRect(this->getPos().x + this->getSize().x - resizeHandleSize, this->getPos().y + this->getSize().y - resizeHandleSize,
-                   resizeHandleSize, resizeHandleSize);
-        McRect resizeRight =
-            McRect(this->getPos().x + this->getSize().x - resizeHandleSize, this->getPos().y, resizeHandleSize, this->getSize().y);
-        McRect resizeTopRight =
-            McRect(this->getPos().x + this->getSize().x - resizeHandleSize, this->getPos().y, resizeHandleSize, resizeHandleSize);
+            McRect(this->getPos().x + this->getSize().x - resizeHandleSize,
+                   this->getPos().y + this->getSize().y - resizeHandleSize, resizeHandleSize, resizeHandleSize);
+        McRect resizeRight = McRect(this->getPos().x + this->getSize().x - resizeHandleSize, this->getPos().y,
+                                    resizeHandleSize, this->getSize().y);
+        McRect resizeTopRight = McRect(this->getPos().x + this->getSize().x - resizeHandleSize, this->getPos().y,
+                                       resizeHandleSize, resizeHandleSize);
         McRect resizeTop = McRect(this->getPos().x, this->getPos().y, this->getSize().x, resizeHandleSize);
 
         if(resizeTopLeft.contains(this->vMousePosBackup)) {

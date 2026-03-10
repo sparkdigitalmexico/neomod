@@ -257,7 +257,7 @@ bool BassSoundEngine::init_bass_mixer(const SoundEngine::OUTPUT_DEVICE &device) 
 }
 
 bool BassSoundEngine::initializeOutputDevice(const SoundEngine::OUTPUT_DEVICE &device) {
-    debugLog("BassSoundEngine: initializeOutputDevice( {:s} ) ...", device.name.toUtf8());
+    debugLog("BassSoundEngine: initializeOutputDevice( {:s} ) ...", device.name);
 
     this->shutdown();
 
@@ -265,7 +265,7 @@ bool BassSoundEngine::initializeOutputDevice(const SoundEngine::OUTPUT_DEVICE &d
         this->ready_since = -1.0;
         this->currentOutputDevice = device;
         cv::snd_output_device.setValue(this->currentOutputDevice.name);
-        debugLog("BassSoundEngine: Output Device = \"{:s}\"", this->currentOutputDevice.name.toUtf8());
+        debugLog("BassSoundEngine: Output Device = \"{:s}\"", this->currentOutputDevice.name);
 
         return true;
     }
@@ -406,7 +406,7 @@ bool BassSoundEngine::initializeOutputDevice(const SoundEngine::OUTPUT_DEVICE &d
     this->ready_since = engine->getTime();
     this->currentOutputDevice = device;
     cv::snd_output_device.setValue(this->currentOutputDevice.name);
-    debugLog("BassSoundEngine: Output Device = \"{:s}\"", this->currentOutputDevice.name.toUtf8());
+    debugLog("BassSoundEngine: Output Device = \"{:s}\"", this->currentOutputDevice.name);
 
     return true;
 }

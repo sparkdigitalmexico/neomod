@@ -8,8 +8,8 @@
 #include "Logging.h"
 #include "Graphics.h"
 #include "Font.h"
-#include "UString.h"
 #include "Image.h"
+#include "UniString.h"
 #include "VertexArrayObject.h"
 
 #include "CBaseUIButton.h"
@@ -18,7 +18,7 @@ namespace Mc::Tests {
 class FrameworkTestButton : public CBaseUIButton {
     NOCOPY_NOMOVE(FrameworkTestButton)
    public:
-    FrameworkTestButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
+    FrameworkTestButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
     ~FrameworkTestButton() override = default;
 
@@ -103,7 +103,7 @@ void BaseFrameworkTest::draw() {
     m_testButton->draw();
 
     // test text
-    UString testText = "It's working!";
+    std::string_view testText = "It's working!";
     g->push3DScene(McRect(800, 300, testFont->getStringWidth(testText), testFont->getHeight()));
     {
         g->rotate3DScene(0, engine->getTime() * 200, 0);
@@ -191,8 +191,9 @@ void BaseFrameworkTest::onKeyDown(KeyboardEvent &e) { debugLog("keyDown: {}", e.
 void BaseFrameworkTest::onKeyUp(KeyboardEvent &e) { debugLog("keyUp: {}", e.getScanCode()); }
 
 void BaseFrameworkTest::onChar(KeyboardEvent &e) {
-    const char16_t charray[]{e.getCharCode(), u'\0'};
-    debugLog("charCode: {}", UString{&charray[0]});
+    const char32_t code = e.getCharCode();
+    const char32_t charray[]{code, U'\0'};
+    debugLog("charCode: {}", UniString::to_utf8(std::u32string_view{charray}));
 }
 
 void BaseFrameworkTest::onButtonChange(ButtonEvent event) {

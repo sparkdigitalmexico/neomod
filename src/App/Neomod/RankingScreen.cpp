@@ -224,7 +224,7 @@ struct RankingScreen::RankingScreenImpl {
     float fHitErrorAvgMin;
     float fHitErrorAvgMax;
 
-    UString sMods;
+    std::string sMods;
     std::vector<SkinImage Skin::*> modImages;
     std::vector<ConVar *> extraMods;
 
@@ -263,11 +263,11 @@ void RankingScreen::draw() {
     // draw experimental mods
     if(m_impl->extraMods.size() > 0) {
         McFont *experimentalModFont = osu->getSubTitleFont();
-        const UString prefix = "+ ";
+        const std::string prefix = "+ ";
 
         float maxStringWidth = 0.0f;
         for(auto &enabledExperimentalMod : m_impl->extraMods) {
-            UString experimentalModName{enabledExperimentalMod->getName()};
+            std::string experimentalModName{enabledExperimentalMod->getName()};
             experimentalModName.insert(0, prefix);
             const float width = experimentalModFont->getStringWidth(experimentalModName);
             if(width > maxStringWidth) maxStringWidth = width;
@@ -291,7 +291,7 @@ void RankingScreen::draw() {
         {
             g->translate((int)experimentalModPos.x, (int)experimentalModPos.y);
             for(auto &enabledExperimentalMod : m_impl->extraMods) {
-                UString experimentalModName{enabledExperimentalMod->getName()};
+                std::string experimentalModName{enabledExperimentalMod->getName()};
                 experimentalModName.insert(0, prefix);
 
                 g->translate(1.5f, 1.5f);
@@ -308,7 +308,7 @@ void RankingScreen::draw() {
 
     // draw pp
     if(cv::rankingscreen_pp.getBool()) {
-        const UString ppString = this->getPPString();
+        const std::string ppString = this->getPPString();
         const vec2 ppPos = this->getPPPosRaw();
 
         g->pushTransform();
@@ -442,7 +442,7 @@ void RankingScreen::setScore(const FinishedScore &newscore) {
     m_impl->fHitErrorAvgMin = sc.hitErrorAvgMin;
     m_impl->fHitErrorAvgMax = sc.hitErrorAvgMax;
 
-    const UString modsString = ScoreButton::getModsStringForDisplay(sc.mods);
+    const std::string modsString = ScoreButton::getModsStringForDisplay(sc.mods);
     if(modsString.length() > 0) {
         m_impl->sMods = "Mods: ";
         m_impl->sMods.append(modsString);
@@ -592,17 +592,17 @@ void RankingScreen::setIndex(int index) {
     }
 }
 
-UString RankingScreen::getPPString() const {
+std::string RankingScreen::getPPString() const {
     f32 pp = m_impl->storedScore.get_pp();
     if(pp == -1.0f) {
-        return US_("");
+        return {};
     } else {
         return fmt::format("{:d}pp", (int)std::round(pp));
     }
 }
 
 vec2 RankingScreen::getPPPosRaw() const {
-    const UString ppString = this->getPPString();
+    const std::string ppString = this->getPPString();
     float ppStringWidth = osu->getTitleFont()->getStringWidth(ppString);
     return vec2(m_impl->rankingGrade->getPos().x, Osu::getRawUIScale() * 10.f) +
            vec2(m_impl->rankingGrade->getSize().x / 2 - (ppStringWidth / 2 + Osu::getRawUIScale() * 100.f),

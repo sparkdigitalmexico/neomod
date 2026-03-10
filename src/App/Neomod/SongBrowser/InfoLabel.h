@@ -7,7 +7,7 @@ class DatabaseBeatmap;
 
 class InfoLabel final : public CBaseUIButton {
    public:
-    InfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, UString name);
+    InfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name);
 
     void draw() override;
     void update(CBaseUIEventCtx &c) override;
@@ -47,9 +47,9 @@ class InfoLabel final : public CBaseUIButton {
     void updateScaling();
     [[nodiscard]] f32 getTitleFontRatio() const;
 
-    [[nodiscard]] UString buildSongInfoString() const;
-    [[nodiscard]] UString buildDiffInfoString() const;
-    [[nodiscard]] UString buildOffsetInfoString() const;
+    [[nodiscard]] std::string buildSongInfoString() const;
+    [[nodiscard]] std::string buildDiffInfoString() const;
+    [[nodiscard]] std::string buildOffsetInfoString() const;
 
     McFont *titleFont;
 

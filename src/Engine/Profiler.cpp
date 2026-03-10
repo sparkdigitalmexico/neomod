@@ -3,7 +3,6 @@
 
 #include "Engine.h"
 #include "Timing.h"
-#include "UString.h"
 
 ProfilerProfile g_profCurrentProfile(true);
 

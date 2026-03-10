@@ -20,6 +20,8 @@
 
 #include <cstring>
 
+using fmt::literals::operator""_cf;
+
 namespace cv {
 static ConVar vprof_sysinfo_refresh_interval("vprof_sysinfo_refresh_interval", 0.5f, CLIENT);
 }
@@ -121,9 +123,9 @@ void VisualProfiler::draw() {
                     const int vramTotalMB = g->getVRAMTotal() / 1024;
                     const int vramRemainingMB = g->getVRAMRemaining() / 1024;
 
-                    UString vendor = g->getVendor();
-                    UString model = g->getModel();
-                    UString version = g->getVersion();
+                    std::string vendor = g->getVendor();
+                    std::string model = g->getModel();
+                    std::string version = g->getVersion();
 
                     addTextLine(fmt::format("GPU Vendor: {:s}"_cf, vendor), textFont, this->textLines);
                     addTextLine(fmt::format("Model: {:s}"_cf, model), textFont, this->textLines);
@@ -149,45 +151,43 @@ void VisualProfiler::draw() {
 
                     const auto &[minfo, cinfo] = this->infoGatherer->getLatest();
 
-                    addTextLine(US_("CPU info:"), {}, textFont, this->textLines);
+                    addTextLine("CPU info:", {}, textFont, this->textLines);
 
-                    addTextLine(US_("Threads:"), fmt::format("{:d}"_cf, cinfo.threadCount), textFont, this->textLines);
+                    addTextLine("Threads:", fmt::format("{:d}"_cf, cinfo.threadCount), textFont, this->textLines);
 
-                    addTextLine(US_("CPU Usage:"), fmt::format("{:.2f}%"_cf, cinfo.cpuUsage), textFont,
+                    addTextLine("CPU Usage:", fmt::format("{:.2f}%"_cf, cinfo.cpuUsage), textFont, this->textLines);
+                    addTextLine("CPU Time (usr):", fmt::format("{:.2f}s"_cf, cinfo.userTime), textFont,
                                 this->textLines);
-                    addTextLine(US_("CPU Time (usr):"), fmt::format("{:.2f}s"_cf, cinfo.userTime), textFont,
-                                this->textLines);
-                    addTextLine(US_("CPU Time (krnl):"), fmt::format("{:.2f}s"_cf, cinfo.kernelTime), textFont,
+                    addTextLine("CPU Time (krnl):", fmt::format("{:.2f}s"_cf, cinfo.kernelTime), textFont,
                                 this->textLines);
 
-                    addTextLine(US_("CTXT (Vol.):"), fmt::format("{:d}"_cf, cinfo.voluntaryCtxSwitches), textFont,
+                    addTextLine("CTXT (Vol.):", fmt::format("{:d}"_cf, cinfo.voluntaryCtxSwitches), textFont,
                                 this->textLines);
-                    addTextLine(US_("CTXT (Invol.):"), fmt::format("{:d}"_cf, cinfo.involuntaryCtxSwitches), textFont,
+                    addTextLine("CTXT (Invol.):", fmt::format("{:d}"_cf, cinfo.involuntaryCtxSwitches), textFont,
                                 this->textLines);
 
                     addTextLine({}, textFont, this->textLines);
 
-                    addTextLine(US_("RAM info:"), {}, textFont, this->textLines);
-                    addTextLine(US_("Total Physical:"), fmt::format("{:d}MB"_cf, minfo.totalPhysical / (1024UL * 1024)),
+                    addTextLine("RAM info:", {}, textFont, this->textLines);
+                    addTextLine("Total Physical:", fmt::format("{:d}MB"_cf, minfo.totalPhysical / (1024UL * 1024)),
                                 textFont, this->textLines);
-                    addTextLine(US_("Avail Physical:"), fmt::format("{:d}MB"_cf, minfo.availPhysical / (1024UL * 1024)),
+                    addTextLine("Avail Physical:", fmt::format("{:d}MB"_cf, minfo.availPhysical / (1024UL * 1024)),
                                 textFont, this->textLines);
-                    addTextLine(US_("Total Virtual:"), fmt::format("{:d}MB"_cf, minfo.totalVirtual / (1024UL * 1024)),
+                    addTextLine("Total Virtual:", fmt::format("{:d}MB"_cf, minfo.totalVirtual / (1024UL * 1024)),
                                 textFont, this->textLines);
-                    addTextLine(US_("Usage (RSS):"), fmt::format("{:d}MB"_cf, minfo.currentRSS / (1024UL * 1024)),
-                                textFont, this->textLines);
-                    addTextLine(US_("Peak RSS:"), fmt::format("{:d}MB"_cf, minfo.peakRSS / (1024UL * 1024)), textFont,
+                    addTextLine("Usage (RSS):", fmt::format("{:d}MB"_cf, minfo.currentRSS / (1024UL * 1024)), textFont,
+                                this->textLines);
+                    addTextLine("Peak RSS:", fmt::format("{:d}MB"_cf, minfo.peakRSS / (1024UL * 1024)), textFont,
                                 this->textLines);
 
-                    addTextLine(US_("Virtual:"), fmt::format("{:d}MB"_cf, minfo.virtualSize / (1024UL * 1024)),
-                                textFont, this->textLines);
-                    addTextLine(US_("Private:"), fmt::format("{:d}MB"_cf, minfo.privateBytes / (1024UL * 1024)),
-                                textFont, this->textLines);
-                    addTextLine(US_("Shared:"), fmt::format("{:d}MB"_cf, minfo.sharedBytes / (1024UL * 1024)), textFont,
+                    addTextLine("Virtual:", fmt::format("{:d}MB"_cf, minfo.virtualSize / (1024UL * 1024)), textFont,
+                                this->textLines);
+                    addTextLine("Private:", fmt::format("{:d}MB"_cf, minfo.privateBytes / (1024UL * 1024)), textFont,
+                                this->textLines);
+                    addTextLine("Shared:", fmt::format("{:d}MB"_cf, minfo.sharedBytes / (1024UL * 1024)), textFont,
                                 this->textLines);
 
-                    addTextLine(US_("Page Faults:"), fmt::format("{:d}"_cf, minfo.pageFaults), textFont,
-                                this->textLines);
+                    addTextLine("Page Faults:", fmt::format("{:d}"_cf, minfo.pageFaults), textFont, this->textLines);
                 } break;
 
                 case INFO_BLADE_DISPLAY_MODE::ENGINE_INFO: {
@@ -286,7 +286,7 @@ void VisualProfiler::draw() {
                     {
                         const int leftTrans = engine->getScreenWidth() - largestLineWidth;
                         g->translate(leftTrans, 0);
-                        if(!this->textLines[i].textLeftAligned.isEmpty())
+                        if(!this->textLines[i].textLeftAligned.empty())
                             g->drawString(
                                 textFont, this->textLines[i].textLeftAligned,
                                 TextShadow{.col_text = textColor, .offs_px = std::round(1.f * env->getDPIScale())});
@@ -683,20 +683,20 @@ void VisualProfiler::decrementInfoBladeDisplayMode() {
         cv::vprof_display_mode.setValue(cv::vprof_display_mode.getInt() - 1);
 }
 
-void VisualProfiler::addInfoBladeEngineTextLine(const UString &text) {
+void VisualProfiler::addInfoBladeEngineTextLine(std::string text) {
     if(!cv::vprof.getBool() || !this->bVisible ||
        cv::vprof_display_mode.getVal<INFO_BLADE_DISPLAY_MODE>() != INFO_BLADE_DISPLAY_MODE::ENGINE_INFO)
         return;
 
-    this->engineTextLines.push_back(text);
+    this->engineTextLines.push_back(std::move(text));
 }
 
-void VisualProfiler::addInfoBladeAppTextLine(const UString &text) {
+void VisualProfiler::addInfoBladeAppTextLine(std::string text) {
     if(!cv::vprof.getBool() || !this->bVisible ||
        cv::vprof_display_mode.getVal<INFO_BLADE_DISPLAY_MODE>() != INFO_BLADE_DISPLAY_MODE::APP_INFO)
         return;
 
-    this->appTextLines.push_back(text);
+    this->appTextLines.push_back(std::move(text));
 }
 
 void VisualProfiler::setProfile(ProfilerProfile *profile) {
@@ -763,17 +763,18 @@ int VisualProfiler::getGraphWidth() { return (cv::vprof_graph_width.getFloat() *
 
 int VisualProfiler::getGraphHeight() { return (cv::vprof_graph_height.getFloat() * env->getDPIScale()); }
 
-void VisualProfiler::addTextLine(const UString &text, McFont *font, std::vector<TEXT_LINE> &textLines) {
-    textLines.push_back({.textLeftAligned = {},
-                         .textRightAligned = text,
-                         .widthLeft = 0,
-                         .widthRight = (int)font->getStringWidth(text)});
+void VisualProfiler::addTextLine(std::string text, McFont *font, std::vector<TEXT_LINE> &textLines) {
+    const int widthRight = (int)font->getStringWidth(text);
+    textLines.push_back(
+        {.textLeftAligned = {}, .textRightAligned{std::move(text)}, .widthLeft = 0, .widthRight = widthRight});
 }
 
-void VisualProfiler::addTextLine(const UString &textLeft, const UString &textRight, McFont *font,
+void VisualProfiler::addTextLine(std::string textLeft, std::string textRight, McFont *font,
                                  std::vector<TEXT_LINE> &textLines) {
-    textLines.push_back({.textLeftAligned = textLeft,
-                         .textRightAligned = textRight,
-                         .widthLeft = (int)(font->getStringWidth(textLeft) * 1.1f),  // spacing
-                         .widthRight = (int)font->getStringWidth(textRight)});
+    const int widthLeft = (int)(font->getStringWidth(textLeft) * 1.1f);  // spacing
+    const int widthRight = (int)font->getStringWidth(textRight);
+    textLines.push_back({.textLeftAligned{std::move(textLeft)},
+                         .textRightAligned{std::move(textRight)},
+                         .widthLeft = widthLeft,
+                         .widthRight = widthRight});
 }

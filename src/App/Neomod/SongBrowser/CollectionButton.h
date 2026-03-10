@@ -6,7 +6,7 @@
 class CollectionButton final : public CarouselButton {
     NOCOPY_NOMOVE(CollectionButton)
    public:
-    CollectionButton(float xPos, float yPos, float xSize, float ySize, UString name, const UString &collectionName,
+    CollectionButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string collectionName,
                      std::vector<SongButton *> children = {});
     ~CollectionButton() override = default;
 
@@ -27,9 +27,9 @@ class CollectionButton final : public CarouselButton {
     void onSelected(bool wasSelected, SelOpts opts) override;
     void onRightMouseUpInside() override;
 
-    void onContextMenu(const UString &text, int id = -1);
-    void onRenameCollectionConfirmed(const UString &text, int id = -1);
-    void onDeleteCollectionConfirmed(const UString &text, int id = -1);
+    void onContextMenu(std::string_view text, int id = -1);
+    void onRenameCollectionConfirmed(std::string_view text, int id = -1);
+    void onDeleteCollectionConfirmed(std::string_view text, int id = -1);
 
     std::string sCollectionName;
 

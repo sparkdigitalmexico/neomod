@@ -337,7 +337,7 @@ void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, floa
     }
 }
 
-void OpenGLES32Interface::drawString(McFont *font, const UString &text, std::optional<TextShadow> shadow) {
+void OpenGLES32Interface::drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow) {
     if(font == nullptr || text.length() < 1 || !font->isReady()) return;
 
     updateTransform();

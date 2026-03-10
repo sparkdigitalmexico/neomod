@@ -10,7 +10,7 @@ class DatabaseBeatmap;
 
 class UIRankingScreenInfoLabel final : public CBaseUIElement {
    public:
-    UIRankingScreenInfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, UString name);
+    UIRankingScreenInfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name);
 
     void draw() override;
 
@@ -27,7 +27,7 @@ class UIRankingScreenInfoLabel final : public CBaseUIElement {
     [[nodiscard]] f32 getMinimumHeight() const;
 
    private:
-    [[nodiscard]] UString buildPlayerString() const;
+    [[nodiscard]] std::string buildPlayerString() const;
 
     McFont *font;
 

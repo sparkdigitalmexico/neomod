@@ -43,14 +43,14 @@ class Lobby final : public UIScreen {
     // /!\ Side-effect: sends bancho packets when changing state
     CBaseUIContainer* setVisible(bool visible) override;
 
-    void joinRoom(u32 id, const UString& password);
+    void joinRoom(u32 id, std::string_view password);
     void updateRoom(const Room& room);
     void removeRoom(u32 room_id);
     void updateLayout(vec2 newResolution);
 
     void on_create_room_clicked();
 
-    void on_room_join_with_password(const UString& password);
+    void on_room_join_with_password(std::string_view password);
     void on_room_join_failed();
 
     std::vector<std::unique_ptr<Room>> rooms;

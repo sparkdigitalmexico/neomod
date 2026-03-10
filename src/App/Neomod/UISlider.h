@@ -4,7 +4,7 @@
 
 class UISlider final : public CBaseUISlider {
    public:
-    UISlider(float xPos, float yPos, float xSize, float ySize, UString name);
+    UISlider(float xPos, float yPos, float xSize, float ySize, std::string name);
 
     void draw() override;
 

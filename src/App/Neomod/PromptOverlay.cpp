@@ -95,8 +95,8 @@ void PromptOverlay::onChar(KeyboardEvent &e) {
     e.consume();
 }
 
-void PromptOverlay::prompt(const UString &msg, const PromptResponseCallback &callback) {
-    this->prompt_label->setText(msg);
+void PromptOverlay::prompt(std::string msg, const PromptResponseCallback &callback) {
+    this->prompt_label->setText(std::move(msg));
     this->prompt_input->setText("");
     this->prompt_input->focus();
     this->callback = callback;

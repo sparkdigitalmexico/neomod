@@ -19,12 +19,14 @@
 #include "SoundEngine.h"
 #include "Font.h"
 #include "Graphics.h"
+#include "SString.h"
 #include "Environment.h"
+#include "UniString.h"
 #include "crypto.h"
 
 // #include "Logging.h"
 
-CBaseUITextbox::CBaseUITextbox(float xPos, float yPos, float xSize, float ySize, UString name)
+CBaseUITextbox::CBaseUITextbox(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setKeepActive(true);
 
@@ -59,12 +61,12 @@ CBaseUITextbox::CBaseUITextbox(float xPos, float yPos, float xSize, float ySize,
     this->iCaretPosition = 0;
 }
 
-UString CBaseUITextbox::getVisibleText() {
+std::string CBaseUITextbox::getVisibleText() {
     if(this->is_password) {
-        UString stars;
-        for(int i = 0; i < this->sText.length(); i++) {
-            stars.append(L'*');
-        }
+        const uSz len = UniString::num_codepoints(this->sText);
+        std::string stars;
+        stars.resize(len);
+        std::fill_n(stars.begin(), len, '*');
         return stars;
     } else {
         return this->sText;
@@ -316,11 +318,11 @@ void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
                         // non-space character (but including it)
                         bool foundNonSpaceChar = false;
                         while(this->sText.length() > 0 && (this->iCaretPosition - 1) >= 0) {
-                            UString curChar = this->sText.substr(this->iCaretPosition - 1, 1);
+                            std::string curChar = this->sText.substr(this->iCaretPosition - 1, 1);
 
-                            if(foundNonSpaceChar && curChar.isWhitespaceOnly()) break;
+                            if(foundNonSpaceChar && SString::is_wspace_only(curChar)) break;
 
-                            if(!curChar.isWhitespaceOnly()) foundNonSpaceChar = true;
+                            if(!SString::is_wspace_only(curChar)) foundNonSpaceChar = true;
 
                             this->sText.erase(this->iCaretPosition - 1, 1);
                             this->iCaretPosition--;
@@ -444,7 +446,8 @@ void CBaseUITextbox::onChar(KeyboardEvent &e) {
 
     // add the pressed letter to the text
     {
-        this->sText.insert(this->iCaretPosition, e.getCharCode());
+        char32_t ch = e.getCharCode();
+        this->sText.insert(this->iCaretPosition, UniString::to_utf8(std::u32string_view{&ch, 1}));
         this->iCaretPosition++;
 
         this->setText(this->sText);
@@ -515,7 +518,7 @@ CBaseUITextbox *CBaseUITextbox::setFont(McFont *font) {
     return this;
 }
 
-CBaseUITextbox *CBaseUITextbox::setText(UString text) {
+CBaseUITextbox *CBaseUITextbox::setText(std::string text) {
     this->sText = std::move(text);
     this->iCaretPosition = std::clamp<int>(this->iCaretPosition, 0, this->sText.length());
 
@@ -567,7 +570,7 @@ void CBaseUITextbox::setCursorPosRight() {
 }
 
 void CBaseUITextbox::updateCaretX() {
-    UString text = this->getVisibleText().substr(0, this->iCaretPosition);
+    std::string text = this->getVisibleText().substr(0, this->iCaretPosition);
     this->iCaretX = this->font->getStringWidth(text);
 }
 
@@ -587,7 +590,7 @@ void CBaseUITextbox::handleDeleteSelectedText() {
 }
 
 void CBaseUITextbox::insertTextFromClipboard() {
-    const UString clipstring = env->getClipBoardText();
+    const std::string_view clipstring = env->getClipBoardText();
 
     /*
     debugLog("got clip string: {:s}", clipstring.toUtf8());
@@ -623,7 +626,7 @@ void CBaseUITextbox::deselectText() {
     this->iSelectEnd = 0;
 }
 
-UString CBaseUITextbox::getSelectedText() {
+std::string CBaseUITextbox::getSelectedText() {
     const int selectedTextLength = (this->iSelectStart < this->iSelectEnd ? this->iSelectEnd - this->iSelectStart
                                                                           : this->iSelectStart - this->iSelectEnd);
 

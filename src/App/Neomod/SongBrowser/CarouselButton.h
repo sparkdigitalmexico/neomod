@@ -32,7 +32,7 @@ class CarouselButton : public CBaseUIButton {
 
    public:
     CarouselButton(float xPos, float yPos, float xSize, float ySize, std::nullptr_t = {});
-    CarouselButton(float xPos, float yPos, float xSize, float ySize, UString name = {});
+    CarouselButton(float xPos, float yPos, float xSize, float ySize, std::string name = {});
     ~CarouselButton() override;
     void deleteAnimations();
 

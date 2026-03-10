@@ -46,12 +46,12 @@ static ConVar toast("toast", CLIENT | SERVER | NOLOAD | NOSAVE);
 }  // namespace cv::cmd
 
 void NotificationOverlay::onToastCallback(std::string_view args) {
-    this->addToast(args, INFO_TOAST);
+    this->addToast(std::string{args}, INFO_TOAST);
     cv::cmd::toast.setValue("", false);
 }
 
 void NotificationOverlay::onNotificationCallback(std::string_view args) {
-    this->addNotification(args);
+    this->addNotification(std::string{args});
     cv::cmd::notify.setValue("", false);
 }
 
@@ -79,7 +79,7 @@ static f32 TOAST_OUTER_Y_MARGIN{DEF_TOAST_OUTER_Y_MARGIN};
 static f32 TOAST_SCREEN_BOTTOM_MARGIN{DEF_TOAST_SCREEN_BOTTOM_MARGIN};
 static f32 TOAST_SCREEN_RIGHT_MARGIN{DEF_TOAST_SCREEN_RIGHT_MARGIN};
 
-ToastElement::ToastElement(UString text, Color borderColor, ToastElement::TYPE type)
+ToastElement::ToastElement(std::string text, Color borderColor, ToastElement::TYPE type)
     : CBaseUIButton(0.f, 0.f, 0.f, 0.f, "", std::move(text)), type(type) {
     this->setGrabClicks(true);
 
@@ -285,11 +285,11 @@ void NotificationOverlay::onChar(KeyboardEvent &e) {
     this->bConsumeNextChar = false;
 }
 
-void NotificationOverlay::addNotification(UString text, Color textColor, bool waitForKey, float duration) {
+void NotificationOverlay::addNotification(std::string text, Color textColor, bool waitForKey, float duration) {
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         // also log it
         // TODO: debug channels/separate files
-        debugLog(std::string{text.utf8View()});
+        debugLog(text);
     }
     const float notificationDuration = (duration < 0.0f ? cv::notification_duration.getFloat() : duration);
 
@@ -342,7 +342,7 @@ void NotificationOverlay::addToast(ToastOpts opts) {
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         // also log it
         // TODO: debug channels/separate files
-        debugLog(std::string{opts.text.utf8View()});
+        debugLog(opts.text);
     }
     auto toast = std::make_unique<ToastElement>(std::move(opts.text), opts.borderColor, opts.type);
     toast->setTimeout(opts.timeout);
