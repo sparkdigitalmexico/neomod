@@ -31,6 +31,7 @@
 #include "Osu.h"
 #include "RichPresence.h"
 #include "RoomScreen.h"
+#include "Graphics.h"
 #include "Skin.h"
 #include "SkinImage.h"
 #include "SongBrowser/SongBrowser.h"
@@ -86,6 +87,8 @@ class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
     UString sTooltipText;
 };
 
+namespace {
+
 class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
    public:
     ModSelectorOverrideSliderLockButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text)
@@ -131,6 +134,7 @@ class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
 
     AnimFloat fAnim;
 };
+}  // namespace
 
 ModSelector::ModSelector() : UIScreen() {
     const vec2 osuScreen = osu->getVirtScreenSize();
@@ -204,8 +208,9 @@ ModSelector::ModSelector() : UIScreen() {
     this->addExperimentalCheckbox("No keylock", "You can use 4 keys instead of only 2.", &cv::mod_no_keylock);
     this->addExperimentalCheckbox("Traceable", "Hitcircles are invisible. Good luck if you use this with Hidden!",
                                   &cv::mod_traceable);
-    this->addExperimentalCheckbox("Freeze Frame", "Draw all hitobjects in a combo group together. Try it with Hidden for an extra challenge!",
-                                  &cv::mod_freeze_frame);
+    this->addExperimentalCheckbox(
+        "Freeze Frame", "Draw all hitobjects in a combo group together. Try it with Hidden for an extra challenge!",
+        &cv::mod_freeze_frame);
     this->addExperimentalCheckbox("No pausing", "Pausing is cheating", &cv::mod_no_pausing);
     this->addExperimentalCheckbox(
         "FPoSu: Strafing", "Playfield moves in 3D space (see fposu_mod_strafing_...).\nOnly works in FPoSu mode!",
@@ -276,78 +281,97 @@ ModSelector::ModSelector() : UIScreen() {
 }
 
 void ModSelector::updateButtons(bool initial) {
-    this->modButtonEZ = this->setModButtonOnGrid(
-        EZ_POS, 0, initial && osu->getModEZ(), &cv::mod_easy, "ez",
-        "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.",
-        &Skin::i_modselect_ez);
-    this->modButtonNF = this->setModButtonOnGrid(
-        NF_POS, 0, initial && osu->getModNF(), &cv::mod_nofail, "nf",
-        "You can't fail. No matter what.\nNOTE: To disable drain completely:\nOptions > Gameplay > "
-        "Mechanics > \"Disable HP Drain\".",
-        &Skin::i_modselect_nf);
-    this->modButtonNM =
-        this->setModButtonOnGrid(NM_POS, 0, initial && osu->getModNightmare(), &cv::mod_nightmare, "nightmare",
-                                 "Unnecessary clicks count as misses.\nMassively reduced slider follow circle radius.",
-                                 &Skin::i_modselect_nightmare);
+    using SkinImageGetter = UIModSelectorModButton::SkinImageGetter;
+    static auto setGridModbtn = [](UIModSelectorModButton *modButton, int state, bool initialState, ConVar *modCvar,
+                                   UString modName, const UString &tooltipText,
+                                   SkinImageGetter skinImageGetter) -> UIModSelectorModButton * {
+        if(modButton != nullptr) {
+            modButton->setState(state, initialState, modCvar, std::move(modName), tooltipText,
+                                std::move(skinImageGetter));
+            modButton->setVisible(true);
+        }
 
-    this->modButtonHR = this->setModButtonOnGrid(HR_POS, 0, initial && osu->getModHR(), &cv::mod_hardrock, "hr",
-                                                 "Everything just got a bit harder...", &Skin::i_modselect_hr);
-    this->modButtonSDPF = this->setModButtonOnGrid(SDPF_POS, 0, initial && osu->getModSD(), &cv::mod_suddendeath, "sd",
-                                                   "Miss a note and fail.", &Skin::i_modselect_sd);
-    this->setModButtonOnGrid(SDPF_POS, 1, initial && osu->getModSS(), &cv::mod_perfect, "ss", "SS or quit.",
-                             &Skin::i_modselect_pf);
+        return modButton;
+    };
+
+#define MKIMGGETR(sipmr) SA::MakeDelegate([](const Skin *skin) -> const SkinImage * { return &(skin->*&Skin::sipmr); })
+
+    this->modButtonEZ =
+        setGridModbtn(this->getGridButton(EZ_POS), 0, initial && osu->getModEZ(), &cv::mod_easy, "ez",
+                      "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.",
+                      MKIMGGETR(i_modselect_ez));
+    this->modButtonNF =
+        setGridModbtn(this->getGridButton(NF_POS), 0, initial && osu->getModNF(), &cv::mod_nofail, "nf",
+                      "You can't fail. No matter what.\nNOTE: To disable drain completely:\nOptions > Gameplay > "
+                      "Mechanics > \"Disable HP Drain\".",
+                      MKIMGGETR(i_modselect_nf));
+    this->modButtonNM = setGridModbtn(
+        this->getGridButton(NM_POS), 0, initial && osu->getModNightmare(), &cv::mod_nightmare, "nightmare",
+        "Unnecessary clicks count as misses.\nMassively reduced slider follow circle radius.",
+        MKIMGGETR(i_modselect_nightmare));
+
+    this->modButtonHR = setGridModbtn(this->getGridButton(HR_POS), 0, initial && osu->getModHR(), &cv::mod_hardrock,
+                                      "hr", "Everything just got a bit harder...", MKIMGGETR(i_modselect_hr));
+    this->modButtonSDPF = setGridModbtn(this->getGridButton(SDPF_POS), 0, initial && osu->getModSD(),
+                                        &cv::mod_suddendeath, "sd", "Miss a note and fail.", MKIMGGETR(i_modselect_sd));
+    setGridModbtn(this->getGridButton(SDPF_POS), 1, initial && osu->getModSS(), &cv::mod_perfect, "ss", "SS or quit.",
+                  MKIMGGETR(i_modselect_pf));
 
     {
         const bool nce = cv::nightcore_enjoyer.getBool();
         // clang-format off
         const UString HTTooltip            = nce ? US_("A E S T H E T I C") : US_("Less zoom.");
         const UString HTName               = nce ? US_("dc")                : US_("ht");
-        const SkinImageSkinMember HTMember = nce ? &Skin::i_modselect_dc    : &Skin::i_modselect_ht;
+        const SkinImageGetter HTMember = nce ?
+                                         MKIMGGETR(i_modselect_dc) :
+                                         MKIMGGETR(i_modselect_ht);
 
         const UString DTTooltip            = nce ? US_("uguuuuuuuu")     : US_("Zoooooooooom.");
         const UString DTName               = nce ? US_("nc")             : US_("dt");
-        const SkinImageSkinMember DTMember = nce ? &Skin::i_modselect_nc : &Skin::i_modselect_dt;
+        const SkinImageGetter DTMember = nce ?
+                                         MKIMGGETR(i_modselect_nc) :
+                                         MKIMGGETR(i_modselect_dt);
         // clang-format on
-        this->modButtonHT = this->setModButtonOnGrid(HT_POS, 0, initial && cv::mod_halftime_dummy.getBool(),
-                                                     &cv::mod_halftime_dummy, HTName, HTTooltip, HTMember);
-        this->modButtonDT = this->setModButtonOnGrid(DT_POS, 0, initial && cv::mod_doubletime_dummy.getBool(),
-                                                     &cv::mod_doubletime_dummy, DTName, DTTooltip, DTMember);
+        this->modButtonHT = setGridModbtn(this->getGridButton(HT_POS), 0, initial && cv::mod_halftime_dummy.getBool(),
+                                          &cv::mod_halftime_dummy, HTName, HTTooltip, HTMember);
+        this->modButtonDT = setGridModbtn(this->getGridButton(DT_POS), 0, initial && cv::mod_doubletime_dummy.getBool(),
+                                          &cv::mod_doubletime_dummy, DTName, DTTooltip, DTMember);
     }
 
-    this->modButtonHD = this->setModButtonOnGrid(
-        HD_POS, 0, initial && osu->getModHD(), &cv::mod_hidden, "hd",
-        "Play with no approach circles and fading notes for a slight score advantage.", &Skin::i_modselect_hd);
+    this->modButtonHD = setGridModbtn(this->getGridButton(HD_POS), 0, initial && osu->getModHD(), &cv::mod_hidden, "hd",
+                                      "Play with no approach circles and fading notes for a slight score advantage.",
+                                      MKIMGGETR(i_modselect_hd));
 
-    this->modButtonFL = this->setModButtonOnGrid(FL_POS, 0, initial && osu->getModFlashlight(), &cv::mod_flashlight,
-                                                 "fl", "Restricted view area.", &Skin::i_modselect_fl);
-    this->setModButtonOnGrid(FL_POS, 1, initial && cv::mod_actual_flashlight.getBool(), &cv::mod_actual_flashlight,
-                             "afl", "Actual flashlight.", &Skin::i_modselect_fl);
+    this->modButtonFL = setGridModbtn(this->getGridButton(FL_POS), 0, initial && osu->getModFlashlight(),
+                                      &cv::mod_flashlight, "fl", "Restricted view area.", MKIMGGETR(i_modselect_fl));
+    setGridModbtn(this->getGridButton(FL_POS), 1, initial && cv::mod_actual_flashlight.getBool(),
+                  &cv::mod_actual_flashlight, "afl", "Actual flashlight.", MKIMGGETR(i_modselect_fl));
 
-    this->modButtonTD = this->setModButtonOnGrid(TD_POS, 0, initial && osu->getModTD(), &cv::mod_touchdevice, "nerftd",
-                                                 "Simulate pp nerf for touch devices.\nOnly affects pp calculation.",
-                                                 &Skin::i_modselect_td);
+    this->modButtonTD =
+        setGridModbtn(this->getGridButton(TD_POS), 0, initial && osu->getModTD(), &cv::mod_touchdevice, "nerftd",
+                      "Simulate pp nerf for touch devices.\nOnly affects pp calculation.", MKIMGGETR(i_modselect_td));
 
-    this->modButtonRX = this->setModButtonOnGrid(
-        RX_POS, 0, initial && osu->getModRelax(), &cv::mod_relax, "relax",
+    this->modButtonRX = setGridModbtn(
+        this->getGridButton(RX_POS), 0, initial && osu->getModRelax(), &cv::mod_relax, "relax",
         "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **",
-        &Skin::i_modselect_rx);
-    this->modButtonAP = this->setModButtonOnGrid(
-        AP_POS, 0, initial && osu->getModAutopilot(), &cv::mod_autopilot, "autopilot",
-        "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", &Skin::i_modselect_ap);
+        MKIMGGETR(i_modselect_rx));
+    this->modButtonAP = setGridModbtn(
+        this->getGridButton(AP_POS), 0, initial && osu->getModAutopilot(), &cv::mod_autopilot, "autopilot",
+        "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", MKIMGGETR(i_modselect_ap));
     this->modButtonSO =
-        this->setModButtonOnGrid(SO_POS, 0, initial && osu->getModSpunout(), &cv::mod_spunout, "spunout",
-                                 "Spinners will be automatically completed.", &Skin::i_modselect_so);
+        setGridModbtn(this->getGridButton(SO_POS), 0, initial && osu->getModSpunout(), &cv::mod_spunout, "spunout",
+                      "Spinners will be automatically completed.", MKIMGGETR(i_modselect_so));
     this->modButtonAUTO =
-        this->setModButtonOnGrid(AUTO_POS, 0, initial && osu->getModAuto(), &cv::mod_autoplay, "auto",
-                                 "Watch a perfect automated play through the song.", &Skin::i_modselect_auto);
-    this->modButtonTGT = this->setModButtonOnGrid(
-        TGT_POS, 0, initial && osu->getModTarget(), &cv::mod_target, "practicetarget",
+        setGridModbtn(this->getGridButton(AUTO_POS), 0, initial && osu->getModAuto(), &cv::mod_autoplay, "auto",
+                      "Watch a perfect automated play through the song.", MKIMGGETR(i_modselect_auto));
+    this->modButtonTGT = setGridModbtn(
+        this->getGridButton(TGT_POS), 0, initial && osu->getModTarget(), &cv::mod_target, "practicetarget",
         "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at "
         "least being in the hit window of a 100 in addition to the rule above.",
-        &Skin::i_modselect_target);
+        MKIMGGETR(i_modselect_target));
     this->modButtonSV2 =
-        this->setModButtonOnGrid(SV2_POS, 0, initial && osu->getModScorev2(), &cv::mod_scorev2, "v2",
-                                 "Try the future scoring system.\n** UNRANKED **", &Skin::i_modselect_sv2);
+        setGridModbtn(this->getGridButton(SV2_POS), 0, initial && osu->getModScorev2(), &cv::mod_scorev2, "v2",
+                      "Try the future scoring system.\n** UNRANKED **", MKIMGGETR(i_modselect_sv2));
 
     // Only enable this if mod_touchdevice_always is enabled
     this->modButtonTD->setAvailable(!cv::mod_touchdevice_always.getBool());
@@ -364,6 +388,8 @@ void ModSelector::updateButtons(bool initial) {
     this->modButtonSV2->setAvailable(!isMulti);  // we use win condition instead in multi
     this->modButtonNM->setAvailable(!isMulti);
     this->modButtonAUTO->setAvailable(!isMulti);
+
+#undef MKIMGGETR
 }
 
 void ModSelector::updateScoreMultiplierLabelText() {
@@ -994,19 +1020,6 @@ void ModSelector::updateExperimentalLayout() {
         ->setScrollSizeToContent(1 * dpiScale)  //
         ->container.update_pos();               //
     expCont->setVisible(!BanchoState::is_in_a_multi_room());
-}
-
-UIModSelectorModButton *ModSelector::setModButtonOnGrid(ivec2 pos, int state, bool initialState, ConVar *modCvar,
-                                                        UString modName, const UString &tooltipText,
-                                                        SkinImageSkinMember getSkinImageMember) {
-    UIModSelectorModButton *modButton = this->getGridButton(pos);
-
-    if(modButton != nullptr) {
-        modButton->setState(state, initialState, modCvar, std::move(modName), tooltipText, getSkinImageMember);
-        modButton->setVisible(true);
-    }
-
-    return modButton;
 }
 
 ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(UString text, const UString &labelText, ConVar *cvar,

@@ -8,6 +8,7 @@
 #include "noinclude.h"
 #include "Vectors_fwd.h"
 #include "FixedSizeArray.h"
+#include "DatabaseBeatmapTypes.h"
 
 // TODO: make these utilities available without all of these ifdefs (move all diffcalc things to a lightweight separate directory)
 #ifndef BUILD_TOOLS_ONLY
@@ -16,7 +17,6 @@
 #include "Overrides.h"
 #include "MD5Hash.h"
 #include "Color.h"
-#include "HitSounds.h"
 #include "SyncStoptoken.h"
 
 #else
@@ -30,7 +30,7 @@ using Color = uint32_t;
 
 // re-defining these to avoid needing to compile HitSounds.cpp (only need the definitions for diffcalc)
 namespace SampleSetType {
-enum {
+enum : u8 {
     NORMAL = 1,
     SOFT = 2,
     DRUM = 3,
@@ -38,7 +38,7 @@ enum {
 }
 
 namespace HitSoundType {
-enum {
+enum : u8 {
     NORMAL = (1 << 0),
     WHISTLE = (1 << 1),
     FINISH = (1 << 2),
@@ -48,15 +48,6 @@ enum {
     VALID_SLIDER_HITSOUNDS = NORMAL | WHISTLE,
 };
 }
-
-struct HitSamples final {
-    u8 hitSounds = 0;
-    u8 normalSet = 0;
-    u8 additionSet = 0;
-    u8 volume = 0;
-    i32 index = 0;
-    std::shared_ptr<char[]> filename{nullptr};
-};
 
 #endif
 
@@ -86,7 +77,7 @@ using BeatmapDifficulty = DatabaseBeatmap;
 using BeatmapSet = DatabaseBeatmap;
 using DiffContainer = std::vector<std::unique_ptr<BeatmapDifficulty>>;
 
-struct SLIDER_SCORING_TIME;  // for diffcalc things
+namespace DBType = DatabaseBeatmapTypes;
 
 // DatabaseBeatmap &operator=(DatabaseBeatmap other) already implements these...
 // NOLINTNEXTLINE(hicpp-special-member-functions, cppcoreguidelines-special-member-functions)
@@ -154,26 +145,6 @@ class DatabaseBeatmap final {
         MetadataBlock{.str = "[HitObjects]", .id = BlockId::HitObjects}};
     static inline const auto alwaysFalseStopPred = Sync::stop_token{};
 
-    // raw structs (not editable, we're following db format directly)
-    struct TIMINGPOINT final {
-        f64 offset;
-        f64 msPerBeat;
-
-        i32 sampleSet;
-        i32 sampleIndex;
-        i32 volume;
-
-        bool uninherited;  // <=> timingChange
-        bool kiai;
-
-        bool operator==(const TIMINGPOINT &) const = default;
-    };
-
-    struct BREAK final {
-        i64 startTime;
-        i64 endTime;
-    };
-
     // custom structs
     struct LOAD_DIFFOBJ_RESULT final {
         LOAD_DIFFOBJ_RESULT();
@@ -199,75 +170,13 @@ class DatabaseBeatmap final {
         std::vector<u32> maxComboAtIndex{0};
     };
 
-    struct TIMING_INFO {
-        i32 offset{0};
-
-        f32 beatLengthBase{0.f};
-        f32 beatLength{0.f};
-
-        i32 sampleSet{0};
-        i32 sampleIndex{0};
-        i32 volume{0};
-
-        bool isNaN{false};
-
-        bool operator==(const TIMING_INFO &) const = default;
-    };
-
-    // primitive objects
-
-    struct HITCIRCLE final {
-        int x, y;
-        i32 time;
-        int number;
-        int colorCounter;
-        int colorOffset;
-        bool clicked;
-        HitSamples samples;
-    };
-
-    struct SLIDER final {
-        SLIDER() noexcept;  // needs extern ctors/dtors due to SLIDER_SCORING_TIME being externally defined
-        ~SLIDER() noexcept;
-
-        SLIDER(const SLIDER &) noexcept;
-        SLIDER &operator=(const SLIDER &) noexcept;
-        SLIDER(SLIDER &&) noexcept;
-        SLIDER &operator=(SLIDER &&) noexcept;
-
-        int x, y;
-        char type;
-        int repeat;
-        float pixelLength;
-        i32 time;
-        int number;
-        int colorCounter;
-        int colorOffset;
-        std::vector<vec2> points;
-        HitSamples hoverSamples;
-        std::vector<HitSamples> edgeSamples;
-
-        float sliderTime;
-        float sliderTimeWithoutRepeats;
-        std::vector<float> ticks;
-
-        std::vector<SLIDER_SCORING_TIME> scoringTimesForStarCalc;
-    };
-
-    struct SPINNER final {
-        int x, y;
-        i32 time;
-        i32 endTime;
-        HitSamples samples;
-    };
-
     struct PRIMITIVE_CONTAINER final {
-        std::vector<HITCIRCLE> hitcircles{};
-        std::vector<SLIDER> sliders{};
-        std::vector<SPINNER> spinners{};
-        std::vector<BREAK> breaks{};
+        std::vector<DBType::HITCIRCLE> hitcircles{};
+        std::vector<DBType::SLIDER> sliders{};
+        std::vector<DBType::SPINNER> spinners{};
+        std::vector<DBType::BREAK> breaks{};
 
-        FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> timingpoints{};
+        FixedSizeArray<DBType::TIMINGPOINT> timingpoints{};
         std::vector<Color> combocolors{};
 
         f32 stackLeniency{.7f};
@@ -278,12 +187,12 @@ class DatabaseBeatmap final {
 
         u32 totalBreakDuration{0};
 
-        // sample set to use if timing point doesn't specify it
-        // 1 = normal, 2 = soft, 3 = drum
-        i32 defaultSampleSet{1};
-
         i32 version{14};
         LoadError error;
+
+        // sample set to use if timing point doesn't specify it
+        // 1 = normal, 2 = soft, 3 = drum
+        u8 defaultSampleSet{1};
 
         // Set after calculateSliderTimesClicksTicks has populated slider timing data.
         // Allows reuse of the container for multiple loadDifficultyHitObjects calls.
@@ -306,16 +215,16 @@ class DatabaseBeatmap final {
     static PRIMITIVE_CONTAINER loadPrimitiveObjectsFromData(const std::vector<u8> &fileData,
                                                             std::string_view osuFilePath,
                                                             const Sync::stop_token &dead = alwaysFalseStopPred);
-    static LoadError calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders,
-                                                     FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> &timingpoints,
+    static LoadError calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<DBType::SLIDER> &sliders,
+                                                     FixedSizeArray<DBType::TIMINGPOINT> &timingpoints,
                                                      float sliderMultiplier, float sliderTickRate);
-    static LoadError calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders,
-                                                     FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> &timingpoints,
+    static LoadError calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<DBType::SLIDER> &sliders,
+                                                     FixedSizeArray<DBType::TIMINGPOINT> &timingpoints,
                                                      float sliderMultiplier, float sliderTickRate,
                                                      const Sync::stop_token &dead);
 
-    static TIMING_INFO getTimingInfoForTimeAndTimingPoints(
-        i32 positionMS, const FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> &timingpoints);
+    static DBType::TIMING_INFO getTimingInfoForTimeAndTimingPoints(
+        i32 positionMS, const FixedSizeArray<DBType::TIMINGPOINT> &timingpoints);
 
 #ifndef BUILD_TOOLS_ONLY
 
@@ -371,11 +280,12 @@ class DatabaseBeatmap final {
         LOAD_GAMEPLAY_RESULT &operator=(LOAD_GAMEPLAY_RESULT &&) noexcept;
 
         std::vector<std::unique_ptr<HitObject>> hitobjects;
-        std::vector<BREAK> breaks;
+        std::vector<DBType::BREAK> breaks;
         std::vector<Color> combocolors;
 
-        i32 defaultSampleSet{1};
         LoadError error;
+
+        u8 defaultSampleSet{1};
     };
 
     static LOAD_GAMEPLAY_RESULT loadGameplay(BeatmapDifficulty *databaseBeatmap, AbstractBeatmapInterface *beatmap,
@@ -413,7 +323,7 @@ class DatabaseBeatmap final {
 
     [[nodiscard]] inline BeatmapSet *getParentSet() const { return this->parentSet; }
 
-    [[nodiscard]] TIMING_INFO getTimingInfoForTime(i32 positionMS) const;
+    [[nodiscard]] DBType::TIMING_INFO getTimingInfoForTime(i32 positionMS) const;
 
     static bool prefer_cjk_names();
 
@@ -483,7 +393,7 @@ class DatabaseBeatmap final {
     [[nodiscard]] inline float getSliderTickRate() const { return this->fSliderTickRate; }
     [[nodiscard]] inline float getSliderMultiplier() const { return this->fSliderMultiplier; }
 
-    [[nodiscard]] inline const FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> &getTimingpoints() const {
+    [[nodiscard]] inline const FixedSizeArray<DBType::TIMINGPOINT> &getTimingpoints() const {
         return this->timingpoints;
     }
 
@@ -547,7 +457,7 @@ class DatabaseBeatmap final {
     BeatmapSet *parentSet{nullptr};
 
    public:
-    FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> timingpoints;  // necessary for main menu anim
+    FixedSizeArray<DBType::TIMINGPOINT> timingpoints;  // necessary for main menu anim
 
     // redundant data (technically contained in metadata, but precomputed anyway)
 
@@ -645,10 +555,9 @@ struct DB_TIMINGPOINT;
 
 template <typename T>
 BPMInfo getBPM(const T &timing_points, std::vector<BPMTuple> &bpm_buffer)
-    requires((std::is_same_v<T, std::vector<DB_TIMINGPOINT>> ||
-              std::is_same_v<T, std::vector<DatabaseBeatmap::TIMINGPOINT>>) ||
+    requires((std::is_same_v<T, std::vector<DB_TIMINGPOINT>> || std::is_same_v<T, std::vector<DBType::TIMINGPOINT>>) ||
              (std::is_same_v<T, FixedSizeArray<DB_TIMINGPOINT>> ||
-              std::is_same_v<T, FixedSizeArray<DatabaseBeatmap::TIMINGPOINT>>))
+              std::is_same_v<T, FixedSizeArray<DBType::TIMINGPOINT>>))
 {
     if(timing_points.empty()) {
         return {};

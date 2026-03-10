@@ -4,10 +4,17 @@
 #include "CBaseUIScrollView.h"
 #include "DownloadHandle.h"
 #include "UIScreen.h"
-#include "score.h"
-// need to include full Skin.h because MSVC blows up if you forward declare pointers-to-members
-// https://learn.microsoft.com/en-us/cpp/preprocessor/pointers-to-members?view=msvc-170
-#include "Skin.h"
+
+enum class LegacyFlags : u32;
+
+class DatabaseBeatmap;
+using BeatmapDifficulty = DatabaseBeatmap;
+using BeatmapSet = DatabaseBeatmap;
+
+struct Skin;
+class SkinImage;
+
+struct FinishedScore;
 
 class Room;
 struct Packet;
@@ -23,9 +30,11 @@ class UIContextMenu;
 class McFont;
 
 class UIModList final : public CBaseUIContainer {
+    NOCOPY_NOMOVE(UIModList)
    public:
     UIModList() = delete;
-    UIModList(LegacyFlags* flags) : CBaseUIContainer(0, 0, 0, 0, "mod_list"), flags(flags) {}
+    UIModList(LegacyFlags* flags);
+    ~UIModList() override;
 
     LegacyFlags* flags;
 
@@ -37,7 +46,8 @@ class UIModList final : public CBaseUIContainer {
 
    private:
     LegacyFlags last_flags{};
-    std::vector<SkinImage Skin::*> mod_images;
+    struct ModImageList;
+    std::unique_ptr<ModImageList> mod_images;
 };
 
 class RoomScreen final : public UIScreen {

@@ -22,6 +22,7 @@
 #include "UIContextMenu.h"
 #include "UserCard.h"
 #include "SongDifficultyButton.h"
+#include "score.h"
 
 UserStatsScreen::UserStatsScreen() : ScreenBackable() {
     this->m_userCard = new UserCard(0);

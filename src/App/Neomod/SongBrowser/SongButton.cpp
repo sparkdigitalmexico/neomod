@@ -24,12 +24,14 @@
 #include "Skin.h"
 #include "SkinImage.h"
 #include "UIContextMenu.h"
+#include "Graphics.h"
+#include "score.h"
 
 using namespace neomod::sbr;
 
 // passthrough for SongDifficultyButton
 SongButton::SongButton(float xPos, float yPos, float xSize, float ySize)
-    : CarouselButton(xPos, yPos, xSize, ySize, nullptr) {}
+    : CarouselButton(xPos, yPos, xSize, ySize, nullptr), grade(ScoreGrade::N) {}
 
 SongButton::SongButton(float xPos, float yPos, float xSize, float ySize, BeatmapSet *beatmapSet)
     : SongButton(xPos, yPos, xSize, ySize) {

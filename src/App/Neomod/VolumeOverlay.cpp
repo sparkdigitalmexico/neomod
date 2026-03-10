@@ -27,6 +27,7 @@
 #include "UIContextMenu.h"
 #include "UIVolumeSlider.h"
 #include "UserStatsScreen.h"
+#include "Database.h"
 
 VolumeOverlay::VolumeOverlay() : UIScreen() {
     cv::volume_master.setCallback(SA::MakeDelegate<&VolumeOverlay::onMasterVolumeChange>(this));

@@ -4,7 +4,6 @@
 #include "noinclude.h"
 #include "ModFlags.h"
 #include "UIScreen.h"
-#include "Skin.h"
 
 class SongBrowser;
 
@@ -56,8 +55,6 @@ class ModSelector final : public UIScreen {
     void updateLayout();
     void updateExperimentalLayout();
 
-    using SkinImageSkinMember = SkinImage Skin::*;
-
    private:
     struct OVERRIDE_SLIDER {
         CBaseUICheckbox *lock{nullptr};
@@ -72,10 +69,6 @@ class ModSelector final : public UIScreen {
         CBaseUIElement *element{nullptr};
         ConVar *cvar{nullptr};
     };
-
-    UIModSelectorModButton *setModButtonOnGrid(ivec2 pos, int state, bool initialState, ConVar *modCvar,
-                                               UString modName, const UString &tooltipText,
-                                               SkinImageSkinMember getSkinImageMember);
 
     OVERRIDE_SLIDER addOverrideSlider(UString text, const UString &labelText, ConVar *cvar, float min, float max,
                                       UString tooltipText = {}, ConVar *lockCvar = nullptr);
@@ -113,14 +106,14 @@ class ModSelector final : public UIScreen {
     static constexpr int GRID_WIDTH{6};
     static constexpr int GRID_HEIGHT{3};
 
-    std::array<UIModSelectorModButton *, GRID_WIDTH * GRID_HEIGHT> modButtons;
+    std::array<UIModSelectorModButton *, GRID_WIDTH * GRID_HEIGHT> modButtons{};
 
-#define MKMODBTN(name, x, y)                 \
-    UIModSelectorModButton *modButton##name; \
-                                             \
-   public:                                   \
-    static inline ivec2 name##_POS{x, y}; \
-                                             \
+#define MKMODBTN(name, x, y)                          \
+    UIModSelectorModButton *modButton##name{nullptr}; \
+                                                      \
+   public:                                            \
+    static inline ivec2 name##_POS{x, y};             \
+                                                      \
    private:
     // clang-format off
     MKMODBTN(EZ,0,0); MKMODBTN(NF,  1,0);MKMODBTN(HT,2,0);                   MKMODBTN(NM, 4,0);

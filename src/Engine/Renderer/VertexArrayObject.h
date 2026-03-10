@@ -3,7 +3,9 @@
 #define VERTEXARRAYOBJECT_H
 
 #include "Resource.h"
-#include "Graphics.h"
+#include "Graphics_fwd.h"
+#include "Color.h"
+#include "Vectors.h"
 
 #include "CDynArray.h"
 
@@ -17,8 +19,8 @@ extern template struct Mc::CDynArray<Color>;
 class VertexArrayObject : public Resource {
     NOCOPY_NOMOVE(VertexArrayObject)
    public:
-    constexpr VertexArrayObject(DrawPrimitive primitive = DrawPrimitive::TRIANGLES,
-                                DrawUsageType usage = DrawUsageType::STATIC, bool keepInSystemMemory = false)
+    constexpr VertexArrayObject(DrawPrimitive primitive = DrawPrimitive{2} /* TRIANGLES */,
+                                DrawUsageType usage = DrawUsageType{0} /* STATIC */, bool keepInSystemMemory = false)
         : Resource(VAO), primitive(primitive), usage(usage), bKeepInSystemMemory(keepInSystemMemory) {}
     ~VertexArrayObject() override = default;
 

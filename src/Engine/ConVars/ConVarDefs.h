@@ -308,4 +308,8 @@ CONVAR(win_processpriority, (McThread::Priority)1, CLIENT, "sets the main proces
 
 }  // namespace cv
 
+#undef DEFINE_CONVARS
+#undef _CV
+#undef CONVAR
+
 #endif

@@ -82,14 +82,9 @@ struct AnimVec2 {
     AnimFloat x, y;
 
     AnimVec2() = default;
-    explicit AnimVec2(f32 initial1, f32 initial2 = f32{0}) {
-        x = initial1;
-        y = initial2;
-    }
-    explicit AnimVec2(f64 initial1, f64 initial2 = f64{0}) {
-        x = static_cast<f32>(initial1);
-        y = static_cast<f32>(initial2);
-    }
+    explicit AnimVec2(f32 initial1, f32 initial2 = f32{0}) : x(initial1), y(initial2) {}
+    explicit AnimVec2(f64 initial1, f64 initial2 = f64{0})
+        : x(static_cast<f32>(initial1)), y(static_cast<f32>(initial2)) {}
     explicit AnimVec2(vec2 initial);
     explicit AnimVec2(dvec2 initial);
 
@@ -106,14 +101,8 @@ struct AnimVec2D {
     AnimDouble x, y;
 
     AnimVec2D() = default;
-    explicit AnimVec2D(f32 initial1, f32 initial2 = f32{0}) {
-        x = initial1;
-        y = initial2;
-    }
-    explicit AnimVec2D(f64 initial1, f64 initial2 = f64{0}) {
-        x = initial1;
-        y = initial2;
-    }
+    explicit AnimVec2D(f32 initial1, f32 initial2 = f32{0}) : x(initial1), y(initial2) {}
+    explicit AnimVec2D(f64 initial1, f64 initial2 = f64{0}) : x(initial1), y(initial2) {}
     explicit AnimVec2D(vec2 initial);
     explicit AnimVec2D(dvec2 initial);
 

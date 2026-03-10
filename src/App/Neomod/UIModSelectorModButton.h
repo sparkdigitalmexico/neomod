@@ -2,8 +2,8 @@
 // Copyright (c) 2016, PG, All rights reserved.
 #include "AnimationHandler.h"
 #include "CBaseUIButton.h"
-#include "Skin.h"
 
+struct Skin;
 class SkinImage;
 class ModSelector;
 class ConVar;
@@ -15,7 +15,7 @@ class UIModSelectorModButton final : public CBaseUIButton {
     UIModSelectorModButton(ModSelector *osuModSelector, float xPos, float yPos, float xSize, float ySize, UString name);
     ~UIModSelectorModButton() override;
 
-    using SkinImageSkinMember = SkinImage Skin::*;
+    using SkinImageGetter = SA::delegate<const SkinImage *(const Skin *)>;
 
     void draw() override;
     void update(CBaseUIEventCtx &c) override;
@@ -25,7 +25,7 @@ class UIModSelectorModButton final : public CBaseUIButton {
 
     void setState(int state);
     void setState(unsigned int state, bool initialState, ConVar *cvar, UString modName, const UString &tooltipText,
-                  SkinImageSkinMember skinMember);
+                  SkinImageGetter skinImageGetter);
     void setBaseScale(float xScale, float yScale);
     void setAvailable(bool available) { this->bAvailable = available; }
 
@@ -52,13 +52,13 @@ class UIModSelectorModButton final : public CBaseUIButton {
         ConVar *cvar;
         UString modName;
         std::vector<UString> tooltipTextLines;
-        SkinImageSkinMember skinImageMember{nullptr};
+        SkinImageGetter skinImageGetFunc{nullptr};
     };
     std::vector<STATE> states;
 
     AnimFloat fScaleX{0.f}, fScaleY{0.f};
     AnimFloat fRot;
-    SkinImageSkinMember activeSkinImageMember{nullptr};
+    SkinImageGetter currentSkinImageGetFunc{nullptr};
 
     bool bFocusStolenDelay;
 };

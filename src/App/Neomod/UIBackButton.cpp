@@ -12,6 +12,7 @@
 #include "SkinImage.h"
 #include "SoundEngine.h"
 #include "UI.h"
+#include "Graphics.h"
 
 UIBackButton::UIBackButton(float xPos, float yPos, float xSize, float ySize, UString name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {}

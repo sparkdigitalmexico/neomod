@@ -18,24 +18,33 @@ using fmt::literals::operator""_cf;
 #define _logFmtEnd(...) , __VA_ARGS__)
 
 // main context-aware logging macro
-#define logChannel(chan__, str__, ...)                                                                  \
-    Logger::_detail::log_int(chan__, std::source_location::current(), Logger::_detail::log_level::info, \
-                             __VA_OPT__(_logFmtStart)(str__) __VA_OPT__(_logFmtEnd(__VA_ARGS__)))
+#define logChannel(chan__, str__, ...)                                                         \
+    do {                                                                                       \
+        using namespace Logger;                                                                \
+        _detail::log_int((chan__), std::source_location::current(), _detail::log_level::info,  \
+                         __VA_OPT__(_logFmtStart)(str__) __VA_OPT__(_logFmtEnd(__VA_ARGS__))); \
+    } while(false)
 
-#define debugLog(str__, ...) logChannel(LoggerLogChannel::CHAN_DEFAULT, str__ __VA_OPT__(, ) __VA_ARGS__)
+#define debugLog(str__, ...) logChannel(CHAN_DEFAULT, str__ __VA_OPT__(, ) __VA_ARGS__)
 
 // log only if condition is true
-#define logIf(cond__, ...) (static_cast<bool>(cond__) ? debugLog(__VA_ARGS__) : void(0))
+#define logIf(cond__, ...)                                   \
+    do {                                                     \
+        if(static_cast<bool>(cond__)) debugLog(__VA_ARGS__); \
+    } while(false)
 
 // log only if cvar__.getBool() == true
 #define logIfCV(cvar__, ...) logIf(cv::cvar__.getBool(), __VA_ARGS__)
 
 // raw logging without any context
-#define logRawChannel(chan__, str__, ...)                                 \
-    Logger::_detail::logRaw_int(chan__, Logger::_detail::log_level::info, \
-                                __VA_OPT__(_logFmtStart)(str__) __VA_OPT__(_logFmtEnd(__VA_ARGS__)))
+#define logRawChannel(chan__, str__, ...)                                                         \
+    do {                                                                                          \
+        using namespace Logger;                                                                   \
+        _detail::logRaw_int((chan__), _detail::log_level::info,                                   \
+                            __VA_OPT__(_logFmtStart)(str__) __VA_OPT__(_logFmtEnd(__VA_ARGS__))); \
+    } while(false)
 
-#define logRaw(str__, ...) logRawChannel(LoggerLogChannel::CHAN_DEFAULT, str__ __VA_OPT__(, ) __VA_ARGS__)
+#define logRaw(str__, ...) logRawChannel(CHAN_DEFAULT, str__ __VA_OPT__(, ) __VA_ARGS__)
 
 // print the call stack immediately
 // TODO: some portable way to do this
@@ -53,15 +62,16 @@ using fmt::literals::operator""_cf;
 #define MC_DO_BACKTRACE (void)0;
 #endif
 
-enum LoggerLogChannel : uint8_t {
+// main Logger API
+namespace Logger {
+
+enum Channel : uint8_t {
     CHAN_APP = (1 << 0),
     CHAN_ENGINE = (1 << 1),
     CHAN_NETWORK = (1 << 2),
     CHAN_DEFAULT = CHAN_APP | CHAN_ENGINE
 };
 
-// main Logger API
-namespace Logger {
 class ConsoleBoxSink;
 
 namespace _detail {

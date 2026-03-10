@@ -11,11 +11,9 @@
 #include "Environment.h"
 #include "Graphics.h"
 
-UIPauseMenuButton::UIPauseMenuButton(ImageSkinMember imageMember, float xPos, float yPos, float xSize, float ySize,
+UIPauseMenuButton::UIPauseMenuButton(BasicSkinImageGetter imageGetter, float xPos, float yPos, float xSize, float ySize,
                                      UString name)
-    : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name)) {
-    this->imageMember = imageMember;
-}
+    : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name)), imageGetter(std::move(imageGetter)) {}
 
 UIPauseMenuButton::~UIPauseMenuButton() = default;
 
@@ -23,7 +21,7 @@ void UIPauseMenuButton::draw() {
     if(!this->bVisible) return;
 
     // draw image
-    if(Image *image = this->getImage(); image && image != MISSING_TEXTURE) {
+    if(const Image *image = this->getImage(); image && image != MISSING_TEXTURE) {
         g->setColor(argb(this->fAlpha, this->fBrightness, this->fBrightness, this->fBrightness));
         g->pushTransform();
         {
@@ -83,10 +81,10 @@ void UIPauseMenuButton::onDisabled() {
     }
 }
 
-Image *UIPauseMenuButton::getImage() const {
-    if(!this->imageMember) return MISSING_TEXTURE;
+const Image *UIPauseMenuButton::getImage() const {
+    if(!this->imageGetter) return MISSING_TEXTURE;
     if(const auto *skin = osu->getSkin()) {
-        return skin->*this->imageMember;
+        return this->imageGetter(skin);
     }
     return MISSING_TEXTURE;
 }

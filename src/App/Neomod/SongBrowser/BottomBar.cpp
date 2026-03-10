@@ -19,6 +19,7 @@
 #include "UserCard.h"
 #include "Font.h"
 #include "SyncMutex.h"
+#include "Graphics.h"
 
 #include <atomic>
 #include <cassert>

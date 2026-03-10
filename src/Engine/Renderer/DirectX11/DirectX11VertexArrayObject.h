@@ -20,9 +20,8 @@
 class DirectX11VertexArrayObject final : public VertexArrayObject {
     NOCOPY_NOMOVE(DirectX11VertexArrayObject)
    public:
-    DirectX11VertexArrayObject(DrawPrimitive primitive = DrawPrimitive::TRIANGLES,
-                               DrawUsageType usage = DrawUsageType::STATIC,
-                               bool keepInSystemMemory = false);
+    DirectX11VertexArrayObject(DrawPrimitive primitive = DrawPrimitive{2} /* TRIANGLES */,
+                               DrawUsageType usage = DrawUsageType{0} /* STATIC */, bool keepInSystemMemory = false);
     ~DirectX11VertexArrayObject() override { destroy(); }
 
     void draw() override;

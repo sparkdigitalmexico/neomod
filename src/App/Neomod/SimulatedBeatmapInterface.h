@@ -79,10 +79,10 @@ class SimulatedBeatmapInterface final : public AbstractBeatmapInterface {
     [[nodiscard]] u32 getLength() const override;
     [[nodiscard]] u32 getLengthPlayable() const override;
     [[nodiscard]] u32 getBreakDurationTotal() const override;
-    [[nodiscard]] DatabaseBeatmap::BREAK getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const;
+    [[nodiscard]] DatabaseBeatmapTypes::BREAK getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const;
 
     // HitObject and other helper functions
-    LiveScore::HIT addHitResult(HitObject *hitObject, LiveScore::HIT hit, i32 delta, bool isEndOfCombo = false,
+    LiveHitResult addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta, bool isEndOfCombo = false,
                                 bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false,
                                 bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false) override;
     void addSliderBreak() override;
@@ -104,7 +104,7 @@ class SimulatedBeatmapInterface final : public AbstractBeatmapInterface {
     f64 fDrainRate = 0.0;
 
     // breaks
-    std::vector<DatabaseBeatmap::BREAK> breaks;
+    std::vector<DatabaseBeatmapTypes::BREAK> breaks;
     bool bInBreak = false;
     HitObject *currentHitObject = nullptr;
     i32 iNextHitObjectTime = 0;

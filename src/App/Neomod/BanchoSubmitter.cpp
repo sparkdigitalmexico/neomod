@@ -14,6 +14,7 @@
 #include "Logging.h"
 #include "Timing.h"
 #include "UI.h"
+#include "score.h"
 
 #include <cstdlib>
 #include <cstring>

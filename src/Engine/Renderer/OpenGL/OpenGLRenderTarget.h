@@ -12,8 +12,7 @@
 class OpenGLRenderTarget final : public RenderTarget {
     NOCOPY_NOMOVE(OpenGLRenderTarget)
    public:
-    OpenGLRenderTarget(int x, int y, int width, int height,
-                       MultisampleType multiSampleType = MultisampleType::X0)
+    OpenGLRenderTarget(int x, int y, int width, int height, MultisampleType multiSampleType = MultisampleType{0})
         : RenderTarget(x, y, width, height, multiSampleType) {}
     ~OpenGLRenderTarget() override { destroy(); }
 

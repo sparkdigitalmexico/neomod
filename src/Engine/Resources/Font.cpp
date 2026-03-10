@@ -23,6 +23,7 @@
 #include "Image.h"
 #include "Hashing.h"
 #include "CDynArray.h"
+#include "Graphics.h"
 
 #include <algorithm>
 #include <cstddef>

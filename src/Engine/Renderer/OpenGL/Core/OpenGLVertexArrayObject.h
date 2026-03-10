@@ -12,8 +12,8 @@
 class OpenGLVertexArrayObject final : public VertexArrayObject {
     NOCOPY_NOMOVE(OpenGLVertexArrayObject)
    public:
-    OpenGLVertexArrayObject(DrawPrimitive primitive = DrawPrimitive::TRIANGLES,
-                            DrawUsageType usage = DrawUsageType::STATIC, bool keepInSystemMemory = false);
+    OpenGLVertexArrayObject(DrawPrimitive primitive = DrawPrimitive{2} /* TRIANGLES */,
+                            DrawUsageType usage = DrawUsageType{0} /* STATIC */, bool keepInSystemMemory = false);
     ~OpenGLVertexArrayObject() override { destroy(); }
 
     void draw() override;

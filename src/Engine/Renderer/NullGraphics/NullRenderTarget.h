@@ -5,7 +5,7 @@
 
 class NullRenderTarget : public RenderTarget {
    public:
-    NullRenderTarget(int x, int y, int width, int height, MultisampleType multiSampleType = MultisampleType::X0);
+    NullRenderTarget(int x, int y, int width, int height, MultisampleType multiSampleType = MultisampleType{0});
 
     void enable() override;
     void disable() override;

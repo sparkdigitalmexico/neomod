@@ -2,7 +2,6 @@
 // Copyright (c) 2016, PG, All rights reserved.
 #include "AnimationHandler.h"
 #include "UIScreen.h"
-#include "Skin.h"
 
 class SongBrowser;
 class CBaseUIContainer;
@@ -11,8 +10,6 @@ class UIPauseMenuButton;
 class PauseOverlay final : public UIScreen {
     NOCOPY_NOMOVE(PauseOverlay)
    public:
-    using ImageSkinMember = BasicSkinImage Skin::*;
-
     PauseOverlay();
     ~PauseOverlay() override;
 
@@ -40,8 +37,6 @@ class PauseOverlay final : public UIScreen {
     [[nodiscard]] bool areButtonsActive() const;
 
     void scheduleVisibilityChange(bool visible);
-
-    UIPauseMenuButton *addButton(ImageSkinMember getImageFunc, UString name);
 
     std::vector<UIPauseMenuButton *> buttons;
     UIPauseMenuButton *selectedButton{nullptr};

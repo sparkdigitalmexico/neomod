@@ -2,15 +2,18 @@
 // Copyright (c) 2018, PG, All rights reserved.
 #include "AnimationHandler.h"
 #include "CBaseUIButton.h"
-#include "Skin.h"
+
+struct Skin;
+
+class Image;
 
 class UIPauseMenuButton final : public CBaseUIButton {
     NOCOPY_NOMOVE(UIPauseMenuButton);
 
    public:
-    using ImageSkinMember = BasicSkinImage Skin::*;
+    using BasicSkinImageGetter = SA::delegate<const Image *(const Skin *)>;
 
-    UIPauseMenuButton(ImageSkinMember imageMember, float xPos, float yPos, float xSize, float ySize, UString name);
+    UIPauseMenuButton(BasicSkinImageGetter imageGetter, float xPos, float yPos, float xSize, float ySize, UString name);
     ~UIPauseMenuButton() override;
 
     void draw() override;
@@ -23,7 +26,7 @@ class UIPauseMenuButton final : public CBaseUIButton {
     void setAlpha(float alpha) { this->fAlpha = alpha; }
     void setBrightness(float brightness) { this->fBrightness = brightness; }
 
-    [[nodiscard]] Image* getImage() const;
+    [[nodiscard]] const Image* getImage() const;
 
    private:
     AnimVec2 vScale{1.f, 1.f};
@@ -33,5 +36,5 @@ class UIPauseMenuButton final : public CBaseUIButton {
     float fAlpha{1.f};
     float fBrightness{1.0f};
 
-    ImageSkinMember imageMember{nullptr};
+    BasicSkinImageGetter imageGetter{nullptr};
 };

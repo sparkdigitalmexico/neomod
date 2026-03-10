@@ -18,6 +18,7 @@
 #include "Icons.h"
 #include "SoundEngine.h"
 #include "Sound.h"
+#include "Graphics.h"
 
 #include "Osu.h"
 #include "OsuConVars.h"
@@ -28,6 +29,7 @@
 
 #include "Skin.h"
 #include "SkinImage.h"
+#include "Database.h"
 #include "DatabaseBeatmap.h"
 #include "Downloader.h"
 #include "Collections.h"
@@ -264,8 +266,8 @@ bool SongBrowser::sort_by_date_added(SongButton const *a, SongButton const *b) {
 }
 
 bool SongBrowser::sort_by_grade(SongButton const *a, SongButton const *b) {
-    if(a->grade == b->grade) return sort_by_difficulty(a, b);
-    return a->grade < b->grade;
+    if(a->getGrade() == b->getGrade()) return sort_by_difficulty(a, b);
+    return a->getGrade() < b->getGrade();
 }
 
 bool SongBrowser::sort_by_length(SongButton const *a, SongButton const *b) {

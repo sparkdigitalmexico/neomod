@@ -27,6 +27,7 @@
 #include "Engine.h"
 #include "Logging.h"
 #include "Environment.h"
+#include "Graphics.h"
 
 #include "binary_embed.h"
 

@@ -44,7 +44,7 @@ struct FinishedScore;
 #if defined(__GNUC__) && !defined(__clang__) && (defined(__MINGW32__) || defined(__MINGW64__))
 struct MD5Hash;
 #else
-struct alignas(16) MD5Hash;
+struct alignas(sizeof(void *) * 2) MD5Hash;
 #endif
 
 #endif

@@ -5,7 +5,6 @@
 
 #include <string>
 
-class Graphics;
 struct CBaseUIEventCtx;
 
 // Bottom bar has some hacky logic to handle osu!stable skins properly.

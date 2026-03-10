@@ -21,6 +21,7 @@
 #include "Logging.h"
 #include "crypto.h"
 #include "ContainerRanges.h"
+#include "score.h"
 
 #include <cstring>
 #include <utility>
@@ -1000,7 +1001,7 @@ void Skin::randomizeFilePath() {
 
 void Skin::createSkinImage(SkinImage &ref, const std::string &skinElementName, vec2 baseSizeForScaling2x, float osuSize,
                            bool ignoreDefaultSkin, const std::string &animationSeparator) {
-    assert(!ref.skin);
+    assert(!ref.isReady());
 
     this->skin_images.push_back(&ref);
     auto exportFiles =

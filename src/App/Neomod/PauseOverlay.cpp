@@ -28,14 +28,24 @@
 
 PauseOverlay::PauseOverlay() : UIScreen() {
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
+    using ImageGetter = UIPauseMenuButton::BasicSkinImageGetter;
 
-    UIPauseMenuButton *continueButton = this->addButton(&Skin::i_pause_continue, "Resume");
-    UIPauseMenuButton *retryButton = this->addButton(&Skin::i_pause_retry, "Retry");
-    UIPauseMenuButton *backButton = this->addButton(&Skin::i_pause_back, "Quit");
+    auto addButton = [this](ImageGetter imageGetter, UString btn_name) -> UIPauseMenuButton * {
+        auto *button = new UIPauseMenuButton(std::move(imageGetter), 0, 0, 0, 0, std::move(btn_name));
+        this->addBaseUIElement(button);
+        this->buttons.push_back(button);
+        return button;
+    };
+#define MKIMGGETR(sipmr) SA::MakeDelegate([](const Skin *skin) -> const Image * { return (skin->*&Skin::sipmr).img; })
 
-    continueButton->setClickCallback(SA::MakeDelegate<&PauseOverlay::onContinueClicked>(this));
-    retryButton->setClickCallback(SA::MakeDelegate<&PauseOverlay::onRetryClicked>(this));
-    backButton->setClickCallback(SA::MakeDelegate<&PauseOverlay::onBackClicked>(this));
+    addButton(MKIMGGETR(i_pause_continue), US_("Resume"))
+        ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onContinueClicked>(this));
+    addButton(MKIMGGETR(i_pause_retry), US_("Retry"))
+        ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onRetryClicked>(this));
+    addButton(MKIMGGETR(i_pause_back), US_("Quit"))
+        ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onBackClicked>(this));
+
+#undef MKIMGGETR
 
     this->updateLayout();
 }
@@ -297,7 +307,7 @@ void PauseOverlay::updateLayout() {
     float maxWidth = 0.0f;
     float maxHeight = 0.0f;
     for(auto &button : this->buttons) {
-        Image *img = button->getImage();
+        const Image *img = button->getImage();
         if(img == nullptr) img = MISSING_TEXTURE;
 
         const float scale = Osu::getUIScale(256) / (411.0f * (osu->getSkin()->i_pause_continue.scale()));
@@ -421,11 +431,4 @@ CBaseUIContainer *PauseOverlay::setVisible(bool visible) {
 void PauseOverlay::setContinueEnabled(bool continueEnabled) {
     this->bContinueEnabled = continueEnabled;
     if(this->buttons.size() > 0) this->buttons[0]->setVisible(this->bContinueEnabled);
-}
-
-UIPauseMenuButton *PauseOverlay::addButton(ImageSkinMember skinMember, UString btn_name) {
-    auto *button = new UIPauseMenuButton(skinMember, 0, 0, 0, 0, std::move(btn_name));
-    this->addBaseUIElement(button);
-    this->buttons.push_back(button);
-    return button;
 }

@@ -6,23 +6,26 @@
 #include "Osu.h"
 #include "ResourceManager.h"
 #include "Skin.h"
+#include "DatabaseBeatmap.h"
 #include "SoundEngine.h"
 #include "Sound.h"
 
-i32 HitSamples::getNormalSet(const HitSoundContext &ctx) const {
+namespace HitSamples {
+
+u8 getNormalSet(DBHitSample info, const HitSoundContext &ctx) {
     if(ctx.forcedSampleSet > 0) return ctx.forcedSampleSet;
-    if(this->normalSet != 0) return this->normalSet;
+    if(info.normalSet != 0) return info.normalSet;
     if(ctx.timingPointSampleSet != 0) return ctx.timingPointSampleSet;
     return ctx.defaultSampleSet;
 }
 
-i32 HitSamples::getAdditionSet(const HitSoundContext &ctx) const {
+u8 getAdditionSet(DBHitSample info, const HitSoundContext &ctx) {
     if(ctx.forcedSampleSet > 0) return ctx.forcedSampleSet;
-    if(this->additionSet != 0) return this->additionSet;
-    return this->getNormalSet(ctx);
+    if(info.additionSet != 0) return info.additionSet;
+    return getNormalSet(info, ctx);
 }
 
-f32 HitSamples::getVolume(const HitSoundContext &ctx, i32 hitSoundType, bool is_sliderslide) const {
+f32 getVolume(DBHitSample info, const HitSoundContext &ctx, u8 hitSoundType, bool is_sliderslide) {
     f32 volume = 1.0f;
 
     // some hardcoded modifiers for hitcircle sounds
@@ -46,8 +49,8 @@ f32 HitSamples::getVolume(const HitSoundContext &ctx, i32 hitSoundType, bool is_
     }
 
     if(!ctx.ignoreSampleVolume) {
-        if(this->volume > 0) {
-            volume *= (f32)this->volume / 100.0f;
+        if(info.volume > 0) {
+            volume *= (f32)info.volume / 100.0f;
         } else {
             volume *= (f32)ctx.timingPointVolume / 100.0f;
         }
@@ -65,8 +68,8 @@ f32 HitSamples::getVolume(const HitSoundContext &ctx, i32 hitSoundType, bool is_
 
 // O(1) lookup table for sound names
 // [set][is_sliderslide][hitSound]
-static constexpr const i32 HIT_IDX = 0;
-static constexpr const i32 SLIDER_IDX = 1;
+static constexpr const u8 HIT_IDX = 0;
+static constexpr const u8 SLIDER_IDX = 1;
 #define A_ std::array
 static constexpr auto SOUND_METHODS =  //
     A_{                                //
@@ -121,7 +124,7 @@ static constexpr auto SOUND_METHODS =  //
 #undef A_
 
 // maps SampleSetType (1-3) to SOUND_METHODS index (0-2)
-static constexpr i32 sampleSetToIndex(i32 set) {
+static constexpr u8 sampleSetToIndex(u8 set) {
     switch(set) {
         case SampleSetType::NORMAL:
             return 0;
@@ -135,7 +138,7 @@ static constexpr i32 sampleSetToIndex(i32 set) {
 }
 
 // maps HitSoundType bitmask value to SOUND_METHODS hit index (0-3)
-static constexpr i32 hitSoundToIndex(i32 hitSound) {
+static constexpr u8 hitSoundToIndex(u8 hitSound) {
     switch(hitSound) {
         case HitSoundType::NORMAL:
             return 0;
@@ -150,57 +153,57 @@ static constexpr i32 hitSoundToIndex(i32 hitSound) {
     }
 }
 
-std::vector<ResolvedHitSound> HitSamples::resolve(const HitSoundContext &ctx, bool is_sliderslide) const {
+std::vector<ResolvedHitSound> resolve(DBHitSample info, const HitSoundContext &ctx, bool is_sliderslide) {
     std::vector<ResolvedHitSound> result;
 
     namespace HT = HitSoundType;
     for(const auto type : {HT::NORMAL, HT::WHISTLE, HT::FINISH, HT::CLAP}) {
-        // special case for NORMAL (play if this->hitSounds == 0 or layered hitsounds are enabled)
+        // special case for NORMAL (play if info.hitSounds == 0 or layered hitsounds are enabled)
 
         // NOTE: LayeredHitSounds seems to be forced even if the map uses custom hitsounds
         //       according to https://osu.ppy.sh/community/forums/topics/15937
-        if(!(this->hitSounds & type) && !((type == HT::NORMAL) && ((this->hitSounds == 0) || ctx.layeredHitSounds)))
+        if(!(info.hitSounds & type) && !((type == HT::NORMAL) && ((info.hitSounds == 0) || ctx.layeredHitSounds)))
             continue;
 
-        const f32 vol = this->getVolume(ctx, type, is_sliderslide);
+        const f32 vol = getVolume(info, ctx, type, is_sliderslide);
         if(vol <= 0.f) continue;  // don't play silence
 
-        const i32 set = type == HT::NORMAL ? this->getNormalSet(ctx) : this->getAdditionSet(ctx);
+        const u8 set = type == HT::NORMAL ? getNormalSet(info, ctx) : getAdditionSet(info, ctx);
 
-        const i32 set_idx = sampleSetToIndex(set);
-        const i32 slider_idx = is_sliderslide ? SLIDER_IDX : HIT_IDX;
-        const i32 hit_idx = hitSoundToIndex(type);
+        const u8 set_idx = sampleSetToIndex(set);
+        const u8 slider_idx = is_sliderslide ? SLIDER_IDX : HIT_IDX;
+        const u8 hit_idx = hitSoundToIndex(type);
 
         // check that a valid sound method exists in the lookup table
         if(SOUND_METHODS[set_idx][slider_idx][hit_idx] != nullptr) {
-            result.push_back({set_idx, slider_idx, hit_idx, vol});
+            result.push_back({vol, set_idx, slider_idx, hit_idx});
         }
     }
 
     return result;
 }
 
-ResolvedSliderTick HitSamples::resolveSliderTick(const HitSoundContext &ctx) const {
+ResolvedSliderTick resolveSliderTick(DBHitSample info, const HitSoundContext &ctx) {
     // slider ticks use the normal sample set per osu! reference behavior
-    const i32 set = this->getNormalSet(ctx);
-    const i32 set_idx = sampleSetToIndex(set);
+    const u8 set = getNormalSet(info, ctx);
+    const u8 set_idx = sampleSetToIndex(set);
 
     // slider tick volume: no hitcircle-type modifier (is_sliderslide=true), no boost
     f32 volume = 1.0f;
     if(!ctx.ignoreSampleVolume) {
-        if(this->volume > 0) {
-            volume *= (f32)this->volume / 100.0f;
+        if(info.volume > 0) {
+            volume *= (f32)info.volume / 100.0f;
         } else {
             volume *= (f32)ctx.timingPointVolume / 100.0f;
         }
     }
 
-    return {set_idx, volume};
+    return {volume, set_idx};
 }
 
 // global-dependent methods (delegate to pure versions)
 
-std::vector<HitSamples::Set_Slider_Hit> HitSamples::play(f32 pan, i32 delta, i32 play_time, bool is_sliderslide) {
+std::vector<Set_Slider_Hit> play(DBHitSample info, f32 pan, i32 delta, i32 play_time, bool is_sliderslide) {
     const auto *map_iface = osu->getMapInterface();
     if(unlikely(!map_iface)) return {};  // sanity
 
@@ -232,15 +235,15 @@ std::vector<HitSamples::Set_Slider_Hit> HitSamples::play(f32 pan, i32 delta, i32
         .timingPointSampleSet = ti.sampleSet,
         .timingPointVolume = ti.volume,
         .defaultSampleSet = map_iface->getDefaultSampleSet(),
+        .forcedSampleSet = cv::skin_force_hitsound_sample_set.getVal<u8>(),
         .layeredHitSounds = skin->o_layered_hitsounds,
-        .forcedSampleSet = cv::skin_force_hitsound_sample_set.getInt(),
         .ignoreSampleVolume = cv::ignore_beatmap_sample_volume.getBool(),
         .boostVolume = cv::snd_boost_hitsound_volume.getBool(),
     };
 
     // actually play the resolved sounds
     std::vector<Set_Slider_Hit> played_list;
-    for(const auto &r : this->resolve(ctx, is_sliderslide)) {
+    for(const auto &r : resolve(info, ctx, is_sliderslide)) {
         Sound *Skin::*sound_ptr = SOUND_METHODS[r.set][r.slider][r.hit];
         Sound *snd = skin->*sound_ptr;
         if(!snd) continue;
@@ -255,7 +258,7 @@ std::vector<HitSamples::Set_Slider_Hit> HitSamples::play(f32 pan, i32 delta, i32
     return played_list;
 }
 
-void HitSamples::stop(const std::vector<Set_Slider_Hit> &specific_sets) {
+void stopSliderSounds(const std::vector<Set_Slider_Hit> &specific_sets) {
     // TODO @kiwec: map hitsounds are not supported
     const auto *map_iface = osu->getMapInterface();
     if(unlikely(!map_iface)) return;  // sanity
@@ -294,3 +297,5 @@ void HitSamples::stop(const std::vector<Set_Slider_Hit> &specific_sets) {
         }
     }
 }
+
+}  // namespace HitSamples

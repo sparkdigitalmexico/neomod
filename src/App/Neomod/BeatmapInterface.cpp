@@ -53,6 +53,7 @@
 #include "UI.h"
 #include "Matrices.h"
 #include "UIModSelectorModButton.h"
+#include "Graphics.h"
 
 using namespace flags::operators;
 BeatmapInterface::BeatmapInterface() : AbstractBeatmapInterface(), ppv2_calc(this) {
@@ -170,7 +171,7 @@ void BeatmapInterface::drawDebug() {
     g->pushTransform();
     g->translate(xOffset, yOffset + dbgfontheight);
 
-    for(const DatabaseBeatmap::TIMINGPOINT &t : alltp) {
+    for(const DBType::TIMINGPOINT &t : alltp) {
         // TODO: draw current TIMING_INFO in green (not timingpoint)
         // next to (to the right) the closest timingpoint with an offset < (this->iCurMusicPos + cv::timingpoints_offset.getInt())
 
@@ -1290,11 +1291,8 @@ u32 BeatmapInterface::getBreakDurationTotal() const {
     return breakDurationTotal;
 }
 
-DatabaseBeatmap::BREAK BeatmapInterface::getBreakForTimeRange(i64 startMS, i64 positionMS, i64 endMS) const {
-    DatabaseBeatmap::BREAK curBreak;
-
-    curBreak.startTime = -1;
-    curBreak.endTime = -1;
+DBType::BREAK BeatmapInterface::getBreakForTimeRange(i64 startMS, i64 positionMS, i64 endMS) const {
+    DBType::BREAK curBreak{.startTime = -1, .endTime = -1};
 
     for(const auto &i : this->breaks) {
         if(i.startTime >= startMS && i.endTime <= endMS) {
@@ -1305,10 +1303,10 @@ DatabaseBeatmap::BREAK BeatmapInterface::getBreakForTimeRange(i64 startMS, i64 p
     return curBreak;
 }
 
-LiveScore::HIT BeatmapInterface::addHitResult(HitObject *hitObject, LiveScore::HIT hit, i32 delta, bool isEndOfCombo,
-                                              bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo,
-                                              bool ignoreScore, bool ignoreHealth) {
-    using enum LiveScore::HIT;
+LiveHitResult BeatmapInterface::addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta, bool isEndOfCombo,
+                                             bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo,
+                                             bool ignoreScore, bool ignoreHealth) {
+    using enum LiveHitResult;
 
     // Frames are already written on every keypress/release.
     // For some edge cases, we need to write extra frames to avoid replaybugs.
@@ -1357,7 +1355,7 @@ LiveScore::HIT BeatmapInterface::addHitResult(HitObject *hitObject, LiveScore::H
                                   ignoreScore);
 
     // health
-    LiveScore::HIT returnedHit = HIT_MISS;
+    LiveHitResult returnedHit = HIT_MISS;
     if(!ignoreHealth) {
         this->addHealth(osu->getScore()->getHealthIncrease(this, hit), true);
 
@@ -3181,7 +3179,7 @@ void BeatmapInterface::update2() {
             break_on_extra_click &= this->iCurrentHitObjectIndex > 0;
             if(break_on_extra_click) {
                 this->addSliderBreak();
-                this->addHitResult(nullptr, LiveScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
+                this->addHitResult(nullptr, LiveHitResult::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
                                    false);  // only decrease health
             }
 
@@ -3239,7 +3237,7 @@ void BeatmapInterface::update2() {
     }
 
     // break time detection, and background fade during breaks
-    const DatabaseBeatmap::BREAK breakEvent = this->getBreakForTimeRange(
+    const DBType::BREAK breakEvent = this->getBreakForTimeRange(
         this->iPreviousHitObjectTime, this->iCurMusicPosWithOffsets, this->iNextHitObjectTime);
     const bool isInBreak = ((int)this->iCurMusicPosWithOffsets >= breakEvent.startTime &&
                             (int)this->iCurMusicPosWithOffsets <= breakEvent.endTime);
@@ -4453,7 +4451,7 @@ void BeatmapInterface::computeDrainRate() {
 
                 int breakTime = 0;
                 if(breakCount > 0 && breakNumber < breakCount) {
-                    const DatabaseBeatmap::BREAK &e = this->breaks[breakNumber];
+                    const DBType::BREAK &e = this->breaks[breakNumber];
                     if(e.startTime >= localLastTime && e.endTime <= h->getClickTime()) {
                         // consider break start equal to object end time for version 8+ since drain stops during this
                         // time
@@ -4477,9 +4475,9 @@ void BeatmapInterface::computeDrainRate() {
                     // nested hitobjects
                     if(sliderPointer != nullptr) {
                         // startcircle
-                        testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                            LiveScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
-                            testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
+                        testPlayer.increaseHealth(
+                            LiveScore::getHealthIncrease(LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
 
                         // ticks + repeats + repeat ticks
                         const std::vector<Slider::SLIDERCLICK> &clicks = sliderPointer->getClicks();
@@ -4487,27 +4485,27 @@ void BeatmapInterface::computeDrainRate() {
                             switch(click.type) {
                                 case 0:  // repeat
                                     testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                        LiveScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                                        LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
                                     break;
                                 case 1:  // tick
                                     testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                        LiveScore::HIT::HIT_SLIDER10, HP, testPlayer.hpMultiplierNormal,
+                                        LiveHitResult::HIT_SLIDER10, HP, testPlayer.hpMultiplierNormal,
                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider10
                                     break;
                             }
                         }
 
                         // endcircle
-                        testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                            LiveScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
-                            testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
+                        testPlayer.increaseHealth(
+                            LiveScore::getHealthIncrease(LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
                     } else if(spinnerPointer != nullptr) {
                         const int rotationsNeeded = (int)((f32)spinnerPointer->getDuration() / 1000.0f *
                                                           GameRules::getSpinnerSpinsPerSecond(this));
                         for(int r = 0; r < rotationsNeeded; r++) {
                             testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                LiveScore::HIT::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal,
+                                LiveHitResult::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal,
                                 testPlayer.hpMultiplierComboEnd, 1.0));  // spinnerspin
                         }
                     }
@@ -4515,14 +4513,14 @@ void BeatmapInterface::computeDrainRate() {
                     if(!(maxLongObjectDrop > 0.0) || (testPlayer.health - maxLongObjectDrop) > lowestHpEver) {
                         // regular hit (for every hitobject)
                         testPlayer.increaseHealth(
-                            LiveScore::getHealthIncrease(LiveScore::HIT::HIT_300, HP, testPlayer.hpMultiplierNormal,
+                            LiveScore::getHealthIncrease(LiveHitResult::HIT_300, HP, testPlayer.hpMultiplierNormal,
                                                          testPlayer.hpMultiplierComboEnd, 1.0));  // 300
 
                         // end of combo (new combo starts at next hitobject)
                         if((i == this->hitobjects.size() - 1) || this->hitobjects[i]->isEndOfCombo()) {
-                            testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                LiveScore::HIT::HIT_300G, HP, testPlayer.hpMultiplierNormal,
-                                testPlayer.hpMultiplierComboEnd, 1.0));  // geki
+                            testPlayer.increaseHealth(
+                                LiveScore::getHealthIncrease(LiveHitResult::HIT_300G, HP, testPlayer.hpMultiplierNormal,
+                                                             testPlayer.hpMultiplierComboEnd, 1.0));  // geki
 
                             if(testPlayer.health < lowestHpComboEnd) {
                                 if(++comboTooLowCount > 2) {

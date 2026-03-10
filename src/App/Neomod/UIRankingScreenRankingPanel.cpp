@@ -7,6 +7,7 @@
 #include "Skin.h"
 #include "SkinImage.h"
 #include "score.h"
+#include "Graphics.h"
 
 UIRankingScreenRankingPanel::UIRankingScreenRankingPanel() : CBaseUIImage("", 0, 0, 0, 0, "") {
     this->setImage(osu->getSkin()->i_ranking_panel);

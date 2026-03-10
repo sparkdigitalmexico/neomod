@@ -4,6 +4,7 @@
 #include "GameRules.h"
 #include "LegacyReplay.h"
 #include "DatabaseBeatmap.h"
+#include "score.h"
 
 f32 AbstractBeatmapInterface::getHitWindow300() const {
     return GameRules::mapDifficultyRange(this->getOD(), GameRules::getMinHitWindow300(),
@@ -83,7 +84,7 @@ u32 AbstractBeatmapInterface::getScoreV1DifficultyMultiplier() const {
                       38.0f * 5.0f);
 }
 
-LiveScore::HIT AbstractBeatmapInterface::getHitResult(i32 delta) const {
+LiveHitResult AbstractBeatmapInterface::getHitResult(i32 delta) const {
     // "stable-like" hit windows, see https://github.com/ppy/osu/pull/33882
     const f32 window300 = std::floor(this->getHitWindow300()) - 0.5f;
     const f32 window100 = std::floor(this->getHitWindow100()) - 0.5f;
@@ -92,7 +93,7 @@ LiveScore::HIT AbstractBeatmapInterface::getHitResult(i32 delta) const {
 
     // We are 400ms away from the hitobject, don't count this as a miss
     if(fDelta > GameRules::getHitWindowMiss()) {
-        return LiveScore::HIT::HIT_NULL;
+        return LiveHitResult::HIT_NULL;
     }
 
     const auto modFlags = this->getMods().flags;
@@ -101,16 +102,16 @@ LiveScore::HIT AbstractBeatmapInterface::getHitResult(i32 delta) const {
     // mod_halfwindow_allow_300s also allows "late" perfect hits
     if(flags::has<ModFlags::HalfWindow>(modFlags) && delta > 0) {
         if(fDelta > window300 || !flags::has<ModFlags::HalfWindowAllow300s>(modFlags)) {
-            return LiveScore::HIT::HIT_MISS;
+            return LiveHitResult::HIT_MISS;
         }
     }
 
-    if(fDelta < window300) return LiveScore::HIT::HIT_300;
+    if(fDelta < window300) return LiveHitResult::HIT_300;
     if(fDelta < window100 && !(flags::has<ModFlags::No100s>(modFlags) || flags::has<ModFlags::Ming3012>(modFlags)))
-        return LiveScore::HIT::HIT_100;
+        return LiveHitResult::HIT_100;
     if(fDelta < window50 && !(flags::has<ModFlags::No100s>(modFlags) || flags::has<ModFlags::No50s>(modFlags)))
-        return LiveScore::HIT::HIT_50;
-    return LiveScore::HIT::HIT_MISS;
+        return LiveHitResult::HIT_50;
+    return LiveHitResult::HIT_MISS;
 }
 
 bool AbstractBeatmapInterface::isClickHeld() const { return this->getKeys() & ~LegacyReplay::Smoke; }

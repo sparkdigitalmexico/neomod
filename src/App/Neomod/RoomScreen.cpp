@@ -4,6 +4,14 @@
 #include <sstream>
 #include <utility>
 
+#include "Logging.h"
+#include "Graphics.h"
+#include "SoundEngine.h"
+#include "Engine.h"
+#include "Mouse.h"
+#include "Keyboard.h"
+
+#include "Osu.h"
 #include "BackgroundImageHandler.h"
 #include "Bancho.h"
 #include "BanchoNetworking.h"
@@ -18,17 +26,13 @@
 #include "Database.h"
 #include "MakeDelegateWrapper.h"
 #include "Downloader.h"
-#include "Engine.h"
 #include "HUD.h"
-#include "Keyboard.h"
 #include "LegacyReplay.h"
 #include "Lobby.h"
 #include "MainMenu.h"
 #include "ModSelector.h"
-#include "Mouse.h"
 #include "NotificationOverlay.h"
 #include "OptionsOverlay.h"
-#include "Osu.h"
 #include "OsuDirectScreen.h"
 #include "PromptOverlay.h"
 #include "RankingScreen.h"
@@ -38,7 +42,6 @@
 #include "SkinImage.h"
 #include "SongBrowser/SongBrowser.h"
 #include "SongBrowser/SongButton.h"
-#include "SoundEngine.h"
 #include "SpectatorScreen.h"
 #include "UI.h"
 #include "UIAvatar.h"
@@ -46,9 +49,18 @@
 #include "UICheckbox.h"
 #include "UIContextMenu.h"
 #include "UIUserContextMenu.h"
-#include "Logging.h"
+#include "DatabaseBeatmap.h"
 
 using namespace flags::operators;
+
+// pointers-to-members MSVC shenanigans
+// see https://learn.microsoft.com/en-us/cpp/preprocessor/pointers-to-members?view=msvc-170
+
+struct UIModList::ModImageList : public std::vector<SkinImage Skin::*> {};
+
+UIModList::UIModList(LegacyFlags *flags)
+    : CBaseUIContainer(0, 0, 0, 0, "mod_list"), flags(flags), mod_images(new ModImageList()) {}
+UIModList::~UIModList() = default;
 
 void UIModList::draw() {
     // TODO: when can this->flags actually change? why can't we just store the flags ourselves instead of using a pointer
@@ -63,15 +75,15 @@ void UIModList::draw() {
             temp.flags &= ~ModFlags::NoPitchCorrection;
         }
 
-        this->mod_images.clear();
-        Skin::getModImagesForMods(this->mod_images, temp);
+        this->mod_images->clear();
+        Skin::getModImagesForMods(*this->mod_images, temp);
     }
 
     g->setColor(0xffffffff);
     vec2 mod_pos = this->getPos();
 
     const auto *skin = osu->getSkin();
-    for(const auto memb : this->mod_images) {
+    for(const auto memb : *this->mod_images) {
         const SkinImage &mod_icon = skin->*memb;
         float target_height = this->getSize().y;
         float scaling_factor = target_height / mod_icon.getSize().y;

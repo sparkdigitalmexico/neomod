@@ -5,8 +5,8 @@
 
 class NullVertexArrayObject : public VertexArrayObject {
    public:
-    NullVertexArrayObject(DrawPrimitive primitive = DrawPrimitive::TRIANGLES,
-                          DrawUsageType usage = DrawUsageType::STATIC, bool keepInSystemMemory = false);
+    NullVertexArrayObject(DrawPrimitive primitive = DrawPrimitive{2} /* TRIANGLES */,
+                          DrawUsageType usage = DrawUsageType{0} /* STATIC */, bool keepInSystemMemory = false);
 
     void draw() override;
 };

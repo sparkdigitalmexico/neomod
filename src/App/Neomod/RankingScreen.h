@@ -1,23 +1,14 @@
 #pragma once
 // Copyright (c) 2016, PG, All rights reserved.
-#include "Database.h"
 #include "ScreenBackable.h"
-#include "score.h"
-#include "Skin.h"
+#include "StaticPImpl.h"
 
-class CBaseUIContainer;
-class CBaseUIScrollView;
-class CBaseUIImage;
-class CBaseUILabel;
-class DatabaseBeatmap;
+struct FinishedScore;
+
+struct Skin;
 class SkinImage;
-class UIButton;
-class UIRankingScreenInfoLabel;
-class UIRankingScreenRankingPanel;
-class RankingScreenIndexLabel;
-class RankingScreenBottomElement;
 
-class ConVar;
+enum class ScoreGrade : uint8_t;
 
 class RankingScreen final : public ScreenBackable {
    public:
@@ -45,28 +36,6 @@ class RankingScreen final : public ScreenBackable {
     [[nodiscard]] UString getPPString() const;
     [[nodiscard]] vec2 getPPPosRaw() const;
 
-    CBaseUIScrollView *rankings;
-
-    UIRankingScreenInfoLabel *songInfo;
-    UIRankingScreenRankingPanel *rankingPanel;
-    CBaseUIImage *rankingTitle;
-    CBaseUIImage *rankingGrade;
-    RankingScreenIndexLabel *rankingIndex;
-    RankingScreenBottomElement *rankingBottom;
-
-    UIButton *retry_btn;
-    UIButton *watch_btn;
-
-    ScoreGrade grade{ScoreGrade::D};
-    float fUnstableRate;
-    float fHitErrorAvgMin;
-    float fHitErrorAvgMax;
-
-    UString sMods;
-    std::vector<SkinImage Skin::*> modImages;
-    std::vector<ConVar *> extraMods;
-
-    // custom
-    FinishedScore storedScore;
-    bool bIsUnranked;
+    struct RankingScreenImpl;
+    StaticPImpl<RankingScreenImpl, 768> m_impl;
 };

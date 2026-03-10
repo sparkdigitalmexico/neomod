@@ -22,6 +22,7 @@
 #include "UI.h"
 #include "Logging.h"
 #include "MakeDelegateWrapper.h"
+#include "Graphics.h"
 
 #include "VertexArrayObject.h"
 #include "RenderTarget.h"

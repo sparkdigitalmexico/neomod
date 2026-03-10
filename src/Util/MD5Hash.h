@@ -25,7 +25,7 @@ using MD5Byte = unsigned char;
 #define ALIGNED_TO(x) alignas(x)
 #endif
 
-struct ALIGNED_TO(16) MD5String final : public std::array<char, 32> {
+struct ALIGNED_TO(sizeof(void *) * 2) MD5String final : public std::array<char, 32> {
     using array::array;
     constexpr MD5String() : array() {}
     MD5String(const char *str);
@@ -70,7 +70,7 @@ struct ALIGNED_TO(16) MD5String final : public std::array<char, 32> {
     }
 };
 
-struct ALIGNED_TO(16) MD5Hash final : public std::array<MD5Byte, 16> {
+struct ALIGNED_TO(sizeof(void *) * 2) MD5Hash final : public std::array<MD5Byte, 16> {
     using array::array;
 
     constexpr MD5Hash() : array() {}

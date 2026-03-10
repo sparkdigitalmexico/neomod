@@ -3,6 +3,10 @@
 
 #include "Engine.h"
 #include "ContainerRanges.h"
+#include "Graphics.h"
+
+static_assert(DrawUsageType::STATIC == DrawUsageType{0});
+static_assert(DrawPrimitive::TRIANGLES == DrawPrimitive{2});
 
 void VertexArrayObject::init() {
     // this->bReady may only be set in inheriting classes, if baking was successful

@@ -42,6 +42,8 @@
 #include "Environment.h"
 #include "MakeDelegateWrapper.h"
 #include "crypto.h"
+#include "Graphics.h"
+#include "DatabaseBeatmap.h"
 
 #include <algorithm>
 #include <cmath>

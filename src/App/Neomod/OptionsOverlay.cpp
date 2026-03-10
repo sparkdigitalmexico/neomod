@@ -20,6 +20,7 @@
 #include "RenderTarget.h"
 #include "KeyBindings.h"
 #include "OsuKeyBinds.h"
+#include "BeatmapInterface.h"
 #include "MainMenu.h"
 #include "ModSelector.h"
 #include "Osu.h"
@@ -53,6 +54,7 @@
 #include "AsyncPool.h"
 #include "Parsing.h"
 
+#include "Graphics.h"
 #include "Sound.h"
 #include "SoundEngine.h"
 #if defined(MCENGINE_PLATFORM_WINDOWS) && defined(MCENGINE_FEATURE_BASS)
@@ -494,7 +496,7 @@ class SkinPreviewElement final : public CBaseUIElement {
             const int colorCounter = 42;
             const int colorOffset = 0;
             const float colorRGBMultiplier = 1.0f;
-            using enum LiveScore::HIT;
+            using enum LiveHitResult;
 
             Circle::drawCircle(
                 skin, this->getPos() + vec2(0, this->getSize().y / 2) + vec2(this->getSize().x * (1.0f / 5.0f), 0.0f),

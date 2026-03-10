@@ -1,7 +1,9 @@
 #pragma once
 // Copyright (c) 2023, kiwec, All rights reserved.
 
-#include "DatabaseBeatmap.h"
+#include "types.h"
+
+class DatabaseBeatmap;
 
 struct Packet;
 

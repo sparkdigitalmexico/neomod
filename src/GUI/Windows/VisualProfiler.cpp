@@ -14,6 +14,7 @@
 #include "RuntimePlatform.h"
 #include "SoundEngine.h"
 #include "Font.h"
+#include "Graphics.h"
 #include "VertexArrayObject.h"
 #include "SysMon.h"
 

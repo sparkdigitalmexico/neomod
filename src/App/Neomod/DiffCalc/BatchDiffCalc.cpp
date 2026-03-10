@@ -65,8 +65,12 @@ void internal::collect_outdated_db_diffs(const Sync::stop_token& stoken, std::ve
 
 namespace {
 
-#define logFailure(err__, ...) \
-    cv::debug_pp.getBool() ? debugLog("{}: {}", (err__).error_string(), fmt::format(__VA_ARGS__)) : (void)(0)
+#define logFailure(err__, ...)                                                   \
+    do {                                                                         \
+        if(cv::debug_pp.getBool()) {                                             \
+            debugLog("{}: {}", (err__).error_string(), fmt::format(__VA_ARGS__)); \
+        }                                                                        \
+    } while(false)
 
 // Mod parameters that affect difficulty calculation. Scores with identical
 // ModParams on the same beatmap can share star rating calculations.

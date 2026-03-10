@@ -3,13 +3,13 @@
 
 #include "AnimationHandler.h"
 #include "AbstractBeatmapInterface.h"
-#include "DatabaseBeatmap.h"
 #include "AsyncPPCalculator.h"
 #include "LegacyReplay.h"
 #include "PlaybackInterpolator.h"
 #include "score.h"
 #include "LivePPCalc.h"
 #include "Vectors.h"
+#include "DatabaseBeatmapTypes.h"
 
 #include <memory>
 
@@ -143,8 +143,10 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     void setMusicSpeed(f32 speed);
     void setMusicPitch(f32 pitch);
     void seekMS(u32 ms);
-    [[nodiscard]] inline DatabaseBeatmap::TIMING_INFO getCurrentTimingInfo() const { return this->cur_timing_info; }
-    [[nodiscard]] inline i32 getDefaultSampleSet() const { return this->default_sample_set; }
+    [[nodiscard]] inline DatabaseBeatmapTypes::TIMING_INFO getCurrentTimingInfo() const {
+        return this->cur_timing_info;
+    }
+    [[nodiscard]] inline u8 getDefaultSampleSet() const { return this->default_sample_set; }
 
     [[nodiscard]] inline Sound *getMusic() const { return this->music; }
     [[nodiscard]] u32 getTime() const;
@@ -230,14 +232,14 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     [[nodiscard]] inline f32 shouldFlashSectionFail() const { return this->fShouldFlashSectionFail; }
     [[nodiscard]] bool isWaiting() const override { return this->bIsWaiting; }
 
-    [[nodiscard]] inline const std::vector<DatabaseBeatmap::BREAK> &getBreaks() const { return this->breaks; }
+    [[nodiscard]] inline const std::vector<DatabaseBeatmapTypes::BREAK> &getBreaks() const { return this->breaks; }
     [[nodiscard]] u32 getBreakDurationTotal() const override;
-    [[nodiscard]] DatabaseBeatmap::BREAK getBreakForTimeRange(i64 startMS, i64 positionMS, i64 endMS) const;
+    [[nodiscard]] DatabaseBeatmapTypes::BREAK getBreakForTimeRange(i64 startMS, i64 positionMS, i64 endMS) const;
 
     // HitObject and other helper functions
-    LiveScore::HIT addHitResult(HitObject *hitObject, LiveScore::HIT hit, i32 delta, bool isEndOfCombo = false,
-                                bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false,
-                                bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false) override;
+    LiveHitResult addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta, bool isEndOfCombo = false,
+                               bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false,
+                               bool ignoreScore = false, bool ignoreHealth = false) override;
     void addSliderBreak() override;
     void addScorePoints(int points, bool isSpinner = false) override;
     void addHealth(f64 percent, bool isFromHitResult);
@@ -300,8 +302,8 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     bool bIsFirstMissSound;
     bool bIsWaitingForPreview{false};
     bool bIsAsyncMusicLoadHandled{true};
-    DatabaseBeatmap::TIMING_INFO cur_timing_info{};
-    i32 default_sample_set{1};
+    DatabaseBeatmapTypes::TIMING_INFO cur_timing_info{};
+    u8 default_sample_set{1};
 
     // health
     bool bFailed;
@@ -313,7 +315,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     f64 fDrainRate;
 
     // breaks
-    std::vector<DatabaseBeatmap::BREAK> breaks;
+    std::vector<DatabaseBeatmapTypes::BREAK> breaks;
     AnimFloat fBreakBackgroundFade;
     bool bInBreak;
     HitObject *currentHitObject;

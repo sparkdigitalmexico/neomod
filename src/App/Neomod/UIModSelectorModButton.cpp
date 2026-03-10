@@ -18,6 +18,7 @@
 #include "SoundEngine.h"
 #include "TooltipOverlay.h"
 #include "UI.h"
+#include "Graphics.h"
 
 UIModSelectorModButton::UIModSelectorModButton(ModSelector *osuModSelector, float xPos, float yPos, float xSize,
                                                float ySize, UString name)
@@ -33,7 +34,7 @@ UIModSelectorModButton::UIModSelectorModButton(ModSelector *osuModSelector, floa
     this->bAvailable = true;
     this->bOn = false;
 
-    this->activeSkinImageMember = nullptr;
+    this->currentSkinImageGetFunc = nullptr;
 
     this->bFocusStolenDelay = false;
 }
@@ -229,8 +230,8 @@ void UIModSelectorModButton::setOn(bool on, bool silent) {
             this->fScaleX.set(this->vBaseScale.x, animationDuration * swapDurationMultiplier, anim::Linear);
             this->fScaleY.set(this->vBaseScale.y, animationDuration * swapDurationMultiplier, anim::Linear);
 
-            this->fRot.append(this->fEnabledRotationDeg, animationDuration * swapDurationMultiplier,
-                              anim::Linear, animationDuration * swapDurationMultiplier);
+            this->fRot.append(this->fEnabledRotationDeg, animationDuration * swapDurationMultiplier, anim::Linear,
+                              animationDuration * swapDurationMultiplier);
             this->fScaleX.append(this->vBaseScale.x * this->fEnabledScaleMultiplier,
                                  animationDuration * swapDurationMultiplier, anim::Linear,
                                  animationDuration * swapDurationMultiplier);
@@ -239,10 +240,8 @@ void UIModSelectorModButton::setOn(bool on, bool silent) {
                                  animationDuration * swapDurationMultiplier);
         } else {
             this->fRot.set(this->fEnabledRotationDeg, animationDuration, anim::Linear);
-            this->fScaleX.set(this->vBaseScale.x * this->fEnabledScaleMultiplier, animationDuration,
-                              anim::Linear);
-            this->fScaleY.set(this->vBaseScale.y * this->fEnabledScaleMultiplier, animationDuration,
-                              anim::Linear);
+            this->fScaleX.set(this->vBaseScale.x * this->fEnabledScaleMultiplier, animationDuration, anim::Linear);
+            this->fScaleY.set(this->vBaseScale.y * this->fEnabledScaleMultiplier, animationDuration, anim::Linear);
         }
 
         soundEngine->play(osu->getSkin()->s_check_on);
@@ -261,8 +260,8 @@ void UIModSelectorModButton::setState(int state) {
     this->iState = state;
 
     // update image
-    if(this->iState < this->states.size() && this->states[this->iState].skinImageMember != nullptr) {
-        this->activeSkinImageMember = this->states[this->iState].skinImageMember;
+    if(this->iState < this->states.size() && this->states[this->iState].skinImageGetFunc != nullptr) {
+        this->currentSkinImageGetFunc = this->states[this->iState].skinImageGetFunc;
     }
 
     // FIXME: needing to call a bunch of functions from all over the place just to keep
@@ -272,23 +271,23 @@ void UIModSelectorModButton::setState(int state) {
 }
 
 void UIModSelectorModButton::setState(unsigned int state, bool initialState, ConVar *cvar, UString modName,
-                                      const UString &tooltipText, SkinImageSkinMember skinMember) {
+                                      const UString &tooltipText, SkinImageGetter skinImageGetter) {
     // dynamically add new state
     while(this->states.size() < state + 1) {
         STATE t{};
-        t.skinImageMember = nullptr;
+        t.skinImageGetFunc = nullptr;
         this->states.push_back(t);
     }
     this->states[state].cvar = cvar;
     this->states[state].modName = std::move(modName);
     this->states[state].tooltipTextLines = tooltipText.split(US_("\n"));
-    this->states[state].skinImageMember = skinMember;
+    this->states[state].skinImageGetFunc = std::move(skinImageGetter);
 
     // set initial state image
     if(this->states.size() == 1)
-        this->activeSkinImageMember = this->states[0].skinImageMember;
+        this->currentSkinImageGetFunc = this->states[0].skinImageGetFunc;
     else if(this->iState > -1 && this->iState < this->states.size())  // update current state image
-        this->activeSkinImageMember = this->states[this->iState].skinImageMember;
+        this->currentSkinImageGetFunc = this->states[this->iState].skinImageGetFunc;
 
     // set initial state on (but without firing callbacks)
     if(initialState) {
@@ -305,9 +304,9 @@ const UString &UIModSelectorModButton::getActiveModName() const {
 }
 
 const SkinImage *UIModSelectorModButton::getActiveSkinImage() const {
-    if(!this->activeSkinImageMember) return nullptr;
+    if(!this->currentSkinImageGetFunc) return nullptr;
     if(const auto *skin = osu->getSkin()) {
-        return &(skin->*this->activeSkinImageMember);
+        return this->currentSkinImageGetFunc(skin);
     }
     return nullptr;
 }

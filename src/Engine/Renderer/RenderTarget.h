@@ -1,7 +1,10 @@
 #pragma once
 // Copyright (c) 2013, PG, All rights reserved.
 #include "Resource.h"
-#include "Graphics.h"
+#include "Graphics_fwd.h"
+
+#include "Color.h"
+#include "Vectors.h"
 
 #include <memory>
 
@@ -11,7 +14,7 @@ class RenderTarget : public Resource {
     NOCOPY_NOMOVE(RenderTarget)
    public:
     RenderTarget(int x, int y, int width, int height,
-                 MultisampleType multiSampleType = MultisampleType::X0);
+                 MultisampleType multiSampleType = MultisampleType{0});
     ~RenderTarget() override;
 
     virtual void draw(int x, int y);
@@ -49,7 +52,7 @@ class RenderTarget : public Resource {
 
     [[nodiscard]] inline bool isMultiSampled() const {
         if constexpr(Env::cfg(OS::WASM)) return false;
-        return this->multiSampleType != MultisampleType::X0;
+        return this->multiSampleType != MultisampleType{};
     }
 
     RenderTarget *asRenderTarget() final { return this; }

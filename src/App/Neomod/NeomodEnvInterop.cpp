@@ -15,6 +15,7 @@
 #include "Skin.h"
 #include "SongBrowser/SongBrowser.h"
 #include "UI.h"
+#include "score.h"
 #include "Logging.h"
 
 struct NeomodEnvInterop : public Environment::Interop {

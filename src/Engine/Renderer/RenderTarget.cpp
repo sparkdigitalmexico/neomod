@@ -4,7 +4,10 @@
 #include "ConVar.h"
 #include "Engine.h"
 #include "VertexArrayObject.h"
+#include "Graphics.h"
 #include "Logging.h"
+
+static_assert(MultisampleType::X0 == MultisampleType{0});
 
 RenderTarget::RenderTarget(int x, int y, int width, int height, MultisampleType multiSampleType)
     : Resource(RENDERTARGET),

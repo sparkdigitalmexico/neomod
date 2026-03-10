@@ -1,7 +1,6 @@
 #pragma once
 // Copyright (c) 2016, PG, All rights reserved.
 #include "CarouselButton.h"
-#include "score.h"
 
 class Image;
 class SongBrowser;
@@ -10,6 +9,8 @@ class DatabaseBeatmap;
 using BeatmapSet = DatabaseBeatmap;
 using BeatmapDifficulty = DatabaseBeatmap;
 class BeatmapCarousel;
+
+enum class ScoreGrade : u8;
 
 class SongButton : public CarouselButton {
     NOCOPY_NOMOVE(SongButton)
@@ -34,7 +35,8 @@ class SongButton : public CarouselButton {
     virtual void updateGrade() { ; }
 
     [[nodiscard]] const DatabaseBeatmap *getDatabaseBeatmap() const override { return this->databaseBeatmap; }
-    ScoreGrade grade = ScoreGrade::N;
+    [[nodiscard]] inline ScoreGrade getGrade() const { return this->grade; }
+    inline void setGrade(ScoreGrade grade) { this->grade = grade; }
 
    protected:
     SongButton *setVisible(bool visible) override;
@@ -71,10 +73,15 @@ class SongButton : public CarouselButton {
     float fVisibleFor{0.f};
 
    private:
+    float fThumbnailFadeInTime{0.0f};
+
+   protected:
+    ScoreGrade grade;
+
+   private:
     [[nodiscard]] inline std::vector<SongDifficultyButton *> &childDiffBtns() {
         return reinterpret_cast<std::vector<SongDifficultyButton *> &>(this->children);
     }
 
-    float fThumbnailFadeInTime{0.0f};
     void onOpenBeatmapFolderClicked();
 };

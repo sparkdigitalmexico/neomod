@@ -1,6 +1,13 @@
 #pragma once
+#include "types.h"
+#include "noinclude.h"
+
 #include "AnimationHandler.h"
-#include "BeatmapInterface.h"
+#include "Vectors.h"
+#include "Color.h"
+
+#include "HitSounds.h"
+
 #include <vector>
 
 class ConVar;
@@ -9,6 +16,13 @@ class SkinImage;
 class SliderCurve;
 class VertexArrayObject;
 class Image;
+class AbstractBeatmapInterface;
+class BeatmapInterface;
+
+struct Click;
+struct Skin;
+
+enum class LiveHitResult : uint8_t;
 
 enum class HitObjectType : uint8_t {
     CIRCLE,
@@ -17,7 +31,7 @@ enum class HitObjectType : uint8_t {
 };
 
 namespace PpyHitObjectType {
-enum {
+enum : u8 {
     CIRCLE = (1 << 0),
     SLIDER = (1 << 1),
     NEW_COMBO = (1 << 2),
@@ -35,13 +49,13 @@ class HitObject {
     void setComboNumber(i32 comboNumber) { m_comboNumber = comboNumber; }
 
    public:
-    static void drawHitResult(BeatmapInterface *pf, vec2 rawPos, LiveScore::HIT result, float animPercentInv,
+    static void drawHitResult(BeatmapInterface *pf, vec2 rawPos, LiveHitResult result, float animPercentInv,
                               float hitDeltaRangePercent);
     static void drawHitResult(const Skin *skin, float hitcircleDiameter, float rawHitcircleDiameter, vec2 rawPos,
-                              LiveScore::HIT result, float animPercentInv, float hitDeltaRangePercent);
+                              LiveHitResult result, float animPercentInv, float hitDeltaRangePercent);
 
    protected:  // only constructable through subclasses
-    HitObject(i32 timeMS, HitSamples samples, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset,
+    HitObject(i32 timeMS, DBHitSample samples, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset,
               AbstractBeatmapInterface *beatmap);
 
    public:
@@ -77,7 +91,7 @@ class HitObject {
     [[nodiscard]] forceinline i32 getComboStartTime() const { return m_comboStartMS; }
     [[nodiscard]] forceinline i32 getComboNumber() const { return m_comboNumber; }
 
-    void addHitResult(LiveScore::HIT result, i32 delta, bool isEndOfCombo, vec2 posRaw, float targetDeltaPct = 0.0f,
+    void addHitResult(LiveHitResult result, i32 delta, bool isEndOfCombo, vec2 posRaw, float targetDeltaPct = 0.0f,
                       float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false,
                       bool ignoreHealth = false, bool addObjectDurationToSkinAnimationTimeStartOffset = true);
     void misAimed() { m_misAim = true; }
@@ -114,7 +128,7 @@ class HitObject {
         vec2 rawPos{0.f};
         i32 deltaMS{0};
         float timeSecs{-9999.0f};
-        LiveScore::HIT result{LiveScore::HIT::HIT_NULL};
+        LiveHitResult result{0 /* LiveHitResult::HIT_NULL*/};
         bool addObjectDurationToSkinAnimationTimeStartOffset{false};
     };
 
@@ -127,7 +141,7 @@ class HitObject {
     AbstractBeatmapInterface *m_pi;
     BeatmapInterface *m_pf;  // NULL when simulating
 
-    i32 m_comboStartMS;  // for freeze time mod
+    i32 m_comboStartMS{0};  // for freeze time mod
     i32 m_clickTimeMS;
     i32 m_durationMS{0};
 
@@ -138,7 +152,7 @@ class HitObject {
     i32 m_fadeInTimeMS{0};  // extra time added before the approachTime to let the object smoothly become visible
     i32 m_autopilotDeltaMS{0};
 
-    HitSamples m_hitSamples;
+    DBHitSample m_hitSamples;
     int m_colorCounter;
     int m_colorOffset;
 
@@ -205,7 +219,7 @@ class Circle final : public HitObject {
     Circle() = delete;
     ~Circle() override;
 
-    Circle(int x, int y, i32 timeMS, HitSamples samples, int comboNumber, bool isEndOfCombo, int colorCounter,
+    Circle(int x, int y, i32 timeMS, DBHitSample samples, int comboNumber, bool isEndOfCombo, int colorCounter,
            int colorOffset, AbstractBeatmapInterface *beatmap);
 
     Circle(const Circle &) = delete;
@@ -232,7 +246,7 @@ class Circle final : public HitObject {
     static int rainbowNumber;
     static int rainbowColorCounter;
 
-    void onHit(LiveScore::HIT result, i32 hitDeltaMS, float targetDeltaPct = 0.0f, float targetAngle = 0.0f);
+    void onHit(LiveHitResult result, i32 hitDeltaMS, float targetDeltaPct = 0.0f, float targetAngle = 0.0f);
 
     bool m_waiting{false};
 
@@ -261,7 +275,7 @@ class Slider final : public HitObject {
 
     Slider(SLIDERCURVETYPE stype, int repeat, float pixelLength, std::vector<vec2> points,
            const std::vector<float> &ticks, float sliderTimeMS, float sliderTimeMSWithoutRepeats, i32 timeMS,
-           HitSamples hoverSamples, std::vector<HitSamples> edgeSamples, int comboNumber, bool isEndOfCombo,
+           DBHitSample hoverSamples, std::vector<DBHitSample> edgeSamples, int comboNumber, bool isEndOfCombo,
            int colorCounter, int colorOffset, AbstractBeatmapInterface *beatmap);
 
     Slider(const Slider &) = delete;
@@ -302,7 +316,7 @@ class Slider final : public HitObject {
 
     void updateAnimations(i32 curPosMS);
 
-    void onHit(LiveScore::HIT result, i32 hitDeltaMS, bool isEndCircle, float targetDelta = 0.0f,
+    void onHit(LiveHitResult result, i32 hitDeltaMS, bool isEndCircle, float targetDelta = 0.0f,
                float targetAngle = 0.0f, bool isEndResultFromStrictTrackingMod = false);
     void onRepeatHit(const SLIDERCLICK &click);
     void onTickHit(const SLIDERCLICK &click);
@@ -328,8 +342,8 @@ class Slider final : public HitObject {
 
     std::vector<HitAnim> m_clickAnimations;
     std::vector<vec2> m_points;
-    std::vector<HitSamples> m_edgeSamples;
-    std::vector<HitSamples::Set_Slider_Hit> m_lastSliderSampleSets{};
+    std::vector<DBHitSample> m_edgeSamples;
+    std::vector<HitSamples::Set_Slider_Hit> m_lastSliderSampleSets;
 
     std::vector<SLIDERTICK> m_ticks;  // ticks (drawing)
 
@@ -368,8 +382,8 @@ class Slider final : public HitObject {
 
     SLIDERCURVETYPE m_curveType;
 
-    LiveScore::HIT m_startResult{LiveScore::HIT::HIT_NULL};
-    LiveScore::HIT m_endResult{LiveScore::HIT::HIT_NULL};
+    LiveHitResult m_startResult{0 /* LiveHitResult::HIT_NULL*/};
+    LiveHitResult m_endResult{0 /* LiveHitResult::HIT_NULL*/};
 
     bool m_startFinished{false};
     bool m_endFinished{false};
@@ -385,7 +399,7 @@ class Slider final : public HitObject {
 class Spinner final : public HitObject {
    public:
     Spinner() = delete;
-    Spinner(int x, int y, i32 timeMS, HitSamples samples, bool isEndOfCombo, i32 endTimeMS,
+    Spinner(int x, int y, i32 timeMS, DBHitSample samples, bool isEndOfCombo, i32 endTimeMS,
             AbstractBeatmapInterface *beatmap);
     ~Spinner() override;
 

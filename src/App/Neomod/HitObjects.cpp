@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "AnimationHandler.h"
+#include "Graphics.h"
 #include "Bancho.h"
 #include "OsuConVars.h"
 #include "Engine.h"
@@ -15,6 +16,7 @@
 #include "Font.h"
 #include "VertexArrayObject.h"
 #include "BeatmapInterface.h"
+#include "DatabaseBeatmap.h"
 #include "RenderTarget.h"
 #include "ResourceManager.h"
 #include "Skin.h"
@@ -28,14 +30,14 @@
 
 using namespace flags::operators;
 
-void HitObject::drawHitResult(BeatmapInterface *pf, vec2 rawPos, LiveScore::HIT result, float animPercentInv,
+void HitObject::drawHitResult(BeatmapInterface *pf, vec2 rawPos, LiveHitResult result, float animPercentInv,
                               float hitDeltaRangePercent) {
     drawHitResult(pf->getSkin(), pf->fHitcircleDiameter, pf->fRawHitcircleDiameter, rawPos, result, animPercentInv,
                   hitDeltaRangePercent);
 }
 
 void HitObject::drawHitResult(const Skin *skin, float hitcircleDiameter, float rawHitcircleDiameter, vec2 rawPos,
-                              LiveScore::HIT result, float animPercentInv, float hitDeltaRangePercent) {
+                              LiveHitResult result, float animPercentInv, float hitDeltaRangePercent) {
     if(animPercentInv <= 0.0f) return;
 
     const float animPercent = 1.0f - animPercentInv;
@@ -44,7 +46,7 @@ void HitObject::drawHitResult(const Skin *skin, float hitcircleDiameter, float r
 
     // determine color/transparency
     {
-        if(!cv::hitresult_delta_colorize.getBool() || result == LiveScore::HIT::HIT_MISS)
+        if(!cv::hitresult_delta_colorize.getBool() || result == LiveHitResult::HIT_MISS)
             g->setColor(0xffffffff);
         else {
             // NOTE: hitDeltaRangePercent is within -1.0f to 1.0f
@@ -98,7 +100,7 @@ void HitObject::drawHitResult(const Skin *skin, float hitcircleDiameter, float r
         float hitImageScale = 1.0f;
 
         switch(result) {
-            using enum LiveScore::HIT;
+            using enum LiveHitResult;
             case HIT_MISS:
                 doScaleOrRotateAnim = skin->i_hit0.getNumImages() == 1;
                 hitImageScale = (rawHitcircleDiameter / skin->i_hit0.getSizeBaseRaw().x) * osuCoordScaleMultiplier;
@@ -169,7 +171,7 @@ void HitObject::drawHitResult(const Skin *skin, float hitcircleDiameter, float r
         }
 
         switch(result) {
-            using enum LiveScore::HIT;
+            using enum LiveHitResult;
 
             case HIT_MISS: {
                 // special case: animated misses don't move down, and skins with version <= 1 also don't move down
@@ -233,13 +235,13 @@ void HitObject::drawHitResult(const Skin *skin, float hitcircleDiameter, float r
     g->popTransform();
 }
 
-HitObject::HitObject(i32 timeMS, HitSamples samples, int comboNumber, bool isEndOfCombo, int colorCounter,
+HitObject::HitObject(i32 timeMS, DBHitSample samples, int comboNumber, bool isEndOfCombo, int colorCounter,
                      int colorOffset, AbstractBeatmapInterface *pi)
     : m_pi(pi),
       m_pf(dynamic_cast<BeatmapInterface *>(pi)),  // should be NULL if SimulatedBeatmapInterface
       m_clickTimeMS(timeMS),
       m_comboNumber(comboNumber),
-      m_hitSamples(std::move(samples)),
+      m_hitSamples(samples),
       m_colorCounter(colorCounter),
       m_colorOffset(colorOffset),
       m_endOfCombo(isEndOfCombo) {}
@@ -429,34 +431,34 @@ void HitObject::update(i32 curPosMS, f64 /*frame_time*/) {
     }
 }
 
-void HitObject::addHitResult(LiveScore::HIT result, i32 delta, bool isEndOfCombo, vec2 posRaw, float targetDelta,
+void HitObject::addHitResult(LiveHitResult result, i32 delta, bool isEndOfCombo, vec2 posRaw, float targetDelta,
                              float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo, bool ignoreHealth,
                              bool addObjectDurationToSkinAnimationTimeStartOffset) {
-    if(m_pf != nullptr && m_pi->getMods().has(ModFlags::Target) && result != LiveScore::HIT::HIT_MISS &&
+    if(m_pf != nullptr && m_pi->getMods().has(ModFlags::Target) && result != LiveHitResult::HIT_MISS &&
        targetDelta >= 0.0f) {
         const float p300 = cv::mod_target_300_percent.getFloat();
         const float p100 = cv::mod_target_100_percent.getFloat();
         const float p50 = cv::mod_target_50_percent.getFloat();
 
-        if(targetDelta < p300 && (result == LiveScore::HIT::HIT_300 || result == LiveScore::HIT::HIT_100))
-            result = LiveScore::HIT::HIT_300;
+        if(targetDelta < p300 && (result == LiveHitResult::HIT_300 || result == LiveHitResult::HIT_100))
+            result = LiveHitResult::HIT_300;
         else if(targetDelta < p100)
-            result = LiveScore::HIT::HIT_100;
+            result = LiveHitResult::HIT_100;
         else if(targetDelta < p50)
-            result = LiveScore::HIT::HIT_50;
+            result = LiveHitResult::HIT_50;
         else
-            result = LiveScore::HIT::HIT_MISS;
+            result = LiveHitResult::HIT_MISS;
 
         ui->getHUD()->addTarget(targetDelta, targetAngle);
     }
 
-    const LiveScore::HIT returnedHit = m_pi->addHitResult(this, result, delta, isEndOfCombo, ignoreOnHitErrorBar, false,
-                                                          ignoreCombo, false, ignoreHealth);
+    const LiveHitResult returnedHit = m_pi->addHitResult(this, result, delta, isEndOfCombo, ignoreOnHitErrorBar, false,
+                                                         ignoreCombo, false, ignoreHealth);
     if(m_pf == nullptr) return;
 
     HITRESULTANIM hitresultanim;
     {
-        hitresultanim.result = (returnedHit != LiveScore::HIT::HIT_MISS ? returnedHit : result);
+        hitresultanim.result = (returnedHit != LiveHitResult::HIT_MISS ? returnedHit : result);
         hitresultanim.rawPos = posRaw;
         hitresultanim.deltaMS = delta;
         hitresultanim.timeSecs = engine->getTime();
@@ -780,9 +782,9 @@ void Circle::drawHitCircleNumber(const Skin *skin, float numberScale, float over
     g->popTransform();
 }
 
-Circle::Circle(int x, int y, i32 timeMS, HitSamples samples, int comboNumber, bool isEndOfCombo, int colorCounter,
+Circle::Circle(int x, int y, i32 timeMS, DBHitSample samples, int comboNumber, bool isEndOfCombo, int colorCounter,
                int colorOffset, AbstractBeatmapInterface *pi)
-    : HitObject(timeMS, std::move(samples), comboNumber, isEndOfCombo, colorCounter, colorOffset, pi),
+    : HitObject(timeMS, samples, comboNumber, isEndOfCombo, colorCounter, colorOffset, pi),
       m_rawPos(x, y),
       m_originalRawPos(m_rawPos) {
     m_type = HitObjectType::CIRCLE;
@@ -891,7 +893,7 @@ void Circle::update(i32 curPosMS, f64 frameTimeSecs) {
 
     if(flags::has<ModFlags::Autoplay>(curIFaceMods)) {
         if(curPosMS >= m_clickTimeMS) {
-            onHit(LiveScore::HIT::HIT_300, 0);
+            onHit(LiveHitResult::HIT_300, 0);
         }
         return;
     }
@@ -902,9 +904,9 @@ void Circle::update(i32 curPosMS, f64 frameTimeSecs) {
             const vec2 pos = m_pi->osuCoords2Pixels(m_rawPos);
             const float cursorDelta = vec::length(m_pi->getCursorPos() - pos);
             if((cursorDelta < m_pi->fHitcircleDiameter / 2.0f && (flags::has<ModFlags::Relax>(curIFaceMods)))) {
-                LiveScore::HIT result = m_pi->getHitResult(deltaMS);
+                LiveHitResult result = m_pi->getHitResult(deltaMS);
 
-                if(result != LiveScore::HIT::HIT_NULL) {
+                if(result != LiveHitResult::HIT_NULL) {
                     const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
                     const float targetAngle =
                         vec::degrees(std::atan2(m_pi->getCursorPos().y - pos.y, m_pi->getCursorPos().x - pos.x));
@@ -920,7 +922,7 @@ void Circle::update(i32 curPosMS, f64 frameTimeSecs) {
 
         // if this is a miss after waiting
         if(deltaMS > (i32)m_pi->getHitWindow50()) {
-            onHit(LiveScore::HIT::HIT_MISS, deltaMS);
+            onHit(LiveHitResult::HIT_MISS, deltaMS);
         }
     } else {
         m_waiting = false;
@@ -938,7 +940,7 @@ void Circle::miss(i32 curPosMS) {
 
     const i32 deltaMS = curPosMS - m_clickTimeMS;
 
-    onHit(LiveScore::HIT::HIT_MISS, deltaMS);
+    onHit(LiveHitResult::HIT_MISS, deltaMS);
 }
 
 void Circle::onClickEvent(std::vector<Click> &clicks) {
@@ -957,8 +959,8 @@ void Circle::onClickEvent(std::vector<Click> &clicks) {
 
         const i32 deltaMS = clicks[0].musicPosMS - m_clickTimeMS;
 
-        LiveScore::HIT result = m_pi->getHitResult(deltaMS);
-        if(result != LiveScore::HIT::HIT_NULL) {
+        LiveHitResult result = m_pi->getHitResult(deltaMS);
+        if(result != LiveHitResult::HIT_NULL) {
             const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
             const float targetAngle = vec::degrees(std::atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
 
@@ -968,12 +970,12 @@ void Circle::onClickEvent(std::vector<Click> &clicks) {
     }
 }
 
-void Circle::onHit(LiveScore::HIT result, i32 delta, float targetDelta, float targetAngle) {
+void Circle::onHit(LiveHitResult result, i32 delta, float targetDelta, float targetAngle) {
     // sound and hit animation
-    if(m_pf != nullptr && result != LiveScore::HIT::HIT_MISS) {
+    if(m_pf != nullptr && result != LiveHitResult::HIT_MISS) {
         const vec2 osuCoords = m_pf->pixels2OsuCoords(m_pf->osuCoords2Pixels(m_rawPos));
         f32 pan = GameRules::osuCoords2Pan(osuCoords.x);
-        m_hitSamples.play(pan, delta, m_clickTimeMS);
+        HitSamples::play(m_hitSamples, pan, delta, m_clickTimeMS);
 
         m_hitAnimation = 0.001f;  // quickfix for 1 frame missing images
         m_hitAnimation.set(1.0f, GameRules::getFadeOutTime(m_pi->getBaseAnimationSpeed()), anim::QuadOut);
@@ -1007,9 +1009,9 @@ vec2 Circle::getAutoCursorPos(i32 /*curPos*/) const { return m_pi->osuCoords2Pix
 
 Slider::Slider(SLIDERCURVETYPE stype, int repeat, float pixelLength, std::vector<vec2> points,
                const std::vector<float> &ticks, float sliderTimeMS, float sliderTimeMSWithoutRepeats, i32 timeMS,
-               HitSamples hoverSamples, std::vector<HitSamples> edgeSamples, int comboNumber, bool isEndOfCombo,
+               DBHitSample hoverSamples, std::vector<DBHitSample> edgeSamples, int comboNumber, bool isEndOfCombo,
                int colorCounter, int colorOffset, AbstractBeatmapInterface *pi)
-    : HitObject(timeMS, std::move(hoverSamples), comboNumber, isEndOfCombo, colorCounter, colorOffset, pi),
+    : HitObject(timeMS, hoverSamples, comboNumber, isEndOfCombo, colorCounter, colorOffset, pi),
       m_points(std::move(points)),
       m_edgeSamples(std::move(edgeSamples)),
       m_pixelLength(std::abs(pixelLength)),
@@ -1141,7 +1143,7 @@ void Slider::draw() {
             }
 
             const bool ifStrictTrackingModShouldDrawEndCircle =
-                (!cv::mod_strict_tracking.getBool() || m_endResult != LiveScore::HIT::HIT_MISS);
+                (!cv::mod_strict_tracking.getBool() || m_endResult != LiveHitResult::HIT_MISS);
 
             const bool draw_end =
                 ((!m_endFinished && m_repeat % 2 != 0 && ifStrictTrackingModShouldDrawEndCircle) ||
@@ -1504,7 +1506,7 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
     if(m_pf != nullptr) {
         // stop slide sound while paused
         if(m_pf->isPaused() || !m_pf->isPlaying() || m_pf->hasFailed()) {
-            m_hitSamples.stop();
+            HitSamples::stopSliderSounds(m_lastSliderSampleSets);
         }
 
         // animations must be updated even if we are finished
@@ -1605,7 +1607,7 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
     if(!m_startFinished) {
         if((flags::has<ModFlags::Autoplay>(curIFaceMods))) {
             if(curPosMS >= m_clickTimeMS) {
-                onHit(LiveScore::HIT::HIT_300, 0, false);
+                onHit(LiveHitResult::HIT_300, 0, false);
                 m_pi->holding_slider = true;
             }
         } else {
@@ -1617,9 +1619,9 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
                     const vec2 pos = m_pi->osuCoords2Pixels(m_curve->pointAt(0.0f));
                     const float cursorDelta = vec::length(m_pi->getCursorPos() - pos);
                     if((cursorDelta < m_pi->fHitcircleDiameter / 2.0f && (flags::has<ModFlags::Relax>(curIFaceMods)))) {
-                        LiveScore::HIT result = m_pi->getHitResult(deltaMS);
+                        LiveHitResult result = m_pi->getHitResult(deltaMS);
 
-                        if(result != LiveScore::HIT::HIT_NULL) {
+                        if(result != LiveHitResult::HIT_NULL) {
                             const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
                             const float targetAngle = vec::degrees(
                                 std::atan2(m_pi->getCursorPos().y - pos.y, m_pi->getCursorPos().x - pos.x));
@@ -1636,7 +1638,7 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
             if(deltaMS >= 0) {
                 // if this is a miss after waiting
                 if(deltaMS > (i32)m_pi->getHitWindow50()) {
-                    m_startResult = LiveScore::HIT::HIT_MISS;
+                    m_startResult = LiveHitResult::HIT_MISS;
                     onHit(m_startResult, deltaMS, false);
                     m_pi->holding_slider = false;
                 }
@@ -1698,14 +1700,14 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
                 // since the slider is then already considered fully finished gameplay wise
                 if(!m_heldTillEndForLenienceHack) {
                     // force miss the end once, if it has not already been force missed by notelock
-                    if(m_endResult == LiveScore::HIT::HIT_NULL) {
+                    if(m_endResult == LiveHitResult::HIT_NULL) {
                         // force miss endcircle
                         onSliderBreak();
 
                         m_heldTillEnd = false;
                         m_heldTillEndForLenienceHack = false;
                         m_heldTillEndForLenienceHackCheck = true;
-                        m_endResult = LiveScore::HIT::HIT_MISS;
+                        m_endResult = LiveHitResult::HIT_MISS;
 
                         // end of combo, ignore in hiterrorbar, ignore combo, subtract health
                         addHitResult(m_endResult, 0, m_endOfCombo, getRawPosAt(getEndTime()), -1.0f, 0.0f, true, true,
@@ -1735,7 +1737,7 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
         if((flags::has<ModFlags::Autoplay>(curIFaceMods))) {
             if(curPosMS >= getEndTime()) {
                 m_heldTillEnd = true;
-                onHit(LiveScore::HIT::HIT_300, 0, true);
+                onHit(LiveHitResult::HIT_300, 0, true);
                 m_pi->holding_slider = false;
             }
         } else {
@@ -1743,32 +1745,32 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
                 // handle leftover startcircle
                 {
                     // this may happen (if the slider time is shorter than the miss window of the startcircle)
-                    if(m_startResult == LiveScore::HIT::HIT_NULL) {
+                    if(m_startResult == LiveHitResult::HIT_NULL) {
                         // we still want to cause a sliderbreak in this case!
                         onSliderBreak();
 
                         // special case: missing the startcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS
                         // health)
-                        m_pi->addHitResult(this, LiveScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
+                        m_pi->addHitResult(this, LiveHitResult::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
                                            false);  // only decrease health
 
-                        m_startResult = LiveScore::HIT::HIT_MISS;
+                        m_startResult = LiveHitResult::HIT_MISS;
                     }
                 }
 
                 // handle endcircle
                 bool isEndResultComingFromStrictTrackingMod = false;
-                if(m_endResult == LiveScore::HIT::HIT_NULL) {
+                if(m_endResult == LiveHitResult::HIT_NULL) {
                     m_heldTillEnd = m_heldTillEndForLenienceHack;
-                    m_endResult = m_heldTillEnd ? LiveScore::HIT::HIT_300 : LiveScore::HIT::HIT_MISS;
+                    m_endResult = m_heldTillEnd ? LiveHitResult::HIT_300 : LiveHitResult::HIT_MISS;
 
                     // handle total slider result (currently startcircle + repeats + ticks + endcircle)
                     // clicks = (repeats + ticks)
                     const float numMaxPossibleHits = 1 + m_clicks.size() + 1;
                     float numActualHits = 0;
 
-                    if(m_startResult != LiveScore::HIT::HIT_MISS) numActualHits++;
-                    if(m_endResult != LiveScore::HIT::HIT_MISS) numActualHits++;
+                    if(m_startResult != LiveHitResult::HIT_MISS) numActualHits++;
+                    if(m_endResult != LiveHitResult::HIT_MISS) numActualHits++;
 
                     for(auto &click : m_clicks) {
                         if(click.successful) numActualHits++;
@@ -1777,24 +1779,24 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
                     const float percent = numActualHits / numMaxPossibleHits;
 
                     const bool allow300 = (flags::has<ModFlags::ScoreV2>(curIFaceMods))
-                                              ? (m_startResult == LiveScore::HIT::HIT_300)
+                                              ? (m_startResult == LiveHitResult::HIT_300)
                                               : true;
                     const bool allow100 =
                         (flags::has<ModFlags::ScoreV2>(curIFaceMods))
-                            ? (m_startResult == LiveScore::HIT::HIT_300 || m_startResult == LiveScore::HIT::HIT_100)
+                            ? (m_startResult == LiveHitResult::HIT_300 || m_startResult == LiveHitResult::HIT_100)
                             : true;
 
                     // rewrite m_endResult as the whole slider result, then use it for the final onHit()
                     if(percent >= 0.999f && allow300)
-                        m_endResult = LiveScore::HIT::HIT_300;
+                        m_endResult = LiveHitResult::HIT_300;
                     else if(percent >= 0.5f && allow100 && !flags::has<ModFlags::Ming3012>(curIFaceMods) &&
                             !flags::has<ModFlags::No100s>(curIFaceMods))
-                        m_endResult = LiveScore::HIT::HIT_100;
+                        m_endResult = LiveHitResult::HIT_100;
                     else if(percent > 0.0f && !flags::has<ModFlags::No100s>(curIFaceMods) &&
                             !flags::has<ModFlags::No50s>(curIFaceMods))
-                        m_endResult = LiveScore::HIT::HIT_50;
+                        m_endResult = LiveHitResult::HIT_50;
                     else
-                        m_endResult = LiveScore::HIT::HIT_MISS;
+                        m_endResult = LiveHitResult::HIT_MISS;
 
                     // debugLog("percent = {:f}", percent);
 
@@ -1821,7 +1823,7 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
             if(sliding) {
                 const vec2 osuCoords = m_pf->pixels2OsuCoords(m_pf->osuCoords2Pixels(m_curPointRaw));
                 f32 pan = GameRules::osuCoords2Pan(osuCoords.x);
-                m_lastSliderSampleSets = m_hitSamples.play(pan, 0, -1, true);
+                m_lastSliderSampleSets = HitSamples::play(m_hitSamples, pan, 0, -1, true);
             } else if(!m_lastSliderSampleSets.empty()) {
                 // debugLog("not sliding, stopping");
                 // debugLog(
@@ -1831,7 +1833,7 @@ void Slider::update(i32 curPosMS, f64 frameTimeSecs) {
                 //     !!bStartFinished, !!bEndFinished, !!bCursorInside, iDelta,
                 //     isClickHeldSlider(), pf->isPaused(), pf->isWaiting(), pf->isPlaying(),
                 //     pf->bWasSeekFrame);
-                m_hitSamples.stop(m_lastSliderSampleSets);
+                HitSamples::stopSliderSounds(m_lastSliderSampleSets);
                 m_lastSliderSampleSets.clear();
             }
         }
@@ -1888,7 +1890,7 @@ void Slider::miss(i32 curPosMS) {
 
     // startcircle
     if(!m_startFinished) {
-        m_startResult = LiveScore::HIT::HIT_MISS;
+        m_startResult = LiveHitResult::HIT_MISS;
         onHit(m_startResult, deltaMS, false);
         m_pi->holding_slider = false;
     }
@@ -1916,7 +1918,7 @@ void Slider::miss(i32 curPosMS) {
 
             if(!m_heldTillEnd && cv::slider_end_miss_breaks_combo.getBool()) onSliderBreak();
 
-            m_endResult = LiveScore::HIT::HIT_MISS;
+            m_endResult = LiveHitResult::HIT_MISS;
             onHit(m_endResult, 0, true);
             m_pi->holding_slider = false;
         }
@@ -1974,8 +1976,8 @@ void Slider::onClickEvent(std::vector<Click> &clicks) {
         if(cursorDelta < m_pi->fHitcircleDiameter / 2.0f) {
             const i32 deltaMS = clicks[0].musicPosMS - m_clickTimeMS;
 
-            LiveScore::HIT result = m_pi->getHitResult(deltaMS);
-            if(result != LiveScore::HIT::HIT_NULL) {
+            LiveHitResult result = m_pi->getHitResult(deltaMS);
+            if(result != LiveHitResult::HIT_NULL) {
                 const float targetDelta = cursorDelta / (m_pi->fHitcircleDiameter / 2.0f);
                 const float targetAngle = vec::degrees(std::atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
 
@@ -1988,7 +1990,7 @@ void Slider::onClickEvent(std::vector<Click> &clicks) {
     }
 }
 
-void Slider::onHit(LiveScore::HIT result, i32 delta, bool isEndCircle, float targetDelta, float targetAngle,
+void Slider::onHit(LiveHitResult result, i32 delta, bool isEndCircle, float targetDelta, float targetAngle,
                    bool isEndResultFromStrictTrackingMod) {
     if(m_points.size() == 0) return;
 
@@ -1998,16 +2000,16 @@ void Slider::onHit(LiveScore::HIT result, i32 delta, bool isEndCircle, float tar
 
     // sound and hit animation and also sliderbreak combo drop
     {
-        if(result == LiveScore::HIT::HIT_MISS) {
+        if(result == LiveHitResult::HIT_MISS) {
             if(!isEndResultFromStrictTrackingMod) onSliderBreak();
         } else if(m_pf != nullptr) {
             if(m_edgeSamples.size() > 0) {
                 const vec2 osuCoords = m_pf->pixels2OsuCoords(m_pf->osuCoords2Pixels(m_curPointRaw));
                 const f32 pan = GameRules::osuCoords2Pan(osuCoords.x);
                 if(isEndCircle) {
-                    m_edgeSamples.back().play(pan, delta, getEndTime());
+                    HitSamples::play(m_edgeSamples.back(), pan, delta, getEndTime());
                 } else {
-                    m_edgeSamples[0].play(pan, delta, m_clickTimeMS);
+                    HitSamples::play(m_edgeSamples[0], pan, delta, m_clickTimeMS);
                 }
             }
 
@@ -2032,7 +2034,7 @@ void Slider::onHit(LiveScore::HIT result, i32 delta, bool isEndCircle, float tar
                                                  cv::slider_body_fade_out_time_multiplier.getFloat(),
                                              anim::QuadOut);
             // debugLog("stopping due to end body fadeout");
-            m_hitSamples.stop();
+            HitSamples::stopSliderSounds(m_lastSliderSampleSets);
         }
     }
 
@@ -2059,15 +2061,15 @@ void Slider::onHit(LiveScore::HIT result, i32 delta, bool isEndCircle, float tar
         }
 
         // add bonus score + health manually
-        if(result != LiveScore::HIT::HIT_MISS) {
-            LiveScore::HIT resultForHealth = LiveScore::HIT::HIT_SLIDER30;
+        if(result != LiveHitResult::HIT_MISS) {
+            LiveHitResult resultForHealth = LiveHitResult::HIT_SLIDER30;
 
             m_pi->addHitResult(this, resultForHealth, 0, false, true, true, true, true,
                                false);  // only increase health
             m_pi->addScorePoints(30);
         } else {
             // special case: missing the startcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
-            m_pi->addHitResult(this, LiveScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
+            m_pi->addHitResult(this, LiveHitResult::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
                                false);  // only decrease health
         }
     } else {
@@ -2090,14 +2092,14 @@ void Slider::onHit(LiveScore::HIT result, i32 delta, bool isEndCircle, float tar
 
             // add bonus score + extra health manually
             if(m_heldTillEnd) {
-                m_pi->addHitResult(this, LiveScore::HIT::HIT_SLIDER30, 0, false, true, true, true, true,
+                m_pi->addHitResult(this, LiveHitResult::HIT_SLIDER30, 0, false, true, true, true, true,
                                    false);  // only increase health
                 m_pi->addScorePoints(30);
             } else {
                 // special case: missing the endcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
                 // NOTE: yes, this will drain twice for the end of a slider (once for the judgement of the whole slider
                 // above, and once for the endcircle here)
-                m_pi->addHitResult(this, LiveScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
+                m_pi->addHitResult(this, LiveHitResult::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
                                    false);  // only decrease health
             }
         }
@@ -2123,11 +2125,11 @@ void Slider::onRepeatHit(const SLIDERCLICK &click) {
         const uSz nb_edge_samples = m_edgeSamples.size();
         assert(nb_edge_samples > 0);
         if(std::cmp_less(m_curRepeatCounterForHitSounds + 1, nb_edge_samples)) {
-            m_edgeSamples[m_curRepeatCounterForHitSounds].play(pan, 0, click.timeMS);
+            HitSamples::play(m_edgeSamples[m_curRepeatCounterForHitSounds], pan, 0, click.timeMS);
         } else {
             // We have more repeats than edge samples!
             // Just play whatever we can (either the last repeat sample, or the start sample)
-            m_edgeSamples[nb_edge_samples - 2].play(pan, 0, click.timeMS);
+            HitSamples::play(m_edgeSamples[nb_edge_samples - 2], pan, 0, click.timeMS);
         }
 
         float animation_multiplier = m_pf->getSpeedAdjustedAnimationSpeed();
@@ -2149,10 +2151,10 @@ void Slider::onRepeatHit(const SLIDERCLICK &click) {
     if(!click.successful) {
         // add health manually
         // special case: missing a repeat drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
-        m_pi->addHitResult(this, LiveScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
+        m_pi->addHitResult(this, LiveHitResult::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
                            false);  // only decrease health
     } else {
-        m_pi->addHitResult(this, LiveScore::HIT::HIT_SLIDER30, 0, false, true, true, false, true,
+        m_pi->addHitResult(this, LiveHitResult::HIT_SLIDER30, 0, false, true, true, false, true,
                            false);  // not end of combo, ignore in hiterrorbar, ignore for accuracy, increase
                                     // combo, don't count towards score, increase health
 
@@ -2197,14 +2199,14 @@ void Slider::onTickHit(const SLIDERCLICK &click) {
                 .timingPointSampleSet = ti.sampleSet,
                 .timingPointVolume = ti.volume,
                 .defaultSampleSet = m_pf->getDefaultSampleSet(),
-                .layeredHitSounds = false,  // unused by sliderticks
-                .forcedSampleSet = cv::skin_force_hitsound_sample_set.getInt(),
+                .forcedSampleSet = cv::skin_force_hitsound_sample_set.getVal<u8>(),  // unused by sliderticks
+                .layeredHitSounds = false,
                 .ignoreSampleVolume = cv::ignore_beatmap_sample_volume.getBool(),
                 .boostVolume = false,  // unused by sliderticks
             };
 
-            if(const auto tick = m_hitSamples.resolveSliderTick(ctx);
-               tick.set >= 0 && tick.set < (i32)SLIDERTICK_SAMPLESET_METHODS.size()) {
+            if(const auto tick = HitSamples::resolveSliderTick(m_hitSamples, ctx);
+               tick.set < (i32)SLIDERTICK_SAMPLESET_METHODS.size()) {
                 if(Sound *skin_sound = skin->*SLIDERTICK_SAMPLESET_METHODS[tick.set]) {
                     const vec2 osuCoords = m_pf->pixels2OsuCoords(m_pf->osuCoords2Pixels(m_curPointRaw));
                     f32 pan = GameRules::osuCoords2Pan(osuCoords.x);
@@ -2231,10 +2233,10 @@ void Slider::onTickHit(const SLIDERCLICK &click) {
     if(!click.successful) {
         // add health manually
         // special case: missing a tick drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
-        m_pi->addHitResult(this, LiveScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
+        m_pi->addHitResult(this, LiveHitResult::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
                            false);  // only decrease health
     } else {
-        m_pi->addHitResult(this, LiveScore::HIT::HIT_SLIDER10, 0, false, true, true, false, true,
+        m_pi->addHitResult(this, LiveHitResult::HIT_SLIDER10, 0, false, true, true, false, true,
                            false);  // not end of combo, ignore in hiterrorbar, ignore for accuracy, increase
                                     // combo, don't count towards score, increase health
 
@@ -2250,7 +2252,7 @@ void Slider::onReset(i32 curPosMS) {
 
     if(m_pf != nullptr) {
         // debugLog("stopping due to onReset");
-        m_hitSamples.stop();
+        HitSamples::stopSliderSounds(m_lastSliderSampleSets);
 
         m_followCircleTickAnimationScale.stop();
         m_endSliderBodyFadeAnimation.stop();
@@ -2264,8 +2266,8 @@ void Slider::onReset(i32 curPosMS) {
     m_heldTillEnd = false;
     m_heldTillEndForLenienceHack = false;
     m_heldTillEndForLenienceHackCheck = false;
-    m_startResult = LiveScore::HIT::HIT_NULL;
-    m_endResult = LiveScore::HIT::HIT_NULL;
+    m_startResult = LiveHitResult::HIT_NULL;
+    m_endResult = LiveHitResult::HIT_NULL;
 
     m_curRepeatCounterForHitSounds = 0;
 
@@ -2353,9 +2355,9 @@ bool Slider::isClickHeldSlider() const {
     return (held_gameplay_keys & ~m_ignoredKeys);
 }
 
-Spinner::Spinner(int x, int y, i32 timeMS, HitSamples samples, bool isEndOfCombo, i32 endTimeMS,
+Spinner::Spinner(int x, int y, i32 timeMS, DBHitSample samples, bool isEndOfCombo, i32 endTimeMS,
                  AbstractBeatmapInterface *pi)
-    : HitObject(timeMS, std::move(samples), -1, isEndOfCombo, -1, -1, pi), m_rawPos(x, y), m_originalRawPos(m_rawPos) {
+    : HitObject(timeMS, samples, -1, isEndOfCombo, -1, -1, pi), m_rawPos(x, y), m_originalRawPos(m_rawPos) {
     m_type = HitObjectType::SPINNER;
     m_durationMS = endTimeMS - timeMS;
 
@@ -2720,21 +2722,21 @@ void Spinner::onReset(i32 curPosMS) {
 
 void Spinner::onHit() {
     // calculate hit result
-    LiveScore::HIT result = LiveScore::HIT::HIT_NULL;
+    LiveHitResult result = LiveHitResult::HIT_NULL;
     if(m_ratio >= 1.0f || (flags::has<ModFlags::Autoplay>(m_pi->getMods().flags)))
-        result = LiveScore::HIT::HIT_300;
+        result = LiveHitResult::HIT_300;
     else if(m_ratio >= 0.9f && !cv::mod_ming3012.getBool() && !cv::mod_no100s.getBool())
-        result = LiveScore::HIT::HIT_100;
+        result = LiveHitResult::HIT_100;
     else if(m_ratio >= 0.75f && !cv::mod_no100s.getBool() && !cv::mod_no50s.getBool())
-        result = LiveScore::HIT::HIT_50;
+        result = LiveHitResult::HIT_50;
     else
-        result = LiveScore::HIT::HIT_MISS;
+        result = LiveHitResult::HIT_MISS;
 
     // sound
-    if(m_pf != nullptr && result != LiveScore::HIT::HIT_MISS) {
+    if(m_pf != nullptr && result != LiveHitResult::HIT_MISS) {
         const vec2 osuCoords = m_pf->pixels2OsuCoords(m_pf->osuCoords2Pixels(m_rawPos));
         f32 pan = GameRules::osuCoords2Pan(osuCoords.x);
-        m_hitSamples.play(pan, 0);
+        HitSamples::play(m_hitSamples, pan, 0);
     }
 
     // add it, and we are finished
@@ -2760,16 +2762,16 @@ void Spinner::rotate(float rad) {
             if(m_pf != nullptr && !m_pf->bWasSeekFrame && m_pf->getSkin()->s_spinner_bonus) {
                 soundEngine->play(m_pf->getSkin()->s_spinner_bonus);
             }
-            m_pi->addHitResult(this, LiveScore::HIT::HIT_SPINNERBONUS, 0, false, true, true, true, true,
+            m_pi->addHitResult(this, LiveHitResult::HIT_SPINNERBONUS, 0, false, true, true, true, true,
                                false);  // only increase health
-            m_pi->addHitResult(this, LiveScore::HIT::HIT_SPINNERBONUS, 0, false, true, true, true, true,
+            m_pi->addHitResult(this, LiveHitResult::HIT_SPINNERBONUS, 0, false, true, true, true, true,
                                false);  // HACKHACK: compensating for rotation logic differences
             m_pi->addScorePoints(1100, true);
         } else {
             // normal whole rotation
-            m_pi->addHitResult(this, LiveScore::HIT::HIT_SPINNERSPIN, 0, false, true, true, true, true,
+            m_pi->addHitResult(this, LiveHitResult::HIT_SPINNERSPIN, 0, false, true, true, true, true,
                                false);  // only increase health
-            m_pi->addHitResult(this, LiveScore::HIT::HIT_SPINNERSPIN, 0, false, true, true, true, true,
+            m_pi->addHitResult(this, LiveHitResult::HIT_SPINNERSPIN, 0, false, true, true, true, true,
                                false);  // HACKHACK: compensating for rotation logic differences
             m_pi->addScorePoints(100, true);
         }

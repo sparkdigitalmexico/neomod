@@ -33,6 +33,8 @@
 #include "UserCard.h"
 #include "File.h"
 #include "UI.h"
+#include "Database.h"
+#include "DatabaseBeatmap.h"
 
 #ifdef MCENGINE_PLATFORM_WINDOWS
 

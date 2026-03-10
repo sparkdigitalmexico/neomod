@@ -27,7 +27,7 @@ class SDLGPURenderTarget final : public RenderTarget {
    private:
     friend SDLGPUInterface;
     SDLGPURenderTarget(SDLGPUInterface *gpu, SDL_GPUDevice *device, int x, int y, int width, int height,
-                       MultisampleType multiSampleType = MultisampleType::X0);
+                       MultisampleType multiSampleType = MultisampleType{0});
 
    public:
     SDLGPURenderTarget() = delete;

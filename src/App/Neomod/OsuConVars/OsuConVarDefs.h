@@ -1004,4 +1004,9 @@ CONVAR(enable_screenshots, Env::cfg(OS::WASM) ? false : true, CLIENT | SKINS | S
 
 }  // namespace cv
 
+#undef DEFINE_OSU_CONVARS
+#undef _CV
+#undef CONVAR
+#undef KEYVAR
+
 #endif

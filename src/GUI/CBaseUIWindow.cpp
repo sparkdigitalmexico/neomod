@@ -15,6 +15,7 @@
 #include "ResourceManager.h"
 #include "Font.h"
 #include "MakeDelegateWrapper.h"
+#include "Graphics.h"
 
 CBaseUIWindow::CBaseUIWindow(float xPos, float yPos, float xSize, float ySize, const UString &name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, name) {

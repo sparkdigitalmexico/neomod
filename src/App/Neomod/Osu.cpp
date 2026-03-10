@@ -70,6 +70,7 @@
 #include "UserStatsScreen.h"
 #include "VolumeOverlay.h"
 #include "Logging.h"
+#include "Graphics.h"
 
 #include "score.h"
 #include "NeomodEnvInterop.h"

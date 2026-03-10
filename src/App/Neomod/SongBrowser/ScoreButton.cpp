@@ -36,6 +36,8 @@
 #include "UserStatsScreen.h"
 #include "Logging.h"
 #include "SongDifficultyButton.h"
+#include "Graphics.h"
+#include "score.h"
 
 using namespace neomod::sbr;
 
@@ -45,8 +47,15 @@ inline const char *comboBasedSuffix(bool perfect, bool FC) { return perfect ? " 
 
 UString ScoreButton::recentScoreIconString;
 
+u64 ScoreButton::getScoreUnixTimestamp() const { return this->storedScore->unixTimestamp; }
+u64 ScoreButton::getScoreScore() const { return this->storedScore->score; }
+
 ScoreButton::ScoreButton(UIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, STYLE style)
-    : CBaseUIButton(xPos, yPos, xSize, ySize, "", ""), contextMenu(contextMenu), style(style) {
+    : CBaseUIButton(xPos, yPos, xSize, ySize, "", ""),
+      contextMenu(contextMenu),
+      storedScore(new FinishedScore()),
+      scoreGrade(ScoreGrade::D),
+      style(style) {
     if(recentScoreIconString.length() < 1) recentScoreIconString.insert(0, Icons::ARROW_CIRCLE_UP);
 }
 
@@ -389,7 +398,7 @@ void ScoreButton::draw() {
 
 void ScoreButton::update(CBaseUIEventCtx &c) {
     // Update pp
-    auto &sc = this->storedScore;
+    auto &sc = *this->storedScore;
     if(sc.get_pp() == -1.0) {
         if(sc.get_or_calc_pp() != -1.0) {
             // NOTE: Allows dropped sliderends. Should fix with @PPV3
@@ -564,7 +573,7 @@ void ScoreButton::onFocusStolen() {
 
 void ScoreButton::onRightMouseUpInside() {
     const vec2 pos = mouse->getPos();
-    auto &sc = this->storedScore;
+    auto &sc = *this->storedScore;
 
     if(this->contextMenu != nullptr) {
         this->contextMenu->setPos(pos);
@@ -606,7 +615,7 @@ void ScoreButton::onRightMouseUpInside() {
 }
 
 void ScoreButton::onContextMenu(const UString &text, int id) {
-    auto &sc = this->storedScore;
+    auto &sc = *this->storedScore;
 
     if(ui->getUserStatsScreen()->isVisible()) {
         ui->setScreen(ui->getSongBrowser());
@@ -642,7 +651,7 @@ void ScoreButton::onContextMenu(const UString &text, int id) {
 }
 
 void ScoreButton::onUseModsClicked() {
-    Replay::Mods::use(this->storedScore.mods);
+    Replay::Mods::use(this->storedScore->mods);
     soundEngine->play(osu->getSkin()->s_check_on);
 }
 
@@ -678,8 +687,8 @@ void ScoreButton::onDeleteScoreConfirmed(const UString & /*text*/, int id) {
 
 void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap *map, int index,
                            const UString &titleString, float weight) {
-    this->storedScore = newscore;
-    auto &sc = this->storedScore;
+    *this->storedScore = newscore;
+    auto &sc = *this->storedScore;
 
     sc.beatmap_hash = map->getMD5();
     sc.map = map;

@@ -2,9 +2,20 @@
 // Copyright (c) 2018, PG, All rights reserved.
 #include "AnimationHandler.h"
 #include "CBaseUIButton.h"
-#include "Database.h"
-#include "score.h"
 
+#include <memory>
+
+class DatabaseBeatmap;
+using BeatmapDifficulty = DatabaseBeatmap;
+using BeatmapSet = DatabaseBeatmap;
+
+namespace Replay {
+struct Mods;
+}
+
+enum class ScoreGrade : uint8_t;
+
+struct FinishedScore;
 class SkinImage;
 
 class UIAvatar;
@@ -16,7 +27,7 @@ class ScoreButton final : public CBaseUIButton {
     static UString getModsStringForDisplay(const Replay::Mods &mods);
 
     enum class STYLE : uint8_t { SONG_BROWSER, TOP_RANKS };
-
+    ScoreButton() = delete;
     ScoreButton(UIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize,
                 STYLE style = STYLE::SONG_BROWSER);
     ~ScoreButton() override;
@@ -31,9 +42,9 @@ class ScoreButton final : public CBaseUIButton {
                   const UString &titleString = {}, float weight = 1.0f);
     void setIndex(int index) { this->iScoreIndexNumber = index; }
 
-    [[nodiscard]] inline const FinishedScore &getScore() const { return this->storedScore; }
-    [[nodiscard]] inline u64 getScoreUnixTimestamp() const { return this->storedScore.unixTimestamp; }
-    [[nodiscard]] inline u64 getScoreScore() const { return this->storedScore.score; }
+    [[nodiscard]] inline const FinishedScore &getScore() const { return *this->storedScore; }
+    [[nodiscard]] u64 getScoreUnixTimestamp() const;
+    [[nodiscard]] u64 getScoreScore() const;
 
     [[nodiscard]] inline const UString &getDateTime() const { return this->sScoreDateTime; }
     [[nodiscard]] inline int getIndex() const { return this->iScoreIndexNumber; }
@@ -84,11 +95,11 @@ class ScoreButton final : public CBaseUIButton {
     UString sScoreDateTime;
 
     // score data
-    FinishedScore storedScore;
+    std::unique_ptr<FinishedScore> storedScore;
     int iScoreIndexNumber{1};
     u64 iScoreUnixTimestamp{0};
 
-    ScoreGrade scoreGrade{ScoreGrade::D};
+    ScoreGrade scoreGrade;
 
     STYLE style;
     AnimFloat fIndexNumberAnim;

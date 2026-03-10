@@ -51,6 +51,7 @@
 #include "UpdateHandler.h"
 #include "VertexArrayObject.h"
 #include "Logging.h"
+#include "Graphics.h"
 #include "crypto.h"
 
 class MainMenu::CubeButton final : public CBaseUIButton {
@@ -654,7 +655,7 @@ std::pair<bool, float> MainMenu::getTimingpointPulseAmount() {
         cv::universal_offset_norate.getInt() - music->getRateBasedStreamDelayMS() - map->getLocalOffset() -
         map->getOnlineOffset() - (map->getVersion() < 5 ? cv::old_beatmap_offset.getInt() : 0);
 
-    DatabaseBeatmap::TIMING_INFO t = map->getTimingInfoForTime(curMusicPos);
+    DatabaseBeatmapTypes::TIMING_INFO t = map->getTimingInfoForTime(curMusicPos);
 
     if(t.beatLengthBase == 0.0f)  // bah
         t.beatLengthBase = 1.0f;

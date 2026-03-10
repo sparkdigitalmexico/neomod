@@ -11,6 +11,8 @@
 #include "Skin.h"
 #include "SkinImage.h"
 #include "SString.h"
+#include "UIAvatar.h"
+#include "Graphics.h"
 
 ScoreboardSlot::ScoreboardSlot(const SCORE_ENTRY &score, int index, bool use_dummy_avatar, int override_is_friend) {
     if(!use_dummy_avatar) {

@@ -29,11 +29,8 @@ enum class LegacyFlags : u32;
 struct BasicSkinImage;
 struct Skin;
 
-enum class SkinSoundID : u8;
-enum class SkinImageID : u8;
-
 // minimal Image wrapper for some cached info (not a full SkinImage, which is used for pre-sized/animated images)
-struct BasicSkinImage {
+struct BasicSkinImage final {
     BasicSkinImage() = default;
     BasicSkinImage(Image *img) : img(img) {}
 
@@ -65,9 +62,8 @@ struct BasicSkinImage {
 };
 
 struct Skin final {
-   private:
     NOCOPY_NOMOVE(Skin)
-
+   private:
     // custom
     void randomizeFilePath();
 

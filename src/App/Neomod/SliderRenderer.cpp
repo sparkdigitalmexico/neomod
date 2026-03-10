@@ -13,6 +13,7 @@
 #include "UI.h"
 #include "VertexArrayObject.h"
 #include "Logging.h"
+#include "Graphics.h"
 
 #include <limits>
 

@@ -5,6 +5,7 @@
 
 #include "Osu.h"
 #include "BeatmapInterface.h"
+#include "DatabaseBeatmap.h"
 #include "DifficultyCalculator.h"
 #include "uwu.h"
 #include "ConVar.h"

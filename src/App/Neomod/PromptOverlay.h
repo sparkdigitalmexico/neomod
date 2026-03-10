@@ -6,7 +6,6 @@
 
 class CBaseUILabel;
 class CBaseUITextbox;
-class Graphics;
 class UIButton;
 
 class PromptOverlay final : public UIScreen {

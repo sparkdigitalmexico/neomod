@@ -33,6 +33,7 @@
 #include "UI.h"
 #include "UIButton.h"
 #include "UIIcon.h"
+#include "DatabaseBeatmap.h"
 
 #include <charconv>
 

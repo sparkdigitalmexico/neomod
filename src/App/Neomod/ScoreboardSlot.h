@@ -3,10 +3,11 @@
 
 #include "AnimationHandler.h"
 #include "HUD.h"
-#include "UIAvatar.h"
+#include "Color.h"
 
 #include <array>
 
+class UIAvatar;
 class ScoreboardSlot final {
    public:
     ScoreboardSlot() = delete;

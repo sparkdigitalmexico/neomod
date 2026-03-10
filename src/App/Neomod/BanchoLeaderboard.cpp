@@ -10,6 +10,8 @@
 #include "OsuConVars.h"
 #include "Environment.h"
 #include "Database.h"
+#include "DatabaseBeatmap.h"
+#include "score.h"
 #include "Engine.h"
 #include "ModSelector.h"
 #include "Parsing.h"

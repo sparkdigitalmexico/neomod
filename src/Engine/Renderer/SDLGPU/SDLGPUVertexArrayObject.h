@@ -26,8 +26,9 @@ class SDLGPUVertexArrayObject final : public VertexArrayObject {
     NOCOPY_NOMOVE(SDLGPUVertexArrayObject)
    private:
     friend SDLGPUInterface;
-    SDLGPUVertexArrayObject(SDLGPUInterface *gpu, SDL_GPUDevice *device, DrawPrimitive primitive = DrawPrimitive::TRIANGLES,
-                            DrawUsageType usage = DrawUsageType::STATIC, bool keepInSystemMemory = false);
+    SDLGPUVertexArrayObject(SDLGPUInterface *gpu, SDL_GPUDevice *device,
+                            DrawPrimitive primitive = DrawPrimitive{2} /* TRIANGLES */,
+                            DrawUsageType usage = DrawUsageType{0} /* STATIC */, bool keepInSystemMemory = false);
 
    public:
     SDLGPUVertexArrayObject() = delete;

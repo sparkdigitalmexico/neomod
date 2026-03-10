@@ -32,7 +32,10 @@
 #include "UI.h"
 #include "VertexArrayObject.h"
 #include "score.h"
+#include "MakeDelegateWrapper.h"
+#include "UIAvatar.h"
 #include "Sound.h"
+#include "Graphics.h"
 
 HUD::CursorTrail::CursorTrail() : buffer(std::clamp(cv::cursor_trail_max_size.getInt() * 2, 1, 32768)) {}
 
@@ -1262,7 +1265,7 @@ bool HUD::shouldDrawScoreboard() const {
 }
 
 // FIXME: this is extremely suboptimal, and runs on EVERY HITRESULT DURING GAMEPLAY!!!! (LiveScore::onScoreChange)
-const std::vector<SCORE_ENTRY> &HUD::getCurrentScores() {
+std::span<const SCORE_ENTRY> HUD::updateAndGetCurrentScores() {
     this->scores_cache.clear();
 
     const auto *pf = osu->getMapInterface();
@@ -1273,15 +1276,16 @@ const std::vector<SCORE_ENTRY> &HUD::getCurrentScores() {
             if(!slot->is_player_playing() && !slot->has_finished_playing()) continue;
 
             if(slot->player_id == BanchoState::get_uid()) {
+                const LiveScore &player_score = *osu->getScore();
                 // Update local player slot instantly
                 // (not including fields that won't be used for the HUD)
-                slot->num300 = (u16)osu->getScore()->getNum300s();
-                slot->num100 = (u16)osu->getScore()->getNum100s();
-                slot->num50 = (u16)osu->getScore()->getNum50s();
-                slot->num_miss = (u16)osu->getScore()->getNumMisses();
-                slot->current_combo = (u16)osu->getScore()->getCombo();
-                slot->max_combo = (u16)osu->getScore()->getComboMax();
-                slot->total_score = (i32)osu->getScore()->getScore();
+                slot->num300 = (u16)player_score.getNum300s();
+                slot->num100 = (u16)player_score.getNum100s();
+                slot->num50 = (u16)player_score.getNum50s();
+                slot->num_miss = (u16)player_score.getNumMisses();
+                slot->current_combo = (u16)player_score.getCombo();
+                slot->max_combo = (u16)player_score.getComboMax();
+                slot->total_score = (i32)player_score.getScore();
                 slot->current_hp = pf->getHealth() * 200;
             }
 
@@ -1421,7 +1425,8 @@ void HUD::resetScoreboard() {
 
     i32 player_entry_id = BanchoState::is_in_a_multi_room() ? BanchoState::get_uid() : 0;
     i32 i = 0;
-    for(const auto &score : this->getCurrentScores()) {
+    const auto scores = this->updateAndGetCurrentScores();
+    for(const auto &score : scores) {
         auto slot = std::make_unique<ScoreboardSlot>(score, i);
         if(score.entry_id == player_entry_id) {
             this->player_slot = slot.get();
@@ -1451,7 +1456,7 @@ void HUD::updateScoreboard(bool animate) {
     }
 
     // Update player slot first
-    const auto &new_scores = this->getCurrentScores();
+    const auto new_scores = this->updateAndGetCurrentScores();
     i32 player_index = 0;
     for(i32 i = 0; i < new_scores.size(); i++) {
         if(new_scores[i].entry_id != this->player_slot->score.entry_id) continue;

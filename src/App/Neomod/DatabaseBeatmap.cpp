@@ -55,7 +55,7 @@ enum class HitObjectType : uint8_t {
 };
 
 namespace PpyHitObjectType {
-enum {
+enum : uint8_t {
     CIRCLE = (1 << 0),
     SLIDER = (1 << 1),
     NEW_COMBO = (1 << 2),
@@ -77,6 +77,8 @@ enum {
 
 #endif  // BUILD_TOOLS_ONLY
 
+using namespace DBType;
+
 // defined here to avoid including diffcalc things in DatabaseBeatmap.h
 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::LOAD_DIFFOBJ_RESULT() = default;
 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::~LOAD_DIFFOBJ_RESULT() = default;
@@ -94,13 +96,13 @@ u32 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::getMaxComboAtIndex(uSz index) const {
     return maxComboAtIndex.back();
 }
 
-DatabaseBeatmap::SLIDER::SLIDER() noexcept = default;
-DatabaseBeatmap::SLIDER::~SLIDER() noexcept = default;
+SLIDER::SLIDER() noexcept = default;
+SLIDER::~SLIDER() noexcept = default;
 
-DatabaseBeatmap::SLIDER::SLIDER(const SLIDER &) noexcept = default;
-DatabaseBeatmap::SLIDER &DatabaseBeatmap::SLIDER::operator=(const SLIDER &) noexcept = default;
-DatabaseBeatmap::SLIDER::SLIDER(SLIDER &&) noexcept = default;
-DatabaseBeatmap::SLIDER &DatabaseBeatmap::SLIDER::operator=(SLIDER &&) noexcept = default;
+SLIDER::SLIDER(const SLIDER &) noexcept = default;
+SLIDER &SLIDER::operator=(const SLIDER &) noexcept = default;
+SLIDER::SLIDER(SLIDER &&) noexcept = default;
+SLIDER &SLIDER::operator=(SLIDER &&) noexcept = default;
 
 #ifndef BUILD_TOOLS_ONLY
 
@@ -304,7 +306,7 @@ bool DatabaseBeatmap::operator==(const DatabaseBeatmap &other) const {
 
 namespace {  // internal helpers
 
-bool parse_timing_point(std::string_view curLine, DatabaseBeatmap::TIMINGPOINT &out) {
+bool parse_timing_point(std::string_view curLine, TIMINGPOINT &out) {
     // old beatmaps: Offset, Milliseconds per Beat
     // old new beatmaps: Offset, Milliseconds per Beat, Meter, sampleSet, sampleIndex, Volume,
     // !Inherited new new beatmaps: Offset, Milliseconds per Beat, Meter, sampleSet, sampleIndex,
@@ -355,7 +357,7 @@ forceinline u8 parse_sampleset_value(std::string_view str) {
 }
 
 // hitSamples are colon-separated optional components (up to 5), and not all 5 have to be specified
-void parse_hitsamples(std::vector<std::string_view> &parts, std::string_view hitSampleStr, HitSamples &samples) {
+void parse_hitsamples(std::vector<std::string_view> &parts, std::string_view hitSampleStr, HITSAMPLE_BITS &samples) {
     if(hitSampleStr.empty()) return;
 
     SString::split(parts, hitSampleStr, ':');
@@ -367,18 +369,19 @@ void parse_hitsamples(std::vector<std::string_view> &parts, std::string_view hit
     if(parts.size() >= 2) {
         samples.additionSet = parse_sampleset_value(parts[1]);
     }
-    if(parts.size() >= 3) {
-        samples.index = Parsing::strto<i32>(parts[2]);
-    }
+    // TODO: unused atm
+    // if(parts.size() >= 3) {
+    //     samples.index = Parsing::strto<i32>(parts[2]);
+    // }
     if(parts.size() >= 4) {
         i32 volume{};
         volume = Parsing::strto<i32>(parts[3]);  // for some reason this can be negative
         samples.volume = std::clamp<u8>(volume, 0, 100);
     }
-    if(parts.size() >= 5 && !parts[4].empty()) {
-        // TODO: unused atm
-        samples.filename = SString::strcpy_u(parts[4]);
-    }
+    // TODO: unused atm
+    // if(parts.size() >= 5 && !parts[4].empty()) {
+    // samples.filename = SString::strcpy_u(parts[4]);
+    // }
 };
 
 bool sliderScoringTimeComparator(const SLIDER_SCORING_TIME &a, const SLIDER_SCORING_TIME &b) {
@@ -387,7 +390,7 @@ bool sliderScoringTimeComparator(const SLIDER_SCORING_TIME &a, const SLIDER_SCOR
     return false;  // equivalent
 };
 
-bool timingPointSortComparator(const DatabaseBeatmap::TIMINGPOINT &a, const DatabaseBeatmap::TIMINGPOINT &b) {
+bool timingPointSortComparator(const TIMINGPOINT &a, const TIMINGPOINT &b) {
     if(a.offset != b.offset) return a.offset < b.offset;
 
     // uninherited timingpoints go before inherited timingpoints
@@ -453,7 +456,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                              // 9000 repeats, here we just clamp it instead
 
     std::array<std::optional<Color>, 8> tempColors;
-    std::vector<DatabaseBeatmap::TIMINGPOINT> tempTimingpoints;
+    std::vector<TIMINGPOINT> tempTimingpoints;
 
     // load the actual beatmap
     int hitobjectsWithoutSpinnerCounter = 0;
@@ -536,7 +539,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
             }
 
             case TimingPoints: {
-                DatabaseBeatmap::TIMINGPOINT t{};
+                TIMINGPOINT t{};
                 if(parse_timing_point(curLine, t)) {
                     tempTimingpoints.push_back(t);
                 }
@@ -635,7 +638,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                         parse_hitsamples(hitsamplebuf, csvs[5], h.samples);
                     }
 
-                    c.hitcircles.push_back(std::move(h));
+                    c.hitcircles.push_back(h);
                 } else if(type & PpyHitObjectType::SLIDER) {
                     SLIDER slider{};
                     slider.colorCounter = colorCounter;
@@ -712,7 +715,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                         edgeSets.clear();
 
                     for(i32 i = 0; i < edgeSounds.size(); i++) {
-                        HitSamples samples;
+                        HITSAMPLE_BITS samples{};
                         // ignore parse errors, default hitSounds to 0
                         (void)Parsing::parse(edgeSounds[i], &samples.hitSounds);
                         samples.hitSounds &= HitSoundType::VALID_HITSOUNDS;
@@ -724,7 +727,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                             if(parts.size() >= 2) samples.additionSet = parse_sampleset_value(parts[1]);
                         }
 
-                        slider.edgeSamples.push_back(std::move(samples));
+                        slider.edgeSamples.emplace_back(samples);
                     }
 
                     // No start sample specified, use default
@@ -752,17 +755,14 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                         break;
                     }
 
-                    SPINNER s{.x = (i32)x,
-                              .y = (i32)y,
-                              .time = time,
-                              .endTime = endTime,
-                              .samples = {.hitSounds = (u8)(hitSounds & HitSoundType::VALID_HITSOUNDS)}};
+                    SPINNER s{.x = (i32)x, .y = (i32)y, .time = time, .endTime = endTime, .samples = {}};
+                    s.samples.hitSounds = (u8)(hitSounds & HitSoundType::VALID_HITSOUNDS);
 
                     if(csvs.size() > 6) {
                         parse_hitsamples(hitsamplebuf, csvs[6], s.samples);
                     }
 
-                    c.spinners.push_back(std::move(s));
+                    c.spinners.push_back(s);
                 }
 
                 break;
@@ -796,16 +796,18 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
     return c;
 }
 
-DatabaseBeatmap::LoadError DatabaseBeatmap::calculateSliderTimesClicksTicks(
-    int beatmapVersion, std::vector<SLIDER> &sliders, FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> &timingpoints,
-    float sliderMultiplier, float sliderTickRate) {
+DatabaseBeatmap::LoadError DatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion,
+                                                                            std::vector<SLIDER> &sliders,
+                                                                            FixedSizeArray<TIMINGPOINT> &timingpoints,
+                                                                            float sliderMultiplier,
+                                                                            float sliderTickRate) {
     return calculateSliderTimesClicksTicks(beatmapVersion, sliders, timingpoints, sliderMultiplier, sliderTickRate,
                                            alwaysFalseStopPred);
 }
 
 DatabaseBeatmap::LoadError DatabaseBeatmap::calculateSliderTimesClicksTicks(
-    int beatmapVersion, std::vector<SLIDER> &sliders, FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> &timingpoints,
-    float sliderMultiplier, float sliderTickRate, const Sync::stop_token &dead) {
+    int beatmapVersion, std::vector<SLIDER> &sliders, FixedSizeArray<TIMINGPOINT> &timingpoints, float sliderMultiplier,
+    float sliderTickRate, const Sync::stop_token &dead) {
     LoadError r;
 
     if(timingpoints.size() < 1) {
@@ -1250,8 +1252,8 @@ DatabaseBeatmap::LOAD_DIFFOBJ_RESULT DatabaseBeatmap::loadDifficultyHitObjects(P
     return result;
 }
 
-DatabaseBeatmap::TIMING_INFO DatabaseBeatmap::getTimingInfoForTimeAndTimingPoints(
-    i32 positionMS, const FixedSizeArray<DatabaseBeatmap::TIMINGPOINT> &timingpoints) {
+TIMING_INFO DatabaseBeatmap::getTimingInfoForTimeAndTimingPoints(i32 positionMS,
+                                                                 const FixedSizeArray<TIMINGPOINT> &timingpoints) {
     static TIMING_INFO default_info{
         .offset = 0,
         .beatLengthBase = 1,
@@ -1429,7 +1431,7 @@ DatabaseBeatmap::LOAD_META_RESULT DatabaseBeatmap::loadMetadata(bool compute_md5
     // reset
     this->timingpoints.clear();
 
-    std::vector<DatabaseBeatmap::TIMINGPOINT> tempTimingpoints;
+    std::vector<TIMINGPOINT> tempTimingpoints;
 
     // load metadata
     bool foundAR = false;
@@ -1538,7 +1540,7 @@ DatabaseBeatmap::LOAD_META_RESULT DatabaseBeatmap::loadMetadata(bool compute_md5
             }
 
             case TimingPoints: {
-                DatabaseBeatmap::TIMINGPOINT t{};
+                TIMINGPOINT t{};
                 if(parse_timing_point(curLine, t)) {
                     tempTimingpoints.push_back(t);
                 }
@@ -1801,7 +1803,7 @@ MapOverrides DatabaseBeatmap::get_overrides() const {
             .draw_background = this->draw_background};
 }
 
-DatabaseBeatmap::TIMING_INFO DatabaseBeatmap::getTimingInfoForTime(i32 positionMS) const {
+TIMING_INFO DatabaseBeatmap::getTimingInfoForTime(i32 positionMS) const {
     return getTimingInfoForTimeAndTimingPoints(positionMS, this->timingpoints);
 }
 

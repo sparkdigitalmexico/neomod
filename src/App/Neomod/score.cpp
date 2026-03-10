@@ -76,12 +76,12 @@ void LiveScore::reset() {
 
 f64 LiveScore::getScoreMultiplier() const { return this->mods.get_scorev1_multiplier(); }
 
-void LiveScore::addHitResult(AbstractBeatmapInterface *beatmap, HitObject * /*hitObject*/, HIT hit, i32 delta,
+void LiveScore::addHitResult(AbstractBeatmapInterface *beatmap, HitObject * /*hitObject*/, LiveHitResult hit, i32 delta,
                              bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore) {
     // current combo, excluding the current hitobject which caused the addHitResult() call
     const int scoreComboMultiplier = std::max(this->iCombo - 1, 0);
 
-    if(hit == LiveScore::HIT::HIT_MISS) {
+    if(hit == LiveHitResult::HIT_MISS) {
         this->iCombo = 0;
 
         if(!this->simulating && !ignoreOnHitErrorBar && cv::hiterrorbar_misses.getBool() &&
@@ -109,24 +109,24 @@ void LiveScore::addHitResult(AbstractBeatmapInterface *beatmap, HitObject * /*hi
         this->hitresults.push_back(hit);
 
         switch(hit) {
-            case LiveScore::HIT::HIT_MISS:
+            case LiveHitResult::HIT_MISS:
                 this->iNumMisses++;
                 this->iComboEndBitmask |= 2;
                 break;
 
-            case LiveScore::HIT::HIT_50:
+            case LiveHitResult::HIT_50:
                 this->iNum50s++;
                 hitValue = 50;
                 this->iComboEndBitmask |= 2;
                 break;
 
-            case LiveScore::HIT::HIT_100:
+            case LiveHitResult::HIT_100:
                 this->iNum100s++;
                 hitValue = 100;
                 this->iComboEndBitmask |= 1;
                 break;
 
-            case LiveScore::HIT::HIT_300:
+            case LiveHitResult::HIT_300:
                 this->iNum300s++;
                 hitValue = 300;
                 break;
@@ -265,14 +265,14 @@ void LiveScore::addHitResult(AbstractBeatmapInterface *beatmap, HitObject * /*hi
     }
 }
 
-void LiveScore::addHitResultComboEnd(LiveScore::HIT hit) {
+void LiveScore::addHitResultComboEnd(LiveHitResult hit) {
     switch(hit) {
-        case LiveScore::HIT::HIT_100K:
-        case LiveScore::HIT::HIT_300K:
+        case LiveHitResult::HIT_100K:
+        case LiveHitResult::HIT_300K:
             this->iNum100ks++;
             break;
 
-        case LiveScore::HIT::HIT_300G:
+        case LiveHitResult::HIT_300G:
             this->iNum300gs++;
             break;
 
@@ -326,14 +326,14 @@ void LiveScore::addKeyCount(GameplayKeys key_flag) {
     }
 }
 
-double LiveScore::getHealthIncrease(AbstractBeatmapInterface *beatmap, HIT hit) {
+double LiveScore::getHealthIncrease(AbstractBeatmapInterface *beatmap, LiveHitResult hit) {
     return getHealthIncrease(hit, beatmap->getHP(), beatmap->fHpMultiplierNormal, beatmap->fHpMultiplierComboEnd,
                              200.0);
 }
 
-double LiveScore::getHealthIncrease(LiveScore::HIT hit, double HP, double hpMultiplierNormal,
+double LiveScore::getHealthIncrease(LiveHitResult hit, double HP, double hpMultiplierNormal,
                                     double hpMultiplierComboEnd, double hpBarMaximumForNormalization) {
-    using enum LiveScore::HIT;
+    using enum LiveHitResult;
 
     switch(hit) {
         case HIT_MISS:

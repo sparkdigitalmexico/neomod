@@ -228,8 +228,8 @@ u32 SimulatedBeatmapInterface::getBreakDurationTotal() const {
     return breakDurationTotal;
 }
 
-DatabaseBeatmap::BREAK SimulatedBeatmapInterface::getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const {
-    DatabaseBeatmap::BREAK curBreak;
+DatabaseBeatmapTypes::BREAK SimulatedBeatmapInterface::getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const {
+    DatabaseBeatmapTypes::BREAK curBreak;
 
     curBreak.startTime = -1;
     curBreak.endTime = -1;
@@ -243,22 +243,22 @@ DatabaseBeatmap::BREAK SimulatedBeatmapInterface::getBreakForTimeRange(i32 start
     return curBreak;
 }
 
-LiveScore::HIT SimulatedBeatmapInterface::addHitResult(HitObject *hitObject, LiveScore::HIT hit, i32 delta,
+LiveHitResult SimulatedBeatmapInterface::addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta,
                                                        bool isEndOfCombo, bool ignoreOnHitErrorBar,
                                                        bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore,
                                                        bool ignoreHealth) {
     // handle perfect & sudden death
     if(this->mods.has(ModFlags::Perfect)) {
-        if(!hitErrorBarOnly && hit != LiveScore::HIT::HIT_300 && hit != LiveScore::HIT::HIT_300G &&
-           hit != LiveScore::HIT::HIT_SLIDER10 && hit != LiveScore::HIT::HIT_SLIDER30 &&
-           hit != LiveScore::HIT::HIT_SPINNERSPIN && hit != LiveScore::HIT::HIT_SPINNERBONUS) {
+        if(!hitErrorBarOnly && hit != LiveHitResult::HIT_300 && hit != LiveHitResult::HIT_300G &&
+           hit != LiveHitResult::HIT_SLIDER10 && hit != LiveHitResult::HIT_SLIDER30 &&
+           hit != LiveHitResult::HIT_SPINNERSPIN && hit != LiveHitResult::HIT_SPINNERBONUS) {
             this->fail();
-            return LiveScore::HIT::HIT_MISS;
+            return LiveHitResult::HIT_MISS;
         }
     } else if(this->mods.has(ModFlags::SuddenDeath)) {
-        if(hit == LiveScore::HIT::HIT_MISS) {
+        if(hit == LiveHitResult::HIT_MISS) {
             this->fail();
-            return LiveScore::HIT::HIT_MISS;
+            return LiveHitResult::HIT_MISS;
         }
     }
 
@@ -267,7 +267,7 @@ LiveScore::HIT SimulatedBeatmapInterface::addHitResult(HitObject *hitObject, Liv
                                   ignoreScore);
 
     // health
-    LiveScore::HIT returnedHit = LiveScore::HIT::HIT_MISS;
+    LiveHitResult returnedHit = LiveHitResult::HIT_MISS;
     if(!ignoreHealth) {
         // why is this upcast exactly idk but im not changing it
         this->addHealth(this->live_score.getHealthIncrease((AbstractBeatmapInterface *)this, hit), true);
@@ -277,21 +277,21 @@ LiveScore::HIT SimulatedBeatmapInterface::addHitResult(HitObject *hitObject, Liv
             const int comboEndBitmask = this->live_score.getComboEndBitmask();
 
             if(comboEndBitmask == 0) {
-                returnedHit = LiveScore::HIT::HIT_300G;
+                returnedHit = LiveHitResult::HIT_300G;
                 this->addHealth(this->live_score.getHealthIncrease(this, returnedHit), true);
                 this->live_score.addHitResultComboEnd(returnedHit);
             } else if((comboEndBitmask & 2) == 0) {
-                if(hit == LiveScore::HIT::HIT_100) {
-                    returnedHit = LiveScore::HIT::HIT_100K;
+                if(hit == LiveHitResult::HIT_100) {
+                    returnedHit = LiveHitResult::HIT_100K;
                     this->addHealth(this->live_score.getHealthIncrease(this, returnedHit), true);
                     this->live_score.addHitResultComboEnd(returnedHit);
-                } else if(hit == LiveScore::HIT::HIT_300) {
-                    returnedHit = LiveScore::HIT::HIT_300K;
+                } else if(hit == LiveHitResult::HIT_300) {
+                    returnedHit = LiveHitResult::HIT_300K;
                     this->addHealth(this->live_score.getHealthIncrease(this, returnedHit), true);
                     this->live_score.addHitResultComboEnd(returnedHit);
                 }
-            } else if(hit != LiveScore::HIT::HIT_MISS)
-                this->addHealth(this->live_score.getHealthIncrease(this, LiveScore::HIT::HIT_MU), true);
+            } else if(hit != LiveHitResult::HIT_MISS)
+                this->addHealth(this->live_score.getHealthIncrease(this, LiveHitResult::HIT_MU), true);
 
             this->live_score.setComboEndBitmask(0);
         }
@@ -615,7 +615,7 @@ void SimulatedBeatmapInterface::update(f64 frame_time) {
             break_on_extra_click &= this->iCurrentHitObjectIndex > 0;
             if(break_on_extra_click) {
                 this->addSliderBreak();
-                this->addHitResult(nullptr, LiveScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
+                this->addHitResult(nullptr, LiveHitResult::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true,
                                    false);  // only decrease health
             }
 
@@ -624,7 +624,7 @@ void SimulatedBeatmapInterface::update(f64 frame_time) {
     }
 
     // break time detection
-    const DatabaseBeatmap::BREAK breakEvent =
+    const DatabaseBeatmapTypes::BREAK breakEvent =
         this->getBreakForTimeRange(this->iPreviousHitObjectTime, this->iCurMusicPos, this->iNextHitObjectTime);
     const bool isInBreak =
         ((int)this->iCurMusicPos >= breakEvent.startTime && (int)this->iCurMusicPos <= breakEvent.endTime);
@@ -1058,7 +1058,7 @@ void SimulatedBeatmapInterface::computeDrainRate() {
 
                 int breakTime = 0;
                 if(breakCount > 0 && breakNumber < breakCount) {
-                    const DatabaseBeatmap::BREAK &e = this->breaks[breakNumber];
+                    const DatabaseBeatmapTypes::BREAK &e = this->breaks[breakNumber];
                     if(e.startTime >= localLastTime && e.endTime <= h->getClickTime()) {
                         // consider break start equal to object end time for version 8+ since drain stops during this
                         // time
@@ -1083,7 +1083,7 @@ void SimulatedBeatmapInterface::computeDrainRate() {
                     if(sliderPointer != nullptr) {
                         // startcircle
                         testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                            LiveScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                            LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
                             testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
 
                         // ticks + repeats + repeat ticks
@@ -1092,12 +1092,12 @@ void SimulatedBeatmapInterface::computeDrainRate() {
                             switch(click.type) {
                                 case 0:  // repeat
                                     testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                        LiveScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                                        LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
                                     break;
                                 case 1:  // tick
                                     testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                        LiveScore::HIT::HIT_SLIDER10, HP, testPlayer.hpMultiplierNormal,
+                                        LiveHitResult::HIT_SLIDER10, HP, testPlayer.hpMultiplierNormal,
                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider10
                                     break;
                             }
@@ -1105,14 +1105,14 @@ void SimulatedBeatmapInterface::computeDrainRate() {
 
                         // endcircle
                         testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                            LiveScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                            LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
                             testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
                     } else if(spinnerPointer != nullptr) {
                         const int rotationsNeeded = (int)((f32)spinnerPointer->getDuration() / 1000.0f *
                                                           GameRules::getSpinnerSpinsPerSecond(this));
                         for(int r = 0; r < rotationsNeeded; r++) {
                             testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                LiveScore::HIT::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal,
+                                LiveHitResult::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal,
                                 testPlayer.hpMultiplierComboEnd, 1.0));  // spinnerspin
                         }
                     }
@@ -1120,13 +1120,13 @@ void SimulatedBeatmapInterface::computeDrainRate() {
                     if(!(maxLongObjectDrop > 0.0) || (testPlayer.health - maxLongObjectDrop) > lowestHpEver) {
                         // regular hit (for every hitobject)
                         testPlayer.increaseHealth(
-                            LiveScore::getHealthIncrease(LiveScore::HIT::HIT_300, HP, testPlayer.hpMultiplierNormal,
+                            LiveScore::getHealthIncrease(LiveHitResult::HIT_300, HP, testPlayer.hpMultiplierNormal,
                                                          testPlayer.hpMultiplierComboEnd, 1.0));  // 300
 
                         // end of combo (new combo starts at next hitobject)
                         if((i == this->hitobjects.size() - 1) || this->hitobjects[i]->isEndOfCombo()) {
                             testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                LiveScore::HIT::HIT_300G, HP, testPlayer.hpMultiplierNormal,
+                                LiveHitResult::HIT_300G, HP, testPlayer.hpMultiplierNormal,
                                 testPlayer.hpMultiplierComboEnd, 1.0));  // geki
 
                             if(testPlayer.health < lowestHpComboEnd) {

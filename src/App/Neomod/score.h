@@ -29,7 +29,7 @@ enum class ScoreGrade : uint8_t {
     N  // means "no grade"
 };
 
-struct FinishedScore {
+struct FinishedScore final {
     [[nodiscard]] inline bool operator==(const FinishedScore &c) const {
         return unixTimestamp == c.unixTimestamp &&      //
                score == c.score &&                      //
@@ -154,28 +154,28 @@ struct hash<FinishedScore> {
 };
 }  // namespace std
 
-class LiveScore {
+enum class LiveHitResult : uint8_t {
+    // score
+    HIT_NULL,
+    HIT_MISS,
+    HIT_50,
+    HIT_100,
+    HIT_300,
+
+    // only used for health + SS/PF mods
+    HIT_MISS_SLIDERBREAK,
+    HIT_MU,
+    HIT_100K,
+    HIT_300K,
+    HIT_300G,
+    HIT_SLIDER10,  // tick
+    HIT_SLIDER30,  // repeat
+    HIT_SPINNERSPIN,
+    HIT_SPINNERBONUS
+};
+
+class LiveScore final {
    public:
-    enum class HIT : uint8_t {
-        // score
-        HIT_NULL,
-        HIT_MISS,
-        HIT_50,
-        HIT_100,
-        HIT_300,
-
-        // only used for health + SS/PF mods
-        HIT_MISS_SLIDERBREAK,
-        HIT_MU,
-        HIT_100K,
-        HIT_300K,
-        HIT_300G,
-        HIT_SLIDER10,  // tick
-        HIT_SLIDER30,  // repeat
-        HIT_SPINNERSPIN,
-        HIT_SPINNERBONUS
-    };
-
     static float calculateAccuracy(int num300s, int num100s, int num50s, int numMisses);
 
    public:
@@ -184,10 +184,10 @@ class LiveScore {
     void reset();  // only Beatmap may call this function!
 
     // only Beatmap/SimulatedBeatmapInterface may call this function!
-    void addHitResult(AbstractBeatmapInterface *beatmap, HitObject *hitObject, LiveScore::HIT hit, i32 delta,
+    void addHitResult(AbstractBeatmapInterface *beatmap, HitObject *hitObject, LiveHitResult hit, i32 delta,
                       bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore);
 
-    void addHitResultComboEnd(LiveScore::HIT hit);
+    void addHitResultComboEnd(LiveHitResult hit);
     void addSliderBreak();  // only Beatmap may call this function!
     void addPoints(int points, bool isSpinner);
     void setComboFull(int comboFull) { this->iComboFull = comboFull; }
@@ -240,8 +240,8 @@ class LiveScore {
     [[nodiscard]] inline bool isUnranked() const { return this->bIsUnranked; }
     void setCheated() { this->bIsUnranked = true; }
 
-    static double getHealthIncrease(AbstractBeatmapInterface *beatmap, LiveScore::HIT hit);
-    static double getHealthIncrease(LiveScore::HIT hit, double HP = 5.0f, double hpMultiplierNormal = 1.0f,
+    static double getHealthIncrease(AbstractBeatmapInterface *beatmap, LiveHitResult hit);
+    static double getHealthIncrease(LiveHitResult hit, double HP = 5.0f, double hpMultiplierNormal = 1.0f,
                                     double hpMultiplierComboEnd = 1.0f, double hpBarMaximumForNormalization = 200.0f);
 
     [[nodiscard]] int getKeyCount(GameplayKeys key_flag) const;
@@ -253,7 +253,7 @@ class LiveScore {
     [[nodiscard]] f64 getScoreMultiplier() const;
     void onScoreChange();
 
-    std::vector<HIT> hitresults;
+    std::vector<LiveHitResult> hitresults;
     std::vector<int> hitdeltas;
 
     ScoreGrade grade;

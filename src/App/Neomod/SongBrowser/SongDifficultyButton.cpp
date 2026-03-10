@@ -24,8 +24,8 @@
 
 using namespace neomod::sbr;
 
-SongDifficultyButton::SongDifficultyButton(float xPos, float yPos, float xSize, float ySize, 
-                                           BeatmapDifficulty* diff, SongButton* parentSongButton)
+SongDifficultyButton::SongDifficultyButton(float xPos, float yPos, float xSize, float ySize, BeatmapDifficulty* diff,
+                                           SongButton* parentSongButton)
     : SongButton(xPos, yPos, xSize, ySize) {
     // must exist and be a difficulty
     assert(diff && diff->getDifficulties().empty());
@@ -170,8 +170,8 @@ void SongDifficultyButton::update(CBaseUIEventCtx& c) {
         const f32 targetAnim = newOffsetPercentSelectionState ? 1.f : 0.f;
 
         if(targetAnim != this->fOffsetPercentAnim) {
-            this->fOffsetPercentAnim.set(targetAnim,
-                                        0.25f * (std::abs(targetAnim - this->fOffsetPercentAnim)), anim::QuadOut);
+            this->fOffsetPercentAnim.set(targetAnim, 0.25f * (std::abs(targetAnim - this->fOffsetPercentAnim)),
+                                         anim::QuadOut);
         }
     }
 
@@ -242,8 +242,8 @@ void SongDifficultyButton::updateGrade() {
         if(score.grade < this->grade) {
             this->grade = score.grade;
 
-            if(this->parentSongButton->grade > this->grade) {
-                this->parentSongButton->grade = this->grade;
+            if(this->parentSongButton->getGrade() > this->grade) {
+                this->parentSongButton->setGrade(this->grade);
             }
         }
     }

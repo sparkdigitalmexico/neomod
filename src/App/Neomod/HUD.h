@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <cassert>
+#include <span>
 
 class UIAvatar;
 class ScoreboardSlot;
@@ -113,7 +114,7 @@ class HUD final : public UIScreen {
     static f32 getCursorScaleFactor();
 
    private:
-    const std::vector<SCORE_ENTRY> &getCurrentScores();
+    std::span<const SCORE_ENTRY> updateAndGetCurrentScores();
     std::vector<SCORE_ENTRY> scores_cache;
 
     // for drawDummy

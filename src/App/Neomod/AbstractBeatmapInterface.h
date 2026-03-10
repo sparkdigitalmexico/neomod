@@ -1,7 +1,13 @@
 #pragma once
-#include "Replay.h"
-#include "score.h"
+#include "noinclude.h"
+
 #include "Vectors_fwd.h"
+
+namespace Replay {
+struct Mods;
+}
+enum class LegacyFlags : u32;
+enum class LiveHitResult : uint8_t;
 
 class HitObject;
 class DatabaseBeatmap;
@@ -14,10 +20,10 @@ class AbstractBeatmapInterface {
     AbstractBeatmapInterface() = default;
     virtual ~AbstractBeatmapInterface() = default;
 
-    virtual LiveScore::HIT addHitResult(HitObject *hitObject, LiveScore::HIT hit, i32 delta, bool isEndOfCombo = false,
-                                        bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false,
-                                        bool ignoreCombo = false, bool ignoreScore = false,
-                                        bool ignoreHealth = false) = 0;
+    virtual LiveHitResult addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta, bool isEndOfCombo = false,
+                                       bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false,
+                                       bool ignoreCombo = false, bool ignoreScore = false,
+                                       bool ignoreHealth = false) = 0;
 
     [[nodiscard]] virtual u32 getBreakDurationTotal() const = 0;
     [[nodiscard]] virtual u8 getKeys() const = 0;
@@ -74,7 +80,7 @@ class AbstractBeatmapInterface {
     [[nodiscard]] inline BeatmapDifficulty *getBeatmapMutable() const { return this->beatmap; }
 
     [[nodiscard]] bool isClickHeld() const;
-    [[nodiscard]] LiveScore::HIT getHitResult(i32 delta) const;
+    [[nodiscard]] LiveHitResult getHitResult(i32 delta) const;
 
     // Potentially Visible Set gate time size, for optimizing draw() and update() when iterating over all hitobjects
     [[nodiscard]] i32 getPVS() const;
