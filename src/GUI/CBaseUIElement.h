@@ -123,12 +123,12 @@ class CBaseUIElement : public KeyboardListener {
     inline CBaseUIElement *setSizeY(float ySize) { return this->setSize({this->rect.getSize().x, ySize}); }
 
     inline CBaseUIElement *setRect(McRect rect) {
-        this->rect = rect;
+        this->rect = std::move(rect);
         return this;
     }
 
     inline CBaseUIElement *setRelRect(McRect rect) {
-        this->relRect = rect;
+        this->relRect = std::move(rect);
         return this;
     }
 
@@ -223,19 +223,19 @@ class CBaseUIElement : public KeyboardListener {
     // attributes
 
    private:
-    uint8_t mouseInsideCheck : 2{0};
-    uint8_t mouseUpCheck : 2{0};
+    uint8_t mouseInsideCheck : 2 {0};
+    uint8_t mouseUpCheck : 2 {0};
 
    protected:
-    bool grabs_clicks : 1{false};  // TODO: remove this (confusing behavior)
-    bool bVisible : 1{true};
-    bool bActive : 1{false};  // we are doing something, e.g. textbox is blinking and ready to receive input
-    bool bBusy : 1{false};    // we demand the focus to be kept on us, e.g. click-drag scrolling in a scrollview
-    bool bEnabled : 1{true};
+    bool grabs_clicks : 1 {false};  // TODO: remove this (confusing behavior)
+    bool bVisible : 1 {true};
+    bool bActive : 1 {false};  // we are doing something, e.g. textbox is blinking and ready to receive input
+    bool bBusy : 1 {false};    // we demand the focus to be kept on us, e.g. click-drag scrolling in a scrollview
+    bool bEnabled : 1 {true};
 
-    bool bKeepActive : 1{false};  // once clicked, don't lose m_bActive, we have to manually release it (e.g. textbox)
-    bool bMouseInside : 1{false};
+    bool bKeepActive : 1 {false};  // once clicked, don't lose m_bActive, we have to manually release it (e.g. textbox)
+    bool bMouseInside : 1 {false};
 
-    bool bHandleLeftMouse : 1{true};
-    bool bHandleRightMouse : 1{false};
+    bool bHandleLeftMouse : 1 {true};
+    bool bHandleRightMouse : 1 {false};
 };

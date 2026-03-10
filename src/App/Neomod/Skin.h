@@ -136,26 +136,92 @@ struct Skin final {
     std::vector<SkinImage *> skin_images;
 
     // images
+    std::array<BasicSkinImage, 10> i_defaults{};
+    std::array<BasicSkinImage, 10> i_scores{};
+    std::array<BasicSkinImage, 10> i_combos{};
+
     BasicSkinImage i_hitcircle{};
-    mutable SkinImage i_hitcircleoverlay{};
     BasicSkinImage i_approachcircle{};
     BasicSkinImage i_reversearrow{};
-    mutable SkinImage i_followpoint{};
-
-    std::array<BasicSkinImage, 10> i_defaults{};
-
-    std::array<BasicSkinImage, 10> i_scores{};
     BasicSkinImage i_score_x{};
     BasicSkinImage i_score_percent{};
     BasicSkinImage i_score_dot{};
-
-    std::array<BasicSkinImage, 10> i_combos{};
     BasicSkinImage i_combo_x{};
+    BasicSkinImage i_play_warning_arrow{};
+    BasicSkinImage i_circular_metre{};
+    BasicSkinImage i_particle50{};
+    BasicSkinImage i_particle100{};
+    BasicSkinImage i_particle300{};
+    BasicSkinImage i_slider_gradient{};
+    BasicSkinImage i_slider_score_point{};
+    BasicSkinImage i_slider_start_circle{};
+    BasicSkinImage i_slider_start_circle_overlay{};
+    BasicSkinImage i_slider_end_circle{};
+    BasicSkinImage i_slider_end_circle_overlay{};
+    BasicSkinImage i_spinner_approach_circle{};
+    BasicSkinImage i_spinner_bg{};
+    BasicSkinImage i_spinner_circle{};
+    BasicSkinImage i_spinner_clear{};
+    BasicSkinImage i_spinner_bottom{};
+    BasicSkinImage i_spinner_glow{};
+    BasicSkinImage i_spinner_metre{};
+    BasicSkinImage i_spinner_middle{};
+    BasicSkinImage i_spinner_middle2{};
+    BasicSkinImage i_spinner_osu{};
+    BasicSkinImage i_spinner_top{};
+    BasicSkinImage i_spinner_rpm{};
+    BasicSkinImage i_spinner_spin{};
+    BasicSkinImage i_cursor{};
+    BasicSkinImage i_cursor_default{};
+    BasicSkinImage i_cursor_middle{};
+    BasicSkinImage i_cursor_trail{};
+    BasicSkinImage i_cursor_ripple{};
+    BasicSkinImage i_cursor_smoke{};
+    BasicSkinImage i_pause_continue{};
+    BasicSkinImage i_pause_replay{};
+    BasicSkinImage i_pause_retry{};
+    BasicSkinImage i_pause_back{};
+    BasicSkinImage i_pause_overlay{};
+    BasicSkinImage i_fail_bg{};
+    BasicSkinImage i_unpause{};
+    BasicSkinImage i_button_left{};
+    BasicSkinImage i_button_mid{};
+    BasicSkinImage i_button_right{};
+    BasicSkinImage i_button_left_default{};
+    BasicSkinImage i_button_mid_default{};
+    BasicSkinImage i_button_right_default{};
+    BasicSkinImage i_songselect_top{};
+    BasicSkinImage i_songselect_bot{};
+    BasicSkinImage i_menu_button_bg{};
+    BasicSkinImage i_star{};
+    BasicSkinImage i_ranking_panel{};
+    BasicSkinImage i_ranking_graph{};
+    BasicSkinImage i_ranking_title{};
+    BasicSkinImage i_ranking_max_combo{};
+    BasicSkinImage i_ranking_accuracy{};
+    BasicSkinImage i_ranking_a{};
+    BasicSkinImage i_ranking_b{};
+    BasicSkinImage i_ranking_c{};
+    BasicSkinImage i_ranking_d{};
+    BasicSkinImage i_ranking_s{};
+    BasicSkinImage i_ranking_sh{};
+    BasicSkinImage i_ranking_x{};
+    BasicSkinImage i_ranking_xh{};
+    BasicSkinImage i_beatmap_import_spinner{};
+    BasicSkinImage i_loading_spinner{};
+    BasicSkinImage i_circle_empty{};
+    BasicSkinImage i_circle_full{};
+    BasicSkinImage i_seek_triangle{};
+    BasicSkinImage i_user_icon{};
+    BasicSkinImage i_background_cube{};
+    BasicSkinImage i_menu_bg{};
+    BasicSkinImage i_skybox{};
+
+    mutable SkinImage i_hitcircleoverlay{};
+    mutable SkinImage i_followpoint{};
 
     mutable SkinImage i_play_skip{};
-    BasicSkinImage i_play_warning_arrow{};
     mutable SkinImage i_play_warning_arrow2{};
-    BasicSkinImage i_circular_metre{};
     mutable SkinImage i_scorebar_bg{};
     mutable SkinImage i_scorebar_colour{};
     mutable SkinImage i_scorebar_marker{};
@@ -178,43 +244,12 @@ struct Skin final {
     mutable SkinImage i_hit300g{};
     mutable SkinImage i_hit300k{};
 
-    BasicSkinImage i_particle50{};
-    BasicSkinImage i_particle100{};
-    BasicSkinImage i_particle300{};
-
-    BasicSkinImage i_slider_gradient{};
     mutable SkinImage i_sliderb{};
     mutable SkinImage i_slider_follow_circle{};
-    BasicSkinImage i_slider_score_point{};
-    BasicSkinImage i_slider_start_circle{};
     mutable SkinImage i_slider_start_circle2{};
-    BasicSkinImage i_slider_start_circle_overlay{};
     mutable SkinImage i_slider_start_circle_overlay2{};
-    BasicSkinImage i_slider_end_circle{};
     mutable SkinImage i_slider_end_circle2{};
-    BasicSkinImage i_slider_end_circle_overlay{};
     mutable SkinImage i_slider_end_circle_overlay2{};
-
-    BasicSkinImage i_spinner_approach_circle{};
-    BasicSkinImage i_spinner_bg{};
-    BasicSkinImage i_spinner_circle{};
-    BasicSkinImage i_spinner_clear{};
-    BasicSkinImage i_spinner_bottom{};
-    BasicSkinImage i_spinner_glow{};
-    BasicSkinImage i_spinner_metre{};
-    BasicSkinImage i_spinner_middle{};
-    BasicSkinImage i_spinner_middle2{};
-    BasicSkinImage i_spinner_osu{};
-    BasicSkinImage i_spinner_top{};
-    BasicSkinImage i_spinner_rpm{};
-    BasicSkinImage i_spinner_spin{};
-
-    BasicSkinImage i_cursor{};
-    BasicSkinImage i_cursor_default{};
-    BasicSkinImage i_cursor_middle{};
-    BasicSkinImage i_cursor_trail{};
-    BasicSkinImage i_cursor_ripple{};
-    BasicSkinImage i_cursor_smoke{};
 
     mutable SkinImage i_modselect_ez{};
     mutable SkinImage i_modselect_nf{};
@@ -240,20 +275,6 @@ struct Skin final {
     mutable SkinImage i_mode_osu{};
     mutable SkinImage i_mode_osu_small{};
 
-    BasicSkinImage i_pause_continue{};
-    BasicSkinImage i_pause_replay{};
-    BasicSkinImage i_pause_retry{};
-    BasicSkinImage i_pause_back{};
-    BasicSkinImage i_pause_overlay{};
-    BasicSkinImage i_fail_bg{};
-    BasicSkinImage i_unpause{};
-
-    BasicSkinImage i_button_left{};
-    BasicSkinImage i_button_mid{};
-    BasicSkinImage i_button_right{};
-    BasicSkinImage i_button_left_default{};
-    BasicSkinImage i_button_mid_default{};
-    BasicSkinImage i_button_right_default{};
     mutable SkinImage i_menu_back2_DEFAULTSKIN{};
     mutable SkinImage i_menu_back2{};
     mutable SkinImage i_sel_mode{};
@@ -265,24 +286,7 @@ struct Skin final {
     mutable SkinImage i_sel_options{};
     mutable SkinImage i_sel_options_over{};
 
-    BasicSkinImage i_songselect_top{};
-    BasicSkinImage i_songselect_bot{};
-    BasicSkinImage i_menu_button_bg{};
     mutable SkinImage i_menu_button_bg2{};
-    BasicSkinImage i_star{};
-    BasicSkinImage i_ranking_panel{};
-    BasicSkinImage i_ranking_graph{};
-    BasicSkinImage i_ranking_title{};
-    BasicSkinImage i_ranking_max_combo{};
-    BasicSkinImage i_ranking_accuracy{};
-    BasicSkinImage i_ranking_a{};
-    BasicSkinImage i_ranking_b{};
-    BasicSkinImage i_ranking_c{};
-    BasicSkinImage i_ranking_d{};
-    BasicSkinImage i_ranking_s{};
-    BasicSkinImage i_ranking_sh{};
-    BasicSkinImage i_ranking_x{};
-    BasicSkinImage i_ranking_xh{};
     mutable SkinImage i_ranking_a_small{};
     mutable SkinImage i_ranking_b_small{};
     mutable SkinImage i_ranking_c_small{};
@@ -292,16 +296,6 @@ struct Skin final {
     mutable SkinImage i_ranking_x_small{};
     mutable SkinImage i_ranking_xh_small{};
     mutable SkinImage i_ranking_perfect{};
-
-    BasicSkinImage i_beatmap_import_spinner{};
-    BasicSkinImage i_loading_spinner{};
-    BasicSkinImage i_circle_empty{};
-    BasicSkinImage i_circle_full{};
-    BasicSkinImage i_seek_triangle{};
-    BasicSkinImage i_user_icon{};
-    BasicSkinImage i_background_cube{};
-    BasicSkinImage i_menu_bg{};
-    BasicSkinImage i_skybox{};
 
     // sounds
     Sound *s_normal_hitnormal{nullptr};

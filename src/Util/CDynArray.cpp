@@ -39,6 +39,7 @@ template <typename T>
 CDynArray<T>::CDynArray(T *to_own, uSz size) noexcept
     : std::unique_ptr<T[], CDynArrayDeleter>(to_own), m_size(size), m_capacity(size) {
     static_assert(std::is_trivial_v<T>);
+    assert(!!to_own);
 }
 
 template <typename T>
@@ -74,10 +75,13 @@ template <typename T>
 CDynArray<T> &CDynArray<T>::operator=(const CDynArray &other) noexcept {
     static_assert(std::is_trivial_v<T>);
     if(this != &other) {
-        if(other.m_size > m_capacity || !this->get()) reserve(other.m_size);
+        if(other.m_size > m_capacity || !this->get()) {
+            this->reserve(other.m_size);
+        }
         m_size = other.m_size;
-        if(m_size > 0)
+        if(m_size > 0) {
             std::memcpy(static_cast<void *>(this->data()), static_cast<const void *>(other.data()), m_size * sizeof(T));
+        }
     }
     return *this;
 }
@@ -85,7 +89,7 @@ CDynArray<T> &CDynArray<T>::operator=(const CDynArray &other) noexcept {
 template <typename T>
 void CDynArray<T>::reserve(uSz cap) {
     const uSz actualCap = std::max(cap, BASE_CAPACITY);
-    if(actualCap <= m_capacity && this->get() != nullptr) return;
+    if(actualCap <= m_capacity && likely(this->get() != nullptr)) return;
 
     T *old = this->release();
     T *temp = nullptr;
@@ -101,7 +105,7 @@ void CDynArray<T>::reserve(uSz cap) {
 
 template <typename T>
 void CDynArray<T>::resize(uSz size) {
-    if(size <= m_capacity && this->get() != nullptr) {
+    if(likely(size <= m_capacity && likely(this->get() != nullptr))) {
         m_size = size;
         return;
     }
