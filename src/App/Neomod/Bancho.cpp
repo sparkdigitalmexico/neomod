@@ -799,8 +799,8 @@ void BanchoState::handle_packet(Packet &packet) {
         }
 
         case INP_USER_DM_BLOCKED: {
-            packet.read_stdstring();
-            packet.read_stdstring();
+            packet.skip_string();
+            packet.skip_string();
             std::string blocked = packet.read_stdstring();
             packet.read<u32>();
             debugLog("Blocked {:s}.", blocked);
@@ -808,8 +808,8 @@ void BanchoState::handle_packet(Packet &packet) {
         }
 
         case INP_TARGET_IS_SILENCED: {
-            packet.read_stdstring();
-            packet.read_stdstring();
+            packet.skip_string();
+            packet.skip_string();
             std::string blocked = packet.read_stdstring();
             packet.read<u32>();
             debugLog("Silenced {:s}.", blocked);

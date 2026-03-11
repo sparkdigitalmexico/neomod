@@ -16,7 +16,7 @@ Room::Room(Packet &packet) {
     if(this->has_password) {
         // Discard password. It should be an empty string, but just in case, read it properly.
         packet.pos--;
-        packet.read_stdstring();
+        packet.skip_string();
     }
 
     this->map_name = packet.read_stdstring();
