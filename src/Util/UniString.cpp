@@ -27,6 +27,36 @@ uSz num_codepoints(std::u16string_view utf16) {
 uSz num_codepoints(std::u32string_view utf32) { return utf32.size(); }
 
 namespace {
+
+// U+FFFD in UTF-8
+constexpr char UTF8_REPLACEMENT[]{'\xEF', '\xBF', '\xBD'};
+
+// replace invalid UTF-8 sequences with U+FFFD.
+// first_error is the byte offset of the first known-bad byte (from validate_utf8_with_errors)
+std::string sanitize_utf8(const char *input, uSz len, uSz first_error) {
+    std::string ret;
+    ret.reserve(len);
+    // copy the valid prefix before the first error
+    ret.append(input, first_error);
+    ret.append(&UTF8_REPLACEMENT[0], sizeof(UTF8_REPLACEMENT));
+    uSz i = first_error + 1;
+    while(i < len) {
+        auto result = simdutf::validate_utf8_with_errors(input + i, len - i);
+        ret.append(input + i, result.count);
+        if(result.error == simdutf::error_code::SUCCESS) break;
+        ret.append(&UTF8_REPLACEMENT[0], sizeof(UTF8_REPLACEMENT));
+        i += result.count + 1;
+    }
+    return ret;
+}
+
+// replace invalid codepoints with U+FFFD in-place
+void sanitize_utf32(char32_t *data, uSz len) {
+    for(uSz i = 0; i < len; i++) {
+        if(data[i] > 0x10FFFF || (data[i] >= 0xD800 && data[i] <= 0xDFFF)) data[i] = 0xFFFD;
+    }
+}
+
 struct AlignedBuffer {
     NOCOPY_NOMOVE(AlignedBuffer)
    private:
@@ -35,21 +65,15 @@ struct AlignedBuffer {
    public:
     AlignedBuffer() = delete;
     // NOLINTNEXTLINE
-    AlignedBuffer(const u8 *src, uSz size, bool force_copy) {
-        if(force_copy || reinterpret_cast<uintptr_t>(src) % static_cast<uSz>(alignment) != 0) {
-            if(size <= sizeof(small)) {
-                data = &small[0];
-            } else {
-                data = static_cast<u8 *>(::operator new(size, alignment));
-                should_delete = true;
-            }
-            std::memcpy(static_cast<void *>(data), static_cast<const void *>(src), size);
+    AlignedBuffer(const u8 *src, uSz size) : src_data(src), in_size(size) {
+        if(reinterpret_cast<uintptr_t>(src) % static_cast<uSz>(alignment) != 0) {
+            make_mutable();
         } else {
             data = const_cast<u8 *>(src);  // NOLINT
         }
     }
     ~AlignedBuffer() {
-        if(should_delete) {
+        if(allocated) {
             ::operator delete(static_cast<void *>(data), alignment);
         }
     }
@@ -59,10 +83,32 @@ struct AlignedBuffer {
         return reinterpret_cast<const T *>(data);
     }
 
+    template <typename T>
+    [[nodiscard]] T *get_mut() {
+        if(!is_mutable()) make_mutable();
+        return reinterpret_cast<T *>(data);
+    }
+
    private:
+    [[nodiscard]] bool is_mutable() const { return allocated || data == &small[0]; }
+
+    void make_mutable() {
+        if(is_mutable()) return;
+        if(in_size <= sizeof(small)) {
+            data = &small[0];
+        } else {
+            data = static_cast<u8 *>(::operator new(in_size, alignment));
+            allocated = true;
+        }
+        std::memcpy(static_cast<void *>(data), static_cast<const void *>(src_data), in_size);
+    }
+
+    const u8 *src_data;
+    uSz in_size;
+
     alignas(static_cast<uSz>(alignment)) u8 small[128];
     u8 *data;
-    bool should_delete{false};
+    bool allocated{false};
 };
 
 inline std::pair<uSz, simdutf::encoding_type> get_bom_and_encoding(const u8 *data, uSz size) {
@@ -97,52 +143,86 @@ std::string to_utf8(const char *arbitrarily_encoded_data, uSz size) {
         return {};
     }
 
-    const u8 *src_start = &(reinterpret_cast<const u8 *>(arbitrarily_encoded_data)[bom_pfx_bytes]);
+    const char *src_start = &arbitrarily_encoded_data[bom_pfx_bytes];
 
     std::string ret;
     if(detected == simdutf::encoding_type::unspecified || detected == simdutf::encoding_type::UTF8) {
-        ret.assign(reinterpret_cast<const char *>(src_start), in_bytes);
+        auto result = simdutf::validate_utf8_with_errors(src_start, in_bytes);
+        if(result.error == simdutf::error_code::SUCCESS) {
+            ret.assign(src_start, in_bytes);
+        } else {
+            ret = sanitize_utf8(src_start, in_bytes, result.count);
+        }
         return ret;
     }
 
-    // data must be aligned (because of simd)
-    const AlignedBuffer buf{src_start, in_bytes, /*force_copy=*/detected == simdutf::encoding_type::UTF32_BE};
+    AlignedBuffer aligned_buf{reinterpret_cast<const u8 *>(src_start), in_bytes};
 
     switch(detected) {
         case simdutf::encoding_type::UTF16_LE: {
             const uSz in_u16_len = in_bytes / 2;
-            const uSz out_u8_len = simdutf::utf8_length_from_utf16le(buf.get<char16_t>(), in_u16_len);
-            ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
-                return simdutf::convert_utf16le_to_utf8(buf.get<char16_t>(), in_u16_len, data);
-            });
+            const auto *maybe_invalid_u16 = aligned_buf.get<char16_t>();
+            if(simdutf::validate_utf16le(maybe_invalid_u16, in_u16_len)) {
+                const uSz out_u8_len = simdutf::utf8_length_from_utf16le(maybe_invalid_u16, in_u16_len);
+                ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz) -> uSz {
+                    return simdutf::convert_valid_utf16le_to_utf8(maybe_invalid_u16, in_u16_len, data);
+                });
+            } else {
+                auto *valid_u16 = aligned_buf.get_mut<char16_t>();
+                simdutf::to_well_formed_utf16le(valid_u16, in_u16_len, valid_u16);
+                const uSz out_u8_len = simdutf::utf8_length_from_utf16le(valid_u16, in_u16_len);
+                ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz) -> uSz {
+                    return simdutf::convert_valid_utf16le_to_utf8(valid_u16, in_u16_len, data);
+                });
+            }
         } break;
 
         case simdutf::encoding_type::UTF16_BE: {
             const uSz in_u16_len = in_bytes / 2;
-            const uSz out_u8_len = simdutf::utf8_length_from_utf16be(buf.get<char16_t>(), in_u16_len);
-            ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
-                return simdutf::convert_utf16be_to_utf8(buf.get<char16_t>(), in_u16_len, data);
-            });
+            const auto *maybe_invalid_u16 = aligned_buf.get<char16_t>();
+            if(simdutf::validate_utf16be(maybe_invalid_u16, in_u16_len)) {
+                const uSz out_u8_len = simdutf::utf8_length_from_utf16be(maybe_invalid_u16, in_u16_len);
+                ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz) -> uSz {
+                    return simdutf::convert_valid_utf16be_to_utf8(maybe_invalid_u16, in_u16_len, data);
+                });
+            } else {
+                auto *valid_u16 = aligned_buf.get_mut<char16_t>();
+                simdutf::to_well_formed_utf16be(valid_u16, in_u16_len, valid_u16);
+                const uSz out_u8_len = simdutf::utf8_length_from_utf16be(valid_u16, in_u16_len);
+                ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz) -> uSz {
+                    return simdutf::convert_valid_utf16be_to_utf8(valid_u16, in_u16_len, data);
+                });
+            }
         } break;
 
         case simdutf::encoding_type::UTF32_LE: {
             const uSz in_u32_len = in_bytes / 4;
-            const uSz out_u8_len = simdutf::utf8_length_from_utf32(buf.get<char32_t>(), in_u32_len);
-            ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
-                return simdutf::convert_utf32_to_utf8(buf.get<char32_t>(), in_u32_len, data);
-            });
+            const auto *maybe_invalid_u32 = aligned_buf.get<char32_t>();
+            if(simdutf::validate_utf32(maybe_invalid_u32, in_u32_len)) {
+                const uSz out_u8_len = simdutf::utf8_length_from_utf32(maybe_invalid_u32, in_u32_len);
+                ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz) -> uSz {
+                    return simdutf::convert_valid_utf32_to_utf8(maybe_invalid_u32, in_u32_len, data);
+                });
+            } else {
+                auto *valid_u32 = aligned_buf.get_mut<char32_t>();
+                sanitize_utf32(valid_u32, in_u32_len);
+                const uSz out_u8_len = simdutf::utf8_length_from_utf32(valid_u32, in_u32_len);
+                ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz) -> uSz {
+                    return simdutf::convert_valid_utf32_to_utf8(valid_u32, in_u32_len, data);
+                });
+            }
         } break;
 
         case simdutf::encoding_type::UTF32_BE: {
             // simdutf has no UTF-32 endianness swap or direct BE->UTF-8 conversion,
             // so byte-swap to native order first. should be rare anyways
             const uSz in_u32_len = in_bytes / 4;
-            // NOLINTNEXTLINE
-            auto *native = const_cast<char32_t *>(buf.get<char32_t>());
+            auto *native = aligned_buf.get_mut<char32_t>();
             for(uSz i = 0; i < in_u32_len; i++) native[i] = std::byteswap(native[i]);
+            if(!simdutf::validate_utf32(native, in_u32_len)) sanitize_utf32(native, in_u32_len);
             const uSz out_u8_len = simdutf::utf8_length_from_utf32(native, in_u32_len);
-            ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
-                return simdutf::convert_utf32_to_utf8(native, in_u32_len, data);
+            ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz) -> uSz {
+                return simdutf::convert_valid_utf32_to_utf8(native, in_u32_len, data);
             });
         } break;
 
@@ -165,98 +245,130 @@ std::string to_utf8(std::string_view maybe_utf8) { return to_utf8(maybe_utf8.dat
 
 std::string to_utf8(std::u16string_view utf16) {
     if(utf16.empty()) return {};
-    std::string ret;
-    const uSz utf8Length = simdutf::utf8_length_from_utf16le(utf16.data(), utf16.size());
-    ret.resize_and_overwrite(utf8Length, [&](char *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf16le_to_utf8(utf16.data(), utf16.size(), data);
-    });
-    return ret;
+
+    static constexpr auto do_convert = [](const char16_t *data, uSz size) {
+        std::string ret;
+        const uSz len = simdutf::utf8_length_from_utf16le(data, size);
+        ret.resize_and_overwrite(
+            len, [&](char *out, uSz) -> uSz { return simdutf::convert_valid_utf16le_to_utf8(data, size, out); });
+        return ret;
+    };
+
+    if(simdutf::validate_utf16le(utf16.data(), utf16.size())) return do_convert(utf16.data(), utf16.size());
+
+    std::u16string sanitized(utf16);
+    simdutf::to_well_formed_utf16le(sanitized.data(), sanitized.size(), sanitized.data());
+    return do_convert(sanitized.data(), sanitized.size());
 }
 
 std::string to_utf8(std::u32string_view utf32) {
     if(utf32.empty()) return {};
-    std::string ret;
-    const uSz utf8Length = simdutf::utf8_length_from_utf32(utf32.data(), utf32.size());
-    ret.resize_and_overwrite(utf8Length, [&](char *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf32_to_utf8(utf32.data(), utf32.size(), data);
-    });
-    return ret;
+
+    static constexpr auto do_convert = [](const char32_t *data, uSz size) {
+        std::string ret;
+        const uSz len = simdutf::utf8_length_from_utf32(data, size);
+        ret.resize_and_overwrite(
+            len, [&](char *out, uSz) -> uSz { return simdutf::convert_valid_utf32_to_utf8(data, size, out); });
+        return ret;
+    };
+
+    if(simdutf::validate_utf32(utf32.data(), utf32.size())) return do_convert(utf32.data(), utf32.size());
+
+    std::u32string sanitized(utf32);
+    sanitize_utf32(sanitized.data(), sanitized.size());
+    return do_convert(sanitized.data(), sanitized.size());
 }
 
 std::u16string to_utf16(std::string_view utf8) {
     if(utf8.empty()) return {};
-    std::u16string ret;
-    const uSz out_u16_len = simdutf::utf16_length_from_utf8(utf8.data(), utf8.size());
-    ret.resize_and_overwrite(out_u16_len, [&](char16_t *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf8_to_utf16le(utf8.data(), utf8.size(), data);
-    });
-    return ret;
+
+    static constexpr auto do_convert = [](const char *data, uSz size) {
+        std::u16string ret;
+        const uSz len = simdutf::utf16_length_from_utf8(data, size);
+        ret.resize_and_overwrite(
+            len, [&](char16_t *out, uSz) -> uSz { return simdutf::convert_valid_utf8_to_utf16le(data, size, out); });
+        return ret;
+    };
+
+    auto result = simdutf::validate_utf8_with_errors(utf8.data(), utf8.size());
+    if(result.error == simdutf::error_code::SUCCESS) return do_convert(utf8.data(), utf8.size());
+
+    auto sanitized = sanitize_utf8(utf8.data(), utf8.size(), result.count);
+    return do_convert(sanitized.data(), sanitized.size());
 }
 
 std::u16string to_utf16(std::u32string_view utf32) {
     if(utf32.empty()) return {};
-    std::u16string ret;
-    const uSz out_u16_len = simdutf::utf16_length_from_utf32(utf32.data(), utf32.size());
-    ret.resize_and_overwrite(out_u16_len, [&](char16_t *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf32_to_utf16le(utf32.data(), utf32.size(), data);
-    });
-    return ret;
+
+    static constexpr auto do_convert = [](const char32_t *data, uSz size) {
+        std::u16string ret;
+        const uSz len = simdutf::utf16_length_from_utf32(data, size);
+        ret.resize_and_overwrite(
+            len, [&](char16_t *out, uSz) -> uSz { return simdutf::convert_valid_utf32_to_utf16le(data, size, out); });
+        return ret;
+    };
+
+    if(simdutf::validate_utf32(utf32.data(), utf32.size())) return do_convert(utf32.data(), utf32.size());
+
+    std::u32string sanitized(utf32);
+    sanitize_utf32(sanitized.data(), sanitized.size());
+    return do_convert(sanitized.data(), sanitized.size());
 }
 
 std::u32string to_utf32(std::string_view utf8) {
     if(utf8.empty()) return {};
-    std::u32string ret;
-    const uSz out_u32_len = simdutf::utf32_length_from_utf8(utf8.data(), utf8.size());
-    ret.resize_and_overwrite(out_u32_len, [&](char32_t *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf8_to_utf32(utf8.data(), utf8.size(), data);
-    });
-    return ret;
+
+    static constexpr auto do_convert = [](const char *data, uSz size) {
+        std::u32string ret;
+        const uSz len = simdutf::utf32_length_from_utf8(data, size);
+        ret.resize_and_overwrite(
+            len, [&](char32_t *out, uSz) -> uSz { return simdutf::convert_valid_utf8_to_utf32(data, size, out); });
+        return ret;
+    };
+
+    auto result = simdutf::validate_utf8_with_errors(utf8.data(), utf8.size());
+    if(result.error == simdutf::error_code::SUCCESS) return do_convert(utf8.data(), utf8.size());
+
+    auto sanitized = sanitize_utf8(utf8.data(), utf8.size(), result.count);
+    return do_convert(sanitized.data(), sanitized.size());
 }
 
 std::u32string to_utf32(std::u16string_view utf16) {
     if(utf16.empty()) return {};
-    std::u32string ret;
-    const uSz out_u32_len = simdutf::utf32_length_from_utf16le(utf16.data(), utf16.size());
-    ret.resize_and_overwrite(out_u32_len, [&](char32_t *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf16le_to_utf32(utf16.data(), utf16.size(), data);
-    });
-    return ret;
+
+    static constexpr auto do_convert = [](const char16_t *data, uSz size) {
+        std::u32string ret;
+        const uSz len = simdutf::utf32_length_from_utf16le(data, size);
+        ret.resize_and_overwrite(
+            len, [&](char32_t *out, uSz) -> uSz { return simdutf::convert_valid_utf16le_to_utf32(data, size, out); });
+        return ret;
+    };
+
+    if(simdutf::validate_utf16le(utf16.data(), utf16.size())) return do_convert(utf16.data(), utf16.size());
+
+    std::u16string sanitized(utf16);
+    simdutf::to_well_formed_utf16le(sanitized.data(), sanitized.size(), sanitized.data());
+    return do_convert(sanitized.data(), sanitized.size());
 }
 
 std::string to_utf8(std::wstring_view wide) {
     if(wide.empty()) return {};
-    std::string ret;
 #if WCHAR_MAX <= 0xFFFF
-    const uSz out_u8_len =
-        simdutf::utf8_length_from_utf16(reinterpret_cast<const char16_t *>(wide.data()), wide.size());
-    ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf16_to_utf8(reinterpret_cast<const char16_t *>(wide.data()), wide.size(), data);
-    });
+    return to_utf8(std::u16string_view{reinterpret_cast<const char16_t *>(wide.data()), wide.size()});
 #else
-    const uSz out_u8_len =
-        simdutf::utf8_length_from_utf32(reinterpret_cast<const char32_t *>(wide.data()), wide.size());
-    ret.resize_and_overwrite(out_u8_len, [&](char *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf32_to_utf8(reinterpret_cast<const char32_t *>(wide.data()), wide.size(), data);
-    });
+    return to_utf8(std::u32string_view{reinterpret_cast<const char32_t *>(wide.data()), wide.size()});
 #endif
-    return ret;
 }
 
 std::wstring to_wide(std::string_view utf8) {
     if(utf8.empty()) return {};
-    std::wstring ret;
 #if WCHAR_MAX <= 0xFFFF
-    const uSz out_u16_len = simdutf::utf16_length_from_utf8(utf8.data(), utf8.size());
-    ret.resize_and_overwrite(out_u16_len, [&](wchar_t *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf8_to_utf16(utf8.data(), utf8.size(), reinterpret_cast<char16_t *>(data));
-    });
+    auto u16 = to_utf16(utf8);
+    return std::wstring{reinterpret_cast<const wchar_t *>(u16.data()), u16.size()};
 #else
-    const uSz out_u32_len = simdutf::utf32_length_from_utf8(utf8.data(), utf8.size());
-    ret.resize_and_overwrite(out_u32_len, [&](wchar_t *data, uSz /* size */) -> uSz {
-        return simdutf::convert_utf8_to_utf32(utf8.data(), utf8.size(), reinterpret_cast<char32_t *>(data));
-    });
+    auto u32 = to_utf32(utf8);
+    return std::wstring{reinterpret_cast<const wchar_t *>(u32.data()), u32.size()};
 #endif
-    return ret;
 }
 
 u8codepoint_view::u8codepoint_view(std::string_view sv) : m_sv(sv) {}
