@@ -688,7 +688,8 @@ bool McFontImpl::loadGlyphDynamic(char32_t ch, FT_Face existingFace) {
         }
 
         logIf(cv::r_debug_font_unicode.getBool() && face != m_ftFace,
-              "Font Info (for font resource {}): Using fallback font for character {}", m_parent->getName(), debugstr);
+              "Font Info (for font resource {}): Using fallback font for character {} (from font {})",
+              m_parent->getName(), debugstr, face->family_name);
     }
 
     // ensure face size is set
