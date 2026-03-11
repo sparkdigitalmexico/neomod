@@ -1299,12 +1299,13 @@ void ModSelector::onOverrideSliderChange(CBaseUISlider *slider) {
         // update convar with final value (e.g. cv::ar_override, etc.)
         overrideSlider.cvar->setValue(sliderValue);
 
+        // HACKHACK: since updateOverrideSliderLabels depends on mods currently applied to beatmap, we need to apply them from cvars here
+        osu->updateMods();
+
         this->updateOverrideSliderLabels();
 
         break;
     }
-
-    osu->updateMods();
 }
 
 void ModSelector::onOverrideSliderLockChange(CBaseUICheckbox *checkbox) {
@@ -1334,13 +1335,14 @@ void ModSelector::onOverrideSliderLockChange(CBaseUICheckbox *checkbox) {
                 }
             }
 
+            // HACKHACK: since updateOverrideSliderLabels depends on mods currently applied to beatmap, we need to apply them from cvars here
+            osu->updateMods();
+
             this->updateOverrideSliderLabels();
 
             break;
         }
     }
-
-    osu->updateMods();
 }
 
 void ModSelector::onOverrideARSliderDescClicked(CBaseUIButton * /*button*/) { this->ARLock->click(); }

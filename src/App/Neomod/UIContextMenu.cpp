@@ -6,7 +6,6 @@
 #include "AnimationHandler.h"
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
-#include "Logging.h"
 #include "OsuConVars.h"
 #include "MakeDelegateWrapper.h"
 #include "Engine.h"
