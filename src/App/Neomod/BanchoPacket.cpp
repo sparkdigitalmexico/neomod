@@ -2,6 +2,7 @@
 
 #include "BanchoPacket.h"
 #include "BanchoProtocol.h"
+#include "UniString.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -42,7 +43,8 @@ std::string Packet::read_stdstring() {
     u8 *str = new u8[len + 1];
     this->read_bytes(str, len);
 
-    std::string str_out((const char *)str, len);
+    // convert arbitrary bytes to valid utf (sanity)
+    std::string str_out{UniString::to_utf8(reinterpret_cast<const char *>(str), len)};
     delete[] str;
 
     return str_out;
