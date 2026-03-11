@@ -28,16 +28,7 @@ class Resource {
     friend struct ResourceManagerImpl;
 
    public:
-    enum Type : uint8_t {
-        IMAGE,
-        FONT,
-        RENDERTARGET,
-        SHADER,
-        TEXTUREATLAS,
-        VAO,
-        SOUND,
-        LAST_RESTYPE = SOUND
-    };
+    enum Type : uint8_t { IMAGE, FONT, RENDERTARGET, SHADER, TEXTUREATLAS, VAO, SOUND, LAST_RESTYPE = SOUND };
 
    protected:
     constexpr Resource(Type resType) : resType(resType) {
@@ -62,9 +53,9 @@ class Resource {
     [[nodiscard]] inline const std::string &getFilePath() const { return this->sFilePath; }
     [[nodiscard]] inline const std::string &getDebugIdentifier() const { return this->sDebugIdentifier; }
 
-    [[nodiscard]] forceinline bool isReady() const { return this->bReady.load(std::memory_order_acquire); }
-    [[nodiscard]] forceinline bool isAsyncReady() const { return this->bAsyncReady.load(std::memory_order_acquire); }
-    [[nodiscard]] forceinline bool isInterrupted() const { return this->bInterrupted.load(std::memory_order_acquire); }
+    [[nodiscard]] forceinline bool isReady() const { return this->bReady.load(std::memory_order_relaxed); }
+    [[nodiscard]] forceinline bool isAsyncReady() const { return this->bAsyncReady.load(std::memory_order_relaxed); }
+    [[nodiscard]] forceinline bool isInterrupted() const { return this->bInterrupted.load(std::memory_order_relaxed); }
 
    protected:
     virtual void init() = 0;

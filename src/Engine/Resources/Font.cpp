@@ -550,7 +550,7 @@ float McFontImpl::getStringWidth(std::string_view text) const {
     if(!m_parent->isReady()) return 1.0f;
 
     float width = 0.0f;
-    for(auto cp : UniString::codepoints(text)) {
+    for(char32_t cp : UniString::codepoints(text)) {
         width += getGlyphMetrics(cp).advance_x;
     }
     return width;
@@ -560,7 +560,7 @@ float McFontImpl::getStringHeight(std::string_view text) const {
     if(!m_parent->isReady()) return 1.0f;
 
     float height = 0.0f;
-    for(auto cp : UniString::codepoints(text)) {
+    for(char32_t cp : UniString::codepoints(text)) {
         height = std::max(height, static_cast<float>(getGlyphMetrics(cp).top));
     }
     return height;

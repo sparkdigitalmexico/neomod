@@ -499,7 +499,7 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
             if(likely(length == 1)) {
                 keyboard->onChar({0, static_cast<char32_t>(evtextstr[0]), event->text.timestamp, false});
             } else {
-                for(char32_t chr : UniString::codepoints(std::string_view{evtextstr}))
+                for(char32_t chr : UniString::codepoints(std::string_view{evtextstr, length}))
                     keyboard->onChar({0, chr, event->text.timestamp, false});
             }
         } break;

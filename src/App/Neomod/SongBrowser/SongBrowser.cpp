@@ -1050,6 +1050,8 @@ void SongBrowser::onKeyDown(KeyboardEvent &key) {
                 this->sSearchString.clear();
                 this->scheduleSearchUpdate(true);
                 break;
+            default:
+                break;
         }
     } else if(!this->contextMenu->isVisible()) {
         if(key == KEY_ESCAPE)  // can't support GAME_PAUSE hotkey here because of text searching

@@ -304,8 +304,24 @@ u16codepoint_view::iterator u16codepoint_view::begin() const {
 
 u16codepoint_view::iterator u16codepoint_view::end() const { return {m_sv.data() + m_sv.size()}; }
 
-[[nodiscard]] u8codepoint_view codepoints(std::string_view sv) { return u8codepoint_view{sv}; }
+u8codepoint_view codepoints(std::string_view sv) { return u8codepoint_view{sv}; }
 
-[[nodiscard]] u16codepoint_view codepoints(std::u16string_view sv) { return u16codepoint_view{sv}; }
+u16codepoint_view codepoints(std::u16string_view sv) { return u16codepoint_view{sv}; }
+
+uSz prev(std::string_view sv, uSz pos) {
+    if(pos == 0) return 0;
+    do {
+        pos--;
+    } while(pos > 0 && (static_cast<u8>(sv[pos]) & 0xC0) == 0x80);
+    return pos;
+}
+
+uSz next(std::string_view sv, uSz pos) {
+    if(pos >= sv.size()) return sv.size();
+    do {
+        pos++;
+    } while(pos < sv.size() && (static_cast<u8>(sv[pos]) & 0xC0) == 0x80);
+    return pos;
+}
 
 }  // namespace UniString
