@@ -1027,9 +1027,9 @@ void ModSelector::updateExperimentalLayout() {
     expCont->setVisible(!BanchoState::is_in_a_multi_room());
 }
 
-ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(std::string text, std::string labelText, ConVar *cvar,
-                                                            float min, float max, std::string tooltipText,
-                                                            ConVar *lockCvar) {
+ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(const std::string &text, const std::string &labelText,
+                                                            ConVar *cvar, float min, float max,
+                                                            const std::string &tooltipText, ConVar *lockCvar) {
     const float height = 25;
 
     OVERRIDE_SLIDER os;
@@ -1037,10 +1037,10 @@ ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(std::string text, st
         os.lock = new ModSelectorOverrideSliderLockButton(0.f, 0.f, height, height, "", "");
         os.lock->setChangeCallback(SA::MakeDelegate<&ModSelector::onOverrideSliderLockChange>(this));
     }
-    os.desc = new ModSelectorOverrideSliderDescButton(0.f, 0.f, 100.f, height, "", std::move(text));
-    os.desc->setTooltipText(std::move(tooltipText));
+    os.desc = new ModSelectorOverrideSliderDescButton(0.f, 0.f, 100.f, height, "", text);
+    os.desc->setTooltipText(tooltipText);
     os.slider = new UISlider(0.f, 0.f, 100.f, height, "");
-    os.label = new CBaseUILabel(0.f, 0.f, 100.f, height, labelText, std::move(labelText));
+    os.label = new CBaseUILabel(0.f, 0.f, 100.f, height, labelText, labelText);
     os.cvar = cvar;
     os.lockCvar = lockCvar;
 
@@ -1074,16 +1074,16 @@ ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(std::string text, st
     return os;
 }
 
-UIButton *ModSelector::addActionButton(std::string text) {
-    auto *actionButton = new UIButton(50, 50, 100, 100, text, std::move(text));
+UIButton *ModSelector::addActionButton(const std::string &text) {
+    auto *actionButton = new UIButton(50, 50, 100, 100, text, text);
     this->actionButtons.push_back(actionButton);
     this->addBaseUIElement(actionButton);
 
     return actionButton;
 }
 
-CBaseUILabel *ModSelector::addExperimentalLabel(std::string text) {
-    auto *label = new CBaseUILabel(0, 0, 0, 25, text, std::move(text));
+CBaseUILabel *ModSelector::addExperimentalLabel(const std::string &text) {
+    auto *label = new CBaseUILabel(0, 0, 0, 25, text, text);
     label->setFont(osu->getSubTitleFont());
     label->setWidthToContent(0);
     label->setDrawBackground(false);
@@ -1098,8 +1098,9 @@ CBaseUILabel *ModSelector::addExperimentalLabel(std::string text) {
     return label;
 }
 
-UICheckbox *ModSelector::addExperimentalCheckbox(std::string text, std::string_view tooltipText, ConVar *cvar) {
-    auto *checkbox = new UICheckbox(0, 0, 0, 35, text, std::move(text));
+UICheckbox *ModSelector::addExperimentalCheckbox(const std::string &text, const std::string &tooltipText,
+                                                 ConVar *cvar) {
+    auto *checkbox = new UICheckbox(0, 0, 0, 35, text, text);
     checkbox->setTooltipText(tooltipText);
     checkbox->setWidthToContent(0);
     if(cvar != nullptr) {

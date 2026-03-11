@@ -6,6 +6,7 @@
 #include "AnimationHandler.h"
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
+#include "Logging.h"
 #include "OsuConVars.h"
 #include "MakeDelegateWrapper.h"
 #include "Engine.h"
@@ -192,12 +193,11 @@ void UIContextMenu::begin(int minWidth, bool bigStyle) {
     this->containedTextbox = nullptr;
 }
 
-UIContextMenuButton *UIContextMenu::addButtonJustified(std::string text, TEXT_JUSTIFICATION j, int id) {
+UIContextMenuButton *UIContextMenu::addButtonJustified(const std::string &text, TEXT_JUSTIFICATION j, int id) {
     const int buttonHeight = 30 * Osu::getUIScale() * (this->bBigStyle ? 1.27f : 1.0f);
     const int margin = 9 * Osu::getUIScale();
 
-    auto *button =
-        new UIContextMenuButton(margin, this->iYCounter + margin, 0, buttonHeight, text, std::move(text), id);
+    auto *button = new UIContextMenuButton(margin, this->iYCounter + margin, 0, buttonHeight, text, text, id);
     {
         if(this->bBigStyle) button->setFont(osu->getSubTitleFont());
 
@@ -220,13 +220,13 @@ UIContextMenuButton *UIContextMenu::addButtonJustified(std::string text, TEXT_JU
     return button;
 }
 
-UIContextMenuTextbox *UIContextMenu::addTextbox(std::string text, int id) {
+UIContextMenuTextbox *UIContextMenu::addTextbox(const std::string &text, int id) {
     const int buttonHeight = 30 * Osu::getUIScale() * (this->bBigStyle ? 1.27f : 1.0f);
     const int margin = 9 * Osu::getUIScale();
 
     auto *textbox = new UIContextMenuTextbox(margin, this->iYCounter + margin, 0, buttonHeight, text, id);
     {
-        textbox->setText(std::move(text));
+        textbox->setText(text);
 
         if(this->bBigStyle) textbox->setFont(osu->getSubTitleFont());
 

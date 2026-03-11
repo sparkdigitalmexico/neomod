@@ -201,22 +201,22 @@ struct OptionsOverlayImpl final {
 
     // elements
     void addSpacer();
-    CBaseUILabel *addSection(std::string text);
-    CBaseUILabel *addSubSection(std::string text, std::string searchTags = {});
-    CBaseUILabel *addLabel(std::string text);
-    UIButton *addButton(std::string text);
-    OptionsElement *addButton(std::string text, std::string labelText, bool withResetButton = false);
-    OptionsElement *addButtonButton(std::string text1, std::string text2);
-    OptionsElement *addButtonButtonLabel(std::string text1, std::string text2, std::string labelText,
-                                         bool withResetButton = false);
-    KeyBindButton *addKeyBindButton(std::string text, ConVar *cvar);
-    CBaseUICheckbox *addCheckbox(std::string text, ConVar *cvar);
-    CBaseUICheckbox *addCheckbox(std::string text, std::string_view tooltipText = {}, ConVar *cvar = nullptr);
-    OptionsElement *addButtonCheckbox(std::string buttontext, std::string_view cbxtooltip);
-    UISlider *addSlider(std::string text, float min = 0.0f, float max = 1.0f, ConVar *cvar = nullptr,
+    CBaseUILabel *addSection(const std::string &text);
+    CBaseUILabel *addSubSection(const std::string &text, const std::string &searchTags = {});
+    CBaseUILabel *addLabel(const std::string &text);
+    UIButton *addButton(const std::string &text);
+    OptionsElement *addButton(const std::string &text, const std::string &labelText, bool withResetButton = false);
+    OptionsElement *addButtonButton(const std::string &text1, const std::string &text2);
+    OptionsElement *addButtonButtonLabel(const std::string &text1, const std::string &text2,
+                                         const std::string &labelText, bool withResetButton = false);
+    KeyBindButton *addKeyBindButton(const std::string &text, ConVar *cvar);
+    CBaseUICheckbox *addCheckbox(const std::string &text, ConVar *cvar);
+    CBaseUICheckbox *addCheckbox(const std::string &text, const std::string &tooltipText = {}, ConVar *cvar = nullptr);
+    OptionsElement *addButtonCheckbox(const std::string &buttontext, const std::string &cbxtooltip);
+    UISlider *addSlider(const std::string &text, float min = 0.0f, float max = 1.0f, ConVar *cvar = nullptr,
                         float label1Width = 0.0f, bool allowOverscale = false, bool allowUnderscale = false);
-    CBaseUITextbox *addTextbox(std::string text, ConVar *cvar = nullptr);
-    CBaseUITextbox *addTextbox(std::string text, std::string labelText, ConVar *cvar = nullptr);
+    CBaseUITextbox *addTextbox(const std::string &text, ConVar *cvar = nullptr);
+    CBaseUITextbox *addTextbox(const std::string &text, const std::string &labelText, ConVar *cvar = nullptr);
 
     SkinPreviewElement *addSkinPreview();
     SliderPreviewElement *addSliderPreview();
@@ -3785,8 +3785,8 @@ void OptionsOverlayImpl::onResetEverythingClicked(CBaseUIButton * /*button*/) {
 
 void OptionsOverlayImpl::addSpacer() { this->elemContainers.emplace_back(new OptionsElement{SPCR}); }
 
-CBaseUILabel *OptionsOverlayImpl::addSection(std::string text) {
-    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 25, text, std::move(text));
+CBaseUILabel *OptionsOverlayImpl::addSection(const std::string &text) {
+    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 25, text, text);
     // label->setTextColor(0xff58dafe);
     label->setFont(osu->getTitleFont());
     label->setSizeToContent(0, 0);
@@ -3803,8 +3803,8 @@ CBaseUILabel *OptionsOverlayImpl::addSection(std::string text) {
     return label;
 }
 
-CBaseUILabel *OptionsOverlayImpl::addSubSection(std::string text, std::string searchTags) {
-    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 25, text, std::move(text));
+CBaseUILabel *OptionsOverlayImpl::addSubSection(const std::string &text, const std::string &searchTags) {
+    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 25, text, text);
     label->setFont(osu->getSubTitleFont());
     label->setSizeToContent(0, 0);
     label->setDrawFrame(false);
@@ -3820,8 +3820,8 @@ CBaseUILabel *OptionsOverlayImpl::addSubSection(std::string text, std::string se
     return label;
 }
 
-CBaseUILabel *OptionsOverlayImpl::addLabel(std::string text) {
-    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 25, text, std::move(text));
+CBaseUILabel *OptionsOverlayImpl::addLabel(const std::string &text) {
+    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 25, text, text);
     label->setSizeToContent(0, 0);
     label->setDrawFrame(false);
     label->setDrawBackground(false);
@@ -3835,8 +3835,8 @@ CBaseUILabel *OptionsOverlayImpl::addLabel(std::string text) {
     return label;
 }
 
-UIButton *OptionsOverlayImpl::addButton(std::string text) {
-    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, std::move(text));
+UIButton *OptionsOverlayImpl::addButton(const std::string &text) {
+    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, text);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
     this->options->container.addBaseUIElement(button);
@@ -3849,13 +3849,14 @@ UIButton *OptionsOverlayImpl::addButton(std::string text) {
     return button;
 }
 
-OptionsElement *OptionsOverlayImpl::addButton(std::string text, std::string labelText, bool withResetButton) {
-    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, std::move(text));
+OptionsElement *OptionsOverlayImpl::addButton(const std::string &text, const std::string &labelText,
+                                              bool withResetButton) {
+    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, text);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
     this->options->container.addBaseUIElement(button);
 
-    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 50, labelText, std::move(labelText));
+    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 50, labelText, labelText);
     label->setDrawFrame(false);
     label->setDrawBackground(false);
     this->options->container.addBaseUIElement(label);
@@ -3873,13 +3874,13 @@ OptionsElement *OptionsOverlayImpl::addButton(std::string text, std::string labe
     return this->elemContainers.back().get();
 }
 
-OptionsElement *OptionsOverlayImpl::addButtonButton(std::string text1, std::string text2) {
-    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, std::move(text1));
+OptionsElement *OptionsOverlayImpl::addButtonButton(const std::string &text1, const std::string &text2) {
+    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, text1);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
     this->options->container.addBaseUIElement(button);
 
-    auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, std::move(text2));
+    auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, text2);
     button2->setColor(0xff0c7c99);
     button2->setUseDefaultSkin();
     this->options->container.addBaseUIElement(button2);
@@ -3894,19 +3895,19 @@ OptionsElement *OptionsOverlayImpl::addButtonButton(std::string text1, std::stri
     return this->elemContainers.back().get();
 }
 
-OptionsElement *OptionsOverlayImpl::addButtonButtonLabel(std::string text1, std::string text2, std::string labelText,
-                                                         bool withResetButton) {
-    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, std::move(text1));
+OptionsElement *OptionsOverlayImpl::addButtonButtonLabel(const std::string &text1, const std::string &text2,
+                                                         const std::string &labelText, bool withResetButton) {
+    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, text1);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
     this->options->container.addBaseUIElement(button);
 
-    auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, std::move(text2));
+    auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, text2);
     button2->setColor(0xff0c7c99);
     button2->setUseDefaultSkin();
     this->options->container.addBaseUIElement(button2);
 
-    auto *label = new UILabel(0, 0, this->options->getSize().x, 50, labelText, std::move(labelText));
+    auto *label = new UILabel(0, 0, this->options->getSize().x, 50, labelText, labelText);
     label->setDrawFrame(false);
     label->setDrawBackground(false);
     this->options->container.addBaseUIElement(label);
@@ -3926,7 +3927,7 @@ OptionsElement *OptionsOverlayImpl::addButtonButtonLabel(std::string text1, std:
     return this->elemContainers.back().get();
 }
 
-KeyBindButton *OptionsOverlayImpl::addKeyBindButton(std::string text, ConVar *cvar) {
+KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, ConVar *cvar) {
     /// UString unbindIconString; unbindIconString.insert(0, Icons::UNDO);
     auto *unbindButton = new UIButton(0, 0, this->options->getSize().x, 50, text, "");
     unbindButton->setTooltipText("Unbind");
@@ -3936,7 +3937,7 @@ KeyBindButton *OptionsOverlayImpl::addKeyBindButton(std::string text, ConVar *cv
     /// unbindButton->setFont(osu->getFontIcons());
     this->options->container.addBaseUIElement(unbindButton);
 
-    auto *bindButton = new KeyBindButton(0, 0, this->options->getSize().x, 50, text, std::move(text));
+    auto *bindButton = new KeyBindButton(0, 0, this->options->getSize().x, 50, text, text);
     bindButton->setColor(0xff0c7c99);
     bindButton->setUseDefaultSkin();
     bindButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onKeyBindingButtonPressed>(this));
@@ -3961,12 +3962,13 @@ KeyBindButton *OptionsOverlayImpl::addKeyBindButton(std::string text, ConVar *cv
     return bindButton;
 }
 
-CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(std::string text, ConVar *cvar) {
-    return this->addCheckbox(std::move(text), "", cvar);
+CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(const std::string &text, ConVar *cvar) {
+    return this->addCheckbox(text, "", cvar);
 }
 
-CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(std::string text, std::string_view tooltipText, ConVar *cvar) {
-    auto *checkbox = new UICheckbox(0, 0, this->options->getSize().x, 50, text, std::move(text));
+CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(const std::string &text, const std::string &tooltipText,
+                                                 ConVar *cvar) {
+    auto *checkbox = new UICheckbox(0, 0, this->options->getSize().x, 50, text, text);
     checkbox->setDrawFrame(false);
     checkbox->setDrawBackground(false);
 
@@ -3993,8 +3995,8 @@ CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(std::string text, std::string_v
     return checkbox;
 }
 
-OptionsElement *OptionsOverlayImpl::addButtonCheckbox(std::string buttontext, std::string_view cbxtooltip) {
-    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, buttontext, std::move(buttontext));
+OptionsElement *OptionsOverlayImpl::addButtonCheckbox(const std::string &buttontext, const std::string &cbxtooltip) {
+    auto *button = new UIButton(0, 0, this->options->getSize().x, 50, buttontext, buttontext);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
     this->options->container.addBaseUIElement(button);
@@ -4017,7 +4019,7 @@ OptionsElement *OptionsOverlayImpl::addButtonCheckbox(std::string buttontext, st
     return this->elemContainers.back().get();
 }
 
-UISlider *OptionsOverlayImpl::addSlider(std::string text, float min, float max, ConVar *cvar, float label1Width,
+UISlider *OptionsOverlayImpl::addSlider(const std::string &text, float min, float max, ConVar *cvar, float label1Width,
                                         bool allowOverscale, bool allowUnderscale) {
     auto *slider = new UISlider(0, 0, 100, 50, text);
     slider->setAllowMouseWheel(false);
@@ -4030,7 +4032,7 @@ UISlider *OptionsOverlayImpl::addSlider(std::string text, float min, float max, 
     this->options->container.addBaseUIElement(slider);
 
     // UILabel vs CBaseUILabel: UILabel allows tooltips
-    auto *label1 = new UILabel(0, 0, this->options->getSize().x, 50, text, std::move(text));
+    auto *label1 = new UILabel(0, 0, this->options->getSize().x, 50, text, text);
     label1->setDrawFrame(false);
     label1->setDrawBackground(false);
     label1->setWidthToContent();
@@ -4067,9 +4069,9 @@ UISlider *OptionsOverlayImpl::addSlider(std::string text, float min, float max, 
     return slider;
 }
 
-CBaseUITextbox *OptionsOverlayImpl::addTextbox(std::string text, ConVar *cvar) {
+CBaseUITextbox *OptionsOverlayImpl::addTextbox(const std::string &text, ConVar *cvar) {
     auto *textbox = new CBaseUITextbox(0, 0, this->options->getSize().x, 40, "");
-    textbox->setText(std::move(text));
+    textbox->setText(text);
     this->options->container.addBaseUIElement(textbox);
 
     auto e = std::make_unique<OptionsElement>(TBX);
@@ -4081,12 +4083,12 @@ CBaseUITextbox *OptionsOverlayImpl::addTextbox(std::string text, ConVar *cvar) {
     return textbox;
 }
 
-CBaseUITextbox *OptionsOverlayImpl::addTextbox(std::string text, std::string labelText, ConVar *cvar) {
+CBaseUITextbox *OptionsOverlayImpl::addTextbox(const std::string &text, const std::string &labelText, ConVar *cvar) {
     auto *textbox = new CBaseUITextbox(0, 0, this->options->getSize().x, 40, "");
-    textbox->setText(std::move(text));
+    textbox->setText(text);
     this->options->container.addBaseUIElement(textbox);
 
-    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 35, labelText, std::move(labelText));
+    auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 35, labelText, labelText);
     label->setDrawFrame(false);
     label->setDrawBackground(false);
     label->setTextColor(rgb(200, 200, 200));
@@ -4181,7 +4183,7 @@ void OptionsOverlayImpl::save() {
             if(Environment::fileExists(cfg_name)) {
                 debugLog("WARNING: read no data from previous osu.cfg!");
                 // back it up just in case
-                std::string backup_name = fmt::format("{}.{:%F}.bak", cfg_name, fmt::gmtime(std::time(nullptr)));
+                const std::string backup_name = fmt::format("{}.{:%F}.bak", cfg_name, fmt::gmtime(std::time(nullptr)));
                 if(File::copy(cfg_name, backup_name)) {
                     debugLog("backed up {} -> {}", cfg_name, backup_name);
                 }

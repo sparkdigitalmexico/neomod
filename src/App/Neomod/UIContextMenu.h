@@ -33,12 +33,12 @@ class UIContextMenu final : public CBaseUIScrollView {
     void setClickCallback(ButtonClickCallback clickCallback) { this->clickCallback = std::move(clickCallback); }
 
     void begin(int minWidth = 0, bool bigStyle = false);
-    UIContextMenuButton *addButtonJustified(std::string text, TEXT_JUSTIFICATION j = TEXT_JUSTIFICATION::CENTERED,
-                                            int id = -1);
-    inline UIContextMenuButton *addButton(std::string text, int id = -1) {
-        return this->addButtonJustified(std::move(text), TEXT_JUSTIFICATION::LEFT, id);
+    UIContextMenuButton *addButtonJustified(const std::string &text,
+                                            TEXT_JUSTIFICATION j = TEXT_JUSTIFICATION::CENTERED, int id = -1);
+    inline UIContextMenuButton *addButton(const std::string &text, int id = -1) {
+        return this->addButtonJustified(text, TEXT_JUSTIFICATION::LEFT, id);
     };
-    UIContextMenuTextbox *addTextbox(std::string text, int id = -1);
+    UIContextMenuTextbox *addTextbox(const std::string &text, int id = -1);
 
     enum class EndStyle : u8 {
         CLAMP_TOP = (1 << 0),
