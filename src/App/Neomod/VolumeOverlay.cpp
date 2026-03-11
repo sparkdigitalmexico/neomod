@@ -125,22 +125,36 @@ void VolumeOverlay::update(CBaseUIEventCtx &c) {
     this->volumeSliderOverlayContainer->setSize(osu->getVirtScreenSize());
     this->volumeSliderOverlayContainer->update(c);
 
-    if(!this->volumeMaster->isBusy())
-        this->volumeMaster->setValue(cv::volume_master.getFloat(), false);
-    else {
-        cv::volume_master.setValue(this->volumeMaster->getFloat());
+    if(!this->volumeMaster->isBusy()) {
+        if(this->volumeMaster->getFloat() != cv::volume_master.getFloat()) {
+            this->volumeMaster->setValue(cv::volume_master.getFloat(), false);
+        }
+    } else {
+        if(cv::volume_master.getFloat() != this->volumeMaster->getFloat()) {
+            cv::volume_master.setValue(this->volumeMaster->getFloat());
+        }
         this->fLastVolume = this->volumeMaster->getFloat();
     }
 
-    if(!this->volumeMusic->isBusy())
-        this->volumeMusic->setValue(cv::volume_music.getFloat(), false);
-    else
-        cv::volume_music.setValue(this->volumeMusic->getFloat());
+    if(!this->volumeMusic->isBusy()) {
+        if(this->volumeMusic->getFloat() != cv::volume_music.getFloat()) {
+            this->volumeMusic->setValue(cv::volume_music.getFloat(), false);
+        }
+    } else {
+        if(cv::volume_music.getFloat() != this->volumeMusic->getFloat()) {
+            cv::volume_music.setValue(this->volumeMusic->getFloat());
+        }
+    }
 
-    if(!this->volumeEffects->isBusy())
-        this->volumeEffects->setValue(cv::volume_effects.getFloat(), false);
-    else
-        cv::volume_effects.setValue(this->volumeEffects->getFloat());
+    if(!this->volumeEffects->isBusy()) {
+        if(this->volumeEffects->getFloat() != cv::volume_effects.getFloat()) {
+            this->volumeEffects->setValue(cv::volume_effects.getFloat(), false);
+        }
+    } else {
+        if(cv::volume_effects.getFloat() != this->volumeEffects->getFloat()) {
+            cv::volume_effects.setValue(this->volumeEffects->getFloat());
+        }
+    }
 
     // force focus back to master if no longer active
     if(engine->getTime() > this->fVolumeChangeTime && !this->volumeMaster->isSelected()) {
