@@ -97,7 +97,7 @@ void ChatChannel::add_message(ChatMessage msg) {
     const bool is_action = msg.text.starts_with("\001ACTION");
     if(is_action) {
         msg.text.erase(0, 7);
-        if(msg.text.ends_with("\001")) {
+        if(msg.text.ends_with('\001')) {
             msg.text.erase(msg.text.length() - 1, 1);
         }
     }
@@ -148,6 +148,8 @@ void ChatChannel::add_message(ChatMessage msg) {
     // Group 7 only exists for raw links
     static constexpr ctll::fixed_string url_pattern{LR"((\[\[(.+?)\]\])|(\[((\S+)://\S+) (.+?)\])|(https?://\S+))"};
 
+    // convert to wstring for regex matching and correct codepoint-level indexing
+    // (also implicitly sanitizes malformed utf-8 from the network)
     std::wstring msg_text = UniString::to_wide(msg.text);
     std::vector<CBaseUILabel *> temp_text_fragments;
     sSz text_idx = 0;
@@ -188,7 +190,7 @@ void ChatChannel::add_message(ChatMessage msg) {
 
         // Add preceding text
         if(match_start > text_idx) {
-            auto preceding_text = msg.text.substr(text_idx, match_start - text_idx);
+            auto preceding_text = UniString::to_utf8(msg_text.substr(text_idx, match_start - text_idx));
             temp_text_fragments.push_back(new CBaseUILabel(0, 0, 0, 0, "", preceding_text));
         }
 
@@ -198,15 +200,15 @@ void ChatChannel::add_message(ChatMessage msg) {
         text_idx = match_start + match_len;
     }
 
+    // append trailing * for action messages after URL matching so it doesn't get included in a link
+    if(is_action) {
+        msg_text.push_back('*');
+    }
+
     // Add remaining text after last match
     if(text_idx < (sSz)msg_text.size()) {
-        auto text = msg.text.substr(text_idx);
+        auto text = UniString::to_utf8(msg_text.substr(text_idx));
         temp_text_fragments.push_back(new CBaseUILabel(0, 0, 0, 0, "", text));
-    }
-    if(is_action) {
-        // Only appending now to prevent this character from being included in a link
-        msg.text.push_back('*');
-        msg_text.push_back('*');
     }
 
     // We're offsetting the first fragment to account for the username + timestamp
@@ -215,7 +217,7 @@ void ChatChannel::add_message(ChatMessage msg) {
 
     // We got a bunch of text fragments, now position them, and if we start a new line,
     // possibly divide them into more text fragments.
-    for(auto fragment : temp_text_fragments) {
+    for(CBaseUILabel *fragment : temp_text_fragments) {
         std::string text_str("");
         auto fragment_text = fragment->getText();
 

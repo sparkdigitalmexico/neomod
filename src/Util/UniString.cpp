@@ -35,16 +35,21 @@ struct AlignedBuffer {
    public:
     AlignedBuffer() = delete;
     // NOLINTNEXTLINE
-    AlignedBuffer(const u8 *src, uSz size) {
-        if(size <= sizeof(small)) {
-            data = &small[0];
+    AlignedBuffer(const u8 *src, uSz size, bool force_copy) {
+        if(force_copy || reinterpret_cast<uintptr_t>(src) % static_cast<uSz>(alignment) != 0) {
+            if(size <= sizeof(small)) {
+                data = &small[0];
+            } else {
+                data = static_cast<u8 *>(::operator new(size, alignment));
+                should_delete = true;
+            }
+            std::memcpy(static_cast<void *>(data), static_cast<const void *>(src), size);
         } else {
-            data = static_cast<u8 *>(::operator new(size, alignment));
+            data = const_cast<u8 *>(src);  // NOLINT
         }
-        std::memcpy(static_cast<void *>(data), static_cast<const void *>(src), size);
     }
     ~AlignedBuffer() {
-        if(data != &small[0]) {
+        if(should_delete) {
             ::operator delete(static_cast<void *>(data), alignment);
         }
     }
@@ -57,6 +62,7 @@ struct AlignedBuffer {
    private:
     alignas(static_cast<uSz>(alignment)) u8 small[128];
     u8 *data;
+    bool should_delete{false};
 };
 
 inline std::pair<uSz, simdutf::encoding_type> get_bom_and_encoding(const u8 *data, uSz size) {
@@ -100,7 +106,7 @@ std::string to_utf8(const char *arbitrarily_encoded_data, uSz size) {
     }
 
     // data must be aligned (because of simd)
-    const AlignedBuffer buf{src_start, in_bytes};
+    const AlignedBuffer buf{src_start, in_bytes, /*force_copy=*/detected == simdutf::encoding_type::UTF32_BE};
 
     switch(detected) {
         case simdutf::encoding_type::UTF16_LE: {

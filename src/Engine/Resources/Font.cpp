@@ -93,6 +93,7 @@ struct LastSizedFTFace {
     FT_Face face{nullptr};
     int size{0};
     int dpi{0};
+    [[nodiscard]] inline bool operator==(const LastSizedFTFace &) const = default;
 } s_lastSizedFace{};
 
 }  // namespace
