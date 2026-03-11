@@ -21,7 +21,7 @@ void set_activity(struct DiscordActivity* /*activity*/) {}
 #include "Timing.h"
 #include "dynutils.h"
 
-#define DISCORD_CLIENT_ID 1288141291686989846
+#define DISCORD_CLIENT_ID 1474141308183380181
 
 namespace DiscRPC {
 namespace  // static
