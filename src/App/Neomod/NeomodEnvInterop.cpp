@@ -117,6 +117,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
         // XXX: naive way of ignoring '-sound soloud' type params, might break in the future
         if(arg[0] == '-') continue;
         if(arg.length() < 4) continue;
+        if(arg.ends_with(PACKAGE_NAME) || arg.ends_with(PACKAGE_NAME ".exe")) continue;
 
         if(arg.starts_with(NEOMOD_URL_SCHEME) || arg.starts_with("neosu://")) {
             debugLog("Handling {}...", arg);
