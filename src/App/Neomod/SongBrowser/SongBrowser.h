@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <array>
 
 class BeatmapCarousel;
 class Database;

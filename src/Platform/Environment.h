@@ -15,6 +15,7 @@
 #include <vector>
 #include <filesystem>
 #include <functional>
+#include <array>
 
 typedef uint32_t SDL_WindowID;
 typedef struct SDL_Window SDL_Window;

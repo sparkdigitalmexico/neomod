@@ -5,6 +5,8 @@
 #include "ModFlags.h"
 #include "UIScreen.h"
 
+#include <array>
+
 class SongBrowser;
 
 class CBaseUIElement;

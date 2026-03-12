@@ -4,6 +4,7 @@
 #include "types.h"
 
 #include <string_view>
+#include <string>
 
 namespace UniString {
 [[nodiscard]] uSz num_codepoints(std::string_view utf8);

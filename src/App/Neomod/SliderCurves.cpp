@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <array>
 
 #ifndef BUILD_TOOLS_ONLY
 #include "Engine.h"

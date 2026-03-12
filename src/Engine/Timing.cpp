@@ -13,6 +13,7 @@
 #include "ConVar.h"
 
 #include <cassert>
+#include <array>
 #endif
 
 namespace Timing {

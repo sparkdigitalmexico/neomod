@@ -2,6 +2,8 @@
 // Copyright (c) 2018, PG, All rights reserved.
 #include "CBaseUISlider.h"
 
+#include <array>
+
 class McFont;
 class Image;
 
