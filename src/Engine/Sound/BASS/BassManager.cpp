@@ -8,6 +8,7 @@
 #include "File.h"
 #include "Logging.h"
 #include "Environment.h"
+#include "UniString.h"
 
 #include "dynutils.h"
 
@@ -121,11 +122,14 @@ HPLUGIN loadPlugin(const std::string &pluginname) {
     else
         tryPath = LNAMESTR(pluginname);
 
-    const UString pathUString{tryPath};
+    if constexpr(Env::cfg(OS::WINDOWS)) {
+        const std::wstring widePath{UniString::to_wide(tryPath)};
 
-    ret = BASS_PluginLoad(
-        (const char *)pathUString.plat_str(),
-        Env::cfg(OS::WINDOWS) ? BASS_UNICODE : 0);  // ??? this wchar_t->char* cast is required for some reason?
+        // ??? this wchar_t->char* cast is required for some reason?
+        ret = BASS_PluginLoad((const char *)widePath.c_str(), BASS_UNICODE);
+    } else {
+        ret = BASS_PluginLoad(tryPath.c_str(), 0);
+    }
 
     if(ret) {
         logIfCV(debug_snd, "loaded {:s} version {:#x}", pluginname.c_str(), BASS_PluginGetInfo(ret)->version);

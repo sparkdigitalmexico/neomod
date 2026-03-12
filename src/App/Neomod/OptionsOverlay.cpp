@@ -308,7 +308,7 @@ struct OptionsOverlayImpl final {
     Async::Future<std::vector<std::string>> skinFolderEnumHandle;
 
     // search
-    UString sSearchString{};
+    std::string sSearchString{};
     float fSearchOnCharKeybindHackTime{0.f};
 
     // notelock
@@ -1756,7 +1756,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         }
 
         ui->getNotificationOverlay()->addNotification("Opening file browser ...", 0xffffffff, false, 0.75f);
-        env->openFolderWindow([conclude_import](const std::vector<UString> &paths) {
+        env->openFolderWindow([conclude_import](const std::vector<std::string> &paths) {
             if(paths.empty()) {
                 ui->getNotificationOverlay()->addToast("You must select the McOsu folder to import its settings.",
                                                        ERROR_TOAST);
@@ -1764,7 +1764,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
             }
 
             // use the first selected path
-            const std::string mcosu_path = paths[0].toUtf8();
+            const std::string mcosu_path = paths[0];
             const bool imported = SettingsImporter::import_from_mcosu(mcosu_path);
             conclude_import(imported);
         });
@@ -2138,31 +2138,34 @@ void OptionsOverlayImpl::onKeyDown(KeyboardEvent &e) {
     }
 
     // searching text delete
-    if(!this->sSearchString.isEmpty()) {
+    if(!this->sSearchString.empty()) {
         switch(e.getScanCode()) {
             case KEY_DELETE:
-            case KEY_BACKSPACE:
+            case KEY_BACKSPACE: {
+                std::u32string uSearch{UniString::to_utf32(this->sSearchString)};
                 if(keyboard->isControlDown()) {
                     // delete everything from the current caret position to the left, until after the first
                     // non-space character (but including it)
                     bool foundNonSpaceChar = false;
-                    while(!this->sSearchString.isEmpty()) {
-                        const auto &curChar = this->sSearchString.back();
+                    while(!uSearch.empty()) {
+                        const auto &curChar = uSearch.back();
 
                         const bool whitespace = std::iswspace(static_cast<wint_t>(curChar)) != 0;
                         if(foundNonSpaceChar && whitespace) break;
 
                         if(!whitespace) foundNonSpaceChar = true;
 
-                        this->sSearchString.pop_back();
+                        uSearch.pop_back();
                     }
                 } else {
-                    this->sSearchString.pop_back();
+                    uSearch.pop_back();
                 }
+                this->sSearchString = UniString::to_utf8(uSearch);
 
                 e.consume();
                 this->scheduleSearchUpdate();
                 return;
+            }
 
             case KEY_ESCAPE:
                 this->sSearchString.clear();
@@ -2400,7 +2403,7 @@ void OptionsOverlayImpl::updateLayout() {
     bool inSkipSubSection = false;
     bool sectionTitleMatch = false;
     bool subSectionTitleMatch = false;
-    const auto &search = this->sSearchString;
+    const std::string search = SString::to_lower(this->sSearchString);
     for(int i = 0; i < this->elemContainers.size(); i++) {
         if(!this->elemContainers[i]->render_condition()) continue;
         if(this->elemContainers[i]->render_condition == RenderCondition::ASIO_ENABLED &&
@@ -2429,15 +2432,15 @@ void OptionsOverlayImpl::updateLayout() {
         // if match in section or subsection -> display entire section (disregard content match)
         // matcher is run through all remaining elements at every section + subsection
 
-        if(!search.isEmpty()) {
-            const UString searchTags{this->elemContainers[i]->searchTags};
+        if(!search.empty()) {
+            const std::string searchTags{SString::to_lower(this->elemContainers[i]->searchTags)};
 
             // if this is a section
             if(this->elemContainers[i]->type == SECT) {
                 bool sectionMatch = false;
 
-                const UString sectionTitle{this->elemContainers[i]->baseElems[0]->getName()};
-                sectionTitleMatch = sectionTitle.findIgnoreCase(search) != -1;
+                const std::string sectionTitle{SString::to_lower(this->elemContainers[i]->baseElems[0]->getName())};
+                sectionTitleMatch = sectionTitle.find(search) != std::string::npos;
 
                 subSectionTitleMatch = false;
                 if(inSkipSection) inSkipSection = false;
@@ -2448,9 +2451,9 @@ void OptionsOverlayImpl::updateLayout() {
 
                     for(const auto &element : this->elemContainers[s]->baseElems) {
                         if(!element->getName().empty()) {
-                            const UString tags{element->getName()};
+                            const std::string tags{element->getName()};
 
-                            if(tags.findIgnoreCase(search) != -1) {
+                            if(tags.find(search) != std::string::npos) {
                                 sectionMatch = true;
                                 break;
                             }
@@ -2466,9 +2469,9 @@ void OptionsOverlayImpl::updateLayout() {
             if(this->elemContainers[i]->type == SUBSECT) {
                 bool subSectionMatch = false;
 
-                const UString subSectionTitle{this->elemContainers[i]->baseElems[0]->getName()};
+                const std::string subSectionTitle{SString::to_lower(this->elemContainers[i]->baseElems[0]->getName())};
                 subSectionTitleMatch =
-                    subSectionTitle.findIgnoreCase(search) != -1 || searchTags.findIgnoreCase(search) != -1;
+                    subSectionTitle.find(search) != std::string::npos || searchTags.find(search) != std::string::npos;
 
                 if(inSkipSubSection) inSkipSubSection = false;
 
@@ -2478,9 +2481,9 @@ void OptionsOverlayImpl::updateLayout() {
 
                     for(const auto &element : this->elemContainers[s]->baseElems) {
                         if(!element->getName().empty()) {
-                            const UString tags{element->getName()};
+                            const std::string tags{SString::to_lower(element->getName())};
 
-                            if(tags.findIgnoreCase(search) != -1) {
+                            if(tags.find(search) != std::string::npos) {
                                 subSectionMatch = true;
                                 break;
                             }
@@ -2499,9 +2502,9 @@ void OptionsOverlayImpl::updateLayout() {
                     for(const auto &element : this->elemContainers[i]->baseElems) {
                         if(!element) continue;
                         if(!element->getName().empty()) {
-                            const UString tags{element->getName()};
+                            const std::string tags{SString::to_lower(element->getName())};
 
-                            if(tags.findIgnoreCase(search) != -1) {
+                            if(tags.find(search) != std::string::npos) {
                                 contentMatch = true;
                                 break;
                             }
@@ -2771,7 +2774,7 @@ void OptionsOverlayImpl::onBack() {
 void OptionsOverlayImpl::scheduleSearchUpdate() {
     this->updateLayout();
     this->options->scrollToTop();
-    this->search->setSearchString(this->sSearchString.toUtf8());
+    this->search->setSearchString(this->sSearchString);
 
     if(this->contextMenu->isVisible()) this->contextMenu->setVisible2(false);
 }

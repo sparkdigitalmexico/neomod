@@ -13,7 +13,6 @@ class Image;
 class Sound;
 class Resource;
 class ConVar;
-class UString;
 
 class SkinImage;
 

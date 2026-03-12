@@ -74,7 +74,7 @@ size_t stringToCacheIndex(std::string_view str) { return std::hash<std::string_v
 
 // other shared-across-instances things
 struct FallbackFont {
-    UString fontPath;
+    std::string fontPath;
     FT_Face face;
     bool isSystemFont;
 };
@@ -1400,9 +1400,9 @@ void McFontImpl::setFaceSize(FT_Face face) {
 
 namespace {  // static namespace
 
-bool loadFallbackFont(const UString &fontPath, bool isSystemFont) {
+bool loadFallbackFont(const std::string &fontPath, bool isSystemFont) {
     FT_Face face{};
-    if(FT_New_Face(s_sharedFtLibrary, fontPath.toUtf8(), 0, &face)) {
+    if(FT_New_Face(s_sharedFtLibrary, fontPath.c_str(), 0, &face)) {
         logIfCV(r_debug_font_unicode, "Font Warning: Failed to load fallback font: {:s}", fontPath);
         return false;
     }
@@ -1429,7 +1429,7 @@ void discoverSystemFallbacks() {
 #ifdef MCENGINE_PLATFORM_WINDOWS
     std::string windir;
     windir.resize(MAX_PATH + 1);
-    int ret = GetWindowsDirectoryA(windir.data(), MAX_PATH);
+    const size_t ret = GetWindowsDirectoryA(windir.data(), MAX_PATH);
     if(ret <= 0) return;
     windir.resize(ret);
 
@@ -1501,7 +1501,7 @@ bool McFont::initSharedResources() {
         }
     }
     for(const auto &fontName : bundledFallbacks) {
-        if(loadFallbackFont(UString{fontName}, false)) {
+        if(loadFallbackFont(fontName, false)) {
             logIfCV(r_debug_font_unicode, "Font Info: Loaded bundled fallback font: {:s}", fontName);
         }
     }

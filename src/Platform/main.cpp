@@ -19,11 +19,12 @@
 #include "CrashHandler.h"
 #endif
 #include "Profiler.h"
-#include "UString.h"
+
 #include "Thread.h"
 #include "Engine.h"
 #include "DiffCalcTool.h"
 #include "File.h"
+#include "UniString.h"
 
 #include "environment_private.h"
 #include "AppDescriptor.h"
@@ -63,8 +64,12 @@ void setcwdexe(const std::string &exePathStr) noexcept {
     bool failed = true;
     std::error_code ec;
 
-    UString uPath{exePathStr};
-    fs::path exe_path{uPath.plat_str()};
+    fs::path exe_path;
+    if constexpr(Env::cfg(OS::WINDOWS)) {
+        exe_path = UniString::to_wide(exePathStr);
+    } else {
+        exe_path = exePathStr;
+    }
 
     if(!exe_path.empty() && exe_path.has_parent_path()) {
         fs::current_path(exe_path.parent_path(), ec);

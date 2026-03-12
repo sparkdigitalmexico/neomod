@@ -1,10 +1,10 @@
 #pragma once
 
-#include "UString.h"
 #include "Thread.h"
 #include "SyncMutex.h"
 #include "SyncCV.h"
 #include "SyncJthread.h"
+#include "fmt/format.h"
 
 #include <optional>
 #include <atomic>
@@ -74,8 +74,11 @@ struct lazy_promise {
     static inline uint64_t threads_created{0};
 
     void run(const Sync::stop_token &stoken) {
-        McThread::set_current_thread_name(fmt::format("lazy_promise{}", threads_created % 128));  // just for uniqueness
-        McThread::set_current_thread_prio(McThread::Priority::LOW);
+        {
+            const std::string thread_name = fmt::format("lazy_promise{}", threads_created % 128);
+            McThread::set_current_thread_name(thread_name.c_str());  // just for uniqueness
+            McThread::set_current_thread_prio(McThread::Priority::LOW);
+        }
 
         while(!stoken.stop_requested()) {
             std::optional<Func> current;

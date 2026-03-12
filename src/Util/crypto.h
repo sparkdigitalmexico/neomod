@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-class UString;
 struct MD5String;
 
 namespace crypto {

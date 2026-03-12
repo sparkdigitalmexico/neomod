@@ -18,7 +18,6 @@
         return typeId == TYPE_ID || ParentClass::isTypeOf(typeId);      \
     }
 
-class UString;
 class Sound;
 using SOUNDHANDLE = uint32_t;
 

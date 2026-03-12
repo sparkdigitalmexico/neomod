@@ -261,7 +261,6 @@ neomod_SOURCES = \
 	src/Util/Rect.cpp \
 	src/Util/SString.cpp \
 	src/Util/SyncPrimitives/SyncJthread.cpp \
-	src/Util/UString.cpp \
 	src/Util/UniString.cpp \
 	src/Util/Vectors.cpp \
 	src/Util/crypto.cpp \

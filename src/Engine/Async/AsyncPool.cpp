@@ -2,7 +2,7 @@
 #include "AsyncPool.h"
 
 #include "Thread.h"
-#include "UString.h"
+
 #include "Logging.h"
 
 #include <cassert>
@@ -45,8 +45,11 @@ void AsyncPool::shutdown() {
 }
 
 void AsyncPool::fg_worker_loop(size_t index) noexcept {
-    McThread::set_current_thread_name(fmt::format("async_fg_{}", index));
-    McThread::set_current_thread_prio(McThread::Priority::NORMAL);
+    {
+        const std::string thread_name = fmt::format("async_fg_{}", index);
+        McThread::set_current_thread_name(thread_name.c_str());
+        McThread::set_current_thread_prio(McThread::Priority::NORMAL);
+    }
 
     while(true) {
         std::unique_ptr<TaskBase> task;
@@ -72,8 +75,11 @@ void AsyncPool::fg_worker_loop(size_t index) noexcept {
 }
 
 void AsyncPool::bg_worker_loop(size_t index) noexcept {
-    McThread::set_current_thread_name(fmt::format("async_bg_{}", index));
-    McThread::set_current_thread_prio(McThread::Priority::LOW);
+    {
+        const std::string thread_name = fmt::format("async_bg_{}", index);
+        McThread::set_current_thread_name(thread_name.c_str());
+        McThread::set_current_thread_prio(McThread::Priority::NORMAL);
+    }
 
     while(true) {
         std::unique_ptr<TaskBase> task;

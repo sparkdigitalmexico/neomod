@@ -24,7 +24,6 @@ typedef struct SDL_Environment SDL_Environment;
 typedef struct SDL_Rect SDL_Rect;
 
 class Graphics;
-class UString;
 class Engine;
 namespace Mc {
 struct AppDescriptor;
@@ -165,7 +164,7 @@ class Environment {
     [[nodiscard]] static std::vector<std::string> getFilesInFolder(std::string_view folder) noexcept;
     [[nodiscard]] static std::vector<std::string> getFoldersInFolder(std::string_view folder) noexcept;
     [[nodiscard]] static std::vector<std::string> getEntriesInFolder(std::string_view folder) noexcept;
-    [[nodiscard]] static std::vector<UString> getLogicalDrives();
+    [[nodiscard]] static std::vector<std::string> getLogicalDrives();
     // returns an absolute (i.e. fully-qualified) filesystem path
     [[nodiscard]] static std::string getFolderFromFilePath(std::string_view filepath) noexcept;
     [[nodiscard]] static std::string getFileExtensionFromFilePath(std::string_view filepath) noexcept;
@@ -189,7 +188,7 @@ class Environment {
     void showMessageError(const std::string &title, const std::string &message) const;
     void showMessageErrorFatal(const std::string &title, const std::string &message) const;
 
-    using FileDialogCallback = std::function<void(const std::vector<UString> &paths)>;
+    using FileDialogCallback = std::function<void(const std::vector<std::string> &paths)>;
     void openFileWindow(FileDialogCallback callback, const char *filetypefilters, std::string_view title,
                         std::string_view initialpath = "") const noexcept;
     void openFolderWindow(FileDialogCallback callback, std::string_view initialpath = "") const noexcept;

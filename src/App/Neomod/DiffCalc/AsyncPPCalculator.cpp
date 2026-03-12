@@ -8,7 +8,7 @@
 #include "Thread.h"
 #include "SyncMutex.h"
 #include "SyncCV.h"
-#include "UString.h"
+
 
 #include "SyncJthread.h"
 
@@ -80,7 +80,7 @@ void clear_caches() {
 }
 
 void run_thread(const Sync::stop_token& stoken) {
-    McThread::set_current_thread_name(US_("async_pp_calc"));
+    McThread::set_current_thread_name("async_pp_calc");
     McThread::set_current_thread_prio(McThread::Priority::LOW);  // reset priority
 
     while(!stoken.stop_requested()) {

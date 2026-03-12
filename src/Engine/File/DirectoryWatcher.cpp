@@ -7,7 +7,6 @@
 #include "Timing.h"
 #include "SyncJthread.h"
 #include "SyncMutex.h"
-#include "UString.h"
 
 #include <algorithm>
 #include <utility>
@@ -17,6 +16,7 @@
 #ifdef MCENGINE_PLATFORM_WINDOWS
 #include "WinDebloatDefs.h"
 #include <windows.h>
+#include "UniString.h"
 #endif
 
 namespace fs = std::filesystem;
@@ -135,7 +135,7 @@ struct DirWatcherImpl {
     };
 
     void worker_loop(const Sync::stop_token& stoken) {
-        McThread::set_current_thread_name(US_("dir_watcher"));
+        McThread::set_current_thread_name("dir_watcher");
         McThread::set_current_thread_prio(McThread::Priority::LOW);
 
         Hash::stable_stringmap<DirectoryState> active_directories;
@@ -179,10 +179,10 @@ struct DirWatcherImpl {
             for(const auto& it : directories_to_init) {
                 auto& state = it->second;
                 const auto& path = it->first;
-                const UString uni_path{path};
+                const std::wstring uni_path{UniString::to_wide(std::string_view{path})};
 
                 state.w.dir_handle = CreateFileW(
-                    uni_path.wchar_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    uni_path.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                     nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
 
                 if(state.w.dir_handle == INVALID_HANDLE_VALUE) {
@@ -279,15 +279,14 @@ struct DirWatcherImpl {
                 do {
                     notify = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(state.buffer.data() + offset);
 
-                    UString uni_filename{&notify->FileName[0],
-                                         static_cast<int>(notify->FileNameLength / sizeof(WCHAR))};
+                    std::wstring wide_filename{&notify->FileName[0], notify->FileNameLength / sizeof(WCHAR)};
 
                     // The directory is guaranteed to end with a '/', since we made sure when we added it.
-                    UString uni_filepath{fmt::format("{}{}", path, uni_filename)};
-                    std::string std_filepath{uni_filepath.utf8View()};
+                    std::string std_filepath{fmt::format("{}{}", path, UniString::to_utf8(wide_filename))};
+                    std::wstring wide_filepath{UniString::to_wide(std_filepath)};
 
                     std::error_code ec;
-                    auto file_status = fs::status(uni_filepath.wstringView(), ec);
+                    auto file_status = fs::status(wide_filepath.c_str(), ec);
 
                     // Handle deletions immediately
                     if(ec || file_status.type() != fs::file_type::regular) {
@@ -301,7 +300,7 @@ struct DirWatcherImpl {
                         }
                     } else {
                         // For creations and modifications, add to unconfirmed (needs debouncing)
-                        auto file_time = fs::last_write_time(uni_filepath.wstringView(), ec);
+                        auto file_time = fs::last_write_time(wide_filepath.c_str(), ec);
                         if(!ec) {
                             FileChangeType change_type = FileChangeType::MODIFIED;
                             if(notify->Action == FILE_ACTION_ADDED || notify->Action == FILE_ACTION_RENAMED_NEW_NAME) {
@@ -336,9 +335,9 @@ struct DirWatcherImpl {
                 std::vector<std::string> to_confirm;
 
                 for(auto& [file, unconfirmed] : state.unconfirmed_events) {
-                    UString uni_path{file};
+                    std::wstring uni_path{UniString::to_wide(file)};
                     std::error_code ec;
-                    auto current_time = fs::last_write_time(uni_path.wstringView(), ec);
+                    auto current_time = fs::last_write_time(uni_path.c_str(), ec);
 
                     if(ec) {
                         // File was deleted or became inaccessible
@@ -391,7 +390,7 @@ struct DirWatcherImpl {
     };
 
     void worker_loop(const Sync::stop_token& stoken) {
-        McThread::set_current_thread_name(US_("dir_watcher"));
+        McThread::set_current_thread_name("dir_watcher");
         McThread::set_current_thread_prio(McThread::Priority::LOW);
 
         // Windows & OSX do not provide APIs that tell you when a file is

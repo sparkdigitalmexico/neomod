@@ -19,6 +19,9 @@
 
 #include <winbase.h>
 #include <winreg.h>
+
+#include "UniString.h"
+
 #endif
 namespace SettingsImporter {
 namespace {  // static namespace
@@ -204,9 +207,9 @@ void update_osu_folder_from_registry() {
     WCHAR* lastBackslash = wcsrchr(path, L'\\');
     if(lastBackslash) {
         *lastBackslash = L'\0';
-        UString new_osu_folder{path};
-        debugLog("Found osu! folder from registry: {:s}", new_osu_folder.toUtf8());
-        cv::osu_folder.setValue(new_osu_folder.toUtf8());
+        std::string new_osu_folder{UniString::to_utf8(path)};
+        debugLog("Found osu! folder from registry: {:s}", new_osu_folder);
+        cv::osu_folder.setValue(new_osu_folder);
         return;
     }
 #endif
@@ -226,8 +229,7 @@ std::string get_steam_path() {
         err = RegQueryValueExW(key, L"InstallPath", NULL, &dwType, (LPBYTE)szPath, &dwSize);
         RegCloseKey(key);
         if(err == ERROR_SUCCESS) {
-            UString wPath{szPath};
-            return std::string(wPath.toUtf8());
+            return std::string(UniString::to_utf8(szPath));
         }
     }
 

@@ -12,7 +12,7 @@
 #include "Logging.h"
 #include "ConVar.h"
 #include "Thread.h"
-#include "UString.h"
+
 #include "UniString.h"
 
 #include "AppDescriptor.h"
@@ -257,7 +257,8 @@ std::string_view Environment::getUsername() const noexcept {
     std::array<wchar_t, UNLEN + 1> username{};
 
     if(GetUserNameW(username.data(), &username_len)) {
-        m_sUsername = UniString::to_utf8(std::wstring_view{username.data(), (size_t)std::max(0, (int)username_len - 1)});
+        m_sUsername =
+            UniString::to_utf8(std::wstring_view{username.data(), (size_t)std::max(0, (int)username_len - 1)});
     }
 #elif defined(__APPLE__) || defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_WASM)
     std::string user = getEnvVariable("USER");
@@ -415,26 +416,26 @@ std::string manualDirectoryFixup(std::string_view input) {
 
     auto fsPath = File::getFsPath(input);
     // std::filesystem bogus (will crash if you try to get the wrong type of string from what you constructed it with)
-    UString ret;
+    std::string ret;
     if constexpr(Env::cfg(OS::WINDOWS)) {
-        ret = fsPath.wstring().c_str();
+        ret = UniString::to_utf8(fsPath.wstring());
     } else {
-        ret = fsPath.string().c_str();
+        ret = fsPath.string();
     }
-    UString endSep{"/"};
+    std::string endSep{"/"};
 
     if constexpr(Env::cfg(OS::WINDOWS)) {
         // for UNC/long paths, make sure we use a backslash as the last separator
-        if(ret.startsWith(R"(\\?\)") || ret.startsWith(R"(\\.\)")) {
+        if(ret.starts_with(R"(\\?\)") || ret.starts_with(R"(\\.\)")) {
             endSep = "\\";
         }
     }
 
-    if(!ret.endsWith(endSep)) {
+    if(!ret.ends_with(endSep)) {
         ret.append(endSep);
     }
 
-    return std::string{ret.utf8View()};
+    return ret;
 }
 
 }  // namespace
@@ -515,8 +516,8 @@ std::string Environment::getFileExtensionFromFilePath(std::string_view filepath)
 }
 
 // sadly, sdl doesn't give a way to do this
-std::vector<UString> Environment::getLogicalDrives() {
-    std::vector<UString> drives{};
+std::vector<std::string> Environment::getLogicalDrives() {
+    std::vector<std::string> drives{};
 
     if constexpr(Env::cfg(OS::LINUX)) {
         drives.emplace_back("/");
@@ -527,12 +528,14 @@ std::vector<UString> Environment::getLogicalDrives() {
         {
             if(dwDrives & (1 << i)) {
                 char driveLetter = 'A' + i;
-                UString drivePath = fmt::format("{:c}:/", driveLetter);
+                std::string drivePath = fmt::format("{:c}:/", driveLetter);
 
                 SDL_PathInfo info;
-                UString testPath = fmt::format("{:c}:\\", driveLetter);
+                std::string testPath = fmt::format("{:c}:\\", driveLetter);
 
-                if(SDL_GetPathInfo(testPath.toUtf8(), &info)) drives.emplace_back(drivePath);
+                if(SDL_GetPathInfo(testPath.c_str(), &info)) {
+                    drives.emplace_back(drivePath);
+                }
             }
         }
 #endif
@@ -561,20 +564,23 @@ const std::string &Environment::getPathToSelf(const char *argv0) {
     if constexpr(Env::cfg(OS::LINUX))
         exe_path = fs::canonical("/proc/self/exe", ec);
     else {
-        UString uPath{argv0};
-        exe_path = fs::canonical(fs::path(uPath.plat_str()), ec);
+        std::wstring wPath{UniString::to_wide(std::string_view{argv0})};
+        exe_path = fs::canonical(fs::path(wPath), ec);
     }
 
     if(!ec && !exe_path.empty())  // canonical path found
     {
-        UString uPath{exe_path.string().c_str()};
-        pathStr = uPath.toUtf8();
+        if constexpr(Env::cfg(OS::WINDOWS)) {
+            pathStr = UniString::to_utf8(exe_path.wstring());
+        } else {
+            pathStr = exe_path.string();
+        }
     } else {
 #if defined(MCENGINE_PLATFORM_WINDOWS)  // fallback to GetModuleFileNameW
         std::array<wchar_t, MAX_PATH + 1> buf{};
-        int length = static_cast<int>(GetModuleFileNameW(nullptr, buf.data(), MAX_PATH));
-        UString uPath{buf.data(), length};
-        pathStr = uPath.toUtf8();
+        const size_t length = static_cast<size_t>(GetModuleFileNameW(nullptr, buf.data(), MAX_PATH));
+        std::wstring wPath{buf.data(), length};
+        pathStr = UniString::to_utf8(wPath);
 #else
 #ifndef MCENGINE_PLATFORM_LINUX
         debugLog("WARNING: unsupported platform");
@@ -642,9 +648,10 @@ std::string Environment::filesystemPathToURI(const std::filesystem::path &path) 
     // convert to absolute path and normalize
     auto abs_path = fs::absolute(path);
     // convert to path with forward slashes
-    const UString path_str = UString{abs_path.generic_string()};
+    const std::string path_str =
+        Env::cfg(OS::WINDOWS) ? UniString::to_utf8(abs_path.generic_wstring()) : abs_path.generic_string();
     // URI encode the path
-    std::string uri = encodeStringToURI(path_str.toUtf8());
+    std::string uri = encodeStringToURI(path_str);
 
     // prepend with file:///
     if(uri[0] == '/')
@@ -807,7 +814,8 @@ void Environment::openFileBrowser(std::string_view initialpath) const noexcept {
                                             status.type() == fs::file_type::directory);
             // apparently "replace_filename" can throw, let's hope it doesn't :)
             encodedPath = fmt::format(
-                "file://{}", UString{isMaybeAlreadyDir ? fspath.wstring() : fspath.replace_filename({}).wstring()});
+                "file://{}",
+                UniString::to_utf8({isMaybeAlreadyDir ? fspath.wstring() : fspath.replace_filename({}).wstring()}));
             success = SDL_OpenURL(encodedPath.c_str());
         }
     }
@@ -1476,7 +1484,7 @@ void Environment::initMonitors(bool force) const {
 void Environment::sdlFileDialogCallback(void *userdata, const char *const *filelist, int /*filter*/) noexcept {
     if(!userdata) return;
 
-    std::vector<UString> results;
+    std::vector<std::string> results;
 
     if(filelist) {
         for(const char *const *curr = filelist; *curr; curr++) {
@@ -1518,35 +1526,31 @@ std::string Environment::getThingFromPathHelper(std::string_view path, bool fold
     if(folder) {
         // if path ends with separator, it's already a directory
         const bool endsWithSeparator = retPath.back() == prefSep || retPath.back() == otherSep;
-        UString ustrPath;
 
         std::error_code ec;
         // const auto fsPath = File::getFsPath(retPath); // mingw-gcc bugs cause fs::canonical to just go crazy
-        auto abs_path = fs::canonical(UString{retPath}.plat_str(), ec);
+        auto abs_path =
+            Env::cfg(OS::WINDOWS) ? fs::canonical(UniString::to_wide(retPath), ec) : fs::canonical(retPath, ec);
 
         if(!ec)  // canonical path found
         {
             auto status = fs::status(abs_path, ec);
             // if it's already a directory or it doesn't have a parent path then just return it directly
             if(ec || status.type() == fs::file_type::directory || !abs_path.has_parent_path())
-                ustrPath = abs_path.string();
+                retPath = abs_path.string();
             // else return the parent directory for the file
             else if(abs_path.has_parent_path() && !abs_path.parent_path().empty())
-                ustrPath = abs_path.parent_path().string();
+                retPath = abs_path.parent_path().string();
         } else if(!endsWithSeparator)  // canonical failed, handle manually (if it's not already a directory)
         {
             if(lastSlash != std::string::npos)  // return parent
-                ustrPath = retPath.substr(0, lastSlash);
+                retPath = retPath.substr(0, lastSlash);
             else  // no separators found, just use ./
-                ustrPath = fmt::format(".{}{}", prefSep, retPath);
-        }
-
-        if(!ustrPath.isEmpty()) {
-            retPath = ustrPath.utf8View();
+                retPath = fmt::format(".{}{}", prefSep, retPath);
         }
 
         // make sure whatever we got now ends with a slash
-        if(retPath.back() != prefSep && retPath.back() != otherSep) {
+        if(!retPath.empty() && retPath.back() != prefSep && retPath.back() != otherSep) {
             retPath = retPath + prefSep;
         }
     } else if(lastSlash != std::string::npos)  // just return the file

@@ -13,7 +13,7 @@
 #include "SyncJthread.h"
 #include "SyncCV.h"
 #include "ContainerRanges.h"
-#include "UString.h"
+
 
 #include "binary_embed.h"
 #include <curl/curl.h>
@@ -269,7 +269,7 @@ struct NetworkImpl {
 };
 
 void NetworkImpl::threadLoopFunc(const Sync::stop_token& stopToken) {
-    McThread::set_current_thread_name(US_("net_manager"));
+    McThread::set_current_thread_name("net_manager");
     McThread::set_current_thread_prio(McThread::Priority::NORMAL);  // reset priority
 
     Sync::stop_callback stop_cb(stopToken, [this] { curl_multi_wakeup(this->multi_handle); });

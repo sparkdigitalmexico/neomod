@@ -34,7 +34,7 @@
 #include "Font.h"
 #include "Image.h"
 #include "Console.h"
-#include "UString.h"
+
 #include "Thread.h"
 
 #include <iostream>
@@ -625,7 +625,7 @@ double Engine::getSimulatedVsyncFrameDelta() const {
 }
 
 void Engine::stdinReaderThread(const Sync::stop_token &stopToken) {
-    McThread::set_current_thread_name(US_("stdin_reader"));
+    McThread::set_current_thread_name("stdin_reader");
     McThread::set_current_thread_prio(McThread::Priority::LOW);
 
     std::string line;

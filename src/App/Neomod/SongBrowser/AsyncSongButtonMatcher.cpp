@@ -5,7 +5,7 @@
 #include "SString.h"
 
 #include "SongButton.h"
-#include "UString.h"
+
 
 #include "DatabaseBeatmap.h"
 namespace AsyncSongButtonMatcher {
@@ -18,19 +18,17 @@ static bool search_matcher(const DatabaseBeatmap *databaseBeatmap, const std::ve
 Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songButtons, const std::string &searchString,
                                                  const std::string &hardcodedSearchString, float speedMultiplier) {
     // prepare combined lowercase search string
-    UString uSearch;
-    const UString uHardcodedSearch{hardcodedSearchString};
-
-    if(!uHardcodedSearch.isEmpty()) {
+    std::string uSearch;
+    if(!hardcodedSearchString.empty()) {
         uSearch.append(hardcodedSearchString);
-        uSearch.append(u' ');
+        uSearch.push_back(' ');
     }
 
     uSearch.append(searchString);
     // do case-insensitive searches
-    uSearch.lowerCase();
+    SString::lower_inplace(uSearch);
 
-    std::string combinedSearch{uSearch.utf8View()};
+    std::string combinedSearch{uSearch};
 
     return Async::submit_cancellable(
         [buttons = std::move(songButtons), search = std::move(combinedSearch),

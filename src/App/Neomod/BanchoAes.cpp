@@ -6,7 +6,7 @@
 
 #include "BanchoNetworking.h"
 #include "BanchoAes.h"
-#include "UString.h"
+
 
 namespace {  // static
 u8 r_con[] = {1,  2,  4,   8,  16,  32,  64, 128, 27,  54,  108, 216, 171, 77,  154,

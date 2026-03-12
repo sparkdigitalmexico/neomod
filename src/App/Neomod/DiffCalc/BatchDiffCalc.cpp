@@ -21,7 +21,6 @@
 #include "SyncJthread.h"
 #include "SyncStoptoken.h"
 #include "ContainerRanges.h"
-#include "UString.h"
 
 #include <atomic>
 #include <memory>
@@ -66,11 +65,11 @@ void internal::collect_outdated_db_diffs(const Sync::stop_token& stoken, std::ve
 
 namespace {
 
-#define logFailure(err__, ...)                                                   \
-    do {                                                                         \
-        if(cv::debug_pp.getBool()) {                                             \
+#define logFailure(err__, ...)                                                    \
+    do {                                                                          \
+        if(cv::debug_pp.getBool()) {                                              \
             debugLog("{}: {}", (err__).error_string(), fmt::format(__VA_ARGS__)); \
-        }                                                                        \
+        }                                                                         \
     } while(false)
 
 // Mod parameters that affect difficulty calculation. Scores with identical
@@ -523,9 +522,12 @@ void process_work_item(WorkItem& item, const Sync::stop_token& stoken, WorkerCon
 }
 
 void worker_fn(i32 thread_index, const Sync::stop_token& coord_stoken) {
-    McThread::set_current_thread_name(fmt::format("diffcalc_{}", thread_index));
-    // just use a low priority so we don't eat into main thread cpu time too much
-    McThread::set_current_thread_prio(McThread::Priority::LOW);
+    {
+        const std::string thread_name = fmt::format("diffcalc_{}", thread_index);
+        McThread::set_current_thread_name(thread_name.c_str());
+        // just use a low priority so we don't eat into main thread cpu time too much
+        McThread::set_current_thread_prio(McThread::Priority::LOW);
+    }
 
     WorkerContext ctx;
     ctx.diffobj_cache = std::make_unique<std::vector<DifficultyCalculator::DiffObject>>();
@@ -546,7 +548,7 @@ void worker_fn(i32 thread_index, const Sync::stop_token& coord_stoken) {
 }
 
 void coordinator(const Sync::stop_token& stoken) {
-    McThread::set_current_thread_name(US_("diffcalc_coord"));
+    McThread::set_current_thread_name("diffcalc_coord");
     McThread::set_current_thread_prio(McThread::Priority::LOW);  // we don't really do anything here
 
     errored_count.store(0, std::memory_order_relaxed);

@@ -12,7 +12,6 @@
 
 #include "noinclude.h"
 #include "types.h"
-#include "UString.h"
 
 #include <filesystem>
 #include <fstream>
@@ -64,7 +63,7 @@ class File {
 
     void readToVector(std::vector<u8> &out);
 
-    [[nodiscard]] inline std::string_view getPath() const { return this->sFilePath.utf8View(); }
+    [[nodiscard]] inline std::string_view getPath() const { return this->sFilePath; }
 
     // in bytes
     [[nodiscard]] forceinline uSz getFileSize() const { return this->fsstat.st_size; }
@@ -111,7 +110,7 @@ class File {
     [[nodiscard]] static File::FILETYPE existsCaseInsensitive(std::string &filePath, std::filesystem::path &path);
     [[nodiscard]] static File::FILETYPE exists(std::string_view filePath, const std::filesystem::path &path);
 
-    UString sFilePath;
+    std::string sFilePath;
     std::filesystem::path fsPath;
 
     // file streams

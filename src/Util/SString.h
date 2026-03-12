@@ -12,7 +12,7 @@
 #include <cassert>
 #include <memory>
 
-// non-UString-related fast and small string manipulation helpers
+// fast and small string manipulation helpers
 
 namespace SString {
 
@@ -27,7 +27,7 @@ using split_ret_enabled_t =
     std::enable_if_t<std::is_same_v<std::decay_t<R>, std::string> || std::is_same_v<std::decay_t<R>, std::string_view>,
                      bool>;
 
-// std string splitting, for if we don't want to create UStrings everywhere (slow and heavy)
+// std string splitting
 template <typename R = std::string_view, typename S = char, split_ret_enabled_t<R> = true,
           split_join_enabled_t<S> = true>
 std::vector<R> split(std::string_view s, S d);

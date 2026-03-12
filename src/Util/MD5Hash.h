@@ -15,7 +15,6 @@ namespace flat = ankerl::unordered_dense;
 }
 #endif
 
-class UString;
 using MD5Byte = unsigned char;
 
 #if defined(__GNUC__) && !defined(__clang__) && (defined(__MINGW32__) || defined(__MINGW64__))
@@ -82,7 +81,6 @@ struct ALIGNED_TO(sizeof(void *) * 2) MD5Hash final : public std::array<MD5Byte,
 
     [[nodiscard]] constexpr inline MD5String to_chars() const { return MD5String{*this}; }
     [[nodiscard]] inline bool operator==(const std::string &other) const { return this->to_chars().string() == other; }
-    [[nodiscard]] bool operator==(const UString &other) const;
 
     inline void clear() { std::memset(this->data(), 0, this->size() * sizeof(MD5Byte)); }
 

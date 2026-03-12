@@ -14,6 +14,7 @@
 #include "Logging.h"
 #include "SString.h"
 #include "SyncOnce.h"
+#include "UniString.h"
 
 namespace {  // static
 int currentTransposerAlgorithm{BASS_FX_TEMPO_ALGO_CUBIC};
@@ -47,6 +48,24 @@ void BassSound::init() {
 void BassSound::initAsync() {
     Sound::initAsync();
     if(this->bIgnored) return;
+
+    // it's back :)
+    struct UString {
+        UString(std::string_view path) : narrow(path) {
+            if constexpr(Env::cfg(OS::WINDOWS)) {
+                wide = UniString::to_wide(narrow);
+            }
+        }
+        [[nodiscard]] auto plat_str() const {
+            if constexpr(Env::cfg(OS::WINDOWS)) {
+                return narrow.c_str();
+            } else {
+                return wide.c_str();
+            }
+        }
+        std::string narrow;
+        std::wstring wide;
+    };
 
     UString file_path{this->sFilePath};
 

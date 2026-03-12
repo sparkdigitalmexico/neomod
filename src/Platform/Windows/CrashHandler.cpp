@@ -11,9 +11,11 @@ void init() {}
 #else
 
 #include "BaseEnvironment.h"
-#include "UString.h"
+#include "UniString.h"
 #include "dynutils.h"
 #include "Logging.h"
+
+#include "WinDebloatDefs.h"
 
 #include <winver.h>
 #include <processthreadsapi.h>
@@ -210,28 +212,28 @@ static void invalid_parameter_handler(const wchar_t* expression, const wchar_t* 
     // capture the invalid parameter information for the minidump
     std::array<wchar_t, 16 + 1> lineBuf{};
 
-    UString uText{US_("Invalid parameter detected:\n")};
+    std::string errtext{"Invalid parameter detected:\n"};
 
     if(expression) {
-        uText += US_("  Expression: ");
-        uText += expression;
-        uText += u'\n';
+        errtext += "  Expression: ";
+        errtext += UniString::to_utf8(std::wstring_view{expression});
+        errtext += '\n';
     }
     if(function) {
-        uText += US_("  Function: ");
-        uText += function;
-        uText += u'\n';
+        errtext += "  Function: ";
+        errtext += UniString::to_utf8(std::wstring_view{function});
+        errtext += '\n';
     }
     if(file) {
         snwprintf(lineBuf.data(), 16, L"%u", line);
-        uText += US_("  File: ");
-        uText += file;
-        uText += u':';
-        uText += lineBuf.data();
-        uText += u'\n';
+        errtext += "  File: ";
+        errtext += UniString::to_utf8(std::wstring_view{file});
+        errtext += ':';
+        errtext += UniString::to_utf8(std::wstring_view{lineBuf.data()});
+        errtext += '\n';
     }
 
-    memcpy(g_userStream.data(), uText.toUtf8(), std::min((int)g_userStream.size() - 1, uText.lengthUtf8()));
+    memcpy(g_userStream.data(), errtext.c_str(), std::min(g_userStream.size() - 1, errtext.length()));
 
     write_crash_dump_internal(&g_exceptionPointers);
 

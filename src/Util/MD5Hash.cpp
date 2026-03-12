@@ -1,5 +1,6 @@
 #include "MD5Hash.h"
-#include "UString.h"
+
+#include "BaseEnvironment.h"
 #include "Engine.h"
 
 MD5String::MD5String(const char *str) {
@@ -21,5 +22,3 @@ MD5String::MD5String(const char *str) {
 
     memcpy(this->data(), str, 32);
 }
-
-bool MD5Hash::operator==(const UString &other) const { return this->to_chars().string() == other.utf8View(); }

@@ -2,7 +2,6 @@
 
 #include "Thread.h"
 #include "Logging.h"
-#include "UString.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_cpuinfo.h>
@@ -16,6 +15,7 @@
 #endif
 #include <libloaderapi.h>
 #include "dynutils.h"
+#include "UniString.h"
 
 namespace {
 using SetThreadDescription_t = HRESULT WINAPI(HANDLE hThread, PCWSTR lpThreadDescription);
@@ -96,22 +96,26 @@ void on_thread_init() noexcept {
 }
 
 // WARNING: must be called from within the thread itself! otherwise, the main process name will be changed
-bool set_current_thread_name(const UString &name) noexcept {
+bool set_current_thread_name(const char *name) noexcept {
     (void)name;  // may be unused on some platforms
 #if defined(_WIN32)
     try_load_funcs();
     if(pset_thread_desc) {
         HANDLE handle = GetCurrentThread();
-        HRESULT hr = pset_thread_desc(handle, name.wchar_str());
+        std::wstring wide_name = UniString::to_wide(std::string_view{name});
+        HRESULT hr = pset_thread_desc(handle, wide_name.c_str());
         return SUCCEEDED(hr);
     }
 #elif defined(__linux__)
-    auto truncated_name = name.substr<std::string>(0, 15);
+    std::string truncated_name{name};
+    if(truncated_name.length() > 15) {
+        truncated_name = truncated_name.substr(0, 15);
+    }
     return pthread_setname_np(pthread_self(), truncated_name.c_str()) == 0;
 #elif defined(__APPLE__)
-    return pthread_setname_np(name.toUtf8()) == 0;
+    return pthread_setname_np(name.c_str()) == 0;
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-    pthread_set_name_np(pthread_self(), name.toUtf8());
+    pthread_set_name_np(pthread_self(), name.c_str());
     return true;
 #endif
     return false;
@@ -125,20 +129,20 @@ const char *get_current_thread_name() noexcept {
         PWSTR thread_desc;
         HRESULT hr = pget_thread_desc(handle, &thread_desc);
         if(SUCCEEDED(hr) && thread_desc) {
-            UString name{thread_desc};
+            std::wstring name{thread_desc};
             LocalFree(thread_desc);
-            auto utf8_name = name.toUtf8();
-            strncpy_s(thread_name_buffer, sizeof(thread_name_buffer), utf8_name, _TRUNCATE);
+            auto utf8_name = UniString::to_utf8(name);
+            strncpy_s(thread_name_buffer, sizeof(thread_name_buffer), utf8_name.c_str(), _TRUNCATE);
             return thread_name_buffer;
         }
     }
 #elif defined(__linux__) || defined(__APPLE__)
-    if(pthread_getname_np(pthread_self(), thread_name_buffer, sizeof(thread_name_buffer)) == 0) {
-        return thread_name_buffer[0] ? thread_name_buffer : PACKAGE_NAME;
+    if(pthread_getname_np(pthread_self(), &thread_name_buffer[0], sizeof(thread_name_buffer)) == 0) {
+        return thread_name_buffer[0] ? &thread_name_buffer[0] : PACKAGE_NAME;
     }
 #elif defined(__FreeBSD__)
-    pthread_get_name_np(pthread_self(), thread_name_buffer, sizeof(thread_name_buffer));
-    return thread_name_buffer[0] ? thread_name_buffer : PACKAGE_NAME;
+    pthread_get_name_np(pthread_self(), &thread_name_buffer[0], sizeof(thread_name_buffer));
+    return thread_name_buffer[0] ? &thread_name_buffer[0] : PACKAGE_NAME;
 #endif
     return PACKAGE_NAME;
 }

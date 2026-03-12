@@ -5,7 +5,7 @@
 #include "ConsoleBox.h"
 #include "Thread.h"
 #include "Environment.h"
-#include "UString.h"
+
 
 // for SDL_CleanupTLS
 #include <SDL3/SDL_thread.h>
@@ -247,7 +247,6 @@ class ConsoleBoxSink final : public spdlog::sinks::base_sink<custom_spdmtx> {
             --end_pos;
         }
 
-        // store as UString in the circular buffer
         message_buffer_[buffer_head_] = std::string{formatted.data(), end_pos};
         buffer_head_ = (buffer_head_ + 1) % CONSOLE_BUFFER_SIZE;
 
@@ -357,7 +356,7 @@ void init(bool create_console) noexcept {
     spdlog::init_thread_pool(
         32768, 1,
         []() -> void {  // pre-thread-init
-            McThread::set_current_thread_name(US_("spd_logger"));
+            McThread::set_current_thread_name("spd_logger");
             McThread::set_current_thread_prio(McThread::Priority::LOW);
         },
         []() -> void {  // post-thread-shutdown cleanup

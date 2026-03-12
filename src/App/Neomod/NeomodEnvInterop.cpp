@@ -202,6 +202,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
 
 #include "Engine.h"
 #include "SString.h"
+#include "UniString.h"
 #include "Timing.h"
 
 #include "WinDebloatDefs.h"
@@ -437,13 +438,13 @@ void NeomodEnvInterop::setup_system_integrations() {
     assert(!cmdline.empty());
     cmdline.erase(cmdline.begin());  // remove program name
 
-    const UString uLaunchArgs{SString::join(cmdline)};
-    const UString uExePath{Environment::getPathToSelf()};
+    const std::wstring uLaunchArgs{UniString::to_wide(SString::join(cmdline))};
+    const std::wstring uExePath{UniString::to_wide(Environment::getPathToSelf())};
 
     std::wstring command;
     command.resize(uExePath.length() + uLaunchArgs.length() + 10);
 
-    swprintf_s(command.data(), command.size(), LR"("%s" %s "%%1")", uExePath.wchar_str(), uLaunchArgs.wchar_str());
+    swprintf_s(command.data(), command.size(), LR"("%s" %s "%%1")", uExePath.c_str(), uLaunchArgs.c_str());
     command.shrink_to_fit();
 
     RegSetValueExW(cmd_key, L"", 0, REG_SZ, (BYTE *)command.data(), command.size() * sizeof(wchar_t));

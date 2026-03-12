@@ -17,7 +17,6 @@
 #include <functional>
 
 class ConVar;
-class UString;
 struct Matrix4;
 
 class Image;

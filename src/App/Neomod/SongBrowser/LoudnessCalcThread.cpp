@@ -14,6 +14,7 @@
 #include "SyncOnce.h"
 #include "SyncJthread.h"
 #include "ContainerRanges.h"
+#include "UniString.h"
 
 #ifdef MCENGINE_FEATURE_BASS
 #include "BassManager.h"
@@ -50,7 +51,7 @@ struct VolNormalization::LoudnessCalcThread {
     Sync::jthread thr;
 
     void run(const Sync::stop_token &stoken) {
-        McThread::set_current_thread_name(US_("loudness_calc"));
+        McThread::set_current_thread_name("loudness_calc");
         McThread::set_current_thread_prio(McThread::Priority::LOW);
 
 #ifdef MCENGINE_FEATURE_BASS
@@ -69,7 +70,26 @@ struct VolNormalization::LoudnessCalcThread {
 
 #ifdef MCENGINE_FEATURE_BASS
     void run_bass(const Sync::stop_token &stoken) {
-        UString last_song = "";
+        struct UString {
+            UString(std::string_view path) : narrow(path) {
+                if constexpr(Env::cfg(OS::WINDOWS)) {
+                    wide = UniString::to_wide(narrow);
+                }
+            }
+            [[nodiscard]] auto plat_str() const {
+                if constexpr(Env::cfg(OS::WINDOWS)) {
+                    return narrow.c_str();
+                } else {
+                    return wide.c_str();
+                }
+            }
+            [[nodiscard]] bool operator==(const std::string &other) const { return narrow == other; }
+            [[nodiscard]] bool operator==(const UString &other) const { return narrow == other; }
+            std::string narrow;
+            std::wstring wide;
+        };
+        UString last_song{""};
+
         f32 last_loudness = 0.f;
         const f32 fallback_loudness = std::clamp<f32>(cv::loudness_fallback.getFloat(), -16.f, 0.f);
         std::array<f32, 44100> buf{};
@@ -102,7 +122,7 @@ struct VolNormalization::LoudnessCalcThread {
             auto decoder = BASS_StreamCreateFile(BASS_FILE_NAME, song.plat_str(), 0, 0, flags);
             if(!decoder) {
                 if(cv::debug_snd.getBool()) {
-                    BassManager::printBassError(fmt::format("BASS_StreamCreateFile({:s})", song.toUtf8()),
+                    BassManager::printBassError(fmt::format("BASS_StreamCreateFile({:s})", song.narrow),
                                                 BASS_ErrorGetCode());
                 }
                 map->loudness.store(fallback_loudness, std::memory_order_release);
@@ -136,7 +156,7 @@ struct VolNormalization::LoudnessCalcThread {
             BASS_Loudness_Stop(loudness);
 
             if(!succeeded || integrated_loudness == -HUGE_VAL) {
-                debugLog("No loudness information available for '{:s}' {}", song.toUtf8(),
+                debugLog("No loudness information available for '{:s}' {}", song.narrow,
                          !succeeded ? BassManager::getErrorString(errc) : "(silent song?)");
 
                 integrated_loudness = fallback_loudness;

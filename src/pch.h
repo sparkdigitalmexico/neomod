@@ -4,7 +4,6 @@
 
 // local headers which transitively include a lot of other stuff but don't change often themselves
 #include "BaseEnvironment.h"
-#include "UString.h"
 #include "MakeDelegateWrapper.h"
 #include "Hashing.h"
 #include "Color.h"
