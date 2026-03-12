@@ -78,6 +78,11 @@ $(DEPS_CACHE)/freetype-$(FREETYPE2_VERSION).tar.gz:
 	$(MKDIR_P) $(DEPS_CACHE)
 	$(CURLCOMMAND) "https://nongnu.askapache.com/freetype/freetype-$(FREETYPE2_VERSION).tar.gz" || { rm -f $@; exit 1; }
 
+# needed if building freetype
+$(DEPS_CACHE)/brotli-$(BROTLI_VERSION).tar.gz:
+	$(MKDIR_P) $(DEPS_CACHE)
+	$(CURLCOMMAND) "https://github.com/google/brotli/archive/refs/tags/v$(BROTLI_VERSION).tar.gz" || { rm -f $@; exit 1; }
+
 # always needed (if not on host)
 $(DEPS_CACHE)/liblzma-$(LZMA_VERSION).tar.gz:
 	$(MKDIR_P) $(DEPS_CACHE)
@@ -1014,11 +1019,45 @@ $(DEPS_PREFIX)/nsync-$(NSYNC_VERSION).built:
 endif # BUILD_NSYNC
 
 if BUILD_FREETYPE2
+
+if BUILD_BROTLI
+BROTLI_CFLAGS += $(shell $(PKG_CONFIG) --cflags libbrotlidec libbrotlicommon)
+BROTLI_LIBS += $(shell $(PKG_CONFIG) --libs libbrotlidec libbrotlicommon)
+$(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built: $(DEPS_CACHE)/brotli-$(BROTLI_VERSION).tar.gz
+	rm -rf $(DEPS_PREFIX)/brotli
+	$(MKDIR_P) $(DEPS_PREFIX)/brotli/build $(DEPS_PREFIX)/lib/pkgconfig
+	$(TAR) xf $(DEPS_CACHE)/brotli-$(BROTLI_VERSION).tar.gz -C $(DEPS_PREFIX)/brotli --strip-components=1 && \
+	cd $(DEPS_PREFIX)/brotli && \
+	PKG_CONFIG="$(PKG_CONFIG)" \
+	$(CMAKE_CONF_PFX) $(CMAKE) -S . -B build -G "$(CMAKE_GEN)" \
+		-D CMAKE_BUILD_TYPE="$(if $(ENABLE_DEBUG),Debug,Release)" \
+		-D CMAKE_INSTALL_PREFIX="$(DEPS_PREFIX)" \
+		-D CMAKE_SYSTEM_NAME="$(CMAKE_SYSTEM_NAME)" \
+		-D CMAKE_SYSTEM_PROCESSOR="$(host_cpu)" \
+		-D CMAKE_C_COMPILER="$(CC)" \
+		-D CMAKE_C_FLAGS="$(CFLAGS)" \
+		-D CMAKE_CXX_COMPILER="$(CXX)" \
+		-D CMAKE_CXX_FLAGS="$(CXXFLAGS)" \
+		-D CMAKE_C_COMPILER_AR="$(AR)" \
+		-D CMAKE_C_COMPILER_RANLIB="$(RANLIB)" \
+		-D BROTLI_BUILD_TOOLS=OFF \
+		-D BROTLI_DISABLE_TESTS=ON \
+		-D BUILD_SHARED_LIBS=OFF && \
+	$(CMAKE) --build build $(CMAKEPAROPT) && \
+	$(CMAKE) --install build
+	$(PKG_CONFIG) --exists --print-errors libbrotlidec libbrotlicommon
+	touch $@
+INSTALL_LIB_DEPS += $(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built
+else
+$(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built:
+	$(MKDIR_P) $(DEPS_PREFIX) && touch $@
+endif # BUILD_BROTLI
+
 FREETYPE2_CFLAGS += $(shell $(PKG_CONFIG) --cflags freetype2)
 FREETYPE2_LIBS += $(shell $(PKG_CONFIG) --libs freetype2)
 if WASM_PLATFORM
 # Use CMake for WASM to avoid apinames native tool issue
-$(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/libpng-$(LIBPNG_VERSION).built $(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built $(DEPS_CACHE)/freetype-$(FREETYPE2_VERSION).tar.gz
+$(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built $(DEPS_PREFIX)/libpng-$(LIBPNG_VERSION).built $(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built $(DEPS_CACHE)/freetype-$(FREETYPE2_VERSION).tar.gz
 	rm -rf $(DEPS_PREFIX)/freetype
 	$(MKDIR_P) $(DEPS_PREFIX)/freetype/build $(DEPS_PREFIX)/lib/pkgconfig
 	$(TAR) xf $(DEPS_CACHE)/freetype-$(FREETYPE2_VERSION).tar.gz -C $(DEPS_PREFIX)/freetype --strip-components=1 && \
@@ -1036,14 +1075,16 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/libpng-$(LIBP
 		-D CMAKE_C_COMPILER_AR="$(AR)" \
 		-D CMAKE_C_COMPILER_RANLIB="$(RANLIB)" \
 		-D FT_DISABLE_HARFBUZZ=ON \
-		-D FT_DISABLE_BROTLI=ON \
 		-D FT_REQUIRE_ZLIB=ON \
 		-D FT_REQUIRE_PNG=ON \
 		-D FT_REQUIRE_BZIP2=ON \
+		-D FT_REQUIRE_BROTLI=ON \
 		-D BUILD_SHARED_LIBS=OFF \
+		-D BROTLIDEC_INCLUDE_DIRS="$(DEPS_PREFIX)/include" \
 		-D ZLIB_INCLUDE_DIR="$(DEPS_PREFIX)/include" \
 		-D PNG_PNG_INCLUDE_DIR="$(DEPS_PREFIX)/include" \
 		-D BZIP2_INCLUDE_DIR="$(DEPS_PREFIX)/include" \
+		-D BROTLIDEC_LIBRARIES="$(DEPS_PREFIX)/lib/libbrotlidec.a $(DEPS_PREFIX)/lib/libbrotlienc.a" \
 		-D ZLIB_LIBRARY="$(DEPS_PREFIX)/lib/libz.a" \
 		-D PNG_LIBRARY="$(DEPS_PREFIX)/lib/libpng16.a" \
 		-D BZIP2_LIBRARY_RELEASE="$(DEPS_PREFIX)/lib/libbz2.a" \
@@ -1055,7 +1096,7 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/libpng-$(LIBP
 	mv $(DEPS_PREFIX)/lib/libfreetyped.a $(DEPS_PREFIX)/lib/libfreetype.a || true
 	touch $@
 else
-$(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/libpng-$(LIBPNG_VERSION).built $(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built $(DEPS_CACHE)/freetype-$(FREETYPE2_VERSION).tar.gz
+$(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built $(DEPS_PREFIX)/libpng-$(LIBPNG_VERSION).built $(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built $(DEPS_CACHE)/freetype-$(FREETYPE2_VERSION).tar.gz
 	rm -rf $(DEPS_PREFIX)/freetype
 	$(MKDIR_P) $(DEPS_PREFIX)/freetype/build $(DEPS_PREFIX)/lib/pkgconfig
 	$(TAR) xf $(DEPS_CACHE)/freetype-$(FREETYPE2_VERSION).tar.gz -C $(DEPS_PREFIX)/freetype --strip-components=1 && \
@@ -1064,7 +1105,7 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/libpng-$(LIBP
 	patch -Np1<$(BUILD_MISCDIR)/freetype-win.patch && \
 	PKG_CONFIG="$(PKG_CONFIG)" \
 		$(CONFIGURE_PFX) ./configure lt_cv_prog_gnu_ld=yes --host=$(host) --prefix="$(DEPS_PREFIX)" \
-		--with-zlib=yes --with-bzip2=yes --with-png=yes --with-harfbuzz=no --with-brotli=no --with-librsvg=no \
+		--with-zlib=yes --with-bzip2=yes --with-png=yes --with-harfbuzz=no --with-brotli=yes --with-librsvg=no \
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
 		LDFLAGS="$(LDFLAGS)" && \
@@ -1075,6 +1116,8 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/libpng-$(LIBP
 endif # WASM_PLATFORM
 INSTALL_LIB_DEPS += $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built
 else
+$(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built:
+	$(MKDIR_P) $(DEPS_PREFIX) && touch $@
 $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built:
 	$(MKDIR_P) $(DEPS_PREFIX) && touch $@
 endif # BUILD_FREETYPE2
@@ -1405,6 +1448,7 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/libpng-$(LIBPNG_VERSION).built \
 	$(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built \
 	$(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built \
+	$(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built \
 	$(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built \
 	$(DEPS_PREFIX)/glm-$(GLM_VERSION).built \
 	$(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built \
@@ -1481,6 +1525,7 @@ neomod_CXXFLAGS := \
 	$(GL_CFLAGS) \
 	$(GLU_CFLAGS) \
 	$(EGL_CFLAGS) \
+	$(BROTLI_CFLAGS) \
 	$(FREETYPE2_CFLAGS) \
 	$(FMT_CFLAGS) \
 	$(SPDLOG_CFLAGS) \
@@ -1513,6 +1558,7 @@ neomod_LDFLAGS := \
 	$(CURL_LIBS) \
 	$(SDL3_LIBS) \
 	$(AUDIO_LIBS) \
+	$(BROTLI_LIBS) \
 	$(FREETYPE2_LIBS) \
 	$(FMT_LIBS) \
 	$(LIBPNG_LIBS) \
@@ -1709,6 +1755,9 @@ if BUILD_BZIP2
 endif
 if BUILD_ZLIB
 	$(if $(STATICBUILD),,@`find $(ZLIB_PREFIX) '(' -iname '*libz-*'$(DLLEXT) -o -iname '*libz*''.so.*' ')' -exec cp -Pu '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+endif
+if BUILD_BROTLI
+	$(if $(STATICBUILD),,@`find $(BROTLI_PREFIX) '(' -iname '*brotlicommon*'$(DLLEXT) -o -iname '*brotlicommon*''.so.*' -iname '*brotlidec*'$(DLLEXT) -o -iname '*brotlidec*''.so.*' ')' -exec cp -Pu '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_FREETYPE2
 	$(if $(STATICBUILD),,@`find $(FREETYPE2_PREFIX) '(' -iname '*freetype*'$(DLLEXT) -o -iname '*freetype*''.so.*' ')' -exec cp -Pu '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)

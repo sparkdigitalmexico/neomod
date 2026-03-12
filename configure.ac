@@ -1256,8 +1256,10 @@ AS_IF([test "x$use_dx11" = "xyes"], [
 
 SDL3_MIN_VERSION=3.4.0
 SDL3_BUILD_VERSION=c45be94938bdbdacbce4b1011ebe6df6be515c11 # git
-FREETYPE2_MIN_VERSION=2.10.0
-FREETYPE2_BUILD_VERSION=2.14.1
+BROTLI_MIN_VERSION=1.1.0
+BROTLI_BUILD_VERSION=1.2.0
+FREETYPE2_MIN_VERSION=2.10.2
+FREETYPE2_BUILD_VERSION=2.14.2
 LIBJPEG_MIN_VERSION=3.0.0
 LIBJPEG_BUILD_VERSION=3.1.3
 LIBPNG_MIN_VERSION=1.6.38
@@ -1331,6 +1333,8 @@ AS_IF([test "x$enable_system_deps" != "xno"], [
     PKG_CHECK_AUTO([ZLIB], [zlib >= $ZLIB_MIN_VERSION], [have_zlib=yes], [have_zlib=no])
     PKG_CHECK_AUTO([BZIP2], [bzip2 >= $BZIP2_MIN_VERSION], [have_bzip2=yes], [have_bzip2=no])
     PKG_CHECK_AUTO([FREETYPE2], [freetype2 >= $FREETYPE2_MIN_VERSION], [have_freetype2=yes], [have_freetype2=no])
+    PKG_CHECK_AUTO([BROTLICOMMON], [libbrotlicommon >= $BROTLI_MIN_VERSION], [have_brotlicommon=yes], [have_brotlicommon=no])
+    PKG_CHECK_AUTO([BROTLIDEC], [libbrotlidec >= $BROTLI_MIN_VERSION], [have_brotlidec=yes], [have_brotlidec=no])
     PKG_CHECK_AUTO([FMT], [fmt >= $FMT_MIN_VERSION], [have_fmt=yes], [have_fmt=no])
     PKG_CHECK_AUTO([LZMA], [liblzma >= $LZMA_MIN_VERSION], [have_liblzma=yes], [have_liblzma=no])
     PKG_CHECK_AUTO([LIBARCHIVE], [libarchive >= $LIBARCHIVE_MIN_VERSION], [have_libarchive=yes], [have_libarchive=no])
@@ -1340,7 +1344,7 @@ AS_IF([test "x$enable_system_deps" != "xno"], [
     AS_IF([test "x$have_curl" = "xyes"], [
         PKG_CHECK_AUTO([OPENSSL], [openssl >= $OPENSSL_MIN_VERSION], [have_openssl=yes], [have_openssl=no])
     ])
-    AS_IF([test "$with_soloud" = "yes"], [
+    AS_IF([test "x$with_soloud" = "xyes"], [
         PKG_CHECK_AUTO([MPG123], [libmpg123 >= $MPG123_MIN_VERSION], [have_mpg123=yes], [have_mpg123=no])
     ])
     PKG_CHECK_AUTO([SPDLOG], [spdlog >= $SPDLOG_MIN_VERSION], [have_spdlog=yes], [have_spdlog=no])
@@ -1349,6 +1353,17 @@ AS_IF([test "x$enable_system_deps" != "xno"], [
         AC_SEARCH_LIBS([nsync_mu_init], [nsync_cpp], [have_nsync=yes], [have_nsync=no])
     ])
 ])
+
+# just assume the host freetype is built with brotli support, if building with system deps
+# otherwise we'd need to rebuild freetype
+AS_IF([test "x$have_freetype" != "xyes" && { test "x$have_brotlidec" != "xyes" || test "x$have_brotlicommon" != "xyes" ; }], [
+    have_brotli=no
+], [
+    have_brotli=yes
+])
+
+AC_SUBST([BROTLI_CFLAGS], [$BROTLICOMMON_CFLAGS $BROTLIDEC_CFLAGS])
+AC_SUBST([BROTLI_LIBS], [$BROTLICOMMON_LIBS $BROTLIDEC_LIBS])
 
 AS_IF([test -z "$ubercompat" && test "x$with_nsync" != "xno"], [
     AC_DEFINE([USE_NSYNC], [1], [Defined if nsync sync primitives are available.])
@@ -1416,6 +1431,12 @@ FREETYPE2_VERSION=$FREETYPE2_BUILD_VERSION
 FREETYPE2_PREFIX="${DEPS_PREFIX}"
 AC_SUBST([FREETYPE2_VERSION])
 AC_SUBST([FREETYPE2_PREFIX])
+
+AS_IF([test "x$have_brotli" != "xyes"], [have_brotli="build from source"])
+BROTLI_VERSION=$BROTLI_BUILD_VERSION
+BROTLI_PREFIX="${DEPS_PREFIX}"
+AC_SUBST([BROTLI_VERSION])
+AC_SUBST([BROTLI_PREFIX])
 
 AS_IF([test "x$have_fmt" != "xyes"], [have_fmt="build from source"])
 FMT_VERSION=$FMT_BUILD_VERSION
@@ -1508,6 +1529,7 @@ AM_CONDITIONAL([BUILD_LIBPNG], [test "x$have_libpng" != "xyes"])
 AM_CONDITIONAL([BUILD_BZIP2], [test "x$have_bzip2" != "xyes"])
 AM_CONDITIONAL([BUILD_ZLIB], [test "x$have_zlib" != "xyes"])
 AM_CONDITIONAL([BUILD_FREETYPE2], [test "x$have_freetype2" != "xyes"])
+AM_CONDITIONAL([BUILD_BROTLI], [test "x$have_brotli" != "xyes"])
 AM_CONDITIONAL([BUILD_FMT], [test "x$have_fmt" != "xyes"])
 AM_CONDITIONAL([BUILD_LZMA], [test "x$have_liblzma" != "xyes"])
 AM_CONDITIONAL([BUILD_LIBARCHIVE], [test "x$have_libarchive" != "xyes"])
@@ -1617,6 +1639,7 @@ Dependencies:
     bzip2:              ${have_bzip2-build from source}
     zlib:               ${have_zlib-build from source}
     freetype2:          ${have_freetype2-build from source}
+    brotli:             ${have_brotli-build from source}
     fmt:                ${have_fmt-build from source}
     curl:               ${have_curl-download}
     openssl:            ${have_openssl-download}

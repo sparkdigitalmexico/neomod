@@ -163,12 +163,20 @@ add_external_project(libpng
     BUILD_COMMAND cmake --build <BINARY_DIR> --config ${CMAKE_BUILD_TYPE} --parallel ${CPU_COUNT}
 )
 
+add_external_project(brotli
+    CMAKE_ARGS
+        ${EXTERNAL_PROJECT_CMAKE_ARGS}
+        -DBROTLI_BUILD_TOOLS=OFF
+        -DBROTLI_DISABLE_TESTS=ON
+    BUILD_COMMAND cmake --build <BINARY_DIR> --config ${CMAKE_BUILD_TYPE} --parallel ${CPU_COUNT}
+)
+
 add_external_project(freetype
-    DEPENDS zlib_external libpng_external bzip2_external
+    DEPENDS brotli_external zlib_external libpng_external bzip2_external
     CMAKE_ARGS
         ${EXTERNAL_PROJECT_CMAKE_ARGS}
         -DFT_DISABLE_HARFBUZZ=ON
-        -DFT_DISABLE_BROTLI=ON
+        -DFT_REQUIRE_BROTLI=ON
         -DFT_REQUIRE_ZLIB=ON
         -DFT_REQUIRE_PNG=ON
         -DFT_REQUIRE_BZIP2=ON
@@ -487,6 +495,7 @@ ExternalProject_Add(neomod_main
         bzip2_external
         libjpeg_external
         libpng_external
+        brotli_external
         freetype_external
         fmt_external
         spdlog_external
