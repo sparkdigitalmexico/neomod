@@ -21,9 +21,9 @@ macro(set_download_name dep_name version url)
     set(${_upper_dep_name}_DL_NAME "${dep_name}-${version}${_temp_ext}")
 endmacro()
 
-set(SDL3_VERSION "f2c4c66429fe2abb5dc139301e85b9b5637fe3c5")
+set(SDL3_VERSION "c45be94938bdbdacbce4b1011ebe6df6be515c11")
 set(SDL3_URL "https://github.com/libsdl-org/SDL/archive/${SDL3_VERSION}.tar.gz")
-set(SDL3_HASH "SHA512=63a0181c8491b5cd3400cc39ff3329c0a884bf7f3bcaae757fbbe77c04a2d20ac5e8fc63e907a19ec9d0f2e7bdf5d2f9d4ded0b242fe293a369e862f8d8a8294")
+set(SDL3_HASH "SHA512=3b8c5e192b6cc68d60312c323ef630f2cd5324d27093aad2026cd9f6867d46e45c109cbf8ce8b3f428ffbe7d03ca42241ccf05b19e21d0202bf684beb2319df4")
 set_download_name("sdl3" "${SDL3_VERSION}" "${SDL3_URL}")
 
 set(FREETYPE_VERSION "2.14.1")
@@ -98,9 +98,9 @@ set(NSYNC_URL "https://github.com/google/nsync/archive/refs/tags/${NSYNC_VERSION
 set(NSYNC_HASH "SHA512=fdcd61eb686ca6d6804d82837fcd33ddee54d6b2aeb7bc20cdff8c5bd2a75f87b724f72c7e835459a1a82ee8bed3d6da5e4c111b3bca22545c6e037f129839f2")
 set_download_name("nsync" "${NSYNC_VERSION}" "${NSYNC_URL}")
 
-set(SIMDUTF_VERSION "8.0.0")
+set(SIMDUTF_VERSION "8.1.0")
 set(SIMDUTF_URL "https://github.com/simdutf/simdutf/archive/refs/tags/v${SIMDUTF_VERSION}.tar.gz")
-set(SIMDUTF_HASH "SHA512=ee30ac7b7b96dfef2ced3938b1cc8e10cd5ec5b3d35ac9679f30fbb7811bf3f930a31f5b4cf0b4002f27eba84d2e27e7c7bd910d96aa04485588188ad910361d")
+set(SIMDUTF_HASH "SHA512=8cd088a4b3f7175395b4449a5efc585b1eeb2c3e0cc18661e58b73b2a064ae6789ae456fe39c9574fe5b4e77fc96c4eaaf68452f73132e2aac832888c29abe5a")
 set_download_name("simdutf" "${SIMDUTF_VERSION}" "${SIMDUTF_URL}")
 
 set(CTRE_VERSION "6225211806c48230e5d17a1e555ef69e7325051c")
