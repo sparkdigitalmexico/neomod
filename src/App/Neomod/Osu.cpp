@@ -329,13 +329,13 @@ Osu::Osu()
     const int baseDPI = 96;
     const int newDPI = Osu::getUIScale() * baseDPI;
 
-    McFont *defaultFont = resourceManager->loadFont("weblysleekuisb.ttf", "FONT_DEFAULT", 15, true, newDPI);
-    this->titleFont = resourceManager->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 60, true, newDPI);
-    this->subTitleFont = resourceManager->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_SUBTITLE", 21, true, newDPI);
+    McFont *defaultFont = resourceManager->loadFont("weblysleekuisb", "FONT_DEFAULT", 15, true, newDPI);
+    this->titleFont = resourceManager->loadFont("SourceSansPro-Semibold", "FONT_OSU_TITLE", 60, true, newDPI);
+    this->subTitleFont = resourceManager->loadFont("SourceSansPro-Semibold", "FONT_OSU_SUBTITLE", 21, true, newDPI);
     this->songBrowserFont =
-        resourceManager->loadFont("SourceSansPro-Regular.otf", "FONT_OSU_SONGBROWSER", 35, true, newDPI);
+        resourceManager->loadFont("SourceSansPro-Regular", "FONT_OSU_SONGBROWSER", 35, true, newDPI);
     this->songBrowserFontBold =
-        resourceManager->loadFont("SourceSansPro-Bold.otf", "FONT_OSU_SONGBROWSER_BOLD", 30, true, newDPI);
+        resourceManager->loadFont("SourceSansPro-Bold", "FONT_OSU_SONGBROWSER_BOLD", 30, true, newDPI);
 
     {
         const std::string newIconFontPath = MCENGINE_FONTS_PATH "/forkawesome.ttf";
@@ -344,7 +344,7 @@ Osu::Osu()
             Environment::renameFile(oldIconFontPath, newIconFontPath);
         }
     }
-    this->fontIcons = resourceManager->loadFont("forkawesome.ttf", "FONT_OSU_ICONS", Icons::icons, 26, true, newDPI);
+    this->fontIcons = resourceManager->loadFont("forkawesome", "FONT_OSU_ICONS", Icons::icons, 26, true, newDPI);
 
     this->fonts.push_back(defaultFont);
     this->fonts.push_back(this->titleFont);

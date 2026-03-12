@@ -154,6 +154,8 @@ struct McFontImpl final {
         CDynArray<const GLYPH_METRICS *> metrics{};
     };
 
+    std::string m_sActualFilePath;
+
     std::vector<char32_t> m_vInitialGlyphs;
     std::unordered_map<char32_t, std::unique_ptr<GLYPH_METRICS>> m_mGlyphMetrics;
 
@@ -289,11 +291,13 @@ struct McFontImpl final {
 ////////////////////////////////////////////////////////////////////////////////////
 
 McFont::McFont(std::string filepath, int fontSize, bool antialiasing, int fontDPI)
-    : Resource(FONT, std::move(filepath)), pImpl(this, fontSize, antialiasing, fontDPI) {}
+    : Resource(FONT, std::move(filepath), /*doFilesystemExistenceCheck=*/false),
+      pImpl(this, fontSize, antialiasing, fontDPI) {}
 
 McFont::McFont(std::string filepath, const std::span<const char32_t> &characters, int fontSize, bool antialiasing,
                int fontDPI)
-    : Resource(FONT, std::move(filepath)), pImpl(this, characters, fontSize, antialiasing, fontDPI) {}
+    : Resource(FONT, std::move(filepath), /*doFilesystemExistenceCheck=*/false),
+      pImpl(this, characters, fontSize, antialiasing, fontDPI) {}
 
 McFont::~McFont() { destroy(); }
 
@@ -398,7 +402,31 @@ void McFontImpl::init() {
 }
 
 void McFontImpl::initAsync() {
-    debugLog("Loading font: {:s}", m_parent->sFilePath);
+    // find best font
+    if(m_sActualFilePath.empty()) {
+        std::string candidate = m_parent->sFilePath;
+        SString::to_lower(candidate);
+        // if it already ends with a font extension, use it directly
+        if((candidate.ends_with(".woff2") || candidate.ends_with(".woff") || candidate.ends_with(".ttf") ||
+            candidate.ends_with(".otf")) &&
+           Environment::fileExists(candidate)) {
+            m_sActualFilePath = candidate;
+        } else {
+            for(const auto &ext : std::array{".woff2"s, ".woff"s, ".ttf"s, ".otf"s}) {
+                candidate = m_parent->sFilePath + ext;
+                if(Environment::fileExists(candidate)) {
+                    m_sActualFilePath = candidate;
+                    m_parent->sFilePath = m_sActualFilePath;
+                    break;
+                }
+            }
+        }
+    }
+    if(m_sActualFilePath.empty()) {
+        debugLog("Could not find font {}!", m_parent->sFilePath);
+        return;
+    }
+    debugLog("Loading font: {:s}", m_sActualFilePath);
     assert(s_sharedFtLibraryInitialized);
     assert(s_sharedFallbacksInitialized);
 
@@ -822,7 +850,7 @@ bool McFontImpl::initializeFreeType() {
     // load this font's primary face
     {
         Sync::unique_lock<Sync::shared_mutex> lock(s_sharedResourcesMutex);
-        if(FT_New_Face(s_sharedFtLibrary, m_parent->sFilePath.c_str(), 0, &m_ftFace)) {
+        if(FT_New_Face(s_sharedFtLibrary, m_sActualFilePath.c_str(), 0, &m_ftFace)) {
             engine->showMessageError("Font Error", "Couldn't load font file!");
             return false;
         }
@@ -1292,7 +1320,31 @@ bool McFont::initSharedResources() {
     s_sharedFtLibraryInitialized = true;
 
     // check all bundled fonts first
-    std::vector<std::string> bundledFallbacks = env->getFilesInFolder(MCENGINE_FONTS_PATH "/");
+    std::vector<std::string> bundledFallbacks;
+    {
+        auto allFonts = Environment::getFilesInFolder(MCENGINE_FONTS_PATH "/");
+        // sort to load woff2 before ttf/otf
+        std::ranges::sort(allFonts, [](const std::string &font1, const std::string &font2) {
+            std::string ext1 = Environment::getFileExtensionFromFilePath(font1);
+            std::string ext2 = Environment::getFileExtensionFromFilePath(font2);
+            SString::lower_inplace(ext1);
+            SString::lower_inplace(ext2);
+            if(ext1 == ext2) return false;
+            if(ext1.empty() != ext2.empty()) return ext1.empty() > ext2.empty();
+            return ext1.starts_with("woff"sv) > ext2.starts_with("woff"sv);
+        });
+        // deduplicate
+        Hash::unstable_ncase_set<std::string> fontsNoExt;
+        for(const auto &path : allFonts) {
+            const std::string ext = Environment::getFileExtensionFromFilePath(path);
+            if(ext.empty()) continue;
+            std::string pathNoExt = path.substr(0, path.length() - (ext.length() + 1));
+            const auto [_, inserted] = fontsNoExt.insert(pathNoExt);
+            if(inserted) {
+                bundledFallbacks.push_back(path);
+            }
+        }
+    }
     for(const auto &fontName : bundledFallbacks) {
         if(loadFallbackFont(UString{fontName}, false)) {
             logIfCV(r_debug_font_unicode, "Font Info: Loaded bundled fallback font: {:s}", fontName);
@@ -1300,7 +1352,9 @@ bool McFont::initSharedResources() {
     }
 
     // then find likely system fonts
-    if(!Env::cfg(OS::WASM) && cv::font_load_system.getBool()) discoverSystemFallbacks();
+    if(!Env::cfg(OS::WASM) && cv::font_load_system.getBool()) {
+        discoverSystemFallbacks();
+    }
 
     s_sharedFallbacksInitialized = true;
 
