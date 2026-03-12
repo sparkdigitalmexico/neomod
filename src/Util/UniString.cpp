@@ -107,7 +107,7 @@ struct AlignedBuffer {
     uSz in_size;
 
     alignas(static_cast<uSz>(alignment)) u8 small[128];
-    u8 *data;
+    u8 *data{nullptr};
     bool allocated{false};
 };
 
