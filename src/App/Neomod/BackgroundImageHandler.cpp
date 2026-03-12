@@ -40,13 +40,13 @@ bool checkMojibake(std::string_view file_path, std::string &parsed_bg_filename) 
     }
 
     std::string_view containing_folder = file_path.substr(0, last_slash + 1);
-    std::string full_image_path = fmt::format("{}{}", containing_folder, parsed_bg_filename);
+    std::string full_image_path = fmt::format("{:s}{:s}", containing_folder, parsed_bg_filename);
     if(File::exists(full_image_path) == File::FILETYPE::FILE) {
         // we found it, return early
         return ret;
     }
 
-    logIf(debug, "{} doesn't exist, trying to re-mojibake...", full_image_path);
+    logIf(debug, "{:s} doesn't exist, trying to re-mojibake...", full_image_path);
     const size_t out_size = parsed_bg_filename.size() * 4;
 
     auto converted_output = std::make_unique_for_overwrite<char[]>(parsed_bg_filename.size() * 4);
@@ -65,7 +65,7 @@ bool checkMojibake(std::string_view file_path, std::string &parsed_bg_filename) 
             return ret;
         }
 
-        std::string converted_path = fmt::format("{}{}", containing_folder, result);
+        std::string converted_path = fmt::format("{:s}{:s}", containing_folder, result);
         const bool converted_exists = File::exists(converted_path) == File::FILETYPE::FILE;
 
         if(converted_exists) {
@@ -73,12 +73,12 @@ bool checkMojibake(std::string_view file_path, std::string &parsed_bg_filename) 
             ret = true;
         }
 
-        logIf(debug, "got result {}, converted path {}, {} on disk", result, converted_path,
+        logIf(debug, "got result {:s}, converted path {:s}, {:s} on disk", result, converted_path,
               converted_exists ? "exists" : "does not exist");
     } else if(conv_result_len == 0 && debug) {
-        debugLog("got no conversion result for {}", parsed_bg_filename);
+        debugLog("got no conversion result for {:s}", parsed_bg_filename);
     } else if(debug) {
-        debugLog("got error {}", conv_result_len);
+        debugLog("got error {:d}", conv_result_len);
     }
 
     return ret;
@@ -325,7 +325,7 @@ void BGImageHandlerImpl::update(bool allow_eviction) {
 
         // check and handle evictions
         if(evicted < max_to_evict && consider_evictions && !was_used_last_frame) {
-            logIf(doLogging, "evicting entry: {}", entry.bg_image_filename);
+            logIf(doLogging, "evicting entry: {:s}", entry.bg_image_filename);
             this->releaseImageRef(entry);
 
             evicted++;
@@ -341,12 +341,12 @@ void BGImageHandlerImpl::update(bool allow_eviction) {
                     if(entry.bg_image_filename.length() < 2) {
                         // if the backgroundImageFileName is not loaded, then we have to create a full
                         // DatabaseBeatmapBackgroundImagePathLoader
-                        logIf(doLogging, "loading path for entry (scheduled): {}", entry.bg_image_filename);
+                        logIf(doLogging, "loading path for entry (scheduled): {:s}", entry.bg_image_filename);
                         entry.image = nullptr;
                         entry.bg_path_handle = parseBgFromOsuFile(osu_path);
                     } else {
                         // if backgroundImageFileName is already loaded/valid, then we can directly load the image
-                        logIf(doLogging, "loading image for entry (scheduled): {}", entry.bg_image_filename);
+                        logIf(doLogging, "loading image for entry (scheduled): {:s}", entry.bg_image_filename);
                         this->handleLoadImageForEntry(entry);
                     }
                 }
@@ -362,7 +362,7 @@ void BGImageHandlerImpl::update(bool allow_eviction) {
                         entry.ready_but_image_not_found = true;
                     }
 
-                    logIf(doLogging, "loading image for entry (bg path loader finished): {}", entry.bg_image_filename);
+                    logIf(doLogging, "loading image for entry (bg path loader finished): {:s}", entry.bg_image_filename);
                 }
             }
         }
@@ -393,7 +393,7 @@ const Image *BGImageHandlerImpl::getLoadBackgroundImage(const DatabaseBeatmap *b
     const std::string beatmap_filepath{beatmap->getFilePath()};
     this->last_requested_entry = beatmap_filepath;
 
-    logIf(cv::debug_bg_loader.getInt() > 1, "trying to load image for {}", beatmap_filepath);
+    logIf(cv::debug_bg_loader.getInt() > 1, "trying to load image for {:s}", beatmap_filepath);
 
     if(const auto &it = this->cache.find(beatmap_filepath); it != this->cache.end()) {
         // 1) if the path or image is already loaded, return image ref immediately (which may still be NULL) and keep track
@@ -471,11 +471,11 @@ const Image *BGImageHandlerImpl::getLoadBackgroundImage(const DatabaseBeatmap *b
 // private
 
 void BGImageHandlerImpl::acquireImageRef(ENTRY &entry) {
-    std::string full_bg_image_path = fmt::format("{}{}", entry.folder, entry.bg_image_filename);
+    std::string full_bg_image_path = fmt::format("{:s}{:s}", entry.folder, entry.bg_image_filename);
 
     auto &img_ref = this->shared_images[full_bg_image_path];
     if(img_ref.image == nullptr) {
-        logIfCV(debug_bg_loader, "fresh-loading image for {}", full_bg_image_path);
+        logIfCV(debug_bg_loader, "fresh-loading image for {:s}", full_bg_image_path);
         resourceManager->requestNextLoadAsync();
         resourceManager->requestNextLoadUnmanaged();
         img_ref.image = resourceManager->loadImageAbsUnnamed(full_bg_image_path, true);
@@ -489,7 +489,7 @@ void BGImageHandlerImpl::acquireImageRef(ENTRY &entry) {
 void BGImageHandlerImpl::releaseImageRef(ENTRY &entry) {
     if(!entry.has_image_ref || entry.image == nullptr) return;
 
-    std::string full_bg_image_path = fmt::format("{}{}", entry.folder, entry.bg_image_filename);
+    std::string full_bg_image_path = fmt::format("{:s}{:s}", entry.folder, entry.bg_image_filename);
 
     if(auto it = this->shared_images.find(full_bg_image_path); it != this->shared_images.end()) {
         auto &img_ref = it->second;

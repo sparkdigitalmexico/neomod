@@ -38,6 +38,8 @@ Changelog::Changelog() : ScreenBackable() {
     v43_07.title = "43.07 (" CHANGELOG_TIMESTAMP ")";
     v43_07.changes = {
         R"(- Added emoji support)",
+        R"(- Made release downloads smaller)",
+        R"(- Updated Discord app ID (for neosu->neomod rename))",
         R"(- Fixed issues with "Freeze Frame" mod rendering)",
     };
     changelogs.push_back(v43_07);

@@ -838,14 +838,14 @@ bool SongBrowser::selectBeatmapset(i32 set_id) {
     const auto *beatmapset = db->getBeatmapSet(set_id);
     if(beatmapset == nullptr) {
         // Pasted from Downloader::download_beatmap
-        auto mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
+        auto mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{:d}/", set_id);
         beatmapset = db->addBeatmapSet(mapset_path);
 
         if(beatmapset == nullptr) {
-            debugLog("Could not load beatmapset! (ID {})", set_id);
+            debugLog("Could not load beatmapset! (ID {:d})", set_id);
             return false;
         } else {
-            debugLog("Finished loading beatmapset (ID {})", set_id);
+            debugLog("Finished loading beatmapset (ID {:d})", set_id);
         }
     }
 
@@ -2404,7 +2404,7 @@ void SongBrowser::startExport(MapExporter::ExportContext ctx) {
 
 void SongBrowser::initializeGroupingButtons() {
 #define MKCBTN(name__) \
-    std::make_unique<CollectionButton>(250.f, 250.f, 200.f, 50.f, fmt::format("cbtn-{}", name__), name__)
+    std::make_unique<CollectionButton>(250.f, 250.f, 200.f, 50.f, fmt::format("cbtn-{:s}", name__), name__)
     // artist, title, creator
     for(auto *coll : {&this->artistCollectionButtons, &this->titleCollectionButtons, &this->creatorCollectionButtons}) {
         if(coll->size() == 28) continue;
@@ -2484,7 +2484,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
     Timer t;
     t.start();
 
-    debugLog("Loading {} beatmapsets from database.", db->getBeatmapSets().size());
+    debugLog("Loading {:d} beatmapsets from database.", db->getBeatmapSets().size());
 
     // initialize all collection (grouped) buttons
     this->initializeGroupingButtons();
@@ -3308,7 +3308,7 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
         Environment::createDirectory(cv::export_folder.getString() + "/collections");
 
         auto ctx = MapExporter::ExportContext{
-            pathsToExport, fmt::format("collections/{}", colNameSanitized),
+            pathsToExport, fmt::format("collections/{:s}", colNameSanitized),
             [namestr = std::string{collection_name}](f32 progress, std::string entry) -> void {
                 return BottomBar::update_export_progress(progress, std::move(entry), namestr);
             }};

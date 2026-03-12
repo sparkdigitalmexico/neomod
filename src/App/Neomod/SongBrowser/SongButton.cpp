@@ -223,7 +223,7 @@ void SongButton::drawSubTitle(float deselectedAlpha, bool forceSelectedStyle) {
 
     g->pushTransform();
     {
-        const std::string subTitleString{fmt::format("{} // {}", artist, mapper)};
+        const std::string subTitleString{fmt::format("{:s} // {:s}", artist, mapper)};
 
         g->scale(subTitleScale, subTitleScale);
         g->translate(pos.x + this->fTextOffset,

@@ -31,7 +31,7 @@ AppRunner::AppRunner(bool testMode, std::string_view appName) : m_bTestMode(test
             return;
         }
     }
-    debugLog("unknown app '{}', showing selection screen", appName);
+    debugLog("unknown app '{:s}', showing selection screen", appName);
 }
 
 AppRunner::~AppRunner() {
@@ -45,7 +45,7 @@ void AppRunner::launchApp(const char *name) {
     for(const auto &entry : getAllAppDescriptors()) {
         if(std::strcmp(name, entry.name) == 0) {
             if(Env::cfg(BUILD::DEBUG)) {
-                debugLog("launching app: {}", name);
+                debugLog("launching app: {:s}", name);
             }
             m_activeApp.reset(entry.create());
             return;
