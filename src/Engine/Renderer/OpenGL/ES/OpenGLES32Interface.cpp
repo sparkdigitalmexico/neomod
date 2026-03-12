@@ -43,7 +43,6 @@ OpenGLES32Interface::OpenGLES32Interface() : ModernGraphicsShared(), m_vResoluti
     m_iVBOTexcolors = 0;
 
     // persistent vars
-    m_color = 0xffffffff;
     m_bAntiAliasing = true;
 
     // enable
@@ -237,16 +236,18 @@ void OpenGLES32Interface::endScene() {
 void OpenGLES32Interface::clearDepthBuffer() { glClear(GL_DEPTH_BUFFER_BIT); }
 
 void OpenGLES32Interface::setColor(Color color) {
-    if(color == m_color) return;
+    if(color == m_data->color) return;
+    m_data->color = color;
 
     if(m_shaderTexturedGeneric->isActive()) {
-        m_color = color;
         m_shaderTexturedGeneric->setUniform4f("col", color.Rf(), color.Gf(), color.Bf(),
                                               color.Af());  // float components of color
     }
 }
 
-void OpenGLES32Interface::setAlpha(float alpha) { setColor(rgba(m_color.Rf(), m_color.Gf(), m_color.Bf(), alpha)); }
+void OpenGLES32Interface::setAlpha(float alpha) {
+    setColor(rgba(m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(), alpha));
+}
 
 void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
     // skip entirely transparent images
@@ -301,7 +302,8 @@ void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, floa
         this->smoothClipShader->setUniform2f("rect_min", clipMinX, clipMinY);
         this->smoothClipShader->setUniform2f("rect_max", clipMaxX, clipMaxY);
         this->smoothClipShader->setUniform1f("edge_softness", edgeSoftness);
-        this->smoothClipShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
+        this->smoothClipShader->setUniform4f("col", m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(),
+                                             m_data->color.Af());
 
         // set mvp for the shader
         this->smoothClipShader->setMVP(m_data->MP);

@@ -189,6 +189,7 @@ neomod_SOURCES = \
 	src/App/Tests/AsyncPoolTest.cpp \
 	src/App/Tests/AudioTester/AudioTester.cpp \
 	src/App/Tests/BaseFrameworkTest/BaseFrameworkTest.cpp \
+	src/App/Tests/EmojiRenderTest/EmojiRenderTest.cpp \
 	src/App/Tests/Neomod/HitSoundTest.cpp \
 	src/App/Tests/Neomod/SkinLoadTest.cpp \
 	src/Engine/AnimationHandler.cpp \

@@ -2,6 +2,7 @@
 // dummy graphics backend for headless mode (no rendering)
 #include "NullGraphics.h"
 
+#include "Graphics_private.h"
 #include "NullImage.h"
 #include "NullRenderTarget.h"
 #include "NullShader.h"
@@ -17,7 +18,7 @@ void NullGraphics::endScene() {}
 void NullGraphics::clearDepthBuffer() {}
 
 // color
-void NullGraphics::setColor(Color /*color*/) {}
+void NullGraphics::setColor(Color color) { m_data->color = color; }
 void NullGraphics::setAlpha(float /*alpha*/) {}
 
 // 2d primitive drawing

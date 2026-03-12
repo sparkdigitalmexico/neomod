@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <numeric>
 #include <set>
 #include <utility>
 #include <cassert>
@@ -58,7 +59,7 @@ constexpr const float ATLAS_OCCUPANCY_TARGET{0.75f};  // target atlas occupancy 
 // we initially pack the ASCII characters + initial characters into a region,
 // then dynamically loaded glyphs are placed in the remaining space in fixed-size slots (not packed)
 // this maximizes the amount of fallback glyphs we can have loaded at once for a fixed amount of memory usage
-constexpr float ATLAS_SIZE_MULTIPLIER{4.0f};
+constexpr const size_t ATLAS_SIZE_MULTIPLIER{4};
 
 constexpr const size_t MIN_ATLAS_SIZE{256};
 constexpr const size_t MAX_ATLAS_SIZE{4096};
@@ -82,6 +83,7 @@ struct FallbackFont {
 FT_Library s_sharedFtLibrary{nullptr};
 std::vector<FallbackFont> s_sharedFallbackFonts;
 Hash::flat::set<char32_t> s_sharedFallbackFaceBlacklist;
+FT_Face s_sharedEmojiFace{nullptr};
 
 bool s_sharedFtLibraryInitialized{false};
 bool s_sharedFallbacksInitialized{false};
@@ -112,6 +114,7 @@ struct McFontImpl final {
         int left, top, width, rows;
         float advance_x;
         bool inAtlas;  // whether UV coordinates are valid (glyph is rendered in atlas)
+        bool isColor;  // color bitmap glyph (e.g. emoji from CBDT font)
     };
 
     // texture atlas dynamic slot management
@@ -124,11 +127,16 @@ struct McFontImpl final {
 
     struct VerTexMetCacheEntry {
         std::string string;
+        bool hasColorGlyphs{false};
+
         void clear() {
             string.clear();
             verts.clear();
             texcoords.clear();
             metrics.clear();
+            emojiVerts.clear();
+            emojiTexcoords.clear();
+            hasColorGlyphs = false;
         }
 
         void resize(size_t numVerts, size_t numMetrics) {
@@ -148,10 +156,17 @@ struct McFontImpl final {
         [[nodiscard]] const CDynArray<vec2> &getTexcoords() const { return texcoords; }
         [[nodiscard]] const CDynArray<const GLYPH_METRICS *> &getMetrics() const { return metrics; }
 
+        CDynArray<vec3> &getEmojiVerts() { return emojiVerts; }
+        CDynArray<vec2> &getEmojiTexcoords() { return emojiTexcoords; }
+        [[nodiscard]] const CDynArray<vec3> &getEmojiVerts() const { return emojiVerts; }
+        [[nodiscard]] const CDynArray<vec2> &getEmojiTexcoords() const { return emojiTexcoords; }
+
        private:
         CDynArray<vec3> verts{};
         CDynArray<vec2> texcoords{};
         CDynArray<const GLYPH_METRICS *> metrics{};
+        CDynArray<vec3> emojiVerts{};
+        CDynArray<vec2> emojiTexcoords{};
     };
 
     std::string m_sActualFilePath;
@@ -250,14 +265,13 @@ struct McFontImpl final {
     bool loadGlyphDynamic(char32_t ch, FT_Face existingFace);
     bool loadGlyphMetrics(char32_t ch);
 
-    std::unique_ptr<u8[]> createExpandedBitmapData(const FT_Bitmap &bitmap);
-
     // loads glyph from face and converts to bitmap. Returns nullptr on failure.
     // if storeMetrics is true, stores metrics in m_mGlyphMetrics[ch].
     // caller is responsible for calling FT_Done_Glyph on returned glyph.
     FT_BitmapGlyph loadBitmapGlyph(char32_t ch, FT_Face face, bool storeMetrics);
 
     // renders bitmap to atlas at specified position. updates UV coords and sets inAtlas.
+    // handles grayscale->white+alpha, BGRA->RGBA conversion, and color bitmap downscaling.
     void renderBitmapToAtlas(char32_t ch, int x, int y, const FT_Bitmap &bitmap, bool isDynamicSlot);
 
     // for initial glyphs, packed
@@ -266,13 +280,12 @@ struct McFontImpl final {
     // fallback font management
     FT_Face getFontFaceForGlyph(char32_t ch);
 
-    // returns end vertex from startVertex
-    size_t buildGlyphGeometry(std::span<vec3> vertsOut, std::span<vec2> texcoordsOut, const GLYPH_METRICS &gm,
-                              float advanceX, size_t startVertex);
+    // writes glyph quad into buffer at startVertex, returns end vertex.
+    // if gm.isColor, also appends to the buffer's emoji overlay arrays.
+    size_t buildGlyphGeometry(VerTexMetCacheEntry &buffer, const GLYPH_METRICS &gm, float advanceX, size_t startVertex);
 
-    // returns final vertices ready to be drawn in the out parameter
-    void buildStringGeometry(std::string_view text, std::span<vec3> vertsOut, std::span<vec2> texcoordsOut,
-                             size_t maxGlyphs, std::span<const GLYPH_METRICS *> gmOut);
+    // builds full string geometry into buffer, including emoji overlay arrays.
+    void buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs);
 
     static std::unique_ptr<Channel[]> unpackMonoBitmap(const FT_Bitmap &bitmap);
 
@@ -329,20 +342,21 @@ std::vector<std::string> McFont::wrap(std::string_view text, f64 max_width) cons
 // Public passthroughs end, implementation begins
 ////////////////////////////////////////////////////////////////////////////////////
 
+// they are initialized in constructor()
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
 McFontImpl::McFontImpl(McFont *parent, int fontSize, bool antialiasing, int fontDPI)
     : m_parent(parent),
       m_vao(g->createVertexArrayObject(
           (Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS),
           DrawUsageType::DYNAMIC, true)) {
-    std::array<char32_t, 96> characters;
     // initialize with basic ASCII, load the rest as needed
-    for(int i = 32; i < 128; i++) {
-        characters[i - 32] = static_cast<char32_t>(i);
-    }
+    std::array<char32_t, 96> characters;  // NOLINT
+    std::ranges::iota(characters, 32);
     m_bTryFindFallbacks = true;
     constructor(characters, fontSize, antialiasing, fontDPI);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
 McFontImpl::McFontImpl(McFont *parent, const std::span<const char32_t> &characters, int fontSize, bool antialiasing,
                        int fontDPI)
     : m_parent(parent),
@@ -383,7 +397,8 @@ void McFontImpl::constructor(const std::span<const char32_t> &characters, int fo
                     .width = 10,
                     .rows = 1,
                     .advance_x = 0,
-                    .inAtlas = true};
+                    .inAtlas = true,
+                    .isColor = false};
 
     // pre-allocate space for initial glyphs
     m_vInitialGlyphs.reserve(characters.size());
@@ -512,11 +527,13 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
 
         if(m_bAtlasNeedsReload) {
             size_t currentVertex = 0;
+            buffer.hasColorGlyphs = false;
+            buffer.getEmojiVerts().clear();
+            buffer.getEmojiTexcoords().clear();
 
             float advanceX = 0.0f;
             for(const GLYPH_METRICS *gm : metrics) {
-                currentVertex =
-                    buildGlyphGeometry(buffer.getVerts(), buffer.getTexcoords(), *gm, advanceX, currentVertex);
+                currentVertex = buildGlyphGeometry(buffer, *gm, advanceX, currentVertex);
                 advanceX += gm->advance_x;
             }
 
@@ -531,7 +548,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
 
         buffer.resize(totalVerts, maxGlyphs);
 
-        buildStringGeometry(buffer.string, buffer.getVerts(), buffer.getTexcoords(), maxGlyphs, buffer.getMetrics());
+        buildStringGeometry(buffer, maxGlyphs);
     }
 
     m_vao->reserve(buffer.getVerts().size());
@@ -556,7 +573,24 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
 
     g->drawVAO(m_vao.get());
 
-    if(cv::r_debug_drawstring_unbind.getBool()) m_textureAtlas->getAtlasImage()->unbind();
+    // redraw emoji glyphs with their original colors
+    if(buffer.hasColorGlyphs && !buffer.getEmojiVerts().empty()) {
+        const Color savedColor = g->getColor();
+
+        m_vao->clear();
+        m_vao->reserve(buffer.getEmojiVerts().size());
+        m_vao->setVertices(buffer.getEmojiVerts());
+        m_vao->setTexcoords(buffer.getEmojiTexcoords());
+
+        g->setColor((Color)-1);  // don't tint emojis
+        g->drawVAO(m_vao.get());
+
+        g->setColor(savedColor);
+    }
+
+    if(cv::r_debug_drawstring_unbind.getBool()) {
+        m_textureAtlas->getAtlasImage()->unbind();
+    }
 
     if(!useCache) {
         buffer.clear();
@@ -670,14 +704,16 @@ const McFontImpl::GLYPH_METRICS &McFontImpl::getGlyphMetrics(char32_t ch) const 
 
     // either no metrics, or metrics exist but glyph was evicted from atlas
     if(m_bTryFindFallbacks) {
-        auto &metrics = const_cast<McFontImpl *>(this)->m_mGlyphMetrics;
-        if(const_cast<McFontImpl *>(this)->loadGlyphDynamic(ch, existingFace)) {
+        // we want to pretend to be const but silently load glyphs we don't have
+        // NOLINTNEXTLINE
+        auto *dynamic_this = const_cast<McFontImpl *>(this);
+        auto &metrics = dynamic_this->m_mGlyphMetrics;
+        if(dynamic_this->loadGlyphDynamic(ch, existingFace)) {
             return *metrics[ch];
         } else {
             // fallback to unknown character glyph
             if(const auto &it = m_mGlyphMetrics.find(UNKNOWN_CHAR); it != m_mGlyphMetrics.end()) {
                 // update metrics to just always point to UNKNOWN_CHAR
-
                 return *(metrics[ch] = std::make_unique<GLYPH_METRICS>(*it->second));
             }
         }
@@ -880,36 +916,94 @@ bool McFontImpl::loadGlyphMetrics(char32_t ch) {
     return true;
 }
 
-std::unique_ptr<u8[]> McFontImpl::createExpandedBitmapData(const FT_Bitmap &bitmap) {
-    auto expandedData = std::make_unique_for_overwrite<u8[]>(static_cast<size_t>(bitmap.width) * bitmap.rows * 4);
-
-    std::unique_ptr<Channel[]> monoBitmapUnpacked{nullptr};
-    if(!m_bAntialiasing) monoBitmapUnpacked = unpackMonoBitmap(bitmap);
-
-    for(u32 j = 0; j < bitmap.rows; j++) {
-        for(u32 k = 0; k < bitmap.width; k++) {
-            const size_t srcIdx = k + static_cast<size_t>(bitmap.width) * j;
-            const size_t dstIdx = srcIdx * 4;
-
-            Channel alpha = m_bAntialiasing ? bitmap.buffer[srcIdx] : monoBitmapUnpacked[srcIdx] > 0 ? 255 : 0;
-            expandedData[dstIdx + 0] = 255;    // R
-            expandedData[dstIdx + 1] = 255;    // G
-            expandedData[dstIdx + 2] = 255;    // B
-            expandedData[dstIdx + 3] = alpha;  // A
-        }
-    }
-
-    return expandedData;
-}
-
 void McFontImpl::renderBitmapToAtlas(char32_t ch, int x, int y, const FT_Bitmap &bitmap, bool isDynamicSlot) {
     if(bitmap.width == 0 || bitmap.rows == 0) return;
 
     const int atlasWidth = m_textureAtlas->getWidth();
     const int atlasHeight = m_textureAtlas->getHeight();
+    const sSz srcW = static_cast<sSz>(bitmap.width);
+    const sSz srcH = static_cast<sSz>(bitmap.rows);
 
-    int renderWidth = std::min(static_cast<int>(bitmap.width), atlasWidth - x);
-    int renderHeight = std::min(static_cast<int>(bitmap.rows), atlasHeight - y);
+    // determine target size for color bitmaps (may need downscaling)
+    sSz outW = srcW, outH = srcH;
+    const auto &metricsPtr = m_mGlyphMetrics[ch];
+    const bool needsDownscale = metricsPtr && metricsPtr->isColor && static_cast<sSz>(metricsPtr->sizePixelsX) < srcW &&
+                                static_cast<sSz>(metricsPtr->sizePixelsY) < srcH && metricsPtr->sizePixelsX > 0 &&
+                                metricsPtr->sizePixelsY > 0;
+    if(needsDownscale) {
+        outW = static_cast<sSz>(metricsPtr->sizePixelsX);
+        outH = static_cast<sSz>(metricsPtr->sizePixelsY);
+    }
+
+    // convert bitmap to RGBA, maybe downscaling if we need to (the font has only fixed sizes)
+    auto expandedData = std::make_unique_for_overwrite<u8[]>(static_cast<size_t>(outW) * outH * 4);
+
+    if(bitmap.pixel_mode == FT_PIXEL_MODE_BGRA && needsDownscale) {
+        //  BGRA->RGBA + area-averaging downscale
+        const float scaleX = static_cast<float>(srcW) / static_cast<float>(outW);
+        const float scaleY = static_cast<float>(srcH) / static_cast<float>(outH);
+        for(sSz dy = 0; dy < outH; dy++) {
+            const float sy0 = static_cast<float>(dy) * scaleY;
+            const float sy1 = std::min(static_cast<float>(dy + 1) * scaleY, static_cast<float>(srcH));
+            for(sSz dx = 0; dx < outW; dx++) {
+                const float sx0 = static_cast<float>(dx) * scaleX;
+                const float sx1 = std::min(static_cast<float>(dx + 1) * scaleX, static_cast<float>(srcW));
+
+                float rAcc = 0, gAcc = 0, bAcc = 0, aAcc = 0, area = 0;
+                for(sSz sy = static_cast<sSz>(sy0); sy < static_cast<sSz>(sy1 + 0.999f) && sy < srcH; sy++) {
+                    float wy = std::min(static_cast<float>(sy + 1), sy1) - std::max(static_cast<float>(sy), sy0);
+                    for(sSz sx = static_cast<sSz>(sx0); sx < static_cast<sSz>(sx1 + 0.999f) && sx < srcW; sx++) {
+                        float wx = std::min(static_cast<float>(sx + 1), sx1) - std::max(static_cast<float>(sx), sx0);
+                        float w = wx * wy;
+                        const u8 *p = bitmap.buffer + sy * bitmap.pitch + sx * 4;
+                        rAcc += static_cast<float>(p[2]) * w;  // B->R
+                        gAcc += static_cast<float>(p[1]) * w;
+                        bAcc += static_cast<float>(p[0]) * w;  // R->B
+                        aAcc += static_cast<float>(p[3]) * w;
+                        area += w;
+                    }
+                }
+                const size_t di = (static_cast<size_t>(dy) * outW + dx) * 4;
+                const float inv = area > 0 ? 1.0f / area : 0;
+                expandedData[di + 0] = static_cast<u8>(std::min(rAcc * inv, 255.0f));
+                expandedData[di + 1] = static_cast<u8>(std::min(gAcc * inv, 255.0f));
+                expandedData[di + 2] = static_cast<u8>(std::min(bAcc * inv, 255.0f));
+                expandedData[di + 3] = static_cast<u8>(std::min(aAcc * inv, 255.0f));
+            }
+        }
+    } else if(bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
+        // BGRA->RGBA, no downscale
+        for(sSz j = 0; j < srcH; j++) {
+            const u8 *srcRow = bitmap.buffer + j * bitmap.pitch;
+            u8 *dstRow = expandedData.get() + j * srcW * 4;
+            for(sSz k = 0; k < srcW; k++) {
+                dstRow[k * 4 + 0] = srcRow[k * 4 + 2];  // R <- B
+                dstRow[k * 4 + 1] = srcRow[k * 4 + 1];  // G
+                dstRow[k * 4 + 2] = srcRow[k * 4 + 0];  // B <- R
+                dstRow[k * 4 + 3] = srcRow[k * 4 + 3];  // A
+            }
+        }
+    } else {
+        // grayscale or mono bitmap: white + alpha
+        std::unique_ptr<Channel[]> monoBitmapUnpacked{nullptr};
+        if(!m_bAntialiasing) monoBitmapUnpacked = unpackMonoBitmap(bitmap);
+
+        for(u32 j = 0; j < bitmap.rows; j++) {
+            for(u32 k = 0; k < bitmap.width; k++) {
+                const size_t srcIdx = k + static_cast<size_t>(bitmap.width) * j;
+                const size_t dstIdx = srcIdx * 4;
+
+                Channel alpha = m_bAntialiasing ? bitmap.buffer[srcIdx] : monoBitmapUnpacked[srcIdx] > 0 ? 255 : 0;
+                expandedData[dstIdx + 0] = 255;    // R
+                expandedData[dstIdx + 1] = 255;    // G
+                expandedData[dstIdx + 2] = 255;    // B
+                expandedData[dstIdx + 3] = alpha;  // A
+            }
+        }
+    }
+
+    int renderWidth = std::min(static_cast<int>(outW), atlasWidth - x);
+    int renderHeight = std::min(static_cast<int>(outH), atlasHeight - y);
 
     if(isDynamicSlot) {
         const int maxSlotContent = getDynSlotSize() - TextureAtlas::ATLAS_PADDING;
@@ -917,19 +1011,17 @@ void McFontImpl::renderBitmapToAtlas(char32_t ch, int x, int y, const FT_Bitmap 
         renderHeight = std::min(renderHeight, maxSlotContent);
     }
 
-    auto expandedData = createExpandedBitmapData(bitmap);
-
     // if clipping is needed, create clipped data
-    if(std::cmp_less(renderWidth, bitmap.width) || std::cmp_less(renderHeight, bitmap.rows)) {
+    if(renderWidth < outW || renderHeight < outH) {
         auto clippedData = std::make_unique_for_overwrite<u8[]>(static_cast<size_t>(renderWidth) * renderHeight * 4);
-        const sSz srcStride = static_cast<sSz>(bitmap.width) * 4;
-        const sSz dstStride = static_cast<sSz>(renderWidth) * 4;
+        const sSz outStride = outW * 4;
+        const sSz clipStride = static_cast<sSz>(renderWidth) * 4;
         for(i32 row = 0; row < renderHeight; row++) {
-            std::memcpy(&clippedData[row * dstStride], &expandedData[row * srcStride], dstStride);
+            std::memcpy(&clippedData[row * clipStride], &expandedData[row * outStride], clipStride);
         }
         m_textureAtlas->putAt(x, y, renderWidth, renderHeight, clippedData.get());
     } else {
-        m_textureAtlas->putAt(x, y, bitmap.width, bitmap.rows, expandedData.get());
+        m_textureAtlas->putAt(x, y, static_cast<int>(outW), static_cast<int>(outH), expandedData.get());
     }
 
     // clear 1-pixel border on right and bottom edges for texture filtering.
@@ -1000,8 +1092,8 @@ bool McFontImpl::initializeAtlas() {
     const size_t staticAtlasSize =
         TextureAtlas::calculateOptimalSize(packRects, ATLAS_OCCUPANCY_TARGET, MIN_ATLAS_SIZE, MAX_ATLAS_SIZE);
 
-    const size_t totalAtlasSize = static_cast<size_t>(staticAtlasSize * ATLAS_SIZE_MULTIPLIER);
-    const size_t finalAtlasSize = std::min(totalAtlasSize, static_cast<size_t>(MAX_ATLAS_SIZE));
+    const size_t totalAtlasSize = staticAtlasSize * ATLAS_SIZE_MULTIPLIER;
+    const size_t finalAtlasSize = std::min(totalAtlasSize, MAX_ATLAS_SIZE);
 
     resourceManager->requestNextLoadUnmanaged();
     m_textureAtlas.reset(resourceManager->createTextureAtlas(static_cast<int>(finalAtlasSize),
@@ -1057,6 +1149,17 @@ FT_Face McFontImpl::getFontFaceForGlyph(char32_t ch) {
     if(glyphIndex != 0) return m_ftFace;
     if(!m_bTryFindFallbacks) return nullptr;
 
+    // for likely emoji codepoints, prefer the color emoji face over other fallbacks
+    if(s_sharedEmojiFace) {
+        const bool isLikelyEmoji = ch >= 0x1F000 || (ch >= 0x2600 && ch <= 0x27BF) || (ch >= 0x2300 && ch <= 0x23FF) ||
+                                   (ch >= 0xFE00 && ch <= 0xFE0F) || (ch >= 0x200D && ch <= 0x200D) ||
+                                   (ch >= 0x20E3 && ch <= 0x20E3);
+        if(isLikelyEmoji) {
+            glyphIndex = FT_Get_Char_Index(s_sharedEmojiFace, ch);
+            if(glyphIndex != 0) return s_sharedEmojiFace;
+        }
+    }
+
     // search through shared fallback fonts
     FT_Face foundFace = nullptr;
     {
@@ -1084,8 +1187,10 @@ FT_Face McFontImpl::getFontFaceForGlyph(char32_t ch) {
 }
 
 FT_BitmapGlyph McFontImpl::loadBitmapGlyph(char32_t ch, FT_Face face, bool storeMetrics) {
-    if(FT_Load_Glyph(face, FT_Get_Char_Index(face, ch),
-                     m_bAntialiasing ? FT_LOAD_TARGET_NORMAL : FT_LOAD_TARGET_MONO)) {
+    const bool isColorFace = FT_HAS_COLOR(face);
+    FT_Int32 loadFlags = isColorFace ? FT_LOAD_COLOR : (m_bAntialiasing ? FT_LOAD_TARGET_NORMAL : FT_LOAD_TARGET_MONO);
+
+    if(FT_Load_Glyph(face, FT_Get_Char_Index(face, ch), loadFlags)) {
         debugLog("Font Error: Failed to load glyph for character U+{:04X}", (unsigned int)ch);
         return nullptr;
     }
@@ -1096,7 +1201,11 @@ FT_BitmapGlyph McFontImpl::loadBitmapGlyph(char32_t ch, FT_Face face, bool store
         return nullptr;
     }
 
-    FT_Glyph_To_Bitmap(&glyph, m_bAntialiasing ? FT_RENDER_MODE_NORMAL : FT_RENDER_MODE_MONO, nullptr, 1);
+    if(!isColorFace) {
+        FT_Glyph_To_Bitmap(&glyph, m_bAntialiasing ? FT_RENDER_MODE_NORMAL : FT_RENDER_MODE_MONO, nullptr, 1);
+    } else if(glyph->format != FT_GLYPH_FORMAT_BITMAP) {
+        FT_Glyph_To_Bitmap(&glyph, FT_RENDER_MODE_NORMAL, nullptr, 1);
+    }
 
     auto bitmapGlyph = reinterpret_cast<FT_BitmapGlyph>(glyph);
 
@@ -1106,26 +1215,49 @@ FT_BitmapGlyph McFontImpl::loadBitmapGlyph(char32_t ch, FT_Face face, bool store
         metricsPtr = std::make_unique<GLYPH_METRICS>();
         auto &metrics = *metricsPtr;
 
-        metrics.left = bitmapGlyph->left;
-        metrics.top = bitmapGlyph->top;
-        metrics.width = bitmapGlyph->bitmap.width;
-        metrics.rows = bitmapGlyph->bitmap.rows;
-        metrics.advance_x = static_cast<float>(face->glyph->advance.x >> 6);
+        metrics.isColor = isColorFace;
+
+        if(isColorFace && FT_HAS_FIXED_SIZES(face) && face->available_sizes) {
+            // scale metrics from native bitmap size to target pixel size
+            const int nativeHeight = face->available_sizes[0].height;
+            const int targetPx = (m_iFontSize * m_iFontDPI + 36) / 72;
+            const float scale = static_cast<float>(targetPx) / static_cast<float>(nativeHeight);
+
+            metrics.left = static_cast<int>(static_cast<float>(bitmapGlyph->left) * scale);
+            metrics.top = static_cast<int>(static_cast<float>(bitmapGlyph->top) * scale);
+            metrics.width = static_cast<int>(static_cast<float>(bitmapGlyph->bitmap.width) * scale);
+            metrics.rows = static_cast<int>(static_cast<float>(bitmapGlyph->bitmap.rows) * scale);
+            metrics.advance_x = static_cast<float>(face->glyph->advance.x >> 6) * scale;
+            // sizePixels stores the scaled (display) size for atlas UV calculations
+            metrics.sizePixelsX =
+                std::max(1u, static_cast<unsigned int>(static_cast<float>(bitmapGlyph->bitmap.width) * scale));
+            metrics.sizePixelsY =
+                std::max(1u, static_cast<unsigned int>(static_cast<float>(bitmapGlyph->bitmap.rows) * scale));
+        } else {
+            metrics.left = bitmapGlyph->left;
+            metrics.top = bitmapGlyph->top;
+            metrics.width = static_cast<int>(bitmapGlyph->bitmap.width);
+            metrics.rows = static_cast<int>(bitmapGlyph->bitmap.rows);
+            metrics.advance_x = static_cast<float>(face->glyph->advance.x >> 6);
+            metrics.sizePixelsX = bitmapGlyph->bitmap.width;
+            metrics.sizePixelsY = bitmapGlyph->bitmap.rows;
+        }
 
         // to be updated when rendered to texture atlas
         metrics.inAtlas = false;
         metrics.face = face;
         metrics.uvPixelsX = 0;
         metrics.uvPixelsY = 0;
-        metrics.sizePixelsX = bitmapGlyph->bitmap.width;
-        metrics.sizePixelsY = bitmapGlyph->bitmap.rows;
     }
 
     return bitmapGlyph;
 }
 
-size_t McFontImpl::buildGlyphGeometry(std::span<vec3> vertsOut, std::span<vec2> texcoordsOut, const GLYPH_METRICS &gm,
-                                      float advanceX, size_t startVertex) {
+size_t McFontImpl::buildGlyphGeometry(VerTexMetCacheEntry &buffer, const GLYPH_METRICS &gm, float advanceX,
+                                      size_t startVertex) {
+    auto &vertsOut = buffer.getVerts();
+    auto &texcoordsOut = buffer.getTexcoords();
+
     const float atlasWidth{static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth())};
     const float atlasHeight{static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight())};
 
@@ -1182,28 +1314,42 @@ size_t McFontImpl::buildGlyphGeometry(std::span<vec3> vertsOut, std::span<vec2> 
         texcoordsOut[startVertex + 2] = texTopRight;
         texcoordsOut[startVertex + 3] = texBottomRight;
     }
-    return startVertex + VERTS_PER_VAO;
+
+    const size_t endVertex = startVertex + VERTS_PER_VAO;
+
+    // append to emoji overlay buffer if this is a color glyph
+    if(gm.isColor) {
+        buffer.hasColorGlyphs = true;
+        for(size_t v = startVertex; v < endVertex; v++) {
+            buffer.getEmojiVerts().push_back(vertsOut[v]);
+            buffer.getEmojiTexcoords().push_back(texcoordsOut[v]);
+        }
+    }
+
+    return endVertex;
 }
 
-void McFontImpl::buildStringGeometry(std::string_view text, std::span<vec3> vertsOut, std::span<vec2> texcoordsOut,
-                                     size_t maxGlyphs, std::span<const GLYPH_METRICS *> gmOut) {
+void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs) {
     float advanceX = 0.0f;
     size_t startVertex = 0;
+    buffer.hasColorGlyphs = false;
+    buffer.getEmojiVerts().clear();
+    buffer.getEmojiTexcoords().clear();
 
-    for(int i = -1; char32_t ch : UniString::codepoints(text)) {
+    for(int i = -1; char32_t ch : UniString::codepoints(buffer.string)) {
         ++i;
         if(i >= maxGlyphs) break;
 
         const GLYPH_METRICS &gm = getGlyphMetrics(ch);
 
-        startVertex = buildGlyphGeometry(vertsOut, texcoordsOut, gm, advanceX, startVertex);
+        startVertex = buildGlyphGeometry(buffer, gm, advanceX, startVertex);
         advanceX += gm.advance_x;
 
         // mark dynamic slot as recently used (if this character is in a dynamic slot)
         markSlotUsed(ch);
 
         // add glyph metrics to out parameter
-        gmOut[i] = &gm;
+        buffer.getMetrics()[i] = &gm;
     }
 
     // reload atlas if new glyphs were added to dynamic slots
@@ -1211,8 +1357,6 @@ void McFontImpl::buildStringGeometry(std::string_view text, std::span<vec3> vert
         m_textureAtlas->reloadAtlasImage();
         m_bAtlasNeedsReload = false;
     }
-
-    return;
 }
 
 std::unique_ptr<Channel[]> McFontImpl::unpackMonoBitmap(const FT_Bitmap &bitmap) {
@@ -1240,8 +1384,13 @@ void McFontImpl::setFaceSize(FT_Face face) {
     if(s_lastSizedFace.face != face || s_lastSizedFace.size != m_iFontSize || s_lastSizedFace.dpi != m_iFontDPI) {
         s_lastSizedFace = {.face = face, .size = m_iFontSize, .dpi = m_iFontDPI};
 
-        FT_Set_Char_Size(face, (FT_F26Dot6)(m_iFontSize * 64L), (FT_F26Dot6)(m_iFontSize * 64L), m_iFontDPI,
-                         m_iFontDPI);
+        if(FT_HAS_FIXED_SIZES(face) && !FT_IS_SCALABLE(face)) {
+            // bitmap-only font (e.g. CBDT emoji): select nearest available strike
+            FT_Select_Size(face, 0);
+        } else {
+            FT_Set_Char_Size(face, (FT_F26Dot6)(m_iFontSize * 64L), (FT_F26Dot6)(m_iFontSize * 64L), m_iFontDPI,
+                             m_iFontDPI);
+        }
     }
 }
 
@@ -1267,6 +1416,12 @@ bool loadFallbackFont(const UString &fontPath, bool isSystemFont) {
 
     // don't set font size here, will be set when the face is used by individual font instances
     s_sharedFallbackFonts.push_back(FallbackFont{fontPath, face, isSystemFont});
+
+    // track the first color (emoji) face for prioritized lookup
+    if(!s_sharedEmojiFace && FT_HAS_COLOR(face)) {
+        s_sharedEmojiFace = face;
+    }
+
     return true;
 }
 
@@ -1367,6 +1522,7 @@ void McFont::cleanupSharedResources() {
         if(fallbackFont.face) FT_Done_Face(fallbackFont.face);
     }
     s_sharedFallbackFonts.clear();
+    s_sharedEmojiFace = nullptr;  // owned by s_sharedFallbackFonts, already freed above
     s_sharedFallbacksInitialized = false;
 
     // clean up shared freetype library
@@ -1384,29 +1540,21 @@ void McFont::drawTextureAtlas() const {
     g->setColor((Color)-1);
     g->pushTransform();
     {
-        const vec2 actualScreenPos = mouse->getOffset();
-        const vec2 actualScreenSize = engine->getScreenSize() * mouse->getScale();  // "hack"...
-
-        const auto &ta = pImpl->m_textureAtlas;
-        const i32 offscreenPixels = ta->getHeight() - (actualScreenSize.y * 0.75);
-        const f32 textYRatio = (f32)(actualScreenSize.y * 0.75) / (f32)ta->getHeight();
-
-        const i32 yOffset =
-            textYRatio >= 1 ? 0
-                            : -(i32)((f32)(offscreenPixels) * (mouse->getPos().y / (f32)(actualScreenSize.y * 0.75)));
-        const f32 fitWidth = (actualScreenSize.x * 0.75) / ta->getWidth();
-
-        g->scale(fitWidth, fitWidth);
-        const vec2 centerTrans{(actualScreenPos.x + ta->getWidth()) / 2.f,
-                               (actualScreenPos.y + ta->getHeight() / 2.f) + yOffset};
+        const auto *img = pImpl->m_textureAtlas->getAtlasImage();
+        const auto engineSize = engine->getScreenSize();
+        const f32 fitScale = (f32)img->getWidth() > engineSize.x    ? engineSize.x / (f32)img->getWidth()
+                             : (f32)img->getHeight() > engineSize.y ? engineSize.y / (f32)img->getHeight()
+                                                                    : 1.f;
+        if(fitScale != 1.f) {
+            g->scale(fitScale, fitScale);
+        }
+        vec2 centerTrans{((f32)img->getWidth() / 2.f), (f32)img->getHeight() / 2.f};
+        centerTrans.x += ((engineSize.x / 2.f) - centerTrans.x);
         g->translate(centerTrans);
-
-        // draw image
-        g->drawImage(ta->getAtlasImage());
-
+        g->drawImage(img);
         // draw bounds
         g->setColor(rgb(255, 50, 50));
-        g->drawRect(-ta->getWidth() / 2, -ta->getHeight() / 2, ta->getWidth(), ta->getHeight());
+        g->drawRect(McRect{{}, vec2{img->getSize()}, true});
     }
     g->popTransform();
 }
@@ -1418,6 +1566,8 @@ void McFont::drawDebug() const {
 }
 
 namespace cv {
+// yes yes... its not great
+// NOLINTNEXTLINE(cppcoreguidelines-interfaces-global-init)
 static ConVar r_debug_draw_font_atlas("r_debug_draw_font_atlas", "",
                                       CLIENT | NOSAVE | (!Env::cfg(BUILD::DEBUG) ? HIDDEN : 0),
                                       [](std::string_view atlases) -> void {

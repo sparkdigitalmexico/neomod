@@ -25,11 +25,7 @@ class OpenGLInterface : public Graphics {
 
     // color
     void setColor(Color color) final;
-    inline void setAlpha(float alpha) final {
-        if(this->color.a == Colors::to_byte(alpha)) return;
-        Color newColor = this->color;
-        this->setColor(newColor.setA(alpha));
-    }
+    void setAlpha(float alpha) final;
 
     // 2d primitive drawing
     void drawPixels(int x, int y, int width, int height, DrawPixelsType type, const void *pixels) final;
@@ -116,7 +112,6 @@ class OpenGLInterface : public Graphics {
 
     // persistent vars
     bool bAntiAliasing{true};
-    Color color{0xffffffff};
     //float fZ{1};
     //float fClearZ{1};
 

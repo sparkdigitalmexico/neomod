@@ -605,8 +605,8 @@ void SDLGPUInterface::clearDepthBuffer() {
 // color
 
 void SDLGPUInterface::setColor(Color color) {
-    if(m_color == color) return;
-    m_color = color;
+    if(m_data->color == color) return;
+    m_data->color = color;
 
     if(m_texturingEnabled) {
         m_defaultShader->setUniform4f("col", color.Rf(), color.Gf(), color.Bf(), color.Af());
@@ -614,11 +614,12 @@ void SDLGPUInterface::setColor(Color color) {
 }
 
 void SDLGPUInterface::setAlpha(float alpha) {
-    if(m_color.a == Colors::to_byte(alpha)) return;
-    m_color.setA(alpha);
+    if(m_data->color.a == Colors::to_byte(alpha)) return;
+    m_data->color.setA(alpha);
 
     if(m_texturingEnabled) {
-        m_defaultShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
+        m_defaultShader->setUniform4f("col", m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(),
+                                      m_data->color.Af());
     }
 }
 
@@ -670,7 +671,8 @@ void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float ed
         m_smoothClipShader->setUniform2f("rect_min", clipMinX, clipMinY);
         m_smoothClipShader->setUniform2f("rect_max", clipMaxX, clipMaxY);
         m_smoothClipShader->setUniform1f("edge_softness", edgeSoftness);
-        m_smoothClipShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
+        m_smoothClipShader->setUniform4f("col", m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(),
+                                         m_data->color.Af());
         m_smoothClipShader->setMVP(m_data->MP);
     }
 
@@ -747,8 +749,9 @@ void SDLGPUInterface::drawVAO(VertexArrayObject *vao) {
     // when non-textured with no per-vertex colors, use m_color directly (col uniform unused).
     static Mc::CDynArray<vec4> colors;
     if(vcolors.empty()) {
-        const vec4 c =
-            hasTexcoords0 ? vec4{1.f, 1.f, 1.f, 1.f} : vec4{m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af()};
+        const vec4 c = hasTexcoords0
+                           ? vec4{1.f, 1.f, 1.f, 1.f}
+                           : vec4{m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(), m_data->color.Af()};
         colors.assign(vertices.size(), c);
     } else {
         const uSz n = std::min(vcolors.size(), vertices.size());
@@ -1524,7 +1527,8 @@ void SDLGPUInterface::setTexturing(bool enabled, bool force) {
     m_texturingEnabled = enabled;
     m_defaultShader->setUniform4f("misc", enabled ? 1.f : 0.f, m_colorInversion ? 1.f : 0.f, 0.f, 0.f);
     if(enabled) {
-        m_defaultShader->setUniform4f("col", m_color.Rf(), m_color.Gf(), m_color.Bf(), m_color.Af());
+        m_defaultShader->setUniform4f("col", m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(),
+                                      m_data->color.Af());
     }
 }
 

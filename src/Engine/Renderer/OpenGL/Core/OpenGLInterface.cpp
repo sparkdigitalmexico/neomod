@@ -114,11 +114,17 @@ void OpenGLInterface::endScene() {
 void OpenGLInterface::clearDepthBuffer() { glClear(GL_DEPTH_BUFFER_BIT); }
 
 void OpenGLInterface::setColor(Color color) {
-    if(color == this->color) return;
+    if(color == m_data->color) return;
 
-    this->color = color;
+    m_data->color = color;
 
-    glColor4ub(this->color.r, this->color.g, this->color.b, this->color.a);
+    glColor4ub(m_data->color.r, m_data->color.g, m_data->color.b, m_data->color.a);
+}
+
+void OpenGLInterface::setAlpha(float alpha) {
+    if(m_data->color.a == Colors::to_byte(alpha)) return;
+    Color newColor = m_data->color;
+    this->setColor(newColor.setA(alpha));
 }
 
 void OpenGLInterface::drawPixels(int x, int y, int width, int height, DrawPixelsType type, const void *pixels) {

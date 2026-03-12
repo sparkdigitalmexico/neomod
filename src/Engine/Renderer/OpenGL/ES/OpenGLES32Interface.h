@@ -136,7 +136,6 @@ class OpenGLES32Interface : public ModernGraphicsShared {
     unsigned int m_iVBOTexcolors;
 
     // persistent vars
-    Color m_color;
     bool m_bAntiAliasing;
     bool m_bInScene;
     bool m_bColorInversion{false};

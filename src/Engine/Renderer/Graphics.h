@@ -100,6 +100,7 @@ class Graphics {
 
     // color
     virtual void setColor(Color color) = 0;
+    [[nodiscard]] Color getColor() const;
     virtual void setAlpha(float alpha) = 0;
 
     // 2d primitive drawing

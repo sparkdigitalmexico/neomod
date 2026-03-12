@@ -26,6 +26,7 @@ struct GraphicsPrivateData {
     vec3 v3dSceneOffset{0.f};
 
     // info
+    Color color{(Color)-1};
     DrawBlendMode currentBlendMode{DrawBlendMode::ALPHA};
     bool bBlendingEnabled{true};
     bool bTransformUpToDate{false};

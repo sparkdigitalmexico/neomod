@@ -37,6 +37,7 @@ Changelog::Changelog() : ScreenBackable() {
     CHANGELOG v43_07;
     v43_07.title = "43.07 (" CHANGELOG_TIMESTAMP ")";
     v43_07.changes = {
+        R"(- Added emoji support)",
         R"(- Fixed issues with "Freeze Frame" mod rendering)",
     };
     changelogs.push_back(v43_07);

@@ -433,18 +433,18 @@ void DirectX11Interface::clearDepthBuffer() {
 }
 
 void DirectX11Interface::setColor(Color color) {
-    if(this->color == color) return;
+    if(m_data->color == color) return;
 
-    this->color = color;
+    m_data->color = color;
     if(this->bTexturingEnabled) {
-        this->shaderTexturedGeneric->setUniform4f("col", this->color.Af(), this->color.Rf(), this->color.Gf(),
-                                                  this->color.Bf());
+        this->shaderTexturedGeneric->setUniform4f("col", m_data->color.Af(), m_data->color.Rf(), m_data->color.Gf(),
+                                                  m_data->color.Bf());
     }
 }
 
 void DirectX11Interface::setAlpha(float alpha) {
-    if(this->color.a == Colors::to_byte(alpha)) return;
-    Color newColor = this->color;
+    if(m_data->color.a == Colors::to_byte(alpha)) return;
+    Color newColor = m_data->color;
     newColor.setA(alpha);
 
     this->setColor(newColor);
@@ -460,7 +460,7 @@ void DirectX11Interface::drawPixel(int x, int y) {
 
     this->vertices.push_back(SimpleVertex{
         .pos = {static_cast<float>(x), static_cast<float>(y), 0.f},
-        .col = {this->color.Rf(), this->color.Gf(), this->color.Bf(), this->color.Af()},
+        .col = {m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(), m_data->color.Af()},
         .tex = {0.0f, 0.0f},
     });
 
@@ -693,7 +693,7 @@ void DirectX11Interface::drawVAO(VertexArrayObject *vao) {
         const size_t maxColorIndex = (hasColors ? finalColors.size() - 1 : 0);
         const size_t maxTexcoords0Index = (hasTexcoords0 ? finalTexcoords.size() - 1 : 0);
 
-        const vec4 color = vec4(this->color.Rf(), this->color.Gf(), this->color.Bf(), this->color.Af());
+        const vec4 color = vec4(m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(), m_data->color.Af());
 
         for(size_t i = 0; i < finalVertices.size(); i++) {
             this->vertices[i].pos = finalVertices[i];

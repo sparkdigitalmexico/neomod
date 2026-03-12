@@ -354,7 +354,6 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     // state
     Viewport m_viewport{.pos = {0.f, 0.f}, .size = {1.f, 1.f}};
 
-    Color m_color{(Color)-1};
     int m_maxFrameLatency{1};
     bool m_texturingEnabled{false};
     bool m_colorInversion{false};
