@@ -1844,18 +1844,11 @@ endif # WASM_PLATFORM
 CLEANFILES += $(INSTALL_STAMPS) .install-state
 
 # install hooks
-# copy pdb (windows) / make compat symlinks (linux) (always run)
+# copy pdb (windows)
 install-exec-hook: install-libs
-if LINUX_PLATFORM
-	@cd "$(DESTDIR)$(bindir)" && \
-	$(LN_S) -rf $(PROGRAMS) McEngine && \
-	$(LN_S) -rf $(PROGRAMS) McOsu && \
-	$(LN_S) -rf $(PROGRAMS) neosu
-else
 if WIN_PLATFORM
 	@cp -P neomod.pdb "$(DESTDIR)$(bindir)" &>/dev/null || true # don't fail install if we had no pdb
-endif # WIN_PLATFORM
-endif # LINUX_PLATFORM
+endif
 
 uninstall-local:
 	rm -rf "$(DESTDIR)$(bindir)/"
