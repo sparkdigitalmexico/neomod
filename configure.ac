@@ -232,6 +232,9 @@ AC_ARG_WITH([renderer],
 AC_ARG_WITH([audio],
     AS_HELP_STRING([--with-audio={bass,soloud}], [The (comma separated list of) audio backend(s) to build with (default: soloud)]))
 
+AC_ARG_WITH([ffmpeg],
+    AS_HELP_STRING([--with-ffmpeg], [Build ffmpeg shared libraries (default: yes)]))
+
 AC_ARG_WITH([mimalloc],
     AS_HELP_STRING([--with-mimalloc], [Use mimalloc instead of the default memory allocator (faster) (default: on if not debug and not winx86)]))
 
@@ -461,6 +464,14 @@ AS_IF([test "$with_bass" = "yes"], [
 
 AC_SUBST([AUDBACKENDLIST])
 
+AS_IF([test "x$with_ffmpeg" != "xno" && test "$with_soloud" != "xno" && test -z "$WASM_CC"], [
+    with_ffmpeg=yes
+    AC_DEFINE([MCENGINE_FEATURE_FFMPEG], [1], [Define if ffmpeg library is available.])
+], [
+    with_ffmpeg=no
+])
+AC_SUBST([with_ffmpeg])
+
 AS_IF([test "x$enable_asan" = "xyes" || test "x$enable_tsan" = "xyes"], [
     sanitizer_string=
     AS_IF([test "x$enable_asan" = "xyes"], [
@@ -661,6 +672,7 @@ __EOF__
     AC_DEFINE([MCENGINE_PLATFORM_LINUX], [1], [Define if compiling for Linux.])
 ],[
     AC_CHECK_TOOL([WINDRES], [windres], [windres])
+    AC_CHECK_TOOL([DLLTOOL], [dlltool], [dlltool]) # needed for ffmpeg build
 
     CMAKE_SYSTEM_NAME="Windows"
     CMAKERCOPT="-DCMAKE_RC_COMPILER=$WINDRES"
@@ -675,8 +687,8 @@ __EOF__
         # xp
         win_subsystem_ver="5.01"
         CPPFLAGS="$CPPFLAGS -DWINVER=0x0501 -D_WIN32_WINNT=0x0501 -D_WIN32_WINDOWS=0x0501 -D_WIN32_IE=0x0501"
-        CFLAGS="$CFLAGS -m32 -fno-omit-frame-pointer -momit-leaf-frame-pointer -DWINVER=0x0501 -D_WIN32_WINNT=0x0501 -D_WIN32_WINDOWS=0x0501 -D_WIN32_IE=0x0501 -mfpmath=sse"
-        CXXFLAGS="$CXXFLAGS -m32 -fno-omit-frame-pointer -momit-leaf-frame-pointer -DWINVER=0x0501 -D_WIN32_WINNT=0x0501 -D_WIN32_WINDOWS=0x0501 -D_WIN32_IE=0x0501 -mfpmath=sse"
+        CFLAGS="$CFLAGS -m32 -fno-omit-frame-pointer -momit-leaf-frame-pointer -DWINVER=0x0501 -D_WIN32_WINNT=0x0501 -D_WIN32_WINDOWS=0x0501 -D_WIN32_IE=0x0501 -msse -mfpmath=sse"
+        CXXFLAGS="$CXXFLAGS -m32 -fno-omit-frame-pointer -momit-leaf-frame-pointer -DWINVER=0x0501 -D_WIN32_WINNT=0x0501 -D_WIN32_WINDOWS=0x0501 -D_WIN32_IE=0x0501 -msse -mfpmath=sse"
         AC_SUBST([NASMOBJ],[win32])
     ], [
         # win10
@@ -1021,6 +1033,10 @@ AS_IF([test "x$enable_debug" = "xyes"], [
             NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -mwindows -Wl,--subsystem,windows:${win_subsystem_ver}"
         ])
     ])
+])
+
+AS_IF([test "x$enable_strip" != "xno"], [
+    AC_SUBST([ffmpeg_strip], [1]) # kludge for ffmpeg build
 ])
 
 AS_IF([test "x$enable_omp" = "xyes"], [
@@ -1548,6 +1564,7 @@ AM_CONDITIONAL([BUILD_MIMALLOC], [{ test "x$enable_debug" != "xyes" || test "x$w
 
 AM_CONDITIONAL([USE_BASS], [test "$with_bass" = "yes"])
 AM_CONDITIONAL([USE_SOLOUD], [test "$with_soloud" = "yes"])
+AM_CONDITIONAL([USE_FFMPEG], [test "$with_ffmpeg" = "yes"])
 AM_CONDITIONAL([USE_GL], [test "$use_opengl" = "yes" || test "$use_opengles32" = "yes"])
 AM_CONDITIONAL([USE_OPENGL], [test "$use_opengl" = "yes"])
 AM_CONDITIONAL([USE_OPENGLES], [test "$use_opengles32" = "yes"])

@@ -134,6 +134,16 @@ $(DEPS_CACHE)/SoundTouch-$(SOUNDTOUCH_VERSION).tar.gz:
 	$(MKDIR_P) $(DEPS_CACHE)
 	$(CURLCOMMAND) "https://codeberg.org/soundtouch/soundtouch/archive/$(SOUNDTOUCH_VERSION).tar.gz" || { rm -f $@; exit 1; }
 
+# --with-ffmpeg
+# newer releases are broken for windows xp
+FFMPEG_VERSION_REAL := $(if $(ubercompat),2456a39581c3388bcf6f61c66aef36a887537c23,$(FFMPEG_VERSION))
+FFMPEG_URL := $(if $(ubercompat),https://github.com/FFmpeg/FFmpeg/archive/$(FFMPEG_VERSION_REAL).tar.gz,https://ffmpeg.org/releases/ffmpeg-$(FFMPEG_VERSION_REAL).tar.xz)
+FFMPEG_TARBALL := $(if $(ubercompat),ffmpeg-$(FFMPEG_VERSION_REAL).tar.gz,ffmpeg-$(FFMPEG_VERSION_REAL).tar.xz)
+
+$(DEPS_CACHE)/$(FFMPEG_TARBALL):
+	$(MKDIR_P) $(DEPS_CACHE)
+	$(CURLCOMMAND) $(FFMPEG_URL) || { rm -f $@; exit 1; }
+
 # used for compiling HLSL shaders for SDL_gpu on mingw builds
 # hardcoded version here for now, i don't think it matters
 $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.tar.gz:
@@ -170,60 +180,6 @@ endif
 endif
 
 ## BINARY (pre-built) dependencies (conditional depending on build configuration)
-
-# --with-audio=soloud (misc. codec decoding, anything not flac/wav/mp3/ogg)
-#  the build will work without these (they are dlopen/LoadLibrary'd), but it's a nice-to-have
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-linuxx86_64.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	$(CURLCOMMAND) "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-11-30-12-53/ffmpeg-n$(FFMPEG_VERSION).1-17-g27a297f186-linux64-lgpl-shared-$(FFMPEG_VERSION).tar.xz" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-linuxaarch64.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	$(CURLCOMMAND) "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-11-30-12-53/ffmpeg-n$(FFMPEG_VERSION).1-17-g27a297f186-linuxarm64-lgpl-shared-$(FFMPEG_VERSION).tar.xz" || { rm -f $@; exit 1; }
-
-# NOTE: the yt-dlp repo is no longer building releases, so this is the closest thing
-#   (it's hard to find windows 32-bit builds of new ffmpeg releases)
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-windowsi686.zip:
-	$(MKDIR_P) $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	$(CURLCOMMAND) "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/autobuild-2025-11-30-14-12/ffmpeg-N-121938-g2456a39581-win32-gpl-shared.zip" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-windowsx86_64.zip:
-	$(MKDIR_P) $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	$(CURLCOMMAND) "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-11-30-12-53/ffmpeg-n$(FFMPEG_VERSION).1-17-g27a297f186-win64-lgpl-shared-$(FFMPEG_VERSION).zip" || { rm -f $@; exit 1; }
-
-# architecture-specific extraction targets
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)-linuxx86_64.source: $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-linuxx86_64.tar.xz
-	cd $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	rm -rf linuxx86_64 && \
-	$(MKDIR_P) linuxx86_64 && $(TAR) xf ffmpeg-linuxx86_64.tar.xz -C linuxx86_64 --strip-components=1 --wildcards --no-anchored include/'*'.h lib/'*'.so'*'
-	touch $@
-
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)-linuxaarch64.source: $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-linuxaarch64.tar.xz
-	cd $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	rm -rf linuxaarch64 && \
-	$(MKDIR_P) linuxaarch64 && $(TAR) xf ffmpeg-linuxaarch64.tar.xz -C linuxaarch64 --strip-components=1 --wildcards --no-anchored include/'*'.h lib/'*'.so'*'
-	touch $@
-
-# linux i686 reuses x86_64 headers (no prebuilt libs available)
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)-linuxi686.source: $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)-linuxx86_64.source
-	cd $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	rm -rf linuxi686 && \
-	$(MKDIR_P) linuxi686 && cp -r linuxx86_64/include linuxi686/
-	touch $@
-
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)-windowsi686.source: $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-windowsi686.zip
-	cd $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	rm -rf windowsi686 && \
-	$(MKDIR_P) windowsi686/lib && $(UNZIP) -qjo ffmpeg-windowsi686.zip "*/bin/*.dll" -d windowsi686/lib && \
-	$(MKDIR_P) windowsi686/include && $(UNZIP) -qo ffmpeg-windowsi686.zip "*/include/**" -d windowsi686/include && mv windowsi686/include/*/*/* windowsi686/include/
-	touch $@
-
-$(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)-windowsx86_64.source: $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/ffmpeg-windowsx86_64.zip
-	cd $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION) && \
-	rm -rf windowsx86_64 && \
-	$(MKDIR_P) windowsx86_64/lib && $(UNZIP) -qjo ffmpeg-windowsx86_64.zip "*/bin/*.dll" -d windowsx86_64/lib && \
-	$(MKDIR_P) windowsx86_64/include && $(UNZIP) -qo ffmpeg-windowsx86_64.zip "*/include/**" -d windowsx86_64/include && mv windowsx86_64/include/*/*/* windowsx86_64/include/
-	touch $@
 
 # --with-audio=bass
 # windows zips contain headers needed for all platforms
@@ -635,15 +591,45 @@ if USE_SOLOUD
 AUDIO_CFLAGS += $(shell $(PKG_CONFIG) --cflags soloud) $(shell $(PKG_CONFIG) --cflags soundtouch) $(MPG123_CFLAGS) -DST_NO_EXCEPTION_HANDLING
 AUDIO_LIBS += $(shell $(PKG_CONFIG) --libs soloud) $(shell $(PKG_CONFIG) --libs soundtouch) $(MPG123_LIBS)
 
-if WASM_PLATFORM
-# no FFmpeg for WASM for now (not critical and it's huge bloat)
-FFMPEG_INSTALL_LIBS :=
-FFMPEG_INCDIR :=
-SOLOUD_FFMPEG_DEP :=
-else
-FFMPEG_INSTALL_LIBS := `find $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/$(SYSNAME)$(host_cpu)/lib '(' -name '*avutil*' -o -name '*avcodec*' -o -name '*avformat*' -o -name '*swresample*' ')' -printf '%p '`
-FFMPEG_INCDIR := $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)/$(SYSNAME)$(host_cpu)/include
-SOLOUD_FFMPEG_DEP := $(DEPS_CACHE)/ffmpeg-$(FFMPEG_VERSION)-$(SYSNAME)$(host_cpu).source
+SOLOUD_FFMPEG_DEP =
+
+if USE_FFMPEG
+SOLOUD_FFMPEG_DEP += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built
+
+FFMPEG_INCDIR := $(DEPS_PREFIX)/include
+FFMPEG_LIBDIR := $(DEPS_PREFIX)/lib
+FFMPEG_CONFIGURE_FLAGS := --prefix="$(DEPS_PREFIX)"
+FFMPEG_CONFIGURE_FLAGS += --enable-gpl
+FFMPEG_CONFIGURE_FLAGS += --enable-shared --disable-static --disable-autodetect
+FFMPEG_CONFIGURE_FLAGS += --disable-programs
+FFMPEG_CONFIGURE_FLAGS += --disable-doc
+FFMPEG_CONFIGURE_FLAGS += --disable-avdevice --disable-swscale --disable-avfilter --disable-network --disable-iamf --disable-pixelutils
+FFMPEG_CONFIGURE_FLAGS += --disable-everything
+FFMPEG_CONFIGURE_FLAGS += --enable-decoder=mp3,aac,vorbis,opus,flac,pcm_s16le,pcm_f32le
+FFMPEG_CONFIGURE_FLAGS += --enable-demuxer=mp3,aac,ogg,flac,wav,mov,m4a,matroska
+FFMPEG_CONFIGURE_FLAGS += --enable-parser=aac,flac,mpegaudio,vorbis,opus
+FFMPEG_CONFIGURE_FLAGS += --enable-protocol=file
+FFMPEG_CONFIGURE_FLAGS += --arch=$(host_cpu)
+FFMPEG_CONFIGURE_FLAGS += --target-os=$(if $(findstring mingw,$(host_os)),mingw32,linux)
+FFMPEG_CONFIGURE_FLAGS += --ar=$(AR) --cc=$(CC) --cxx=$(CXX) --ld=$(CXX)
+FFMPEG_CONFIGURE_FLAGS += $(if $(findstring mingw,$(host_os)),--disable-w32threads --enable-pthreads --windres=$(WINDRES),)
+FFMPEG_CONFIGURE_FLAGS += $(if $(ffmpeg_strip),,--disable-stripping)
+FFMPEG_CONFIGURE_FLAGS += $(if $(findstring $(host),$(build)),,--enable-cross-compile)
+FFMPEG_EXTRA_FLAGS := $(if $(findstring mingw,$(host_os)),-fno-lto $(if $(findstring whole-program,$(CXXFLAGS)),-fno-whole-program-vtables,),)
+
+$(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built: $(DEPS_CACHE)/$(FFMPEG_TARBALL) $(DEPS_PREFIX)/winpthread-noversion.built
+	rm -rf $(DEPS_PREFIX)/ffmpeg
+	$(MKDIR_P) $(DEPS_PREFIX)/ffmpeg/build $(DEPS_PREFIX)/lib/pkgconfig
+	$(TAR) xf $(DEPS_CACHE)/$(FFMPEG_TARBALL) -C $(DEPS_PREFIX)/ffmpeg --strip-components=1 && \
+	$(if $(ubercompat),$(SED) -i -e "s|WC_ERR_INVALID_CHARS|0|" $(DEPS_PREFIX)/ffmpeg/libavutil/wchar_filename.h,true) && \
+	$(SED) -i -e 's|dlltool=.*|dlltool=$(DLLTOOL)|' $(DEPS_PREFIX)/ffmpeg/configure && \
+	cd $(DEPS_PREFIX)/ffmpeg/build && \
+	{ CFLAGS="$(CFLAGS) $(FFMPEG_EXTRA_FLAGS)" CXXFLAGS="$(CXXFLAGS) $(FFMPEG_EXTRA_FLAGS)" LDFLAGS="$(LDFLAGS) $(WINPTHREAD_LDFLAGS) $(FFMPEG_EXTRA_FLAGS)" \
+		$(CONFIGURE_PFX) ../configure $(FFMPEG_CONFIGURE_FLAGS) || cat ffbuild/config.log ; } && \
+	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
+	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
+	touch $@
+INSTALL_LIB_DEPS += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built
 endif
 
 $(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built: $(DEPS_CACHE)/SoLoud-$(SOLOUD_VERSION).tar.gz $(SOLOUD_FFMPEG_DEP) $(DEPS_PREFIX)/SDL3-$(SDL3_VERSION).built $(DEPS_PREFIX)/mpg123-$(MPG123_VERSION).built
@@ -1463,7 +1449,7 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/curl-$(CURL_VERSION).built
 
 if !WASM_PLATFORM
-BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION)/certbundle/cacert.pem
+BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION)/certbundle/cacert.pem $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built
 endif
 
 # (this is also disabled in CI by default, because we dont cache the pch there, so there's no point)
@@ -1735,7 +1721,9 @@ endif
 if USE_SOLOUD
 	$(if $(STATICBUILD),,@cp -Pu "$(SOLOUD_PREFIX)/lib"/*$(LIBPREFIX)soloud*$(DLLEXT)* "$(DESTDIR)$(bindir)/$(LIBDEST)")
 	$(if $(STATICBUILD),,@cp -Pu "$(SOUNDTOUCH_PREFIX)/lib"/*$(LIBPREFIX)SoundTouch*$(DLLEXT)* "$(DESTDIR)$(bindir)/$(LIBDEST)")
-	@cp -Pu -t "$(DESTDIR)$(bindir)/" $(FFMPEG_INSTALL_LIBS) || true
+if USE_FFMPEG
+	@find $(DEPS_PREFIX)/lib $(DEPS_PREFIX)/bin '(' -name '*avutil*' -o -name '*avcodec*' -o -name '*avformat*' -o -name '*swresample*' ')' -a '(' -name '*'$(DLLEXT) -o -name '*.so.*' ')' -exec cp -Pu '{}' "$(DESTDIR)$(bindir)/" ';' 2>/dev/null || true
+endif
 if BUILD_MPG123
 	$(if $(STATICBUILD),,@`find $(MPG123_PREFIX) '(' -iname '*mpg*'$(DLLEXT) -o -iname '*mpg*''.so.*' ')' -exec cp -Pu '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
