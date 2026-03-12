@@ -1341,7 +1341,7 @@ bool McFont::initSharedResources() {
             std::string pathNoExt = path.substr(0, path.length() - (ext.length() + 1));
             const auto [_, inserted] = fontsNoExt.insert(pathNoExt);
             if(inserted) {
-                bundledFallbacks.push_back(path);
+                bundledFallbacks.push_back(MCENGINE_FONTS_PATH "/"s + path);
             }
         }
     }
