@@ -438,10 +438,10 @@ void normalizeWideSlashes(std::wstring &str, wchar_t oldSlash, wchar_t newSlash)
 }
 
 forceinline std::wstring adjustPath_(std::string_view filepathNarrow) noexcept {
-    static constexpr const std::wstring extPrefix{LR"(\\?\)"s};
-    static constexpr const std::wstring devicePrefix{LR"(\\.\)"s};
-    static constexpr const std::wstring extUncPrefix{LR"(\\?\UNC\)"s};
-    static constexpr const std::wstring uncStart{LR"(\\)"s};
+    static constexpr const std::wstring_view extPrefix{LR"(\\?\)"sv};
+    static constexpr const std::wstring_view devicePrefix{LR"(\\.\)"sv};
+    static constexpr const std::wstring_view extUncPrefix{LR"(\\?\UNC\)"sv};
+    static constexpr const std::wstring_view uncStart{LR"(\\)"sv};
 
     if(filepathNarrow.empty()) return {};
 
@@ -463,7 +463,7 @@ forceinline std::wstring adjustPath_(std::string_view filepathNarrow) noexcept {
                 // some wine APIs don't work 100% properly with it (like SDL_OpenURL with a file:/// URI)
 
                 if(result.length() > MAX_PATH && !result.starts_with(L'\\')) {
-                    result = extPrefix + result;
+                    result = std::wstring{extPrefix} + result;
                 }
 
                 HeapFree(GetProcessHeap(), 0, dosPath);
@@ -533,10 +533,10 @@ forceinline std::wstring adjustPath_(std::string_view filepathNarrow) noexcept {
 
         // Standard UNC path from GetFullPathNameW -> extended UNC
         if(resolved.starts_with(LR"(\\)") && resolved.size() > 2) {
-            return extUncPrefix + std::wstring{buf.data() + 2, len - 2};
+            return std::wstring{extUncPrefix} + std::wstring{buf.data() + 2, len - 2};
         }
 
-        return outputPrefix + std::wstring{buf.data(), static_cast<int>(len)};
+        return outputPrefix + std::wstring{buf.data(), static_cast<size_t>(len)};
     }
 
     return outputPrefix + path;

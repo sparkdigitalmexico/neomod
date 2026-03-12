@@ -6,8 +6,10 @@
 
 #include "SongButton.h"
 
-
 #include "DatabaseBeatmap.h"
+
+#include <charconv>
+
 namespace AsyncSongButtonMatcher {
 
 namespace {

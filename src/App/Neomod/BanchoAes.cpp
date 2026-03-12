@@ -4,6 +4,7 @@
 // Full of magic values (as usual in crypto), but this will never get edited again.
 #include <cstring>
 
+#include "noinclude.h"
 #include "BanchoNetworking.h"
 #include "BanchoAes.h"
 

@@ -28,6 +28,8 @@ void init() {}
 #include <libloaderapi.h>
 #include <synchapi.h>
 
+#include <array>
+
 #ifndef INFINITE
 #define INFINITE 0xFFFFFFFF
 #endif
