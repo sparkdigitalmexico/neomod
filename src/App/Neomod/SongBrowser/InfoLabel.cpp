@@ -86,14 +86,12 @@ void InfoLabel::draw() {
 
     const f32 globalScale = std::max((this->getSize().y / this->getMinimumHeight()) * 0.91f, 1.0f);
 
-    const i32 shadowOffset = std::round(1.0f * ((f32)this->font->getDPI() / 96.0f));  // NOTE: abusing font dpi
-
     i32 yCounter = this->getPos().y;
 
     // draw title
     g->pushTransform();
     {
-        const i32 titleShadowOffset =
+        const f32 titleShadowOffset =
             std::round(1.0f * ((f32)this->titleFont->getDPI() / 96.0f));  // NOTE: abusing font dpi
 
         const f32 scale = this->fTitleScale * globalScale;
@@ -102,15 +100,13 @@ void InfoLabel::draw() {
 
         g->scale(scale, scale);
         g->translate((i32)(this->getPos().x), yCounter);
-
-        g->translate(titleShadowOffset, titleShadowOffset);
-        g->setColor(0xff000000);
-        g->drawString(this->titleFont, titleText);
-        g->translate(-titleShadowOffset, -titleShadowOffset);
-        g->setColor(0xffffffff);
-        g->drawString(this->titleFont, titleText);
+        g->drawString(this->titleFont, titleText,
+                      TextShadow{.col_text = 0xffffffff, .col_shadow = 0xff000000, .offs_px = titleShadowOffset});
     }
     g->popTransform();
+
+    const f32 shadowOffset = std::round(1.0f * ((f32)this->font->getDPI() / 96.0f));  // NOTE: abusing font dpi
+    TextShadow shadow{.col_text = 0xffffffff, .col_shadow = 0xff000000, .offs_px = shadowOffset};
 
     // draw subtitle (mapped by)
     g->pushTransform();
@@ -124,21 +120,16 @@ void InfoLabel::draw() {
         g->scale(scale, scale);
         g->translate((i32)(this->getPos().x), yCounter);
 
-        g->translate(shadowOffset, shadowOffset);
-        g->setColor(0xff000000);
-        g->drawString(this->font, subTitleText);
-        g->translate(-shadowOffset, -shadowOffset);
-        g->setColor(0xffffffff);
-        g->drawString(this->font, subTitleText);
+        g->drawString(this->font, subTitleText, shadow);
     }
     g->popTransform();
 
     // draw song info (length, bpm, objects)
-    const Color songInfoColor = (osu->getMapInterface()->getSpeedMultiplier() != 1.0f
-                                     ? (osu->getMapInterface()->getSpeedMultiplier() > 1.0f ? 0xffff7f7f : 0xffadd8e6)
-                                     : 0xffffffff);
     g->pushTransform();
     {
+        shadow.col_text = (osu->getMapInterface()->getSpeedMultiplier() != 1.0f
+                               ? (osu->getMapInterface()->getSpeedMultiplier() > 1.0f ? 0xffff7f7f : 0xffadd8e6)
+                               : 0xffffffff);
         const f32 scale = this->fSongInfoScale * globalScale * 0.9f;
 
         yCounter += this->font->getHeight() * scale + (this->iMargin / 2) * globalScale * 1.0f;
@@ -146,32 +137,21 @@ void InfoLabel::draw() {
         g->scale(scale, scale);
         g->translate((i32)(this->getPos().x), yCounter);
 
-        g->translate(shadowOffset, shadowOffset);
-        g->setColor(0xff000000);
-        g->drawString(this->font, songInfoText);
-        g->translate(-shadowOffset, -shadowOffset);
-        g->setColor(songInfoColor);
-        g->drawString(this->font, songInfoText);
+        g->drawString(this->font, songInfoText, shadow);
     }
     g->popTransform();
 
     // draw diff info (CS, AR, OD, HP, Stars)
-    const Color diffInfoColor = osu->getModEZ() ? 0xffadd8e6 : (osu->getModHR() ? 0xffff7f7f : 0xffffffff);
     g->pushTransform();
     {
+        shadow.col_text = osu->getModEZ() ? 0xffadd8e6 : (osu->getModHR() ? 0xffff7f7f : 0xffffffff);
         const f32 scale = this->fDiffInfoScale * globalScale * 0.9f;
 
         yCounter += this->font->getHeight() * scale + this->iMargin * globalScale * 0.85f;
 
         g->scale(scale, scale);
         g->translate((i32)(this->getPos().x), yCounter);
-
-        g->translate(shadowOffset, shadowOffset);
-        g->setColor(0xff000000);
-        g->drawString(this->font, diffInfoText);
-        g->translate(-shadowOffset, -shadowOffset);
-        g->setColor(diffInfoColor);
-        g->drawString(this->font, diffInfoText);
+        g->drawString(this->font, diffInfoText, shadow);
     }
     g->popTransform();
 
@@ -179,6 +159,7 @@ void InfoLabel::draw() {
     if(this->iLocalOffset != 0 || this->iOnlineOffset != 0) {
         g->pushTransform();
         {
+            shadow.col_text = 0xffffffff;
             const f32 scale = this->fOffsetInfoScale * globalScale * 0.8f;
 
             yCounter += this->font->getHeight() * scale + this->iMargin * globalScale * 0.85f;
@@ -186,12 +167,7 @@ void InfoLabel::draw() {
             g->scale(scale, scale);
             g->translate((i32)(this->getPos().x), yCounter);
 
-            g->translate(shadowOffset, shadowOffset);
-            g->setColor(0xff000000);
-            g->drawString(this->font, offsetInfoText);
-            g->translate(-shadowOffset, -shadowOffset);
-            g->setColor(0xffffffff);
-            g->drawString(this->font, offsetInfoText);
+            g->drawString(this->font, offsetInfoText, shadow);
         }
         g->popTransform();
     }
