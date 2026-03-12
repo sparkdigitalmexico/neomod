@@ -1,0 +1,5 @@
+download this file to this folder:
+https://github.com/C1710/blobmoji/releases/download/v15.1-beta1/Blobmoji.ttf
+and run `python subset_blobmoji.py` to generate the compressed blobmoji.woff2
+
+DISCLAIMER: the reason the tool looks like an LLM obviously wrote it is because it was written by Claude Opus 4.6 :^)
