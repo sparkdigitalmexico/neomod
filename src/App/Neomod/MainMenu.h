@@ -18,6 +18,9 @@ typedef DatabaseBeatmap BeatmapDifficulty;
 typedef DatabaseBeatmap BeatmapSet;
 //class Shader;
 
+namespace neomod::mainmenu {
+class WrappedText;
+}
 class CBaseUILabel;
 class CBaseUIContainer;
 class UIButton;
@@ -111,11 +114,12 @@ class MainMenu final : public UIScreen, public MouseListener {
     std::vector<MainButton *> menuElements;
 
     PauseButton *pauseButton;
-    CBaseUILabel *tipLabel{nullptr};
+    neomod::mainmenu::WrappedText *tipLabel{nullptr};
     std::unique_ptr<UIButton> updateAvailableButton{nullptr};
     UIButtonVertical *onlineBeatmapsButton{nullptr};
     CBaseUIButton *versionButton;
 
+    void onAdblockChangeCallback(float value);
     UIButtonWithIcon *discordButton{nullptr};
     UIButtonWithIcon *twitterButton{nullptr};
 

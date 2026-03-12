@@ -53,6 +53,9 @@
 #include "Logging.h"
 #include "Graphics.h"
 #include "crypto.h"
+#include "MainMenuTips.h"
+
+using namespace neomod;
 
 class MainMenu::CubeButton final : public CBaseUIButton {
    public:
@@ -320,26 +323,11 @@ MainMenu::MainMenu() : UIScreen() {
     this->pauseButton->setClickCallback(SA::MakeDelegate<&MainMenu::onPausePressed>(this));
     this->addBaseUIElement(this->pauseButton);
 
-    this->tipLabel = new CBaseUILabel(0, 0, 0, 0, "", "Tip: Press Alt+Enter to toggle Fullscreen.");
-    this->tipLabel->setTextColor(rgb(200, 200, 200));
-    this->tipLabel->setShadowColor(rgb(50, 50, 50));
-    this->tipLabel->setDrawTextShadow(true);
-    this->tipLabel->setDrawBackground(false);
-    this->tipLabel->setDrawFrame(false);
-    this->tipLabel->setVisible(Env::cfg(OS::WASM));
-    this->addBaseUIElement(this->tipLabel);
-
     this->onlineBeatmapsButton = new UIButtonVertical(0, 0, 0, 0, "", "Online Beatmaps");
     this->onlineBeatmapsButton->setFont(osu->getSubTitleFont());
     this->onlineBeatmapsButton->setDrawBackground(false);
     this->onlineBeatmapsButton->setClickCallback(SA::MakeDelegate<&MainMenu::onOnlineBeatmapsButtonPressed>(this));
     this->addBaseUIElement(this->onlineBeatmapsButton);
-
-    this->versionButton = new CBaseUIButton(0, 0, 0, 0, "", "");
-    this->versionButton->setDrawBackground(false);
-    this->versionButton->setDrawFrame(false);
-    this->versionButton->setClickCallback(SA::MakeDelegate<&MainMenu::onVersionPressed>(this));
-    this->addBaseUIElement(this->versionButton);
 
     this->discordButton = new UIButtonWithIcon(NEOMOD_DOMAIN "/discord", Icons::DISCORD);
     this->discordButton->setClickCallback([]() { env->openURLInDefaultBrowser("https://" NEOMOD_DOMAIN "/discord"); });
@@ -348,11 +336,24 @@ MainMenu::MainMenu() : UIScreen() {
     this->twitterButton = new UIButtonWithIcon("x.com/neomodnet", Icons::TWITTER);
     this->twitterButton->setClickCallback([]() { env->openURLInDefaultBrowser("https://x.com/neomodnet"); });
     this->addBaseUIElement(this->twitterButton);
+    cv::adblock.setCallback(SA::MakeDelegate<&MainMenu::onAdblockChangeCallback>(this));
+
+    this->tipLabel = new mainmenu::WrappedText(engine->getDefaultFont(), 0, 0, 0, 0);
+    this->addBaseUIElement(this->tipLabel);
+    cv::main_menu_tips.setCallback(SA::MakeDelegate<&mainmenu::WrappedText::setVisibleCallback>(this->tipLabel));
+
+    this->versionButton = new CBaseUIButton(0, 0, 0, 0, "", "");
+    this->versionButton->setDrawBackground(false);
+    this->versionButton->setDrawFrame(false);
+    this->versionButton->setClickCallback(SA::MakeDelegate<&MainMenu::onVersionPressed>(this));
+    this->addBaseUIElement(this->versionButton);
 
     this->submitSongsFolderEnum();
 }
 
 MainMenu::~MainMenu() {
+    cv::main_menu_tips.reset();
+    cv::adblock.reset();
     mouse->removeListener(this);
 
     this->clearPreloadedMaps();
@@ -1287,9 +1288,14 @@ void MainMenu::onResolutionChange(vec2 /*newResolution*/) {
 }
 
 CBaseUIContainer *MainMenu::setVisible(bool visible) {
+    const bool changed = this->bVisible == visible;
     this->bVisible = visible;
 
     if(visible) {
+        if(changed) {
+            // move to next tip
+            mainmenu::getNextTip();
+        }
         // Clear background change animation, to avoid "fade" when backing out from song browser
         {
             this->currentMap = osu->getMapInterface()->getBeatmap();
@@ -1334,7 +1340,8 @@ CBaseUIContainer *MainMenu::setVisible(bool visible) {
 void MainMenu::updateLayout() {
     const float dpiScale = Osu::getUIScale();
 
-    this->vCenter = osu->getVirtScreenSize() / 2.0f;
+    const vec2 screenSize = osu->getVirtScreenSize();
+    this->vCenter = screenSize / 2.0f;
     const float size = Osu::getUIScale(324.0f);
     this->vSize = vec2(size, size);
 
@@ -1342,42 +1349,42 @@ void MainMenu::updateLayout() {
     this->cube->setSize(this->vSize);
 
     this->pauseButton->setSize(30 * dpiScale, 30 * dpiScale);
-    this->pauseButton->setRelPos(osu->getVirtScreenWidth() - this->pauseButton->getSize().x * 2 - 10 * dpiScale,
+    this->pauseButton->setRelPos(screenSize.x - this->pauseButton->getSize().x * 2 - 10 * dpiScale,
                                  this->pauseButton->getSize().y + 10 * dpiScale);
 
-    this->tipLabel->setSizeToContent();
-    this->tipLabel->setRelPos(osu->getVirtScreenWidth() / 2 - this->tipLabel->getSize().x / 2,
-                              osu->getVirtScreenHeight() - this->tipLabel->getSize().y - 40 * dpiScale);
+    this->tipLabel->setSizeX(screenSize.x * (3.f / 4.f));
+    this->tipLabel->setText(mainmenu::getCurrentTip());
+    this->tipLabel->setRelPos((screenSize.x - this->tipLabel->getSize().x) / 2.f,
+                              screenSize.y - this->tipLabel->getSize().y - 30 * dpiScale);
 
     {
         this->updateAvailableButton->setSize(375 * dpiScale, 50 * dpiScale);
-        this->updateAvailableButton->setPos(
-            osu->getVirtScreenWidth() / 2 - this->updateAvailableButton->getSize().x / 2,
-            osu->getVirtScreenHeight() - this->updateAvailableButton->getSize().y - 10 * dpiScale);
+        this->updateAvailableButton->setPos(screenSize.x / 2 - this->updateAvailableButton->getSize().x / 2,
+                                            screenSize.y - this->updateAvailableButton->getSize().y - 10 * dpiScale);
     }
 
     this->onlineBeatmapsButton->onResized();
     this->onlineBeatmapsButton->setSize(50 * dpiScale, 275 * dpiScale);
-    this->onlineBeatmapsButton->setRelPos(osu->getVirtScreenWidth() - this->onlineBeatmapsButton->getSize().x,
-                                          osu->getVirtScreenHeight() / 2 - this->onlineBeatmapsButton->getSize().y / 2);
+    this->onlineBeatmapsButton->setRelPos(screenSize.x - this->onlineBeatmapsButton->getSize().x,
+                                          screenSize.y / 2 - this->onlineBeatmapsButton->getSize().y / 2);
 
     this->versionButton->onResized();  // HACKHACK: framework, setSizeToContent() does not update string metrics
     this->versionButton->setSizeToContent(8 * dpiScale, 8 * dpiScale);
-    this->versionButton->setRelPos(-1, osu->getVirtScreenSize().y - this->versionButton->getSize().y);
+    this->versionButton->setRelPos(-1, screenSize.y - this->versionButton->getSize().y);
 
     {
         McFont *font = engine->getDefaultFont();
         f32 margin = std::round(3.f * dpiScale);
-        f32 ads_y = osu->getVirtScreenSize().y;
+        f32 ads_y = screenSize.y;
         if(cv::draw_fps.getBool()) ads_y -= (font->getHeight() * 3.f + margin);
 
         this->discordButton->onResized();
         ads_y -= this->discordButton->getSize().y + margin;
-        this->discordButton->setRelPos(osu->getVirtScreenSize().x - this->discordButton->getSize().x, ads_y);
+        this->discordButton->setRelPos(screenSize.x - this->discordButton->getSize().x, ads_y);
 
         this->twitterButton->onResized();
         ads_y -= this->twitterButton->getSize().y + margin;
-        this->twitterButton->setRelPos(osu->getVirtScreenSize().x - this->twitterButton->getSize().x, ads_y);
+        this->twitterButton->setRelPos(screenSize.x - this->twitterButton->getSize().x, ads_y);
     }
 
     int numButtons = this->menuElements.size();
@@ -1407,7 +1414,7 @@ void MainMenu::updateLayout() {
             argb(offsetPercent * cv::main_menu_alpha.getFloat(), 0.0f, 0.0f, 0.0f));
     }
 
-    this->setSize(osu->getVirtScreenSize() + vec2(1, 1));
+    this->setSize(screenSize + vec2(1, 1));
     this->update_pos();
 }
 
@@ -1651,6 +1658,12 @@ void MainMenu::onVersionPressed() {
     this->bDrawVersionNotificationArrow = false;
     this->writeVersionFile();
     ui->setScreen(ui->getChangelog());
+}
+
+void MainMenu::onAdblockChangeCallback(float value) {
+    const bool adblockEnabled = !!static_cast<int>(value);
+    this->discordButton->setVisible(!adblockEnabled);
+    this->twitterButton->setVisible(!adblockEnabled);
 }
 
 void PauseButton::draw() {

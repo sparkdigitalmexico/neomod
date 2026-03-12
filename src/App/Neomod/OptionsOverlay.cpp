@@ -1725,9 +1725,13 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->addCheckbox("Rainbow Numbers", &cv::circle_number_rainbow);
     this->addCheckbox("Draw 300s", &cv::hitresult_draw_300s);
 
-    this->addSection("Maintenance");
+    auto *sectionMisc = this->addSection("Miscellaneous");
+    this->addSubSection("Nags", "tip menu social links");
 
-    this->addSubSection("Import/Reset");
+    this->addCheckbox("Show Main Menu Tips", &cv::main_menu_tips);
+    this->addCheckbox("Hide Discord/X Links", &cv::adblock);
+
+    this->addSubSection("Import/Reset", "mcosu stable");
 
 #ifndef MCENGINE_PLATFORM_WASM
     UIButton *importMcOsuSettingsButton = this->addButton("Import collections/scores/settings from McOsu");
@@ -1764,7 +1768,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
             }
 
             // use the first selected path
-            const std::string mcosu_path = paths[0];
+            const std::string& mcosu_path = paths[0];
             const bool imported = SettingsImporter::import_from_mcosu(mcosu_path);
             conclude_import(imported);
         });
@@ -1800,6 +1804,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->addCategory(subSectionKeyboard, Icons::KEYBOARD);
     this->addCategory(sectionGameplay, Icons::CIRCLE);
     this->fposuCategoryButton = this->addCategory(sectionFposu, Icons::CUBE);
+    this->addCategory(sectionMisc, Icons::WRENCH);
 
     //**************************************************************************************************************************//
 
@@ -3816,7 +3821,7 @@ CBaseUILabel *OptionsOverlayImpl::addSubSection(const std::string &text, const s
 
     auto e = std::make_unique<OptionsElement>(SUBSECT);
     e->baseElems.emplace_back(label);
-    e->searchTags = std::move(searchTags);
+    e->searchTags = searchTags;
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[label] = last.get();
 
