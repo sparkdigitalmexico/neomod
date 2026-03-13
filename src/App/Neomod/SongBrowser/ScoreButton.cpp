@@ -91,10 +91,11 @@ void ScoreButton::draw() {
     const int yPos = (int)this->getPos().y;  // avoid max shimmering
 
     if(this->avatar) {
-        const float margin = this->getSize().y * 0.1;
-        f32 avatar_width = this->getSize().y - (2.f * margin);
-        this->avatar->setPos(this->getPos().x + margin, this->getPos().y + margin);
-        this->avatar->setSize(avatar_width, avatar_width);
+        const f32 margin = this->getSize().y * 0.055f;
+        const f32 height = this->getSize().y - (2.f * margin);
+        const f32 xPos = this->getPos().x + (0.5f + (margin * 2.f) /* dunno! */);
+        this->avatar->setPos(xPos, this->getPos().y + margin);
+        this->avatar->setSize(height, height);
         this->avatar->draw_avatar(1.f);
     }
 
@@ -104,7 +105,7 @@ void ScoreButton::draw() {
     McFont *indexNumberFont = osu->getSongBrowserFontBold();
     g->pushTransform();
     {
-        std::string indexNumberString = fmt::format("{}", this->iScoreIndexNumber);
+        std::string indexNumberString = fmt::format("{:d}", this->iScoreIndexNumber);
         const float scale = (this->getSize().y / indexNumberFont->getHeight()) * indexNumberScale;
 
         g->scale(scale, scale);

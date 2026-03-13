@@ -226,7 +226,7 @@ void OnlineMapListing::draw() {
     const vec2 map_bg_size = {this->getSize().y * (4.f / 3.f), this->getSize().y};
     vec2 pos_counter = this->getPos();
 
-    if(auto* map_thumbnail = osu->getThumbnailManager()->try_get_image(this->thumb_id)) {
+    if(const Image* map_thumbnail = osu->getThumbnailManager()->try_get_image(this->thumb_id)) {
         // Map thumbnail
         const f32 scale = Osu::getImageScaleToFillResolution(map_thumbnail, map_bg_size);
         g->pushTransform();

@@ -15,7 +15,7 @@
 
 #include <sys/stat.h>
 
-Image* ThumbnailManager::try_get_image(const ThumbIdentifier& identifier) {
+const Image* ThumbnailManager::try_get_image(const ThumbIdentifier& identifier) {
     assert(McThread::is_main_thread());
 
     auto it = this->images.find(identifier);
@@ -153,7 +153,7 @@ Image* ThumbnailManager::load_image(const ThumbEntry& entry) {
 
     resourceManager->requestNextLoadAsync();
     // the path *is* the resource name
-    Image *ret = resourceManager->loadImageAbs(entry.file_path, entry.file_path);
+    Image* ret = resourceManager->loadImageAbs(entry.file_path, entry.file_path);
     assert(ret && "ThumbnailManager::load_image: malloc failed");
     return ret;
 }

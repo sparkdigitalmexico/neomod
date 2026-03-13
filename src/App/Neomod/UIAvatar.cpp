@@ -1,7 +1,6 @@
 // Copyright (c) 2024, kiwec, All rights reserved.
 #include "UIAvatar.h"
 
-#include "Logging.h"
 #include "ThumbnailManager.h"
 #include "Bancho.h"
 #include "Engine.h"
@@ -62,14 +61,16 @@ void UIAvatar::draw_avatar(float alpha) {
         thumbnail_manager->request_image(*this->thumb_id);
     }
 
-    auto *avatar_image = thumbnail_manager->try_get_image(*this->thumb_id);
-    if(avatar_image) {
+    if(const Image *avatar_image = thumbnail_manager->try_get_image(*this->thumb_id)) {
         g->pushTransform();
-        g->setColor(Color(0xffffffff).setA(alpha));
+        {
+            const vec2 scale{this->getSize() / vec2{avatar_image->getSize()}};
 
-        g->scale(this->getSize().x / avatar_image->getWidth(), this->getSize().y / avatar_image->getHeight());
-        g->translate(this->getPos().x + this->getSize().x / 2.0f, this->getPos().y + this->getSize().y / 2.0f);
-        g->drawImage(avatar_image);
+            g->setColor(Color(0xffffffff).setA(alpha));
+            g->scale(scale);
+            g->translate(this->getPos().x + this->getSize().x / 2.0f, this->getPos().y + this->getSize().y / 2.0f);
+            g->drawImage(avatar_image);
+        }
         g->popTransform();
     }
 

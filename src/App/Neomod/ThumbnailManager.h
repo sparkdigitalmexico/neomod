@@ -52,7 +52,7 @@ class ThumbnailManager final {
     void discard_image(const ThumbIdentifier& identifier);
 
     // may return null if image is still loading
-    [[nodiscard]] Image* try_get_image(const ThumbIdentifier& identifier);
+    [[nodiscard]] const Image* try_get_image(const ThumbIdentifier& identifier);
 
    private:
     // only keep this many thumbnail Image resources loaded in VRAM at once
