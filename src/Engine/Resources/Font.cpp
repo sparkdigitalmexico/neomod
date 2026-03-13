@@ -1492,7 +1492,7 @@ bool McFont::initSharedResources() {
         Hash::unstable_ncase_set<std::string> fontsNoExt;
         for(const auto &path : allFonts) {
             const std::string ext = Environment::getFileExtensionFromFilePath(path);
-            if(ext.empty()) continue;
+            if(ext.empty() || ext == path) continue;
             std::string pathNoExt = path.substr(0, path.length() - (ext.length() + 1));
             const auto [_, inserted] = fontsNoExt.insert(pathNoExt);
             if(inserted) {
