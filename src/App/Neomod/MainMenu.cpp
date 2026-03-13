@@ -219,19 +219,30 @@ MainMenu::MainMenu() : UIScreen() {
             // get version number
             if(versionFile.canRead() && ((linebuf = versionFile.readLine()) != "") &&
                ((version = Parsing::strto<f64>(linebuf)) > 0.)) {
+                bool makeBackup = false;
+                bool gotLegitBuildstamp = true;
                 // get build timestamp
                 if(versionFile.canRead() && ((linebuf = versionFile.readLine()) != "") &&
                    ((buildstamp = Parsing::strto<u64>(linebuf)) > 0)) {
                     // ignore bogus build timestamps
                     if(buildstamp > 4000000000 || buildstamp < 2000000000) {
+                        gotLegitBuildstamp = false;
                         buildstamp = cv::build_timestamp.getVal<u64>();
                     }
                 }
+                gotLegitBuildstamp &= buildstamp > 0;
+
                 // debugLog("versionFile version: {} our version: {}{}", version, cv::version.getFloat(),
                 //           buildstamp > 0.0f ? fmt::format(" build timestamp: {}", buildstamp) : "");
-                if(!Env::cfg(BUILD::DEBUG) &&
-                   (version < cv::version.getDouble() || buildstamp < cv::build_timestamp.getVal<u64>())) {
-                    this->bDrawVersionNotificationArrow = true;
+                if(version < cv::version.getDouble() || buildstamp < cv::build_timestamp.getVal<u64>()) {
+                    if(!Env::cfg(BUILD::DEBUG)) {
+                        // we know
+                        this->bDrawVersionNotificationArrow = true;
+                    }
+                    makeBackup = !Env::cfg(OS::WASM) &&                 // too hard to even access on wasm
+                                 (version < cv::version.getDouble() ||  // always backup release version bumps
+                                  // don't spam backups for debug builds with build timestamp updates
+                                  (!Env::cfg(BUILD::DEBUG) && buildstamp < cv::build_timestamp.getVal<u64>()));
                 }
 
                 bool shouldSave = false;
@@ -268,9 +279,9 @@ MainMenu::MainMenu() : UIScreen() {
                     }
                 }
                 if(version < 40.00) {
-                    for(auto key : OsuKeyBinds::getAll()) {
+                    for(auto *key : OsuKeyBinds::getAll()) {
                         if(key->getFloat() == key->getDefaultFloat()) continue;
-                        key->setValue(KeyBindings::old_keycode_to_sdl_keycode(key->getInt()));
+                        key->setValue(KeyBindings::old_keycode_to_sdl_scancode(key->getInt()));
                     }
                     shouldSave = true;
                 }
@@ -291,7 +302,30 @@ MainMenu::MainMenu() : UIScreen() {
                     cv::prefer_websockets.setValue(true);
                     shouldSave = true;
                 }
+                if(version < 43.07 || buildstamp <= 2603130815) {
+                    for(auto *keyVar : OsuKeyBinds::getAll()) {
+                        const auto oldVal = keyVar->getVal<KEYCODE>();
+                        KEYCODE newVal{};
+                        if(oldVal == keyVar->getDefaultVal<KEYCODE>() ||
+                           newVal == KeyBindings::old_sdl_scancode_to_sdl_keycode(oldVal)) {
+                            continue;
+                        }
+                        shouldSave = true;
+                        keyVar->setValue(newVal);
+                    }
+                }
 
+                makeBackup &= shouldSave;
+                if(makeBackup) {
+                    // back up synchronously
+                    const std::string backup_name =
+                        fmt::format(NEOMOD_CFG_PATH "/osu.cfg.{:.2f}{:s}.bak", version,
+                                    gotLegitBuildstamp ? fmt::format("-{:d}", buildstamp) : "");
+                    debugLog("Backing up config " NEOMOD_CFG_PATH "/osu.cfg -> {}", backup_name);
+                    if(!File::copy(NEOMOD_CFG_PATH "/osu.cfg"sv, backup_name)) {
+                        debugLog("WARNING: failed to back up " NEOMOD_CFG_PATH "/osu.cfg -> {:s}!", backup_name);
+                    }
+                }
                 if(shouldSave) {
                     ui->getOptionsOverlay()->save();
                 }
