@@ -31,10 +31,10 @@ set(BROTLI_URL "https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VER
 set(BROTLI_HASH "SHA512=f94542afd2ecd96cc41fd21a805a3da314281ae558c10650f3e6d9ca732b8425bba8fde312823f0a564c7de3993bdaab5b43378edab65ebb798cefb6fd702256")
 set_download_name("brotli" "${BROTLI_VERSION}" "${BROTLI_URL}")
 
-set(FREETYPE_VERSION "2.14.2")
+set(FREETYPE_VERSION "2.14.1")
 string(REPLACE "." "-" _freetype_ver_temp "${FREETYPE_VERSION}")
 set(FREETYPE_URL "https://github.com/freetype/freetype/archive/refs/tags/VER-${_freetype_ver_temp}.tar.gz")
-set(FREETYPE_HASH "SHA512=f81fdeed1bc65e70b7990d0e36d71908cc7b14794ba72eda29b61ccf6653ec5bf636ce05bdc043d8e9eab05290142a2e345cbd7a7a33f5a6cff0f10b45b6942a")
+set(FREETYPE_HASH "SHA512=b73b08784bb4b293fb807e4ca5585fa490da11c3b0f9dca26e39e4cdaf4551ce7d75006e97ca721bfca2ed53f4c6f94c12e3d6c606955ec7c0dcd2f48bfa613d")
 set_download_name("freetype" "${FREETYPE_VERSION}" "${FREETYPE_URL}")
 unset(_freetype_ver_temp)
 
