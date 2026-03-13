@@ -317,7 +317,8 @@ OsuDirectScreen::OsuDirectScreen() {
     this->ranked_only = new CBaseUICheckbox(0, 0, 0, 0, "", "Only show ranked beatmaps");
     this->ranked_only->setDrawFrame(false);
     this->ranked_only->setDrawBackground(false);
-    this->ranked_only->setChecked(cv::direct_ranking_status_filter.getInt() == RankingStatusFilter::RANKED);
+    this->ranked_only->setChecked(cv::direct_ranking_status_filter.getVal<RankingStatusFilter>() ==
+                                  RankingStatusFilter::RANKED);
     this->ranked_only->setChangeCallback(SA::MakeDelegate<&OsuDirectScreen::onRankedCheckboxChange>(this));
     this->addBaseUIElement(this->ranked_only);
 
@@ -332,8 +333,8 @@ OsuDirectScreen::OsuDirectScreen() {
 OsuDirectScreen::~OsuDirectScreen() = default;
 
 void OsuDirectScreen::onRankedCheckboxChange(CBaseUICheckbox* checkbox) {
-    cv::direct_ranking_status_filter.setValue(checkbox->isChecked() ? RankingStatusFilter::RANKED
-                                                                    : RankingStatusFilter::ALL);
+    cv::direct_ranking_status_filter.setValue(checkbox->isChecked() ? (u8)RankingStatusFilter::RANKED
+                                                                    : (u8)RankingStatusFilter::ALL);
     this->reset();
     this->search(this->current_query);
 }

@@ -1,9 +1,16 @@
 // Copyright (c) 2016, PG, 2025, kiwec, 2025, WH, All rights reserved.
 #pragma once
 
-class ConVar;
 #include <span>
 
+using SCANCODE = unsigned short;
+class ConVar;
+
 namespace OsuKeyBinds {
-extern std::span<ConVar*> getAll();
+struct Bind {
+	ConVar *cvar;
+	SCANCODE sc;
+};
+
+extern std::span<const Bind> getAll();
 };

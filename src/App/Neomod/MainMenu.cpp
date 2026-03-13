@@ -1,10 +1,6 @@
 // Copyright (c) 2015, PG, All rights reserved.
 #include "MainMenu.h"
 
-#include <algorithm>
-#include <cmath>
-#include <utility>
-
 #include "AsyncPool.h"
 #include "AnimationHandler.h"
 #include "AsyncIOHandler.h"
@@ -54,6 +50,11 @@
 #include "Graphics.h"
 #include "crypto.h"
 #include "MainMenuTips.h"
+
+#include <algorithm>
+#include <cmath>
+#include <utility>
+#include <limits>
 
 using namespace neomod;
 
@@ -279,9 +280,9 @@ MainMenu::MainMenu() : UIScreen() {
                     }
                 }
                 if(version < 40.00) {
-                    for(auto *key : OsuKeyBinds::getAll()) {
-                        if(key->getFloat() == key->getDefaultFloat()) continue;
-                        key->setValue(KeyBindings::old_keycode_to_sdl_scancode(key->getInt()));
+                    for(const auto &[cvar, sc] : OsuKeyBinds::getAll()) {
+                        if(cvar->getVal<SCANCODE>() == sc) continue;
+                        cvar->setValue(KeyBindings::old_keycode_to_sdl_scancode(cvar->getInt()));
                     }
                     shouldSave = true;
                 }
@@ -301,18 +302,6 @@ MainMenu::MainMenu() : UIScreen() {
                 if(version < 43.04 || buildstamp <= 2602190926) {
                     cv::prefer_websockets.setValue(true);
                     shouldSave = true;
-                }
-                if(version < 43.07 || buildstamp <= 2603130815) {
-                    for(auto *keyVar : OsuKeyBinds::getAll()) {
-                        const auto oldVal = keyVar->getVal<KEYCODE>();
-                        KEYCODE newVal{};
-                        if(oldVal == keyVar->getDefaultVal<KEYCODE>() ||
-                           newVal == KeyBindings::old_sdl_scancode_to_sdl_keycode(oldVal)) {
-                            continue;
-                        }
-                        shouldSave = true;
-                        keyVar->setValue(newVal);
-                    }
                 }
 
                 makeBackup &= shouldSave;

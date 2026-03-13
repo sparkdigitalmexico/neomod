@@ -2,11 +2,14 @@
 #include "ScreenBackable.h"
 
 #include "Engine.h"
+#include "Logging.h"
+#include "NotificationOverlay.h"
 #include "OsuConVars.h"
 #include "KeyBindings.h"
 #include "Osu.h"
 #include "Skin.h"
 #include "SoundEngine.h"
+#include "UI.h"
 #include "UIBackButton.h"
 #include "MakeDelegateWrapper.h"
 #include "Mouse.h"
@@ -38,8 +41,10 @@ void ScreenBackable::update(CBaseUIEventCtx &c) {
 void ScreenBackable::onKeyDown(KeyboardEvent &e) {
     UIScreen::onKeyDown(e);
     if(!this->bVisible || e.isConsumed() || !this->backable) return;
-
-    if(e == KEY_ESCAPE || e == cv::GAME_PAUSE.getVal<SCANCODE>()) {
+    const bool isWaitingForKey = ui->getNotificationOverlay()->isWaitingForKey();
+    debugLog("isWaitingForKey: {} e.key: {} game_pause: {} key_escape: {}", isWaitingForKey, e.getScanCode(),
+             cv::GAME_PAUSE.getVal<SCANCODE>(), (SCANCODE)KEY_ESCAPE);
+    if(e == KEY_ESCAPE || (e == cv::GAME_PAUSE.getVal<SCANCODE>() && !isWaitingForKey)) {
         soundEngine->play(osu->getSkin()->s_menu_back);
         this->onBack();
         e.consume();

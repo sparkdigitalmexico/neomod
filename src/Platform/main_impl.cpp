@@ -348,6 +348,10 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
                     }
                     m_engine->onFocusGained();
                     setFgFPS();
+                    // these mouse/keyboard reset calls are just to reconcile held button states
+                    if(keyboard) {
+                        keyboard->reset();
+                    }
                 } break;
 
                 case SDL_EVENT_WINDOW_FOCUS_LOST:
@@ -355,6 +359,9 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
                     m_winflags &= ~(WinFlags::F_MOUSE_FOCUS | WinFlags::F_INPUT_FOCUS);
                     m_engine->onFocusLost();
                     setBgFPS();
+                    if(keyboard) {
+                        keyboard->reset();
+                    }
                     break;
 
                 case SDL_EVENT_WINDOW_MAXIMIZED:
@@ -363,19 +370,27 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
                     break;
 
                 case SDL_EVENT_WINDOW_MOUSE_ENTER:
-                    if(!m_bVirtualMousePositionInitialized) {
-                        m_bVirtualMousePositionInitialized = true;
-                        mouse->onPosChange(getAsyncMousePos());
+                    if(mouse) {
+                        if(!m_bVirtualMousePositionInitialized) {
+                            m_bVirtualMousePositionInitialized = true;
+                            mouse->onPosChange(getAsyncMousePos());
+                        }
                     }
                     m_bIsCursorInsideWindow = true;
                     if(m_bHideCursorPending) {
                         setCursorVisible(false);
+                    }
+                    if(mouse) {
+                        mouse->reset();
                     }
                     break;
 
                 case SDL_EVENT_WINDOW_MOUSE_LEAVE:
                     m_bIsCursorInsideWindow = false;
                     setCursorVisible(true);
+                    if(mouse) {
+                        mouse->reset();
+                    }
                     break;
 
                 case SDL_EVENT_WINDOW_MINIMIZED:
@@ -480,29 +495,14 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
             break;
 
         // keyboard events
-        case SDL_EVENT_KEY_DOWN:
-            keyboard->onKeyDown({static_cast<SCANCODE>(event->key.scancode), static_cast<char32_t>(event->key.key),
-                                 event->key.timestamp, event->key.repeat});
-            break;
-
         case SDL_EVENT_KEY_UP:
-            keyboard->onKeyUp({static_cast<SCANCODE>(event->key.scancode), static_cast<char32_t>(event->key.key),
-                               event->key.timestamp, event->key.repeat});
+        case SDL_EVENT_KEY_DOWN:
+            keyboard->onKey(event->key);
             break;
 
-        case SDL_EVENT_TEXT_INPUT: {
-            const char *evtextstr = event->text.text;
-            if(unlikely(!evtextstr || *evtextstr == '\0'))
-                break;  // probably should be assert() but there's no point in microoptimizing that hard
-
-            size_t length = strlen(evtextstr);
-            if(likely(length == 1)) {
-                keyboard->onChar({0, static_cast<char32_t>(evtextstr[0]), event->text.timestamp, false});
-            } else {
-                for(char32_t chr : UniString::codepoints(std::string_view{evtextstr, length}))
-                    keyboard->onChar({0, chr, event->text.timestamp, false});
-            }
-        } break;
+        case SDL_EVENT_TEXT_INPUT:
+            keyboard->onChar(event->text);
+            break;
 
         // mouse events
         case SDL_EVENT_MOUSE_BUTTON_DOWN:

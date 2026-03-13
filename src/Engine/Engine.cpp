@@ -434,6 +434,10 @@ void Engine::onUpdate() {
 void Engine::onFocusGained() {
     logIfCV(debug_engine, "(Engine) called");
 
+    for(auto *device : this->inputDevices) {
+        device->reset();
+    }
+
     if(soundEngine) soundEngine->onFocusGained();  // switch shared->exclusive if applicable
     app->onFocusGained();
 }

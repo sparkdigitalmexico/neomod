@@ -1,57 +1,53 @@
 #pragma once
-// Copyright (c) 2015, PG, All rights reserved.
-#include "InputDevice.h"
-#include "KeyboardEvent.h"
-#include "KeyBindings.h"
-#include "KeyboardListener.h"
+// Copyright (c) 2015, PG, 2026, WH, All rights reserved.
+#include "types.h"
 
-#include <vector>
+#include "InputDevice.h"
+#include "KeyBindings.h"  // IWYU pragma: keep
+#include "StaticPImpl.h"
+
+#include <span>
+
+typedef struct SDL_KeyboardEvent SDL_KeyboardEvent;
+typedef struct SDL_TextInputEvent SDL_TextInputEvent;
+
+using SCANCODE = uint16_t;
+using KEYCODE = uint32_t;
+using KEYMOD = uint16_t;
+
+class KeyboardListener;
+class SDLMain;
 
 class Keyboard final : public InputDevice {
     NOCOPY_NOMOVE(Keyboard)
 
    public:
-    Keyboard() = default;
-    ~Keyboard() override = default;
+    Keyboard();
+    ~Keyboard() override;
 
     void reset() override;
-    void draw() override {}
+    void draw() override;
     void update() override;
 
     void addListener(KeyboardListener *keyboardListener, bool insertOnTop = false);
     void removeListener(KeyboardListener *keyboardListener);
 
-    void onKeyDown(KeyboardEvent event);
-    void onKeyUp(KeyboardEvent event);
-    void onChar(KeyboardEvent event);
+    [[nodiscard]] bool isControlDown() const;
+    [[nodiscard]] bool isAltDown() const;
+    [[nodiscard]] bool isShiftDown() const;
+    [[nodiscard]] bool isSuperDown() const;
 
-    [[nodiscard]] constexpr forceinline bool isControlDown() const { return this->controlDown > 0; }
-    [[nodiscard]] constexpr forceinline bool isAltDown() const { return this->altDown > 0; }
-    [[nodiscard]] constexpr forceinline bool isShiftDown() const { return this->shiftDown > 0; }
-    [[nodiscard]] constexpr forceinline bool isSuperDown() const { return this->superDown > 0; }
+    [[nodiscard]] bool areModsHeld(KEYMOD keymodMask) const;
+
+    // don't use KEY_ prefixed keys here, use KEYMOD_ ones!
+    [[nodiscard]] bool areModsHeld(KEYCODE keymodMask) = delete;
 
    private:
-    std::vector<KeyboardListener *> listeners;
+    // events received in main loop
+    friend SDLMain;
+    void onKey(SDL_KeyboardEvent keyEvent);
+    void onChar(SDL_TextInputEvent textEvent);
 
-    // keyboard events are only queued on onKeyDown/onKeyUp/onChar, then dispatched during Engine::onUpdate
-    enum class Type : u8 { KEYDOWN, KEYUP };
-
-    struct FullKeyEvent {
-        KeyboardEvent orig;
-        Type type{Type::KEYDOWN};
-    };
-
-    std::vector<FullKeyEvent> keyEventQueue;
-    std::vector<KeyboardEvent> charEventQueue;
-
-    void onKeyDown_internal(KeyboardEvent &event);
-    void onKeyUp_internal(KeyboardEvent &event);
-    void onChar_internal(KeyboardEvent &event);
-
-    // each holds 2 bits of state to handle left/right
-    // first bit is right ctrl/alt/shift/super, second bit is left
-    u8 controlDown{0};
-    u8 altDown{0};
-    u8 shiftDown{0};
-    u8 superDown{0};
+    struct KeyboardImpl;
+    StaticPImpl<KeyboardImpl, sizeof(void *) == 8 ? 64 : 32> m_impl;
 };

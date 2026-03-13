@@ -19,7 +19,7 @@ Mouse::Mouse() : InputDevice(), vPos(env->getMousePos()), vPosWithoutOffsets(thi
 
 void Mouse::reset() {
     this->resetWheelDelta();
-    this->buttonsHeldMask = {};
+    this->buttonsHeldMask = env->getCurrentlyHeldMouseButtons();
     this->vDelta = {0.f, 0.f};
     this->vRawDelta = {0.f, 0.f};
 }

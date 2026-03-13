@@ -9,8 +9,8 @@
 
 // NOLINTBEGIN(misc-definitions-in-headers)
 
-#if !defined(OSU_CONVARS_H) && \
-    (defined(_CLANGD) || defined(Q_CREATOR_RUN) || defined(__INTELLISENSE__) || defined(__CDT_PARSER__) || defined(__clang_analyzer__))
+#if !defined(OSU_CONVARS_H) && (defined(_CLANGD) || defined(Q_CREATOR_RUN) || defined(__INTELLISENSE__) || \
+                                defined(__CDT_PARSER__) || defined(__clang_analyzer__))
 #define DEFINE_OSU_CONVARS
 #include "OsuConVars.h"
 
@@ -90,48 +90,48 @@ CONVAR(slider_debug_draw_square_vao, false, CLIENT | SERVER | PROTECTED | GAMEPL
 CONVAR(slider_debug_wireframe, false, CLIENT | SERVER | PROTECTED | GAMEPLAY, "unused");
 
 // Keybinds
-KEYVAR(BOSS_KEY, "key_boss", (int)KEY_INSERT, CLIENT);
-KEYVAR(DECREASE_LOCAL_OFFSET, "key_decrease_local_offset", (int)KEY_SUBTRACT, CLIENT);
-KEYVAR(DECREASE_VOLUME, "key_decrease_volume", (int)KEY_DOWN, CLIENT);
-KEYVAR(DISABLE_MOUSE_BUTTONS, "key_disable_mouse_buttons", (int)KEY_F10, CLIENT);
+KEYVAR(BOSS_KEY, "key_boss", (SCANCODE)KEY_INSERT, CLIENT);
+KEYVAR(DECREASE_LOCAL_OFFSET, "key_decrease_local_offset", (SCANCODE)KEY_MINUS, CLIENT);
+KEYVAR(DECREASE_VOLUME, "key_decrease_volume", (SCANCODE)KEY_DOWN, CLIENT);
+KEYVAR(DISABLE_MOUSE_BUTTONS, "key_disable_mouse_buttons", (SCANCODE)KEY_F10, CLIENT);
 KEYVAR(FPOSU_ZOOM, "key_fposu_zoom", 0, CLIENT);
-KEYVAR(GAME_PAUSE, "key_game_pause", (int)KEY_ESCAPE, CLIENT);
-KEYVAR(INCREASE_LOCAL_OFFSET, "key_increase_local_offset", (int)KEY_ADD, CLIENT);
-KEYVAR(INCREASE_VOLUME, "key_increase_volume", (int)KEY_UP, CLIENT);
-KEYVAR(INSTANT_REPLAY, "key_instant_replay", (int)KEY_F2, CLIENT);
-KEYVAR(LEFT_CLICK, "key_left_click", (int)KEY_Z, CLIENT);
+KEYVAR(GAME_PAUSE, "key_game_pause", (SCANCODE)KEY_ESCAPE, CLIENT);
+KEYVAR(INCREASE_LOCAL_OFFSET, "key_increase_local_offset", (SCANCODE)KEY_EQUALS, CLIENT);
+KEYVAR(INCREASE_VOLUME, "key_increase_volume", (SCANCODE)KEY_UP, CLIENT);
+KEYVAR(INSTANT_REPLAY, "key_instant_replay", (SCANCODE)KEY_F2, CLIENT);
+KEYVAR(LEFT_CLICK, "key_left_click", (SCANCODE)KEY_Z, CLIENT);
 KEYVAR(LEFT_CLICK_2, "key_left_click_2", 0, CLIENT);
-KEYVAR(MOD_AUTO, "key_mod_auto", (int)KEY_V, CLIENT);
-KEYVAR(MOD_AUTOPILOT, "key_mod_autopilot", (int)KEY_X, CLIENT);
-KEYVAR(MOD_DOUBLETIME, "key_mod_doubletime", (int)KEY_D, CLIENT);
-KEYVAR(MOD_EASY, "key_mod_easy", (int)KEY_Q, CLIENT);
-KEYVAR(MOD_FLASHLIGHT, "key_mod_flashlight", (int)KEY_G, CLIENT);
-KEYVAR(MOD_HALFTIME, "key_mod_halftime", (int)KEY_E, CLIENT);
-KEYVAR(MOD_HARDROCK, "key_mod_hardrock", (int)KEY_A, CLIENT);
-KEYVAR(MOD_HIDDEN, "key_mod_hidden", (int)KEY_F, CLIENT);
-KEYVAR(MOD_NOFAIL, "key_mod_nofail", (int)KEY_W, CLIENT);
-KEYVAR(MOD_RELAX, "key_mod_relax", (int)KEY_Z, CLIENT);
-KEYVAR(MOD_SCOREV2, "key_mod_scorev2", (int)KEY_B, CLIENT);
-KEYVAR(MOD_SPUNOUT, "key_mod_spunout", (int)KEY_C, CLIENT);
-KEYVAR(MOD_SUDDENDEATH, "key_mod_suddendeath", (int)KEY_S, CLIENT);
+KEYVAR(MOD_AUTO, "key_mod_auto", (SCANCODE)KEY_V, CLIENT);
+KEYVAR(MOD_AUTOPILOT, "key_mod_autopilot", (SCANCODE)KEY_X, CLIENT);
+KEYVAR(MOD_DOUBLETIME, "key_mod_doubletime", (SCANCODE)KEY_D, CLIENT);
+KEYVAR(MOD_EASY, "key_mod_easy", (SCANCODE)KEY_Q, CLIENT);
+KEYVAR(MOD_FLASHLIGHT, "key_mod_flashlight", (SCANCODE)KEY_G, CLIENT);
+KEYVAR(MOD_HALFTIME, "key_mod_halftime", (SCANCODE)KEY_E, CLIENT);
+KEYVAR(MOD_HARDROCK, "key_mod_hardrock", (SCANCODE)KEY_A, CLIENT);
+KEYVAR(MOD_HIDDEN, "key_mod_hidden", (SCANCODE)KEY_F, CLIENT);
+KEYVAR(MOD_NOFAIL, "key_mod_nofail", (SCANCODE)KEY_W, CLIENT);
+KEYVAR(MOD_RELAX, "key_mod_relax", (SCANCODE)KEY_Z, CLIENT);
+KEYVAR(MOD_SCOREV2, "key_mod_scorev2", (SCANCODE)KEY_B, CLIENT);
+KEYVAR(MOD_SPUNOUT, "key_mod_spunout", (SCANCODE)KEY_C, CLIENT);
+KEYVAR(MOD_SUDDENDEATH, "key_mod_suddendeath", (SCANCODE)KEY_S, CLIENT);
 KEYVAR(OPEN_SKIN_SELECT_MENU, "key_open_skin_select_menu", 0, CLIENT);
-KEYVAR(QUICK_LOAD, "key_quick_load", (int)KEY_F7, CLIENT);
-KEYVAR(QUICK_RETRY, "key_quick_retry", (int)KEY_BACKSPACE, CLIENT);
-KEYVAR(QUICK_SAVE, "key_quick_save", (int)KEY_F6, CLIENT);
-KEYVAR(RANDOM_BEATMAP, "key_random_beatmap", (int)KEY_F2, CLIENT);
-KEYVAR(RIGHT_CLICK, "key_right_click", (int)KEY_X, CLIENT);
+KEYVAR(QUICK_LOAD, "key_quick_load", (SCANCODE)KEY_F7, CLIENT);
+KEYVAR(QUICK_RETRY, "key_quick_retry", (SCANCODE)KEY_BACKSPACE, CLIENT);
+KEYVAR(QUICK_SAVE, "key_quick_save", (SCANCODE)KEY_F6, CLIENT);
+KEYVAR(RANDOM_BEATMAP, "key_random_beatmap", (SCANCODE)KEY_F2, CLIENT);
+KEYVAR(RIGHT_CLICK, "key_right_click", (SCANCODE)KEY_X, CLIENT);
 KEYVAR(RIGHT_CLICK_2, "key_right_click_2", 0, CLIENT);
-KEYVAR(SAVE_SCREENSHOT, "key_save_screenshot", (int)KEY_F12, CLIENT);
-KEYVAR(SEEK_TIME, "key_seek_time", (int)KEY_RSHIFT, CLIENT);
-KEYVAR(SEEK_TIME_BACKWARD, "key_seek_time_backward", (int)KEY_LEFT, CLIENT);
-KEYVAR(SEEK_TIME_FORWARD, "key_seek_time_forward", (int)KEY_RIGHT, CLIENT);
+KEYVAR(SAVE_SCREENSHOT, "key_save_screenshot", (SCANCODE)KEY_F12, CLIENT);
+KEYVAR(SEEK_TIME, "key_seek_time", (SCANCODE)KEY_RSHIFT, CLIENT);
+KEYVAR(SEEK_TIME_BACKWARD, "key_seek_time_backward", (SCANCODE)KEY_LEFT, CLIENT);
+KEYVAR(SEEK_TIME_FORWARD, "key_seek_time_forward", (SCANCODE)KEY_RIGHT, CLIENT);
 KEYVAR(SMOKE, "key_smoke", 0, CLIENT);
-KEYVAR(SKIP_CUTSCENE, "key_skip_cutscene", (int)KEY_SPACE, CLIENT);
-KEYVAR(TOGGLE_CHAT, "key_toggle_chat", (int)KEY_F8, CLIENT);
-KEYVAR(TOGGLE_EXTENDED_CHAT, "key_toggle_extended_chat", (int)KEY_F9, CLIENT);
+KEYVAR(SKIP_CUTSCENE, "key_skip_cutscene", (SCANCODE)KEY_SPACE, CLIENT);
+KEYVAR(TOGGLE_CHAT, "key_toggle_chat", (SCANCODE)KEY_F8, CLIENT);
+KEYVAR(TOGGLE_EXTENDED_CHAT, "key_toggle_extended_chat", (SCANCODE)KEY_F9, CLIENT);
 KEYVAR(TOGGLE_MAP_BACKGROUND, "key_toggle_map_background", 0, CLIENT);
-KEYVAR(TOGGLE_MODSELECT, "key_toggle_modselect", (int)KEY_F1, CLIENT);
-KEYVAR(TOGGLE_SCOREBOARD, "key_toggle_scoreboard", (int)KEY_TAB, CLIENT);
+KEYVAR(TOGGLE_MODSELECT, "key_toggle_modselect", (SCANCODE)KEY_F1, CLIENT);
+KEYVAR(TOGGLE_SCOREBOARD, "key_toggle_scoreboard", (SCANCODE)KEY_TAB, CLIENT);
 
 // Input behavior
 CONVAR(win_global_media_hotkeys, true, CLIENT,
@@ -626,7 +626,7 @@ CONVAR(main_menu_friend, true, CLIENT | SKINS | SERVER);
 CONVAR(main_menu_background_fade_duration, 0.25f, CLIENT | SKINS | SERVER);
 CONVAR(main_menu_startup_anim_duration, 0.5f, CLIENT | SKINS | SERVER);
 CONVAR(main_menu_use_server_logo, true, CLIENT | SKINS | SERVER);
-CONVAR(main_menu_last_tip_index, -1, CLIENT | HIDDEN); // cache to avoid showing the same tip twice
+CONVAR(main_menu_last_tip_index, -1, CLIENT | HIDDEN);  // cache to avoid showing the same tip twice
 CONVAR(main_menu_tips, true, CLIENT | SKINS | SERVER, "show main menu tips");
 
 // Not sorted

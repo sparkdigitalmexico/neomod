@@ -1166,15 +1166,21 @@ void Environment::setOSMousePos(vec2 pos) {
     m_vLastAbsMousePos = pos;
 }
 
-std::string Environment::keyCodeToString(SCANCODE keyCode) const {
-    const char *name = SDL_GetScancodeName((SDL_Scancode)keyCode);
-    if(name == nullptr)
-        return fmt::format("{}", keyCode);
-    else {
-        if(strlen(name) < 1)
-            return fmt::format("{}", keyCode);
-        else
-            return name;
+std::string Environment::scanCodeToString(SCANCODE scanCode) const {
+    const char *name = SDL_GetScancodeName((SDL_Scancode)scanCode);
+    if(name == nullptr || name[0] == '\0') {
+        return fmt::format("{:d}", scanCode);
+    } else {
+        return name;
+    }
+}
+
+std::string Environment::keyCodeToString(KEYCODE keyCode) const {
+    const char *name = SDL_GetKeyName(keyCode);
+    if(name == nullptr || name[0] == '\0') {
+        return fmt::format("{:d}", keyCode);
+    } else {
+        return name;
     }
 }
 
@@ -1366,6 +1372,22 @@ McRect Environment::SDLRectToMcRect(const SDL_Rect &sdlrect) noexcept {
     return {static_cast<float>(sdlrect.x), static_cast<float>(sdlrect.y), static_cast<float>(sdlrect.w),
             static_cast<float>(sdlrect.h)};
 }
+
+MouseButtonFlags Environment::getCurrentlyHeldMouseButtons() const {
+    float dummyX{}, dummyY{};
+    SDL_MouseButtonFlags sdlFlags = SDL_GetMouseState(&dummyX, &dummyY);
+    if(sdlFlags == 0) {
+        // try relative mouse state (sanity 1)
+        sdlFlags = SDL_GetRelativeMouseState(&dummyX, &dummyY);
+    }
+    if(sdlFlags == 0) {
+        // try global mouse state (sanity 2) (these are only performed on focus in/out, so it's worth trying to check everything)
+        sdlFlags = SDL_GetGlobalMouseState(&dummyX, &dummyY);
+    }
+    return static_cast<MouseButtonFlags>(SDL_BUTTON_MASK(sdlFlags));
+}
+
+KEYMOD Environment::getCurrentlyHeldKeyModifiers() const { return SDL_GetModState(); }
 
 vec2 Environment::getAsyncMousePos() const {
     float x{}, y{};

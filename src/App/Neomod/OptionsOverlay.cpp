@@ -685,9 +685,9 @@ class OptionsMenuKeyBindLabel final : public CBaseUILabel {
         } else if(this->keyCode == 0) {
             labelText = "<UNBOUND>";
         } else {
-            labelText = env->keyCodeToString(this->keyCode);
+            labelText = env->scanCodeToString(this->keyCode);
             if(labelText.find('?') != std::string::npos) {
-                labelText.append(fmt::format("  ({})", this->key->getInt()));
+                labelText.append(fmt::format("  ({})", newKeyCode));
             }
         }
 
@@ -1768,7 +1768,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
             }
 
             // use the first selected path
-            const std::string& mcosu_path = paths[0];
+            const std::string &mcosu_path = paths[0];
             const bool imported = SettingsImporter::import_from_mcosu(mcosu_path);
             conclude_import(imported);
         });
@@ -2234,7 +2234,10 @@ void OptionsOverlayImpl::onResolutionChange(vec2 newResolution) {
 void OptionsOverlayImpl::onKey(KeyboardEvent &e) {
     // from NotificationOverlay
     if(this->waitingKey != nullptr) {
-        this->waitingKey->setValue((float)e.getScanCode());
+        if(e.getScanCode() != this->waitingKey->getVal<SCANCODE>()) {
+            this->bLayoutUpdateScheduled.store(true, std::memory_order_relaxed);
+        }
+        this->waitingKey->setValue(e.getScanCode());
         this->waitingKey = nullptr;
     }
 }
@@ -3462,8 +3465,8 @@ void OptionsOverlayImpl::onKeyBindingsResetAllPressed(CBaseUIButton * /*button*/
     if(this->iNumResetAllKeyBindingsPressed > (numRequiredPressesUntilReset - 1)) {
         this->iNumResetAllKeyBindingsPressed = 0;
 
-        for(ConVar *bind : OsuKeyBinds::getAll()) {
-            bind->setValue(bind->getDefaultFloat());
+        for(const auto &[bind, sc] : OsuKeyBinds::getAll()) {
+            bind->setValue(sc);
         }
 
         ui->getNotificationOverlay()->addNotification("All key bindings have been reset.", 0xff00ff00);
@@ -3689,8 +3692,8 @@ void OptionsOverlayImpl::onHighQualitySlidersConVarChange(float newValue) {
                 for(auto &cvm : element->cvars) {
                     auto *cv = cvm.second;
                     if(cv != nullptr) {
-                        this->sliderQualitySlider->setValue(cv->getDefaultFloat(), false);
-                        cv->setValue(cv->getDefaultFloat());
+                        this->sliderQualitySlider->setValue(static_cast<float>(cv->getDefaultDouble()), false);
+                        cv->setValue(cv->getDefaultDouble());
                     }
                 }
             }
@@ -3719,11 +3722,18 @@ void OptionsOverlayImpl::onResetUpdate(ResetButton *resbtn) {
     if(const auto &cvit = optelem->cvars.find(resbtn); cvit != optelem->cvars.end() && (cv = cvit->second)) {
         switch(optelem->type) {
             case CBX:
-                resbtn->setEnabled(cv->getBool() != (bool)cv->getDefaultFloat());
+                resbtn->setEnabled(cv->getBool() != (bool)cv->getDefaultDouble());
                 break;
             case SLDR:
-                resbtn->setEnabled(cv->getFloat() != cv->getDefaultFloat());
+                resbtn->setEnabled(cv->getDouble() != cv->getDefaultDouble());
                 break;
+            case BINDBTN: {
+                const auto binds = OsuKeyBinds::getAll();
+                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
+                    resbtn->setEnabled(it->sc != cv->getVal<SCANCODE>());
+                }
+                break;
+            }
             default:
                 break;
         }
@@ -3740,18 +3750,25 @@ void OptionsOverlayImpl::onResetClicked(ResetButton *resbtn) {
             case CBX:
                 for(const auto &e : optelem->baseElems) {
                     auto *checkboxPointer = dynamic_cast<CBaseUICheckbox *>(e.get());
-                    if(checkboxPointer != nullptr) checkboxPointer->setChecked((bool)cv->getDefaultFloat());
+                    if(checkboxPointer != nullptr) checkboxPointer->setChecked((bool)cv->getDefaultDouble());
                 }
                 break;
             case SLDR:
                 if(optelem->baseElems.size() == 3) {
                     auto *sliderPointer = dynamic_cast<CBaseUISlider *>(optelem->baseElems[1].get());
                     if(sliderPointer != nullptr) {
-                        sliderPointer->setValue(cv->getDefaultFloat(), false);
+                        sliderPointer->setValue(static_cast<float>(cv->getDefaultDouble()), false);
                         sliderPointer->fireChangeCallback();
                     }
                 }
                 break;
+            case BINDBTN: {
+                const auto binds = OsuKeyBinds::getAll();
+                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
+                    const SCANCODE defSC = it->sc;
+                    cv->setValue(defSC);
+                }
+            } break;
             default:
                 break;
         }
@@ -3776,8 +3793,8 @@ void OptionsOverlayImpl::onResetEverythingClicked(CBaseUIButton * /*button*/) {
         }
 
         // and then all key bindings (since these don't use the yellow reset button system)
-        for(ConVar *bind : OsuKeyBinds::getAll()) {
-            bind->setValue(bind->getDefaultFloat());
+        for(const auto &[bind, sc] : OsuKeyBinds::getAll()) {
+            bind->setValue(sc);
         }
 
         ui->getNotificationOverlay()->addNotification("All settings have been reset.", 0xff00ff00);
@@ -3957,9 +3974,12 @@ KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, Con
     this->options->container.addBaseUIElement(label);
 
     auto e = std::make_unique<OptionsElement>(BINDBTN);
+    e->resetButton = std::make_unique<ResetButton>(e.get(), 0.f, 0.f, 35.f, 50.f, "", "");
+    e->resetButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResetClicked>(this));
     e->baseElems.emplace_back(unbindButton);
     e->baseElems.emplace_back(bindButton);
     e->baseElems.emplace_back(label);
+    e->cvars[e->resetButton.get()] = cvar;
     e->cvars[unbindButton] = cvar;
     e->cvars[bindButton] = cvar;
     const auto &last = this->elemContainers.emplace_back(std::move(e));

@@ -301,7 +301,7 @@ CONVAR(ui_window_animspeed, 0.29f, CLIENT | SKINS | SERVER);
 CONVAR(vsync, false, CLIENT);  // callback set in Graphics.cpp
 CONVAR(archive_threads, 1, CLIENT, "default number of threads to use for compressing archives");
 // this is not windows-only anymore, just keeping it with the "win_" prefix to not break old configs
-CONVAR(win_processpriority, (McThread::Priority)1, CLIENT, "sets the main process priority (0 = normal, 1 = high)",
+CONVAR(win_processpriority, (uint8_t)1, CLIENT, "sets the main process priority (0 = normal, 1 = high)",
        [](float newFloat) -> void { McThread::set_current_thread_prio((McThread::Priority)(int)newFloat); });
 
 // NOLINTEND(misc-definitions-in-headers)

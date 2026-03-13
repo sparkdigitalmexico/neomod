@@ -66,6 +66,8 @@ enum class WinFlags : uint64_t {
 MAKE_FLAG_ENUM(WinFlags);
 // clang-format on
 
+enum class MouseButtonFlags : uint8_t;
+
 class Environment {
     NOCOPY_NOMOVE(Environment)
    public:
@@ -278,7 +280,8 @@ class Environment {
     inline void setOSMousePos(float x, float y) { setOSMousePos(vec2{x, y}); }
 
     // keyboard
-    [[nodiscard]] std::string keyCodeToString(SCANCODE keyCode) const;
+    [[nodiscard]] std::string scanCodeToString(SCANCODE scanCode) const;
+    [[nodiscard]] std::string keyCodeToString(KEYCODE keyCode) const;
     void listenToTextInput(bool listen);
     bool setWindowsKeyDisabled(bool disable);
     void setRawKeyboardInput(bool raw);  // enable/disable OS-level rawinput
@@ -403,6 +406,11 @@ class Environment {
     McRect m_cursorClipRect;
     CURSORTYPE m_cursorType;
     std::array<SDL_Cursor *, (size_t)CURSORTYPE::CURSORTYPE_MAX> m_cursorIcons;
+
+    // for state reconciliation when re-focusing the window
+    friend class Keyboard;
+    MouseButtonFlags getCurrentlyHeldMouseButtons() const;
+    KEYMOD getCurrentlyHeldKeyModifiers() const;
 
     // keyboard
     inline void onRawKeyboardChange(float oldValue, float newValue) {

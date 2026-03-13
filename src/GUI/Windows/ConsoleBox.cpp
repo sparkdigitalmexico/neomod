@@ -586,7 +586,7 @@ void ConsoleBox::clearSuggestions() {
 
 void ConsoleBox::show() {
     if(!this->textbox->isVisible()) {
-        KeyboardEvent fakeEvent(KEY_F1, 0, Timing::getTicksNS());
+        KeyboardEvent fakeEvent(MC_SCANCODE_F1, MC_SCANCODE_TO_KEYCODE(MC_SCANCODE_F1), 0, Timing::getTicksNS());
         this->toggle(fakeEvent);
     }
 }

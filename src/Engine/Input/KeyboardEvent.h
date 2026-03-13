@@ -7,18 +7,20 @@
 #include <cstdint>
 
 using SCANCODE = uint16_t;
+using KEYMOD = uint16_t;
 using KEYCODE = uint32_t;
 using KEYCODES = KEYCODE;
 
 class KeyboardEvent {
    public:
-    KeyboardEvent(SCANCODE scanCode, char32_t charCode, uint64_t timestamp, bool repeat = false)
-        : timestamp(timestamp), scanCode(scanCode), charCode(charCode), bRepeat(repeat) {}
+    KeyboardEvent(SCANCODE scanCode, KEYCODE keyCode, char32_t charCode, uint64_t timestamp, bool repeat = false)
+        : timestamp(timestamp), keyCode(keyCode), charCode(charCode), scanCode(scanCode), bRepeat(repeat) {}
 
     constexpr forceinline void consume() { this->bConsumed = true; }
 
     [[nodiscard]] constexpr forceinline bool isConsumed() const { return this->bConsumed; }
     [[nodiscard]] constexpr forceinline bool isRepeat() const { return this->bRepeat; }
+    [[nodiscard]] constexpr forceinline KEYCODE getKeyCode() const { return this->keyCode; }
     [[nodiscard]] constexpr forceinline SCANCODE getScanCode() const { return this->scanCode; }
     [[nodiscard]] constexpr forceinline char32_t getCharCode() const { return this->charCode; }
     [[nodiscard]] constexpr forceinline uint64_t getTimestamp() const { return this->timestamp; }
@@ -30,8 +32,9 @@ class KeyboardEvent {
 
    private:
     uint64_t timestamp;
-    SCANCODE scanCode;
+    KEYCODE keyCode;
     char32_t charCode;
+    SCANCODE scanCode;
     bool bRepeat;
     bool bConsumed{false};
 };

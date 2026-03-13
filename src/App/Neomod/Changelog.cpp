@@ -39,6 +39,7 @@ Changelog::Changelog() : ScreenBackable() {
     v43_07.changes = {
         R"(- Added emoji support)",
         R"(- Started adding some main menu tips)",
+        R"(- Added reset buttons to key binds)",
         R"(- Fixed issues with "Freeze Frame" mod rendering)",
         R"(- Updated Discord app ID (for neosu->neomod rename))",
         R"(- Made release downloads smaller)",

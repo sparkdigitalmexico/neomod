@@ -263,6 +263,10 @@ class ConVar {
     }
 
     // get
+    template <typename T = int>
+    [[nodiscard]] inline T getDefaultVal() const {
+        return static_cast<T>(this->dDefaultValue);
+    }
     [[nodiscard]] inline float getDefaultFloat() const { return static_cast<float>(this->dDefaultValue); }
     [[nodiscard]] inline double getDefaultDouble() const { return this->dDefaultValue; }
     [[nodiscard]] inline const std::string &getDefaultString() const { return this->sDefaultValue; }

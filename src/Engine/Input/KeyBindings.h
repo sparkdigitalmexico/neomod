@@ -4,13 +4,14 @@
 
 class ConVar;
 
-namespace KeyBindings {
-extern i32 old_keycode_to_sdl_keycode(i32 key);
-}  // namespace KeyBindings
+using SCANCODE = u16;
+using KEYCODE = u32;
+using KEYMOD = u16;
 
-// This is copied from SDL to avoid transitively including SDL headers.
-// Names are changed to avoid clashing, but it must match exactly with the true definitions for SDL_Scancode,
-// there are static_asserts in KeyBindings.cpp that ensure this.
+namespace KeyBindings {
+extern i32 old_keycode_to_sdl_scancode(i32 key);
+extern SCANCODE keycode_to_scancode(KEYCODE keycode);
+extern KEYCODE scancode_to_keycode(SCANCODE scancode);
 
 /*
   Simple DirectMedia Layer
@@ -33,31 +34,11 @@ extern i32 old_keycode_to_sdl_keycode(i32 key);
   3. This notice may not be removed or altered from any source distribution.
 */
 
-/**
- * # CategoryScancode
- *
- * Defines keyboard scancodes.
- *
- * Please refer to the Best Keyboard Practices document for details on what
- * this information means and how best to use it.
- *
- * https://wiki.libsdl.org/SDL3/BestKeyboardPractices
- */
-
-/**
- * The SDL keyboard scancode representation.
- *
- * An SDL scancode is the physical representation of a key on the keyboard,
- * independent of language and keyboard mapping.
- *
- * Values of this type are used to represent keyboard keys, among other places
- * in the `scancode` field of the SDL_KeyboardEvent structure.
- *
- * The values in this enumeration are based on the USB usage page standard:
- * https://usb.org/sites/default/files/hut1_5.pdf
- *
- * \since This enum is available since SDL 3.2.0.
- */
+// This is copied from SDL to avoid transitively including SDL headers.
+// Names are changed to avoid clashing, but it must match exactly with the true definitions for SDL_Scancode/SDL_Keycode/SDL_Keymod.
+#define MC_SCANCODE_MASK (1u << 30)
+#define MC_SCANCODE_TO_KEYCODE(sc) ((sc) | MC_SCANCODE_MASK)
+}  // namespace KeyBindings
 
 extern "C" {
 // NOLINTNEXTLINE(performance-enum-size)
@@ -465,7 +446,7 @@ typedef enum MC_Scancode : unsigned int {
 #define KEY_Y MC_SCANCODE_Y
 #define KEY_Z MC_SCANCODE_Z
 
-// numbers
+// number (row)
 #define KEY_0 MC_SCANCODE_0
 #define KEY_1 MC_SCANCODE_1
 #define KEY_2 MC_SCANCODE_2
@@ -476,6 +457,8 @@ typedef enum MC_Scancode : unsigned int {
 #define KEY_7 MC_SCANCODE_7
 #define KEY_8 MC_SCANCODE_8
 #define KEY_9 MC_SCANCODE_9
+#define KEY_MINUS MC_SCANCODE_MINUS
+#define KEY_EQUALS MC_SCANCODE_EQUALS
 
 // numpad
 #define KEY_NUMPAD0 MC_SCANCODE_KP_0
@@ -488,12 +471,12 @@ typedef enum MC_Scancode : unsigned int {
 #define KEY_NUMPAD7 MC_SCANCODE_KP_7
 #define KEY_NUMPAD8 MC_SCANCODE_KP_8
 #define KEY_NUMPAD9 MC_SCANCODE_KP_9
-#define KEY_MULTIPLY MC_SCANCODE_KP_MULTIPLY
-#define KEY_ADD MC_SCANCODE_KP_PLUS
-#define KEY_SEPARATOR MC_SCANCODE_KP_EQUALS
-#define KEY_SUBTRACT MC_SCANCODE_KP_MINUS
-#define KEY_DECIMAL MC_SCANCODE_KP_DECIMAL
-#define KEY_DIVIDE MC_SCANCODE_KP_DIVIDE
+#define KEY_NUMPAD_MULTIPLY MC_SCANCODE_KP_MULTIPLY
+#define KEY_NUMPAD_ADD MC_SCANCODE_KP_PLUS
+#define KEY_NUMPAD_SEPARATOR MC_SCANCODE_KP_EQUALS
+#define KEY_NUMPAD_SUBTRACT MC_SCANCODE_KP_MINUS
+#define KEY_NUMPAD_DECIMAL MC_SCANCODE_KP_DECIMAL
+#define KEY_NUMPAD_DIVIDE MC_SCANCODE_KP_DIVIDE
 
 // function keys
 #define KEY_F1 MC_SCANCODE_F1
@@ -549,3 +532,23 @@ typedef enum MC_Scancode : unsigned int {
 #define KEY_MUTE MC_SCANCODE_MUTE
 #define KEY_VOLUMEDOWN MC_SCANCODE_VOLUMEDOWN
 #define KEY_VOLUMEUP MC_SCANCODE_VOLUMEUP
+
+// modifier keys
+#define KEYMOD_NONE (KEYMOD)0x0000u     /**< no modifier is applicable. */
+#define KEYMOD_LSHIFT (KEYMOD)0x0001u   /**< the left Shift key is down. */
+#define KEYMOD_RSHIFT (KEYMOD)0x0002u   /**< the right Shift key is down. */
+#define KEYMOD_LEVEL5 (KEYMOD)0x0004u   /**< the Level 5 Shift key is down. */
+#define KEYMOD_LCONTROL (KEYMOD)0x0040u /**< the left Ctrl (Control) key is down. */
+#define KEYMOD_RCONTROL (KEYMOD)0x0080u /**< the right Ctrl (Control) key is down. */
+#define KEYMOD_LALT (KEYMOD)0x0100u     /**< the left Alt key is down. */
+#define KEYMOD_RALT (KEYMOD)0x0200u     /**< the right Alt key is down. */
+#define KEYMOD_LSUPER (KEYMOD)0x0400u   /**< the left GUI key (often the Windows key) is down. */
+#define KEYMOD_RSUPER (KEYMOD)0x0800u   /**< the right GUI key (often the Windows key) is down. */
+#define KEYMOD_NUM (KEYMOD)0x1000u      /**< the Num Lock key (may be located on an extended keypad) is down. */
+#define KEYMOD_CAPS (KEYMOD)0x2000u     /**< the Caps Lock key is down. */
+#define KEYMOD_MODE (KEYMOD)0x4000u     /**< the !AltGr key is down. */
+#define KEYMOD_SCROLL (KEYMOD)0x8000u   /**< the Scroll Lock key is down. */
+#define KEYMOD_CONTROL (KEYMOD)(KEYMOD_LCONTROL | KEYMOD_RCONTROL) /**< Any Ctrl key is down. */
+#define KEYMOD_SHIFT (KEYMOD)(KEYMOD_LSHIFT | KEYMOD_RSHIFT)       /**< Any Shift key is down. */
+#define KEYMOD_ALT (KEYMOD)(KEYMOD_LALT | KEYMOD_RALT)             /**< Any Alt key is down. */
+#define KEYMOD_SUPER (KEYMOD)(KEYMOD_LSUPER | KEYMOD_RSUPER)       /**< Any GUI key is down. */

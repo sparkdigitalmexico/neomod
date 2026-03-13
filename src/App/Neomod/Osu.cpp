@@ -76,6 +76,7 @@
 #include "NeomodEnvInterop.h"
 
 #include <algorithm>
+#include <limits>
 
 using namespace flags::operators;
 

@@ -212,6 +212,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
 #include <SDL3/SDL_system.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_keycode.h>
 
 #define NEOMOD_CMDLINE_WINDOW_MSG_ID TEXT("NEOMOD_CMDLINE")
 namespace {  // static
@@ -305,6 +306,7 @@ bool sdl_windows_message_hook(void *userdata, MSG *msg) {
                 return false;  // not our hotkey?
         }
         // send a key up after too just in case...
+        keydownev.key.key = SDL_SCANCODE_TO_KEYCODE(keydownev.key.scancode);
         keyupev = keydownev;
         keyupev.key.type = SDL_EVENT_KEY_UP;
         keyupev.key.down = false;
