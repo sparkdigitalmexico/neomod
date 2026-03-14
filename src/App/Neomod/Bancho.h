@@ -29,6 +29,7 @@ struct BanchoState final {
     BanchoState(BanchoState &&) = delete;
 
     static std::string endpoint;
+    static std::string game_endpoint;
     static MD5String pw_md5;
     static std::array<u8, 32> oauth_challenge;
     static std::array<u8, 32> oauth_verifier;
@@ -95,6 +96,7 @@ struct BanchoState final {
     static void poll_login();
     static void disconnect(bool shutdown = false);
     static void reconnect();
+    static void reconnect_websocket();
 
    private:
     // internal helpers

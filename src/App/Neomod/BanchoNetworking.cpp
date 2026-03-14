@@ -91,12 +91,10 @@ void attempt_logging_in() {
 
     options.headers["x-mcosu-ver"] = BanchoState::neomod_version;
 
-    auto query_url = fmt::format("c.{:s}/", BanchoState::endpoint);
-
     last_packet_ms = Timing::getTicksMS();
 
     // TODO: allow user to cancel login attempt
-    networkHandler->httpRequestAsync(query_url, std::move(options), [](Mc::Net::Response response) {
+    networkHandler->httpRequestAsync(BanchoState::game_endpoint, std::move(options), [](Mc::Net::Response response) {
         if(!response.success) {
             auto errmsg = fmt::format("Failed to log in: {}", response.error_msg);
             ui->getNotificationOverlay()->addToast(errmsg, ERROR_TOAST);
@@ -155,9 +153,7 @@ void send_bancho_packet_http(Packet outgoing) {
     // copy outgoing packet data for POST
     options.post_data = std::string(reinterpret_cast<char *>(outgoing.memory), outgoing.pos);
 
-    auto query_url = fmt::format("c.{:s}/", BanchoState::endpoint);
-
-    networkHandler->httpRequestAsync(query_url, std::move(options), [](Mc::Net::Response response) {
+    networkHandler->httpRequestAsync(BanchoState::game_endpoint, std::move(options), [](Mc::Net::Response response) {
         if(!response.success) {
             debugLog("Failed to send packet, HTTP error {}", response.response_code);
             return;
@@ -181,19 +177,7 @@ void send_bancho_packet_ws(Packet outgoing) {
             return;
         }
 
-        Mc::Net::WSOptions options;
-        options.user_agent = "osu!";
-        options.headers["x-mcosu-ver"] = BanchoState::neomod_version;
-        options.headers["osu-token"] = auth_token;
-
-        std::string url = fmt::format("c.{}/ws/", BanchoState::endpoint);
-
-        auto new_websocket = networkHandler->initWebsocket(url, options);
-        if(websocket != nullptr) {
-            // don't lose outgoing packet queue
-            new_websocket->write(websocket->drain_output());
-        }
-        websocket = new_websocket;
+        BanchoState::reconnect_websocket();
     }
 
     if(!websocket || websocket->status.load(std::memory_order_relaxed) == Mc::Net::WSStatus::UNSUPPORTED) {
@@ -408,15 +392,13 @@ void BanchoState::disconnect(bool shutdown) {
         options.headers["osu-token"] = BANCHO::Net::auth_token;
         BANCHO::Net::auth_token = "";
 
-        auto query_url = fmt::format("c.{:s}/", BanchoState::endpoint);
-
         // use sync request for logout on shutdown to make sure it completes.
         // on WASM, KEEPALIVE uses fetch(keepalive) instead of blocking sync XHR.
         if(shutdown) {
             options.flags |= Mc::Net::RequestOptions::KEEPALIVE;
-            networkHandler->httpRequestSynchronous(query_url, std::move(options));
+            networkHandler->httpRequestSynchronous(BanchoState::game_endpoint, std::move(options));
         } else {
-            networkHandler->httpRequestAsync(query_url, std::move(options));
+            networkHandler->httpRequestAsync(BanchoState::game_endpoint, std::move(options));
         }
 
         free(packet.memory);
@@ -438,6 +420,7 @@ void BanchoState::disconnect(bool shutdown) {
     BanchoState::is_oauth = false;
     BanchoState::fully_supports_neomod = false;
     BanchoState::endpoint = "";
+    BanchoState::game_endpoint = "";
     BanchoState::spectating = false;
     BanchoState::spectated_player_id = 0;
     BanchoState::spectators.clear();
@@ -481,6 +464,7 @@ void BanchoState::reconnect() {
     }
 
     BanchoState::endpoint = cv::mp_server.getString();
+    BanchoState::game_endpoint = "c." + BanchoState::endpoint;
     BanchoState::username = cv::name.getString().c_str();
     if(strlen(cv::mp_password_md5.getString().c_str()) == 32) {
         BanchoState::pw_md5 = {cv::mp_password_md5.getString().c_str()};
@@ -510,4 +494,23 @@ void BanchoState::reconnect() {
     BanchoState::update_online_status(OnlineStatus::LOGIN_IN_PROGRESS);
 
     BANCHO::Net::attempt_logging_in();
+}
+
+// Close existing websocket and reopen a new one
+void BanchoState::reconnect_websocket() {
+    if(!BANCHO::Net::use_websockets) return;
+
+    Mc::Net::WSOptions options;
+    options.user_agent = "osu!";
+    options.headers["x-mcosu-ver"] = BanchoState::neomod_version;
+    options.headers["osu-token"] = BANCHO::Net::auth_token;
+
+    const std::string url = BanchoState::game_endpoint + "/ws/";
+    auto new_websocket = networkHandler->initWebsocket(url, options);
+    if(BANCHO::Net::websocket != nullptr) {
+        // don't lose outgoing packet queue
+        new_websocket->write(BANCHO::Net::websocket->drain_output());
+        BANCHO::Net::websocket->status.store(Mc::Net::WSStatus::DISCONNECTED, std::memory_order_relaxed);
+    }
+    BANCHO::Net::websocket = new_websocket;
 }

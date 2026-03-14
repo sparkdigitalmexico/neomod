@@ -107,6 +107,7 @@ enum IncomingPackets : uint8_t {
     INP_SWITCH_SERVER = 103,
     INP_ACCOUNT_RESTRICTED = 104,
     INP_MATCH_ABORT = 106,
+    INP_SWITCH_TOURNAMENT_SERVER = 107,
 
     // neomod-specific packets (128 is arbitrary number to start at)
     INP_PROTECT_VARIABLES = 128,

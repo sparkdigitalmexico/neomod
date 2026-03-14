@@ -55,6 +55,7 @@
 // defs
 // some of these are atomic due to multithreaded access
 std::string BanchoState::endpoint;
+std::string BanchoState::game_endpoint;
 std::string BanchoState::username;
 MD5String BanchoState::pw_md5;
 
@@ -823,6 +824,23 @@ void BanchoState::handle_packet(Packet &packet) {
         }
 
         case INP_SWITCH_SERVER: {
+            // "Switches the current bancho server to the backup bancho
+            //  server, if the client happens to be Idle for the given time."
+            (void)packet.read<i32>();  // nb_seconds
+            break;
+        }
+
+        case INP_SWITCH_TOURNAMENT_SERVER: {
+            // "Instructs the tournament client to connect to a different
+            // server for tournament matches. It's currently unknown how
+            // exactly this was used in practice."
+
+            // So essentially we'll just improvise and always switch server,
+            // not just for multiplayer matches or nonexisting "tournament" state.
+            // Note that we don't go through the login process again, but just
+            // reuse the existing login token.
+            BanchoState::game_endpoint = packet.read_stdstring();
+            BanchoState::reconnect_websocket();
             break;
         }
 

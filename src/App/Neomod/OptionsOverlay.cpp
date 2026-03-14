@@ -3195,6 +3195,7 @@ void OptionsOverlayImpl::onLogInClicked(bool left, bool right) {
     } else {
         if(this->should_use_oauth_login() && cv::mp_oauth_token.getString().empty()) {
             BanchoState::endpoint = cv::mp_server.getString();
+            BanchoState::game_endpoint = "c." + BanchoState::endpoint;
 
             crypto::rng::get_rand(BanchoState::oauth_verifier);
             crypto::hash::sha256(&BanchoState::oauth_verifier[0], 32, &BanchoState::oauth_challenge[0]);

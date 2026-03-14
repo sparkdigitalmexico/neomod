@@ -249,6 +249,8 @@ std::string_view Packet::inpacket_to_string(u16 incoming_packet_id) {
             return "VERSION_UPDATE_FORCED"sv;
         case INP_SWITCH_SERVER:
             return "SWITCH_SERVER"sv;
+        case INP_SWITCH_TOURNAMENT_SERVER:
+            return "SWITCH_TOURNAMENT_SERVER"sv;
         case INP_ACCOUNT_RESTRICTED:
             return "ACCOUNT_RESTRICTED"sv;
         case INP_MATCH_ABORT:
