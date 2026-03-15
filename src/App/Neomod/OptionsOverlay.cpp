@@ -2459,7 +2459,7 @@ void OptionsOverlayImpl::updateLayout() {
 
                     for(const auto &element : this->elemContainers[s]->baseElems) {
                         if(!element->getName().empty()) {
-                            const std::string tags{element->getName()};
+                            const std::string tags{SString::to_lower(element->getName())};
 
                             if(tags.find(search) != std::string::npos) {
                                 sectionMatch = true;
