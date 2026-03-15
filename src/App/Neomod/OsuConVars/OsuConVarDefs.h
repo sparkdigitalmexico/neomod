@@ -27,12 +27,9 @@
 // defined and included at the end of ConVar.cpp
 #if defined(DEFINE_OSU_CONVARS)
 #undef CONVAR
-#undef KEYVAR
 #define CONVAR(name, ...) ConVar _CV(name)(#name __VA_OPT__(, ) __VA_ARGS__)
-#define KEYVAR(name, ...) ConVar _CV(name)(__VA_ARGS__)
 
 #include "BaseEnvironment.h"
-#include "KeyBindings.h"
 #include "BanchoNetworking.h"  // defines some things we need like OSU_VERSION_DATEONLY
 #include "OsuConfig.h"
 namespace SliderRenderer {
@@ -44,7 +41,6 @@ extern void start_by_username(std::string_view username);
 
 #else
 #define CONVAR(name, ...) extern ConVar _CV(name)
-#define KEYVAR(name, ...) extern ConVar _CV(name)
 #endif
 
 class ConVar;
@@ -88,50 +84,6 @@ CONVAR(slider_debug_draw, false, CLIENT | SERVER | PROTECTED | GAMEPLAY,
 CONVAR(slider_debug_draw_square_vao, false, CLIENT | SERVER | PROTECTED | GAMEPLAY,
        "generate square vaos and nothing else (no rt, no shader) (requires disabling legacy slider renderer)");
 CONVAR(slider_debug_wireframe, false, CLIENT | SERVER | PROTECTED | GAMEPLAY, "unused");
-
-// Keybinds
-KEYVAR(BOSS_KEY, "key_boss", (SCANCODE)KEY_INSERT, CLIENT);
-KEYVAR(DECREASE_LOCAL_OFFSET, "key_decrease_local_offset", (SCANCODE)KEY_MINUS, CLIENT);
-KEYVAR(DECREASE_VOLUME, "key_decrease_volume", (SCANCODE)KEY_DOWN, CLIENT);
-KEYVAR(DISABLE_MOUSE_BUTTONS, "key_disable_mouse_buttons", (SCANCODE)KEY_F10, CLIENT);
-KEYVAR(FPOSU_ZOOM, "key_fposu_zoom", 0, CLIENT);
-KEYVAR(GAME_PAUSE, "key_game_pause", (SCANCODE)KEY_ESCAPE, CLIENT);
-KEYVAR(INCREASE_LOCAL_OFFSET, "key_increase_local_offset", (SCANCODE)KEY_EQUALS, CLIENT);
-KEYVAR(INCREASE_VOLUME, "key_increase_volume", (SCANCODE)KEY_UP, CLIENT);
-KEYVAR(INSTANT_REPLAY, "key_instant_replay", (SCANCODE)KEY_F2, CLIENT);
-KEYVAR(LEFT_CLICK, "key_left_click", (SCANCODE)KEY_Z, CLIENT);
-KEYVAR(LEFT_CLICK_2, "key_left_click_2", 0, CLIENT);
-KEYVAR(MOD_AUTO, "key_mod_auto", (SCANCODE)KEY_V, CLIENT);
-KEYVAR(MOD_AUTOPILOT, "key_mod_autopilot", (SCANCODE)KEY_X, CLIENT);
-KEYVAR(MOD_DOUBLETIME, "key_mod_doubletime", (SCANCODE)KEY_D, CLIENT);
-KEYVAR(MOD_EASY, "key_mod_easy", (SCANCODE)KEY_Q, CLIENT);
-KEYVAR(MOD_FLASHLIGHT, "key_mod_flashlight", (SCANCODE)KEY_G, CLIENT);
-KEYVAR(MOD_HALFTIME, "key_mod_halftime", (SCANCODE)KEY_E, CLIENT);
-KEYVAR(MOD_HARDROCK, "key_mod_hardrock", (SCANCODE)KEY_A, CLIENT);
-KEYVAR(MOD_HIDDEN, "key_mod_hidden", (SCANCODE)KEY_F, CLIENT);
-KEYVAR(MOD_NOFAIL, "key_mod_nofail", (SCANCODE)KEY_W, CLIENT);
-KEYVAR(MOD_RELAX, "key_mod_relax", (SCANCODE)KEY_Z, CLIENT);
-KEYVAR(MOD_SCOREV2, "key_mod_scorev2", (SCANCODE)KEY_B, CLIENT);
-KEYVAR(MOD_SPUNOUT, "key_mod_spunout", (SCANCODE)KEY_C, CLIENT);
-KEYVAR(MOD_SUDDENDEATH, "key_mod_suddendeath", (SCANCODE)KEY_S, CLIENT);
-KEYVAR(OPEN_SKIN_SELECT_MENU, "key_open_skin_select_menu", 0, CLIENT);
-KEYVAR(QUICK_LOAD, "key_quick_load", (SCANCODE)KEY_F7, CLIENT);
-KEYVAR(QUICK_RETRY, "key_quick_retry", (SCANCODE)KEY_BACKSPACE, CLIENT);
-KEYVAR(QUICK_SAVE, "key_quick_save", (SCANCODE)KEY_F6, CLIENT);
-KEYVAR(RANDOM_BEATMAP, "key_random_beatmap", (SCANCODE)KEY_F2, CLIENT);
-KEYVAR(RIGHT_CLICK, "key_right_click", (SCANCODE)KEY_X, CLIENT);
-KEYVAR(RIGHT_CLICK_2, "key_right_click_2", 0, CLIENT);
-KEYVAR(SAVE_SCREENSHOT, "key_save_screenshot", (SCANCODE)KEY_F12, CLIENT);
-KEYVAR(SEEK_TIME, "key_seek_time", (SCANCODE)KEY_RSHIFT, CLIENT);
-KEYVAR(SEEK_TIME_BACKWARD, "key_seek_time_backward", (SCANCODE)KEY_LEFT, CLIENT);
-KEYVAR(SEEK_TIME_FORWARD, "key_seek_time_forward", (SCANCODE)KEY_RIGHT, CLIENT);
-KEYVAR(SMOKE, "key_smoke", 0, CLIENT);
-KEYVAR(SKIP_CUTSCENE, "key_skip_cutscene", (SCANCODE)KEY_SPACE, CLIENT);
-KEYVAR(TOGGLE_CHAT, "key_toggle_chat", (SCANCODE)KEY_F8, CLIENT);
-KEYVAR(TOGGLE_EXTENDED_CHAT, "key_toggle_extended_chat", (SCANCODE)KEY_F9, CLIENT);
-KEYVAR(TOGGLE_MAP_BACKGROUND, "key_toggle_map_background", 0, CLIENT);
-KEYVAR(TOGGLE_MODSELECT, "key_toggle_modselect", (SCANCODE)KEY_F1, CLIENT);
-KEYVAR(TOGGLE_SCOREBOARD, "key_toggle_scoreboard", (SCANCODE)KEY_TAB, CLIENT);
 
 // Input behavior
 CONVAR(win_global_media_hotkeys, true, CLIENT,
@@ -1009,6 +961,5 @@ CONVAR(enable_screenshots, Env::cfg(OS::WASM) ? false : true, CLIENT | SKINS | S
 #undef DEFINE_OSU_CONVARS
 #undef _CV
 #undef CONVAR
-#undef KEYVAR
 
 #endif

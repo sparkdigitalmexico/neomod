@@ -2,7 +2,8 @@
 #include "ScreenBackable.h"
 
 #include "Engine.h"
-#include "OsuConVars.h"
+#include "ConVar.h"
+#include "OsuKeyBinds.h"
 #include "KeyBindings.h"
 #include "Osu.h"
 #include "Skin.h"
@@ -38,7 +39,7 @@ void ScreenBackable::update(CBaseUIEventCtx &c) {
 void ScreenBackable::onKeyDown(KeyboardEvent &e) {
     UIScreen::onKeyDown(e);
     if(!this->bVisible || e.isConsumed() || !this->backable) return;
-    if(e == KEY_ESCAPE || e == cv::GAME_PAUSE.getVal<SCANCODE>()) {
+    if(e == KEY_ESCAPE || e == keys::GAME_PAUSE.getVal<SCANCODE>()) {
         soundEngine->play(osu->getSkin()->s_menu_back);
         this->onBack();
         e.consume();

@@ -3,10 +3,10 @@
 #include "ConVar.h"
 #include "Engine.h"
 #include "Font.h"
-#include "KeyBindings.h"
 #include "Graphics.h"
 #include "Osu.h"
-#include "OsuConVarDefs.h"
+#include "KeyBindings.h"
+#include "OsuKeyBinds.h"
 #include "Skin.h"
 #include "UI.h"
 
@@ -61,7 +61,7 @@ void LoadingScreen::drawLoadingSpinner() {
 void LoadingScreen::onKeyDown(KeyboardEvent& e) {
     if(e.isConsumed()) return;
 
-    if(e == KEY_ESCAPE || e == cv::GAME_PAUSE.getVal<SCANCODE>()) {
+    if(e == KEY_ESCAPE || e == keys::GAME_PAUSE.getVal<SCANCODE>()) {
         e.consume();
         this->onFinished();
     }

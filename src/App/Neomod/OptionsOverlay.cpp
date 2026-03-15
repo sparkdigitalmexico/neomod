@@ -675,8 +675,8 @@ class OptionsMenuKeyBindLabel final : public CBaseUILabel {
 
         // handle bound/unbound
         // HACKHACK: show mouse left/right for LEFT_CLICK_2/RIGHT_CLICK_2 if not bound to keyboard keys
-        const bool isUnboundKey1_2 = this->key == &cv::LEFT_CLICK_2 && this->keyCode == 0;
-        const bool isUnboundKey2_2 = this->key == &cv::RIGHT_CLICK_2 && this->keyCode == 0;
+        const bool isUnboundKey1_2 = this->key == &keys::LEFT_CLICK_2 && this->keyCode == 0;
+        const bool isUnboundKey2_2 = this->key == &keys::RIGHT_CLICK_2 && this->keyCode == 0;
         const bool isUnbound = this->keyCode == 0 && !(isUnboundKey1_2 || isUnboundKey2_2);
         if(isUnboundKey1_2) {
             labelText = "Mouse Left";
@@ -1407,56 +1407,56 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     resetAllKeyBindingsButton->setClickCallback(
         SA::MakeDelegate<&OptionsOverlayImpl::onKeyBindingsResetAllPressed>(this));
     this->addSubSection("Keys - In-Game", keyboardSectionTags);
-    this->addKeyBindButton("Left Click", &cv::LEFT_CLICK);
-    this->addKeyBindButton("Right Click", &cv::RIGHT_CLICK);
-    this->addKeyBindButton("Left Click (2)", &cv::LEFT_CLICK_2);
-    this->addKeyBindButton("Right Click (2)", &cv::RIGHT_CLICK_2);
-    this->addKeyBindButton("Smoke", &cv::SMOKE);
-    this->addKeyBindButton("Game Pause", &cv::GAME_PAUSE)->setDisallowLeftMouseClickBinding(true);
-    this->addKeyBindButton("Skip Cutscene", &cv::SKIP_CUTSCENE);
-    this->addKeyBindButton("Toggle Scoreboard", &cv::TOGGLE_SCOREBOARD);
-    this->addKeyBindButton("Scrubbing (+ Click Drag!)", &cv::SEEK_TIME);
-    this->addKeyBindButton("Quick Seek -5sec <<<", &cv::SEEK_TIME_BACKWARD);
-    this->addKeyBindButton("Quick Seek +5sec >>>", &cv::SEEK_TIME_FORWARD);
-    this->addKeyBindButton("Increase Local Song Offset", &cv::INCREASE_LOCAL_OFFSET);
-    this->addKeyBindButton("Decrease Local Song Offset", &cv::DECREASE_LOCAL_OFFSET);
-    this->addKeyBindButton("Quick Retry (hold briefly)", &cv::QUICK_RETRY);
-    this->addKeyBindButton("Quick Save", &cv::QUICK_SAVE);
-    this->addKeyBindButton("Quick Load", &cv::QUICK_LOAD);
-    this->addKeyBindButton("Instant Replay", &cv::INSTANT_REPLAY);
+    this->addKeyBindButton("Left Click", &keys::LEFT_CLICK);
+    this->addKeyBindButton("Right Click", &keys::RIGHT_CLICK);
+    this->addKeyBindButton("Left Click (2)", &keys::LEFT_CLICK_2);
+    this->addKeyBindButton("Right Click (2)", &keys::RIGHT_CLICK_2);
+    this->addKeyBindButton("Smoke", &keys::SMOKE);
+    this->addKeyBindButton("Game Pause", &keys::GAME_PAUSE)->setDisallowLeftMouseClickBinding(true);
+    this->addKeyBindButton("Skip Cutscene", &keys::SKIP_CUTSCENE);
+    this->addKeyBindButton("Toggle Scoreboard", &keys::TOGGLE_SCOREBOARD);
+    this->addKeyBindButton("Scrubbing (+ Click Drag!)", &keys::SEEK_TIME);
+    this->addKeyBindButton("Quick Seek -5sec <<<", &keys::SEEK_TIME_BACKWARD);
+    this->addKeyBindButton("Quick Seek +5sec >>>", &keys::SEEK_TIME_FORWARD);
+    this->addKeyBindButton("Increase Local Song Offset", &keys::INCREASE_LOCAL_OFFSET);
+    this->addKeyBindButton("Decrease Local Song Offset", &keys::DECREASE_LOCAL_OFFSET);
+    this->addKeyBindButton("Quick Retry (hold briefly)", &keys::QUICK_RETRY);
+    this->addKeyBindButton("Quick Save", &keys::QUICK_SAVE);
+    this->addKeyBindButton("Quick Load", &keys::QUICK_LOAD);
+    this->addKeyBindButton("Instant Replay", &keys::INSTANT_REPLAY);
     this->addSubSection("Keys - FPoSu", keyboardSectionTags);
-    this->addKeyBindButton("Zoom", &cv::FPOSU_ZOOM);
+    this->addKeyBindButton("Zoom", &keys::FPOSU_ZOOM);
     this->addSubSection("Keys - Universal", keyboardSectionTags);
-    this->addKeyBindButton("Toggle chat", &cv::TOGGLE_CHAT);
-    this->addKeyBindButton("Toggle user list", &cv::TOGGLE_EXTENDED_CHAT);
+    this->addKeyBindButton("Toggle chat", &keys::TOGGLE_CHAT);
+    this->addKeyBindButton("Toggle user list", &keys::TOGGLE_EXTENDED_CHAT);
     if(cv::enable_screenshots.getBool()) {
-        this->addKeyBindButton("Save Screenshot", &cv::SAVE_SCREENSHOT);
+        this->addKeyBindButton("Save Screenshot", &keys::SAVE_SCREENSHOT);
     }
-    this->addKeyBindButton("Increase Volume", &cv::INCREASE_VOLUME);
-    this->addKeyBindButton("Decrease Volume", &cv::DECREASE_VOLUME);
-    this->addKeyBindButton("Disable Mouse Buttons", &cv::DISABLE_MOUSE_BUTTONS);
-    this->addKeyBindButton("Toggle Map Background", &cv::TOGGLE_MAP_BACKGROUND);
-    this->addKeyBindButton("Boss Key (Minimize)", &cv::BOSS_KEY);
-    this->addKeyBindButton("Open Skin Selection Menu", &cv::OPEN_SKIN_SELECT_MENU);
+    this->addKeyBindButton("Increase Volume", &keys::INCREASE_VOLUME);
+    this->addKeyBindButton("Decrease Volume", &keys::DECREASE_VOLUME);
+    this->addKeyBindButton("Disable Mouse Buttons", &keys::DISABLE_MOUSE_BUTTONS);
+    this->addKeyBindButton("Toggle Map Background", &keys::TOGGLE_MAP_BACKGROUND);
+    this->addKeyBindButton("Boss Key (Minimize)", &keys::BOSS_KEY);
+    this->addKeyBindButton("Open Skin Selection Menu", &keys::OPEN_SKIN_SELECT_MENU);
     this->addSubSection("Keys - Song Select", keyboardSectionTags);
-    this->addKeyBindButton("Toggle Mod Selection Screen", &cv::TOGGLE_MODSELECT)
+    this->addKeyBindButton("Toggle Mod Selection Screen", &keys::TOGGLE_MODSELECT)
         ->setTooltipText("(F1 can not be unbound. This is just an additional key.)");
-    this->addKeyBindButton("Random Beatmap", &cv::RANDOM_BEATMAP)
+    this->addKeyBindButton("Random Beatmap", &keys::RANDOM_BEATMAP)
         ->setTooltipText("(F2 can not be unbound. This is just an additional key.)");
     this->addSubSection("Keys - Mod Select", keyboardSectionTags);
-    this->addKeyBindButton("Easy", &cv::MOD_EASY);
-    this->addKeyBindButton("No Fail", &cv::MOD_NOFAIL);
-    this->addKeyBindButton("Half Time", &cv::MOD_HALFTIME);
-    this->addKeyBindButton("Hard Rock", &cv::MOD_HARDROCK);
-    this->addKeyBindButton("Sudden Death", &cv::MOD_SUDDENDEATH);
-    this->addKeyBindButton("Double Time", &cv::MOD_DOUBLETIME);
-    this->addKeyBindButton("Hidden", &cv::MOD_HIDDEN);
-    this->addKeyBindButton("Flashlight", &cv::MOD_FLASHLIGHT);
-    this->addKeyBindButton("Relax", &cv::MOD_RELAX);
-    this->addKeyBindButton("Autopilot", &cv::MOD_AUTOPILOT);
-    this->addKeyBindButton("Spunout", &cv::MOD_SPUNOUT);
-    this->addKeyBindButton("Auto", &cv::MOD_AUTO);
-    this->addKeyBindButton("Score V2", &cv::MOD_SCOREV2);
+    this->addKeyBindButton("Easy", &keys::MOD_EASY);
+    this->addKeyBindButton("No Fail", &keys::MOD_NOFAIL);
+    this->addKeyBindButton("Half Time", &keys::MOD_HALFTIME);
+    this->addKeyBindButton("Hard Rock", &keys::MOD_HARDROCK);
+    this->addKeyBindButton("Sudden Death", &keys::MOD_SUDDENDEATH);
+    this->addKeyBindButton("Double Time", &keys::MOD_DOUBLETIME);
+    this->addKeyBindButton("Hidden", &keys::MOD_HIDDEN);
+    this->addKeyBindButton("Flashlight", &keys::MOD_FLASHLIGHT);
+    this->addKeyBindButton("Relax", &keys::MOD_RELAX);
+    this->addKeyBindButton("Autopilot", &keys::MOD_AUTOPILOT);
+    this->addKeyBindButton("Spunout", &keys::MOD_SPUNOUT);
+    this->addKeyBindButton("Auto", &keys::MOD_AUTO);
+    this->addKeyBindButton("Score V2", &keys::MOD_SCOREV2);
 
     //**************************************************************************************************************************//
 

@@ -10,6 +10,7 @@
 #include "MakeDelegateWrapper.h"
 #include "Engine.h"
 #include "KeyBindings.h"
+#include "OsuKeyBinds.h"
 #include "Mouse.h"
 #include "Graphics.h"
 #include "Osu.h"
@@ -153,7 +154,7 @@ void UIContextMenu::onKeyDown(KeyboardEvent &e) {
 
     // hide on ESC
     if(!e.isConsumed()) {
-        if(e == KEY_ESCAPE || e == cv::GAME_PAUSE.getVal<SCANCODE>()) {
+        if(e == KEY_ESCAPE || e == keys::GAME_PAUSE.getVal<SCANCODE>()) {
             e.consume();
             this->setVisible2(false);
         }

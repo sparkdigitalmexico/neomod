@@ -15,6 +15,7 @@
 #include "BanchoNetworking.h"
 #include "HUD.h"
 #include "Keyboard.h"
+#include "OsuKeyBinds.h"
 #include "ModSelector.h"
 #include "OptionsOverlay.h"
 #include "Osu.h"
@@ -42,8 +43,7 @@ PauseOverlay::PauseOverlay() : UIScreen() {
         ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onContinueClicked>(this));
     addButton(MKIMGGETR(i_pause_retry), "Retry")
         ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onRetryClicked>(this));
-    addButton(MKIMGGETR(i_pause_back), "Quit")
-        ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onBackClicked>(this));
+    addButton(MKIMGGETR(i_pause_back), "Quit")->setClickCallback(SA::MakeDelegate<&PauseOverlay::onBackClicked>(this));
 
 #undef MKIMGGETR
 
@@ -189,14 +189,15 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
     UIScreen::onKeyDown(e);  // only used for options menu
     if(!this->bVisible || e.isConsumed()) return;
 
-    if(e == cv::LEFT_CLICK.getVal<SCANCODE>() || e == cv::RIGHT_CLICK.getVal<SCANCODE>() ||
-       e == cv::LEFT_CLICK_2.getVal<SCANCODE>() || e == cv::RIGHT_CLICK_2.getVal<SCANCODE>()) {
+    if(e == keys::LEFT_CLICK.getVal<SCANCODE>() || e == keys::RIGHT_CLICK.getVal<SCANCODE>() ||
+       e == keys::LEFT_CLICK_2.getVal<SCANCODE>() || e == keys::RIGHT_CLICK_2.getVal<SCANCODE>()) {
         bool fireButtonClick = false;
-        if((e == cv::LEFT_CLICK.getVal<SCANCODE>() || e == cv::LEFT_CLICK_2.getVal<SCANCODE>()) && !this->bClick1Down) {
+        if((e == keys::LEFT_CLICK.getVal<SCANCODE>() || e == keys::LEFT_CLICK_2.getVal<SCANCODE>()) &&
+           !this->bClick1Down) {
             this->bClick1Down = true;
             fireButtonClick = true;
         }
-        if((e == cv::RIGHT_CLICK.getVal<SCANCODE>() || e == cv::RIGHT_CLICK_2.getVal<SCANCODE>()) &&
+        if((e == keys::RIGHT_CLICK.getVal<SCANCODE>() || e == keys::RIGHT_CLICK_2.getVal<SCANCODE>()) &&
            !this->bClick2Down) {
             this->bClick2Down = true;
             fireButtonClick = true;
@@ -271,15 +272,17 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
 
     // consume ALL events, except for a few special binds which are allowed through (e.g. for unpause or changing the
     // local offset in Osu.cpp)
-    if(e != KEY_ESCAPE && e != cv::GAME_PAUSE.getVal<SCANCODE>() && e != cv::INCREASE_LOCAL_OFFSET.getVal<SCANCODE>() &&
-       e != cv::DECREASE_LOCAL_OFFSET.getVal<SCANCODE>())
+    if(e != KEY_ESCAPE && e != keys::GAME_PAUSE.getVal<SCANCODE>() &&
+       e != keys::INCREASE_LOCAL_OFFSET.getVal<SCANCODE>() && e != keys::DECREASE_LOCAL_OFFSET.getVal<SCANCODE>())
         e.consume();
 }
 
 void PauseOverlay::onKeyUp(KeyboardEvent &e) {
-    if(e == cv::LEFT_CLICK.getVal<SCANCODE>() || e == cv::LEFT_CLICK_2.getVal<SCANCODE>()) this->bClick1Down = false;
+    if(e == keys::LEFT_CLICK.getVal<SCANCODE>() || e == keys::LEFT_CLICK_2.getVal<SCANCODE>())
+        this->bClick1Down = false;
 
-    if(e == cv::RIGHT_CLICK.getVal<SCANCODE>() || e == cv::RIGHT_CLICK_2.getVal<SCANCODE>()) this->bClick2Down = false;
+    if(e == keys::RIGHT_CLICK.getVal<SCANCODE>() || e == keys::RIGHT_CLICK_2.getVal<SCANCODE>())
+        this->bClick2Down = false;
 }
 
 void PauseOverlay::onChar(KeyboardEvent &e) {

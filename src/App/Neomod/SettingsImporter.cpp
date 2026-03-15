@@ -10,6 +10,7 @@
 #include "OptionsOverlay.h"
 #include "Osu.h"
 #include "OsuConVars.h"
+#include "OsuKeyBinds.h"
 #include "Environment.h"
 #include "Parsing.h"
 #include "Logging.h"
@@ -449,63 +450,63 @@ bool import_from_osu_stable() {
         else if(Parsing::parse(line, "Ticker", '=', &b))
             cv::chat_ticker.setValue(b);
         else if(Parsing::parse(line, "keyOsuLeft", '=', &str))
-            try_set_key(str, &cv::LEFT_CLICK);
+            try_set_key(str, &keys::LEFT_CLICK);
         else if(Parsing::parse(line, "keyOsuRight", '=', &str))
-            try_set_key(str, &cv::RIGHT_CLICK);
+            try_set_key(str, &keys::RIGHT_CLICK);
         else if(Parsing::parse(line, "keyOsuSmoke", '=', &str))
-            try_set_key(str, &cv::SMOKE);
+            try_set_key(str, &keys::SMOKE);
         else if(Parsing::parse(line, "keyPause", '=', &str))
-            try_set_key(str, &cv::GAME_PAUSE);
+            try_set_key(str, &keys::GAME_PAUSE);
         else if(Parsing::parse(line, "keySkip", '=', &str))
-            try_set_key(str, &cv::SKIP_CUTSCENE);
+            try_set_key(str, &keys::SKIP_CUTSCENE);
         else if(Parsing::parse(line, "keyToggleScoreboard", '=', &str))
-            try_set_key(str, &cv::TOGGLE_SCOREBOARD);
+            try_set_key(str, &keys::TOGGLE_SCOREBOARD);
         else if(Parsing::parse(line, "keyToggleChat", '=', &str))
-            try_set_key(str, &cv::TOGGLE_CHAT);
+            try_set_key(str, &keys::TOGGLE_CHAT);
         else if(Parsing::parse(line, "keyToggleExtendedChat \n]", '=', &str))
-            try_set_key(str, &cv::TOGGLE_EXTENDED_CHAT);
+            try_set_key(str, &keys::TOGGLE_EXTENDED_CHAT);
         else if(Parsing::parse(line, "keyScreenshot", '=', &str))
-            try_set_key(str, &cv::SAVE_SCREENSHOT);
+            try_set_key(str, &keys::SAVE_SCREENSHOT);
         else if(Parsing::parse(line, "keyIncreaseAudioOffset", '=', &str))
-            try_set_key(str, &cv::INCREASE_LOCAL_OFFSET);
+            try_set_key(str, &keys::INCREASE_LOCAL_OFFSET);
         else if(Parsing::parse(line, "keyDecreaseAudioOffset", '=', &str))
-            try_set_key(str, &cv::DECREASE_LOCAL_OFFSET);
+            try_set_key(str, &keys::DECREASE_LOCAL_OFFSET);
         else if(Parsing::parse(line, "keyQuickRetry", '=', &str))
-            try_set_key(str, &cv::QUICK_RETRY);
+            try_set_key(str, &keys::QUICK_RETRY);
         else if(Parsing::parse(line, "keyVolumeIncrease", '=', &str))
-            try_set_key(str, &cv::INCREASE_VOLUME);
+            try_set_key(str, &keys::INCREASE_VOLUME);
         else if(Parsing::parse(line, "keyVolumeDecrease", '=', &str))
-            try_set_key(str, &cv::DECREASE_VOLUME);
+            try_set_key(str, &keys::DECREASE_VOLUME);
         else if(Parsing::parse(line, "keyDisableMouseButtons", '=', &str))
-            try_set_key(str, &cv::DISABLE_MOUSE_BUTTONS);
+            try_set_key(str, &keys::DISABLE_MOUSE_BUTTONS);
         else if(Parsing::parse(line, "keyBossKey", '=', &str))
-            try_set_key(str, &cv::BOSS_KEY);
+            try_set_key(str, &keys::BOSS_KEY);
         else if(Parsing::parse(line, "keyEasy", '=', &str))
-            try_set_key(str, &cv::MOD_EASY);
+            try_set_key(str, &keys::MOD_EASY);
         else if(Parsing::parse(line, "keyNoFail", '=', &str))
-            try_set_key(str, &cv::MOD_NOFAIL);
+            try_set_key(str, &keys::MOD_NOFAIL);
         else if(Parsing::parse(line, "keyHalfTime", '=', &str))
-            try_set_key(str, &cv::MOD_HALFTIME);
+            try_set_key(str, &keys::MOD_HALFTIME);
         else if(Parsing::parse(line, "keyHardRock", '=', &str))
-            try_set_key(str, &cv::MOD_HARDROCK);
+            try_set_key(str, &keys::MOD_HARDROCK);
         else if(Parsing::parse(line, "keySuddenDeath", '=', &str))
-            try_set_key(str, &cv::MOD_SUDDENDEATH);
+            try_set_key(str, &keys::MOD_SUDDENDEATH);
         else if(Parsing::parse(line, "keyDoubleTime", '=', &str))
-            try_set_key(str, &cv::MOD_DOUBLETIME);
+            try_set_key(str, &keys::MOD_DOUBLETIME);
         else if(Parsing::parse(line, "keyHidden", '=', &str))
-            try_set_key(str, &cv::MOD_HIDDEN);
+            try_set_key(str, &keys::MOD_HIDDEN);
         else if(Parsing::parse(line, "keyFlashlight", '=', &str))
-            try_set_key(str, &cv::MOD_FLASHLIGHT);
+            try_set_key(str, &keys::MOD_FLASHLIGHT);
         else if(Parsing::parse(line, "keyRelax", '=', &str))
-            try_set_key(str, &cv::MOD_RELAX);
+            try_set_key(str, &keys::MOD_RELAX);
         else if(Parsing::parse(line, "keyAutopilot", '=', &str))
-            try_set_key(str, &cv::MOD_AUTOPILOT);
+            try_set_key(str, &keys::MOD_AUTOPILOT);
         else if(Parsing::parse(line, "keySpunOut", '=', &str))
-            try_set_key(str, &cv::MOD_SPUNOUT);
+            try_set_key(str, &keys::MOD_SPUNOUT);
         else if(Parsing::parse(line, "keyAuto", '=', &str))
-            try_set_key(str, &cv::MOD_AUTO);
+            try_set_key(str, &keys::MOD_AUTO);
         else if(Parsing::parse(line, "keyScoreV2", '=', &str))
-            try_set_key(str, &cv::MOD_SCOREV2);
+            try_set_key(str, &keys::MOD_SCOREV2);
     }
 
     return true;

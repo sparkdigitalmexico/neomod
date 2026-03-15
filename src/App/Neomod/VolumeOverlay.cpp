@@ -15,6 +15,7 @@
 #include "Mouse.h"
 #include "OptionsOverlay.h"
 #include "Osu.h"
+#include "OsuKeyBinds.h"
 #include "Graphics.h"
 #include "MakeDelegateWrapper.h"
 #include "PauseOverlay.h"
@@ -226,14 +227,14 @@ void VolumeOverlay::onKeyDown(KeyboardEvent &key) {
         key.consume();
     } else {
         // avoid conflicting focus with e.g. songbrowser up/down
-        const bool volIncreaseIsUp = cv::INCREASE_VOLUME.getVal<SCANCODE>() == KEY_UP;
-        const bool volDecreaseIsDown = cv::DECREASE_VOLUME.getVal<SCANCODE>() == KEY_DOWN;
+        const bool volIncreaseIsUp = keys::INCREASE_VOLUME.getVal<SCANCODE>() == KEY_UP;
+        const bool volDecreaseIsDown = keys::DECREASE_VOLUME.getVal<SCANCODE>() == KEY_DOWN;
 
-        if(key == KEY_VOLUMEUP || (key == cv::INCREASE_VOLUME.getVal<SCANCODE>() &&
+        if(key == KEY_VOLUMEUP || (key == keys::INCREASE_VOLUME.getVal<SCANCODE>() &&
                                    (!volIncreaseIsUp || this->isVisible() || this->canChangeVolume()))) {
             this->volumeUp();
             key.consume();
-        } else if(key == KEY_VOLUMEDOWN || (key == cv::DECREASE_VOLUME.getVal<SCANCODE>() &&
+        } else if(key == KEY_VOLUMEDOWN || (key == keys::DECREASE_VOLUME.getVal<SCANCODE>() &&
                                             (!volDecreaseIsDown || this->isVisible() || this->canChangeVolume()))) {
             this->volumeDown();
             key.consume();
