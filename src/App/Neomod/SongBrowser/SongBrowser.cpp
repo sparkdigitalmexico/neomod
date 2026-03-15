@@ -3246,8 +3246,7 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
 
     if(id == 2) {  // delete collection
         if(const auto &it =
-               std::ranges::find(this->collectionButtons, collection_name,
-                                 [](const auto &collBtn) -> std::string { return collBtn->getCollectionName(); });
+               std::ranges::find(this->collectionButtons, collection_name, &CollectionButton::getCollectionName);
            it != this->collectionButtons.end() && Collections::delete_collection(collection_name)) {
             Collections::save_collections();
 
@@ -3271,19 +3270,22 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
 
                 // rename button
                 if(const auto &it = std::ranges::find(this->collectionButtons, collectionButton,
-                                                      [](const auto &unq) -> auto * { return unq.get(); });
+                                                      &std::unique_ptr<CollectionButton>::get);
                    it != this->collectionButtons.end()) {
                     (*it)->setCollectionName(collection_name);
 
                     // resort collection buttons
                     std::ranges::stable_sort(
                         this->collectionButtons,
-                        [](const char *s1, const char *s2) -> bool { return strcasecmp(s1, s2) < 0; },
-                        [](const auto &colBtn) -> const char * { return colBtn->getCollectionName().c_str(); });
+                        [](const std::string &s1, const std::string &s2) -> bool {
+                            return strcasecmp(s1.c_str(), s2.c_str()) < 0;
+                        },
+                        &CollectionButton::getCollectionName);
                 }
 
                 // update UI
-                this->onSortChange(cv::songbrowser_sortingtype.getString());
+                this->bSongButtonsNeedSorting = true;
+                this->rebuildAfterGroupOrSortChange(GroupType::COLLECTIONS);
             }
         }
     } else if(id == 5) {  // export collection
@@ -3297,19 +3299,27 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
 
         // uber sanity
         std::string colNameSanitized = collection_name;
+        SString::trim_inplace(colNameSanitized);
         if(colNameSanitized.empty()) {
             colNameSanitized = fmt::format("Untitled-Collection-{:%F-%H-%M-%S}", fmt::gmtime(std::time(nullptr)));
         } else {
             std::ranges::replace(colNameSanitized, '\\', '_');
             std::ranges::replace(colNameSanitized, '/', '_');
+            if(colNameSanitized.starts_with('.')) {
+                colNameSanitized[0] = '_';
+            } else if(colNameSanitized.starts_with("..")) {
+                colNameSanitized[0] = '_';
+                colNameSanitized[1] = '_';
+            }
         }
 
         // TODO: custom export name maybe
         Environment::createDirectory(cv::export_folder.getString() + "/collections");
 
         auto ctx = MapExporter::ExportContext{
-            pathsToExport, fmt::format("collections/{:s}", colNameSanitized),
-            [namestr = std::string{collection_name}](f32 progress, std::string entry) -> void {
+            .beatmap_folder_paths = pathsToExport,
+            .toplevel_archive_bundle = fmt::format("collections/{:s}", colNameSanitized),
+            .cb = [namestr = std::string{collection_name}](f32 progress, std::string entry) -> void {
                 return BottomBar::update_export_progress(progress, std::move(entry), namestr);
             }};
         this->startExport(std::move(ctx));
@@ -3317,8 +3327,7 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
 }
 
 void SongBrowser::highlightScore(const FinishedScore &scoreToHighlight) {
-    if(auto cachedit =
-           std::ranges::find(this->scoreButtonCache, scoreToHighlight, [](const auto &btn) { return btn->getScore(); });
+    if(auto cachedit = std::ranges::find(this->scoreButtonCache, scoreToHighlight, &ScoreButton::getScore);
        cachedit != this->scoreButtonCache.end()) {
         this->scoreBrowser->scrollToElement(*cachedit, 0, 10);
         (*cachedit)->highlight();

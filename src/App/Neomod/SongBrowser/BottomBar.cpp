@@ -155,7 +155,7 @@ void update(CBaseUIEventCtx& c) {
         press_button(hovered_btn);
     }
 
-    // TODO @kiwec: do buttons make .alphasound?
+    // TODO @kiwec: do hovers make sound?
 }
 
 void draw() {

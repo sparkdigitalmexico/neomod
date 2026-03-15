@@ -139,13 +139,8 @@ struct VolNormalization::LoudnessCalcThread {
                 continue;
             }
 
-            // Did you know?
-            // If we do while(BASS_ChannelGetData(decoder, buf, sizeof(buf) >= 0), we get an infinite loop!
-            // Thanks, Microsoft!
-            int c;
-            do {
-                c = BASS_ChannelGetData(decoder, buf.data(), buf.size());
-            } while(c >= 0);
+            for(int res = 0; res >= 0; res = (int)BASS_ChannelGetData(decoder, buf.data(), buf.size())) {
+            }
 
             BASS_ChannelFree(decoder);
 
