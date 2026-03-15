@@ -1073,11 +1073,11 @@ void SongBrowser::onKeyDown(KeyboardEvent &key) {
     if(key == KEY_LSHIFT || key == KEY_RSHIFT) this->bShiftPressed = true;
 
     // function hotkeys
-    if((key == KEY_F1 || key == keys::TOGGLE_MODSELECT.getVal<SCANCODE>()) && !this->bF1Pressed) {
+    if((key == KEY_F1 || key == binds::TOGGLE_MODSELECT) && !this->bF1Pressed) {
         this->bF1Pressed = true;
         BottomBar::press_button(BottomBar::MODS);
     }
-    if((key == KEY_F2 || key == keys::RANDOM_BEATMAP.getVal<SCANCODE>()) && !this->bF2Pressed) {
+    if((key == KEY_F2 || key == binds::RANDOM_BEATMAP) && !this->bF2Pressed) {
         this->bF2Pressed = true;
         BottomBar::press_button(BottomBar::RANDOM);
     }
@@ -1106,8 +1106,8 @@ void SongBrowser::onKeyUp(KeyboardEvent &key) {
     if(key == KEY_LEFT) this->bLeft = false;
     if(key == KEY_RIGHT) this->bRight = false;
 
-    if(key == KEY_F1 || key == keys::TOGGLE_MODSELECT.getVal<SCANCODE>()) this->bF1Pressed = false;
-    if(key == KEY_F2 || key == keys::RANDOM_BEATMAP.getVal<SCANCODE>()) this->bF2Pressed = false;
+    if(key == KEY_F1 || key == binds::TOGGLE_MODSELECT) this->bF1Pressed = false;
+    if(key == KEY_F2 || key == binds::RANDOM_BEATMAP) this->bF2Pressed = false;
     if(key == KEY_F3) this->bF3Pressed = false;
 }
 

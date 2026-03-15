@@ -189,15 +189,15 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
     UIScreen::onKeyDown(e);  // only used for options menu
     if(!this->bVisible || e.isConsumed()) return;
 
-    if(e == keys::LEFT_CLICK.getVal<SCANCODE>() || e == keys::RIGHT_CLICK.getVal<SCANCODE>() ||
-       e == keys::LEFT_CLICK_2.getVal<SCANCODE>() || e == keys::RIGHT_CLICK_2.getVal<SCANCODE>()) {
+    if(e == binds::LEFT_CLICK || e == binds::RIGHT_CLICK ||
+       e == binds::LEFT_CLICK_2 || e == binds::RIGHT_CLICK_2) {
         bool fireButtonClick = false;
-        if((e == keys::LEFT_CLICK.getVal<SCANCODE>() || e == keys::LEFT_CLICK_2.getVal<SCANCODE>()) &&
+        if((e == binds::LEFT_CLICK || e == binds::LEFT_CLICK_2) &&
            !this->bClick1Down) {
             this->bClick1Down = true;
             fireButtonClick = true;
         }
-        if((e == keys::RIGHT_CLICK.getVal<SCANCODE>() || e == keys::RIGHT_CLICK_2.getVal<SCANCODE>()) &&
+        if((e == binds::RIGHT_CLICK || e == binds::RIGHT_CLICK_2) &&
            !this->bClick2Down) {
             this->bClick2Down = true;
             fireButtonClick = true;
@@ -272,16 +272,16 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
 
     // consume ALL events, except for a few special binds which are allowed through (e.g. for unpause or changing the
     // local offset in Osu.cpp)
-    if(e != KEY_ESCAPE && e != keys::GAME_PAUSE.getVal<SCANCODE>() &&
-       e != keys::INCREASE_LOCAL_OFFSET.getVal<SCANCODE>() && e != keys::DECREASE_LOCAL_OFFSET.getVal<SCANCODE>())
+    if(e != KEY_ESCAPE && e != binds::GAME_PAUSE &&
+       e != binds::INCREASE_LOCAL_OFFSET && e != binds::DECREASE_LOCAL_OFFSET)
         e.consume();
 }
 
 void PauseOverlay::onKeyUp(KeyboardEvent &e) {
-    if(e == keys::LEFT_CLICK.getVal<SCANCODE>() || e == keys::LEFT_CLICK_2.getVal<SCANCODE>())
+    if(e == binds::LEFT_CLICK || e == binds::LEFT_CLICK_2)
         this->bClick1Down = false;
 
-    if(e == keys::RIGHT_CLICK.getVal<SCANCODE>() || e == keys::RIGHT_CLICK_2.getVal<SCANCODE>())
+    if(e == binds::RIGHT_CLICK || e == binds::RIGHT_CLICK_2)
         this->bClick2Down = false;
 }
 

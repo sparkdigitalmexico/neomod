@@ -227,14 +227,14 @@ void VolumeOverlay::onKeyDown(KeyboardEvent &key) {
         key.consume();
     } else {
         // avoid conflicting focus with e.g. songbrowser up/down
-        const bool volIncreaseIsUp = keys::INCREASE_VOLUME.getVal<SCANCODE>() == KEY_UP;
-        const bool volDecreaseIsDown = keys::DECREASE_VOLUME.getVal<SCANCODE>() == KEY_DOWN;
+        const bool volIncreaseIsUp = binds::INCREASE_VOLUME == KEY_UP;
+        const bool volDecreaseIsDown = binds::DECREASE_VOLUME == KEY_DOWN;
 
-        if(key == KEY_VOLUMEUP || (key == keys::INCREASE_VOLUME.getVal<SCANCODE>() &&
+        if(key == KEY_VOLUMEUP || (key == binds::INCREASE_VOLUME &&
                                    (!volIncreaseIsUp || this->isVisible() || this->canChangeVolume()))) {
             this->volumeUp();
             key.consume();
-        } else if(key == KEY_VOLUMEDOWN || (key == keys::DECREASE_VOLUME.getVal<SCANCODE>() &&
+        } else if(key == KEY_VOLUMEDOWN || (key == binds::DECREASE_VOLUME &&
                                             (!volDecreaseIsDown || this->isVisible() || this->canChangeVolume()))) {
             this->volumeDown();
             key.consume();

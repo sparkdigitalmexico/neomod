@@ -465,7 +465,7 @@ bool ModFPoSu::isCrosshairIntersectingScreen() const { return m_impl->bCrosshair
 void ModFPoSu::onResolutionChange0Args() { this->onResolutionChange(osu->getVirtScreenSize()); }
 
 void ModFPoSu::onKeyDown(KeyboardEvent &key) {
-    if(key == keys::FPOSU_ZOOM.getVal<SCANCODE>() && !m_impl->bZoomKeyDown) {
+    if(key == binds::FPOSU_ZOOM && !m_impl->bZoomKeyDown) {
         m_impl->bZoomKeyDown = true;
 
         if(!m_impl->bZoomed || cv::fposu_zoom_toggle.getBool()) {
@@ -490,7 +490,7 @@ void ModFPoSu::onKeyDown(KeyboardEvent &key) {
 }
 
 void ModFPoSu::onKeyUp(KeyboardEvent &key) {
-    if(key == keys::FPOSU_ZOOM.getVal<SCANCODE>()) {
+    if(key == binds::FPOSU_ZOOM) {
         m_impl->bZoomKeyDown = false;
 
         if(m_impl->bZoomed && !cv::fposu_zoom_toggle.getBool()) {

@@ -2,13 +2,14 @@
 #include "OsuKeyBinds.h"
 #include "ConVar.h"
 #include "KeyBindings.h"
+#include "KeyboardEvent.h"
 
 #include <array>
 
 namespace OsuKeyBinds {
-namespace keys {
-using namespace cv;
-
+namespace cv {
+namespace {
+using namespace ::cv;
 ConVar BOSS_KEY("key_boss", (SCANCODE)KEY_INSERT, CLIENT);
 ConVar DECREASE_LOCAL_OFFSET("key_decrease_local_offset", (SCANCODE)KEY_MINUS, CLIENT);
 ConVar DECREASE_VOLUME("key_decrease_volume", (SCANCODE)KEY_DOWN, CLIENT);
@@ -51,52 +52,117 @@ ConVar TOGGLE_EXTENDED_CHAT("key_toggle_extended_chat", (SCANCODE)KEY_F9, CLIENT
 ConVar TOGGLE_MAP_BACKGROUND("key_toggle_map_background", 0, CLIENT);
 ConVar TOGGLE_MODSELECT("key_toggle_modselect", (SCANCODE)KEY_F1, CLIENT);
 ConVar TOGGLE_SCOREBOARD("key_toggle_scoreboard", (SCANCODE)KEY_TAB, CLIENT);
-}  // namespace keys
+}  // namespace
+}  // namespace cv
 
-std::span<const Bind> getAll() {
-    static std::array allBindsList{
-        Bind{&keys::LEFT_CLICK, keys::LEFT_CLICK.getDefaultVal<SCANCODE>()},
-        Bind{&keys::LEFT_CLICK_2, keys::LEFT_CLICK_2.getDefaultVal<SCANCODE>()},
-        Bind{&keys::RIGHT_CLICK, keys::RIGHT_CLICK.getDefaultVal<SCANCODE>()},
-        Bind{&keys::RIGHT_CLICK_2, keys::RIGHT_CLICK_2.getDefaultVal<SCANCODE>()},
-        Bind{&keys::SMOKE, keys::SMOKE.getDefaultVal<SCANCODE>()},
-        Bind{&keys::BOSS_KEY, keys::BOSS_KEY.getDefaultVal<SCANCODE>()},
-        Bind{&keys::DECREASE_LOCAL_OFFSET, keys::DECREASE_LOCAL_OFFSET.getDefaultVal<SCANCODE>()},
-        Bind{&keys::DECREASE_VOLUME, keys::DECREASE_VOLUME.getDefaultVal<SCANCODE>()},
-        Bind{&keys::DISABLE_MOUSE_BUTTONS, keys::DISABLE_MOUSE_BUTTONS.getDefaultVal<SCANCODE>()},
-        Bind{&keys::FPOSU_ZOOM, keys::FPOSU_ZOOM.getDefaultVal<SCANCODE>()},
-        Bind{&keys::GAME_PAUSE, keys::GAME_PAUSE.getDefaultVal<SCANCODE>()},
-        Bind{&keys::INCREASE_LOCAL_OFFSET, keys::INCREASE_LOCAL_OFFSET.getDefaultVal<SCANCODE>()},
-        Bind{&keys::INCREASE_VOLUME, keys::INCREASE_VOLUME.getDefaultVal<SCANCODE>()},
-        Bind{&keys::INSTANT_REPLAY, keys::INSTANT_REPLAY.getDefaultVal<SCANCODE>()},
-        Bind{&keys::OPEN_SKIN_SELECT_MENU, keys::OPEN_SKIN_SELECT_MENU.getDefaultVal<SCANCODE>()},
-        Bind{&keys::QUICK_LOAD, keys::QUICK_LOAD.getDefaultVal<SCANCODE>()},
-        Bind{&keys::QUICK_RETRY, keys::QUICK_RETRY.getDefaultVal<SCANCODE>()},
-        Bind{&keys::QUICK_SAVE, keys::QUICK_SAVE.getDefaultVal<SCANCODE>()},
-        Bind{&keys::RANDOM_BEATMAP, keys::RANDOM_BEATMAP.getDefaultVal<SCANCODE>()},
-        Bind{&keys::SAVE_SCREENSHOT, keys::SAVE_SCREENSHOT.getDefaultVal<SCANCODE>()},
-        Bind{&keys::SEEK_TIME, keys::SEEK_TIME.getDefaultVal<SCANCODE>()},
-        Bind{&keys::SEEK_TIME_BACKWARD, keys::SEEK_TIME_BACKWARD.getDefaultVal<SCANCODE>()},
-        Bind{&keys::SEEK_TIME_FORWARD, keys::SEEK_TIME_FORWARD.getDefaultVal<SCANCODE>()},
-        Bind{&keys::SKIP_CUTSCENE, keys::SKIP_CUTSCENE.getDefaultVal<SCANCODE>()},
-        Bind{&keys::TOGGLE_CHAT, keys::TOGGLE_CHAT.getDefaultVal<SCANCODE>()},
-        Bind{&keys::TOGGLE_EXTENDED_CHAT, keys::TOGGLE_EXTENDED_CHAT.getDefaultVal<SCANCODE>()},
-        Bind{&keys::TOGGLE_MAP_BACKGROUND, keys::TOGGLE_MAP_BACKGROUND.getDefaultVal<SCANCODE>()},
-        Bind{&keys::TOGGLE_MODSELECT, keys::TOGGLE_MODSELECT.getDefaultVal<SCANCODE>()},
-        Bind{&keys::TOGGLE_SCOREBOARD, keys::TOGGLE_SCOREBOARD.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_AUTO, keys::MOD_AUTO.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_AUTOPILOT, keys::MOD_AUTOPILOT.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_DOUBLETIME, keys::MOD_DOUBLETIME.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_EASY, keys::MOD_EASY.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_FLASHLIGHT, keys::MOD_FLASHLIGHT.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_HALFTIME, keys::MOD_HALFTIME.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_HARDROCK, keys::MOD_HARDROCK.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_HIDDEN, keys::MOD_HIDDEN.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_NOFAIL, keys::MOD_NOFAIL.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_RELAX, keys::MOD_RELAX.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_SCOREV2, keys::MOD_SCOREV2.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_SPUNOUT, keys::MOD_SPUNOUT.getDefaultVal<SCANCODE>()},
-        Bind{&keys::MOD_SUDDENDEATH, keys::MOD_SUDDENDEATH.getDefaultVal<SCANCODE>()}};
+namespace binds {
+
+Bind BOSS_KEY{&cv::BOSS_KEY};
+Bind DECREASE_LOCAL_OFFSET{&cv::DECREASE_LOCAL_OFFSET};
+Bind DECREASE_VOLUME{&cv::DECREASE_VOLUME};
+Bind DISABLE_MOUSE_BUTTONS{&cv::DISABLE_MOUSE_BUTTONS};
+Bind FPOSU_ZOOM{&cv::FPOSU_ZOOM};
+Bind GAME_PAUSE{&cv::GAME_PAUSE};
+Bind INCREASE_LOCAL_OFFSET{&cv::INCREASE_LOCAL_OFFSET};
+Bind INCREASE_VOLUME{&cv::INCREASE_VOLUME};
+Bind INSTANT_REPLAY{&cv::INSTANT_REPLAY};
+Bind LEFT_CLICK{&cv::LEFT_CLICK};
+Bind LEFT_CLICK_2{&cv::LEFT_CLICK_2};
+Bind MOD_AUTO{&cv::MOD_AUTO};
+Bind MOD_AUTOPILOT{&cv::MOD_AUTOPILOT};
+Bind MOD_DOUBLETIME{&cv::MOD_DOUBLETIME};
+Bind MOD_EASY{&cv::MOD_EASY};
+Bind MOD_FLASHLIGHT{&cv::MOD_FLASHLIGHT};
+Bind MOD_HALFTIME{&cv::MOD_HALFTIME};
+Bind MOD_HARDROCK{&cv::MOD_HARDROCK};
+Bind MOD_HIDDEN{&cv::MOD_HIDDEN};
+Bind MOD_NOFAIL{&cv::MOD_NOFAIL};
+Bind MOD_RELAX{&cv::MOD_RELAX};
+Bind MOD_SCOREV2{&cv::MOD_SCOREV2};
+Bind MOD_SPUNOUT{&cv::MOD_SPUNOUT};
+Bind MOD_SUDDENDEATH{&cv::MOD_SUDDENDEATH};
+Bind OPEN_SKIN_SELECT_MENU{&cv::OPEN_SKIN_SELECT_MENU};
+Bind QUICK_LOAD{&cv::QUICK_LOAD};
+Bind QUICK_RETRY{&cv::QUICK_RETRY};
+Bind QUICK_SAVE{&cv::QUICK_SAVE};
+Bind RANDOM_BEATMAP{&cv::RANDOM_BEATMAP};
+Bind RIGHT_CLICK{&cv::RIGHT_CLICK};
+Bind RIGHT_CLICK_2{&cv::RIGHT_CLICK_2};
+Bind SAVE_SCREENSHOT{&cv::SAVE_SCREENSHOT};
+Bind SEEK_TIME{&cv::SEEK_TIME};
+Bind SEEK_TIME_BACKWARD{&cv::SEEK_TIME_BACKWARD};
+Bind SEEK_TIME_FORWARD{&cv::SEEK_TIME_FORWARD};
+Bind SMOKE{&cv::SMOKE};
+Bind SKIP_CUTSCENE{&cv::SKIP_CUTSCENE};
+Bind TOGGLE_CHAT{&cv::TOGGLE_CHAT};
+Bind TOGGLE_EXTENDED_CHAT{&cv::TOGGLE_EXTENDED_CHAT};
+Bind TOGGLE_MAP_BACKGROUND{&cv::TOGGLE_MAP_BACKGROUND};
+Bind TOGGLE_MODSELECT{&cv::TOGGLE_MODSELECT};
+Bind TOGGLE_SCOREBOARD{&cv::TOGGLE_SCOREBOARD};
+
+}  // namespace binds
+
+bool Bind::isDefault() const { return cvar->getDefaultVal<SCANCODE>() == cvar->getVal<SCANCODE>(); }
+SCANCODE Bind::getDefault() const { return cvar->getDefaultVal<SCANCODE>(); }
+SCANCODE Bind::get() const { return cvar->getVal<SCANCODE>(); }
+
+void Bind::reset() { set(cvar->getDefaultVal<SCANCODE>()); }
+void Bind::set(SCANCODE bindKey) { cvar->setValue(bindKey); }
+
+bool Bind::operator==(const Bind &rhs) const { return get() == rhs.get(); }
+bool Bind::operator!=(const Bind &rhs) const { return get() != rhs.get(); }
+
+bool Bind::operator==(SCANCODE rhs) const { return get() == rhs; }
+bool Bind::operator!=(SCANCODE rhs) const { return get() != rhs; }
+
+Bind::operator SCANCODE() const { return get(); }
+
+bool Bind::operator==(const KeyboardEvent &e) const { return get() == e.getScanCode(); }
+bool Bind::operator!=(const KeyboardEvent &e) const { return get() != e.getScanCode(); }
+
+std::span<Bind *> getAll() {
+    static std::array allBindsList{&binds::LEFT_CLICK,
+                                   &binds::LEFT_CLICK_2,
+                                   &binds::RIGHT_CLICK,
+                                   &binds::RIGHT_CLICK_2,
+                                   &binds::SMOKE,
+                                   &binds::BOSS_KEY,
+                                   &binds::DECREASE_LOCAL_OFFSET,
+                                   &binds::DECREASE_VOLUME,
+                                   &binds::DISABLE_MOUSE_BUTTONS,
+                                   &binds::FPOSU_ZOOM,
+                                   &binds::GAME_PAUSE,
+                                   &binds::INCREASE_LOCAL_OFFSET,
+                                   &binds::INCREASE_VOLUME,
+                                   &binds::INSTANT_REPLAY,
+                                   &binds::OPEN_SKIN_SELECT_MENU,
+                                   &binds::QUICK_LOAD,
+                                   &binds::QUICK_RETRY,
+                                   &binds::QUICK_SAVE,
+                                   &binds::RANDOM_BEATMAP,
+                                   &binds::SAVE_SCREENSHOT,
+                                   &binds::SEEK_TIME,
+                                   &binds::SEEK_TIME_BACKWARD,
+                                   &binds::SEEK_TIME_FORWARD,
+                                   &binds::SKIP_CUTSCENE,
+                                   &binds::TOGGLE_CHAT,
+                                   &binds::TOGGLE_EXTENDED_CHAT,
+                                   &binds::TOGGLE_MAP_BACKGROUND,
+                                   &binds::TOGGLE_MODSELECT,
+                                   &binds::TOGGLE_SCOREBOARD,
+                                   &binds::MOD_AUTO,
+                                   &binds::MOD_AUTOPILOT,
+                                   &binds::MOD_DOUBLETIME,
+                                   &binds::MOD_EASY,
+                                   &binds::MOD_FLASHLIGHT,
+                                   &binds::MOD_HALFTIME,
+                                   &binds::MOD_HARDROCK,
+                                   &binds::MOD_HIDDEN,
+                                   &binds::MOD_NOFAIL,
+                                   &binds::MOD_RELAX,
+                                   &binds::MOD_SCOREV2,
+                                   &binds::MOD_SPUNOUT,
+                                   &binds::MOD_SUDDENDEATH};
     return allBindsList;
 }
 

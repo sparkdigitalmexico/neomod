@@ -39,7 +39,7 @@ void ScreenBackable::update(CBaseUIEventCtx &c) {
 void ScreenBackable::onKeyDown(KeyboardEvent &e) {
     UIScreen::onKeyDown(e);
     if(!this->bVisible || e.isConsumed() || !this->backable) return;
-    if(e == KEY_ESCAPE || e == keys::GAME_PAUSE.getVal<SCANCODE>()) {
+    if(e == KEY_ESCAPE || e == binds::GAME_PAUSE) {
         soundEngine->play(osu->getSkin()->s_menu_back);
         this->onBack();
         e.consume();

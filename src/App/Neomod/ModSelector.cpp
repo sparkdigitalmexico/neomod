@@ -697,11 +697,11 @@ void ModSelector::onKeyDown(KeyboardEvent &key) {
 
     const SCANCODE scanCode = key.getScanCode();
 
-    const bool forceClose = scanCode == keys::GAME_PAUSE.getVal<SCANCODE>() || scanCode == KEY_ESCAPE;
-    if(forceClose ||                                             //
-       scanCode == KEY_F1 ||                                     //
-       scanCode == keys::TOGGLE_MODSELECT.getVal<SCANCODE>() ||  //
-       scanCode == KEY_2 ||                                      //
+    const bool forceClose = scanCode == binds::GAME_PAUSE || scanCode == KEY_ESCAPE;
+    if(forceClose ||                           //
+       scanCode == KEY_F1 ||                   //
+       scanCode == binds::TOGGLE_MODSELECT ||  //
+       scanCode == KEY_2 ||                    //
        scanCode == KEY_ENTER || scanCode == KEY_NUMPAD_ENTER) {
         this->close(forceClose);
     } else if(scanCode == KEY_1) {
@@ -709,19 +709,19 @@ void ModSelector::onKeyDown(KeyboardEvent &key) {
     } else {
         // mod hotkeys
         // clang-format off
-        if(scanCode == keys::MOD_EASY.getVal<SCANCODE>()) this->modButtonEZ->click();
-        else if(scanCode == keys::MOD_NOFAIL.getVal<SCANCODE>()) this->modButtonNF->click();
-        else if(scanCode == keys::MOD_HARDROCK.getVal<SCANCODE>()) this->modButtonHR->click();
-        else if(scanCode == keys::MOD_SUDDENDEATH.getVal<SCANCODE>()) this->modButtonSDPF->click();
-        else if(scanCode == keys::MOD_HIDDEN.getVal<SCANCODE>()) this->modButtonHD->click();
-        else if(scanCode == keys::MOD_FLASHLIGHT.getVal<SCANCODE>()) this->modButtonFL->click();
-        else if(scanCode == keys::MOD_RELAX.getVal<SCANCODE>()) this->modButtonRX->click();
-        else if(scanCode == keys::MOD_AUTOPILOT.getVal<SCANCODE>()) this->modButtonAP->click();
-        else if(scanCode == keys::MOD_SPUNOUT.getVal<SCANCODE>()) this->modButtonSO->click();
-        else if(scanCode == keys::MOD_AUTO.getVal<SCANCODE>()) this->modButtonAUTO->click();
-        else if(scanCode == keys::MOD_SCOREV2.getVal<SCANCODE>()) this->modButtonSV2->click();
-        else if(scanCode == keys::MOD_HALFTIME.getVal<SCANCODE>()) this->modButtonHT->click();
-        else if(scanCode == keys::MOD_DOUBLETIME.getVal<SCANCODE>()) this->modButtonDT->click();
+        if(scanCode == binds::MOD_EASY) this->modButtonEZ->click();
+        else if(scanCode == binds::MOD_NOFAIL) this->modButtonNF->click();
+        else if(scanCode == binds::MOD_HARDROCK) this->modButtonHR->click();
+        else if(scanCode == binds::MOD_SUDDENDEATH) this->modButtonSDPF->click();
+        else if(scanCode == binds::MOD_HIDDEN) this->modButtonHD->click();
+        else if(scanCode == binds::MOD_FLASHLIGHT) this->modButtonFL->click();
+        else if(scanCode == binds::MOD_RELAX) this->modButtonRX->click();
+        else if(scanCode == binds::MOD_AUTOPILOT) this->modButtonAP->click();
+        else if(scanCode == binds::MOD_SPUNOUT) this->modButtonSO->click();
+        else if(scanCode == binds::MOD_AUTO) this->modButtonAUTO->click();
+        else if(scanCode == binds::MOD_SCOREV2) this->modButtonSV2->click();
+        else if(scanCode == binds::MOD_HALFTIME) this->modButtonHT->click();
+        else if(scanCode == binds::MOD_DOUBLETIME) this->modButtonDT->click();
         // clang-format on
     }
     key.consume();

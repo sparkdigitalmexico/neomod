@@ -26,147 +26,147 @@
 #endif
 namespace SettingsImporter {
 namespace {  // static namespace
-void try_set_key(const std::string& key, ConVar* cvar) {
+void try_set_key(const std::string& key, OsuKeyBinds::Bind& bind) {
     if(key == "None") {
-        cvar->setValue(0);
+        bind.set(0);
     } else if(key == "A") {
-        cvar->setValue<SCANCODE>(KEY_A);
+        bind.set(KEY_A);
     } else if(key == "B") {
-        cvar->setValue<SCANCODE>(KEY_B);
+        bind.set(KEY_B);
     } else if(key == "C") {
-        cvar->setValue<SCANCODE>(KEY_C);
+        bind.set(KEY_C);
     } else if(key == "D") {
-        cvar->setValue<SCANCODE>(KEY_D);
+        bind.set(KEY_D);
     } else if(key == "E") {
-        cvar->setValue<SCANCODE>(KEY_E);
+        bind.set(KEY_E);
     } else if(key == "F") {
-        cvar->setValue<SCANCODE>(KEY_F);
+        bind.set(KEY_F);
     } else if(key == "G") {
-        cvar->setValue<SCANCODE>(KEY_G);
+        bind.set(KEY_G);
     } else if(key == "H") {
-        cvar->setValue<SCANCODE>(KEY_H);
+        bind.set(KEY_H);
     } else if(key == "I") {
-        cvar->setValue<SCANCODE>(KEY_I);
+        bind.set(KEY_I);
     } else if(key == "J") {
-        cvar->setValue<SCANCODE>(KEY_J);
+        bind.set(KEY_J);
     } else if(key == "K") {
-        cvar->setValue<SCANCODE>(KEY_K);
+        bind.set(KEY_K);
     } else if(key == "L") {
-        cvar->setValue<SCANCODE>(KEY_L);
+        bind.set(KEY_L);
     } else if(key == "M") {
-        cvar->setValue<SCANCODE>(KEY_M);
+        bind.set(KEY_M);
     } else if(key == "N") {
-        cvar->setValue<SCANCODE>(KEY_N);
+        bind.set(KEY_N);
     } else if(key == "O") {
-        cvar->setValue<SCANCODE>(KEY_O);
+        bind.set(KEY_O);
     } else if(key == "P") {
-        cvar->setValue<SCANCODE>(KEY_P);
+        bind.set(KEY_P);
     } else if(key == "Q") {
-        cvar->setValue<SCANCODE>(KEY_Q);
+        bind.set(KEY_Q);
     } else if(key == "R") {
-        cvar->setValue<SCANCODE>(KEY_R);
+        bind.set(KEY_R);
     } else if(key == "S") {
-        cvar->setValue<SCANCODE>(KEY_S);
+        bind.set(KEY_S);
     } else if(key == "T") {
-        cvar->setValue<SCANCODE>(KEY_T);
+        bind.set(KEY_T);
     } else if(key == "U") {
-        cvar->setValue<SCANCODE>(KEY_U);
+        bind.set(KEY_U);
     } else if(key == "V") {
-        cvar->setValue<SCANCODE>(KEY_V);
+        bind.set(KEY_V);
     } else if(key == "W") {
-        cvar->setValue<SCANCODE>(KEY_W);
+        bind.set(KEY_W);
     } else if(key == "X") {
-        cvar->setValue<SCANCODE>(KEY_X);
+        bind.set(KEY_X);
     } else if(key == "Y") {
-        cvar->setValue<SCANCODE>(KEY_Y);
+        bind.set(KEY_Y);
     } else if(key == "Z") {
-        cvar->setValue<SCANCODE>(KEY_Z);
+        bind.set(KEY_Z);
     } else if(key == "0") {
-        cvar->setValue<SCANCODE>(KEY_0);
+        bind.set(KEY_0);
     } else if(key == "1") {
-        cvar->setValue<SCANCODE>(KEY_1);
+        bind.set(KEY_1);
     } else if(key == "2") {
-        cvar->setValue<SCANCODE>(KEY_2);
+        bind.set(KEY_2);
     } else if(key == "3") {
-        cvar->setValue<SCANCODE>(KEY_3);
+        bind.set(KEY_3);
     } else if(key == "4") {
-        cvar->setValue<SCANCODE>(KEY_4);
+        bind.set(KEY_4);
     } else if(key == "5") {
-        cvar->setValue<SCANCODE>(KEY_5);
+        bind.set(KEY_5);
     } else if(key == "6") {
-        cvar->setValue<SCANCODE>(KEY_6);
+        bind.set(KEY_6);
     } else if(key == "7") {
-        cvar->setValue<SCANCODE>(KEY_7);
+        bind.set(KEY_7);
     } else if(key == "8") {
-        cvar->setValue<SCANCODE>(KEY_8);
+        bind.set(KEY_8);
     } else if(key == "9") {
-        cvar->setValue<SCANCODE>(KEY_9);
+        bind.set(KEY_9);
     } else if(key == "F1") {
-        cvar->setValue<SCANCODE>(KEY_F1);
+        bind.set(KEY_F1);
     } else if(key == "F2") {
-        cvar->setValue<SCANCODE>(KEY_F2);
+        bind.set(KEY_F2);
     } else if(key == "F3") {
-        cvar->setValue<SCANCODE>(KEY_F3);
+        bind.set(KEY_F3);
     } else if(key == "F4") {
-        cvar->setValue<SCANCODE>(KEY_F4);
+        bind.set(KEY_F4);
     } else if(key == "F5") {
-        cvar->setValue<SCANCODE>(KEY_F5);
+        bind.set(KEY_F5);
     } else if(key == "F6") {
-        cvar->setValue<SCANCODE>(KEY_F6);
+        bind.set(KEY_F6);
     } else if(key == "F7") {
-        cvar->setValue<SCANCODE>(KEY_F7);
+        bind.set(KEY_F7);
     } else if(key == "F8") {
-        cvar->setValue<SCANCODE>(KEY_F8);
+        bind.set(KEY_F8);
     } else if(key == "F9") {
-        cvar->setValue<SCANCODE>(KEY_F9);
+        bind.set(KEY_F9);
     } else if(key == "F10") {
-        cvar->setValue<SCANCODE>(KEY_F10);
+        bind.set(KEY_F10);
     } else if(key == "F11") {
-        cvar->setValue<SCANCODE>(KEY_F11);
+        bind.set(KEY_F11);
     } else if(key == "F12") {
-        cvar->setValue<SCANCODE>(KEY_F12);
+        bind.set(KEY_F12);
     } else if(key == "Left") {
-        cvar->setValue<SCANCODE>(KEY_LEFT);
+        bind.set(KEY_LEFT);
     } else if(key == "Right") {
-        cvar->setValue<SCANCODE>(KEY_RIGHT);
+        bind.set(KEY_RIGHT);
     } else if(key == "Up") {
-        cvar->setValue<SCANCODE>(KEY_UP);
+        bind.set(KEY_UP);
     } else if(key == "Down") {
-        cvar->setValue<SCANCODE>(KEY_DOWN);
+        bind.set(KEY_DOWN);
     } else if(key == "Tab") {
-        cvar->setValue<SCANCODE>(KEY_TAB);
+        bind.set(KEY_TAB);
     } else if((key == "Return") || (key == "Enter")) {
-        cvar->setValue<SCANCODE>(KEY_ENTER);
+        bind.set(KEY_ENTER);
     } else if(key == "Shift") {
-        cvar->setValue<SCANCODE>(KEY_LSHIFT);
+        bind.set(KEY_LSHIFT);
     } else if(key == "Control") {
-        cvar->setValue<SCANCODE>(KEY_LCONTROL);
+        bind.set(KEY_LCONTROL);
     } else if(key == "LeftAlt") {
-        cvar->setValue<SCANCODE>(KEY_LALT);
+        bind.set(KEY_LALT);
     } else if(key == "RightAlt") {
-        cvar->setValue<SCANCODE>(KEY_RALT);
+        bind.set(KEY_RALT);
     } else if(key == "Escape") {
-        cvar->setValue<SCANCODE>(KEY_ESCAPE);
+        bind.set(KEY_ESCAPE);
     } else if(key == "Space") {
-        cvar->setValue<SCANCODE>(KEY_SPACE);
+        bind.set(KEY_SPACE);
     } else if(key == "Back") {
-        cvar->setValue<SCANCODE>(KEY_BACKSPACE);
+        bind.set(KEY_BACKSPACE);
     } else if(key == "End") {
-        cvar->setValue<SCANCODE>(KEY_END);
+        bind.set(KEY_END);
     } else if(key == "Insert") {
-        cvar->setValue<SCANCODE>(KEY_INSERT);
+        bind.set(KEY_INSERT);
     } else if(key == "Delete") {
-        cvar->setValue<SCANCODE>(KEY_DELETE);
+        bind.set(KEY_DELETE);
     } else if(key == "Help") {
-        cvar->setValue<SCANCODE>(KEY_HELP);
+        bind.set(KEY_HELP);
     } else if(key == "Home") {
-        cvar->setValue<SCANCODE>(KEY_HOME);
+        bind.set(KEY_HOME);
     } else if(key == "Escape") {
-        cvar->setValue<SCANCODE>(KEY_ESCAPE);
+        bind.set(KEY_ESCAPE);
     } else if(key == "PageUp") {
-        cvar->setValue<SCANCODE>(KEY_PAGEUP);
+        bind.set(KEY_PAGEUP);
     } else if(key == "PageDown") {
-        cvar->setValue<SCANCODE>(KEY_PAGEDOWN);
+        bind.set(KEY_PAGEDOWN);
     } else {
         debugLog("No key code found for '{}'!", key);
     }
@@ -450,63 +450,63 @@ bool import_from_osu_stable() {
         else if(Parsing::parse(line, "Ticker", '=', &b))
             cv::chat_ticker.setValue(b);
         else if(Parsing::parse(line, "keyOsuLeft", '=', &str))
-            try_set_key(str, &keys::LEFT_CLICK);
+            try_set_key(str, binds::LEFT_CLICK);
         else if(Parsing::parse(line, "keyOsuRight", '=', &str))
-            try_set_key(str, &keys::RIGHT_CLICK);
+            try_set_key(str, binds::RIGHT_CLICK);
         else if(Parsing::parse(line, "keyOsuSmoke", '=', &str))
-            try_set_key(str, &keys::SMOKE);
+            try_set_key(str, binds::SMOKE);
         else if(Parsing::parse(line, "keyPause", '=', &str))
-            try_set_key(str, &keys::GAME_PAUSE);
+            try_set_key(str, binds::GAME_PAUSE);
         else if(Parsing::parse(line, "keySkip", '=', &str))
-            try_set_key(str, &keys::SKIP_CUTSCENE);
+            try_set_key(str, binds::SKIP_CUTSCENE);
         else if(Parsing::parse(line, "keyToggleScoreboard", '=', &str))
-            try_set_key(str, &keys::TOGGLE_SCOREBOARD);
+            try_set_key(str, binds::TOGGLE_SCOREBOARD);
         else if(Parsing::parse(line, "keyToggleChat", '=', &str))
-            try_set_key(str, &keys::TOGGLE_CHAT);
+            try_set_key(str, binds::TOGGLE_CHAT);
         else if(Parsing::parse(line, "keyToggleExtendedChat \n]", '=', &str))
-            try_set_key(str, &keys::TOGGLE_EXTENDED_CHAT);
+            try_set_key(str, binds::TOGGLE_EXTENDED_CHAT);
         else if(Parsing::parse(line, "keyScreenshot", '=', &str))
-            try_set_key(str, &keys::SAVE_SCREENSHOT);
+            try_set_key(str, binds::SAVE_SCREENSHOT);
         else if(Parsing::parse(line, "keyIncreaseAudioOffset", '=', &str))
-            try_set_key(str, &keys::INCREASE_LOCAL_OFFSET);
+            try_set_key(str, binds::INCREASE_LOCAL_OFFSET);
         else if(Parsing::parse(line, "keyDecreaseAudioOffset", '=', &str))
-            try_set_key(str, &keys::DECREASE_LOCAL_OFFSET);
+            try_set_key(str, binds::DECREASE_LOCAL_OFFSET);
         else if(Parsing::parse(line, "keyQuickRetry", '=', &str))
-            try_set_key(str, &keys::QUICK_RETRY);
+            try_set_key(str, binds::QUICK_RETRY);
         else if(Parsing::parse(line, "keyVolumeIncrease", '=', &str))
-            try_set_key(str, &keys::INCREASE_VOLUME);
+            try_set_key(str, binds::INCREASE_VOLUME);
         else if(Parsing::parse(line, "keyVolumeDecrease", '=', &str))
-            try_set_key(str, &keys::DECREASE_VOLUME);
+            try_set_key(str, binds::DECREASE_VOLUME);
         else if(Parsing::parse(line, "keyDisableMouseButtons", '=', &str))
-            try_set_key(str, &keys::DISABLE_MOUSE_BUTTONS);
+            try_set_key(str, binds::DISABLE_MOUSE_BUTTONS);
         else if(Parsing::parse(line, "keyBossKey", '=', &str))
-            try_set_key(str, &keys::BOSS_KEY);
+            try_set_key(str, binds::BOSS_KEY);
         else if(Parsing::parse(line, "keyEasy", '=', &str))
-            try_set_key(str, &keys::MOD_EASY);
+            try_set_key(str, binds::MOD_EASY);
         else if(Parsing::parse(line, "keyNoFail", '=', &str))
-            try_set_key(str, &keys::MOD_NOFAIL);
+            try_set_key(str, binds::MOD_NOFAIL);
         else if(Parsing::parse(line, "keyHalfTime", '=', &str))
-            try_set_key(str, &keys::MOD_HALFTIME);
+            try_set_key(str, binds::MOD_HALFTIME);
         else if(Parsing::parse(line, "keyHardRock", '=', &str))
-            try_set_key(str, &keys::MOD_HARDROCK);
+            try_set_key(str, binds::MOD_HARDROCK);
         else if(Parsing::parse(line, "keySuddenDeath", '=', &str))
-            try_set_key(str, &keys::MOD_SUDDENDEATH);
+            try_set_key(str, binds::MOD_SUDDENDEATH);
         else if(Parsing::parse(line, "keyDoubleTime", '=', &str))
-            try_set_key(str, &keys::MOD_DOUBLETIME);
+            try_set_key(str, binds::MOD_DOUBLETIME);
         else if(Parsing::parse(line, "keyHidden", '=', &str))
-            try_set_key(str, &keys::MOD_HIDDEN);
+            try_set_key(str, binds::MOD_HIDDEN);
         else if(Parsing::parse(line, "keyFlashlight", '=', &str))
-            try_set_key(str, &keys::MOD_FLASHLIGHT);
+            try_set_key(str, binds::MOD_FLASHLIGHT);
         else if(Parsing::parse(line, "keyRelax", '=', &str))
-            try_set_key(str, &keys::MOD_RELAX);
+            try_set_key(str, binds::MOD_RELAX);
         else if(Parsing::parse(line, "keyAutopilot", '=', &str))
-            try_set_key(str, &keys::MOD_AUTOPILOT);
+            try_set_key(str, binds::MOD_AUTOPILOT);
         else if(Parsing::parse(line, "keySpunOut", '=', &str))
-            try_set_key(str, &keys::MOD_SPUNOUT);
+            try_set_key(str, binds::MOD_SPUNOUT);
         else if(Parsing::parse(line, "keyAuto", '=', &str))
-            try_set_key(str, &keys::MOD_AUTO);
+            try_set_key(str, binds::MOD_AUTO);
         else if(Parsing::parse(line, "keyScoreV2", '=', &str))
-            try_set_key(str, &keys::MOD_SCOREV2);
+            try_set_key(str, binds::MOD_SCOREV2);
     }
 
     return true;

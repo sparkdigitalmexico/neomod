@@ -209,7 +209,7 @@ struct OptionsOverlayImpl final {
     OptionsElement *addButtonButton(const std::string &text1, const std::string &text2);
     OptionsElement *addButtonButtonLabel(const std::string &text1, const std::string &text2,
                                          const std::string &labelText, bool withResetButton = false);
-    KeyBindButton *addKeyBindButton(const std::string &text, ConVar *cvar);
+    KeyBindButton *addKeyBindButton(const std::string &text, OsuKeyBinds::Bind *bind);
     CBaseUICheckbox *addCheckbox(const std::string &text, ConVar *cvar);
     CBaseUICheckbox *addCheckbox(const std::string &text, const std::string &tooltipText = {}, ConVar *cvar = nullptr);
     OptionsElement *addButtonCheckbox(const std::string &buttontext, const std::string &cbxtooltip);
@@ -651,10 +651,10 @@ class SliderPreviewElement final : public CBaseUIElement {
 class OptionsMenuKeyBindLabel final : public CBaseUILabel {
    public:
     OptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, std::string name, const std::string &text,
-                            ConVar *cvar, CBaseUIButton *bindButton)
+                            OsuKeyBinds::Bind *bind, CBaseUIButton *bindButton)
         : CBaseUILabel(xPos, yPos, xSize, ySize, std::move(name), text) {
-        this->key = cvar;
-        this->keyCode = -1;
+        this->bind = bind;
+        this->scanCode = -1;
         this->bindButton = bindButton;
 
         this->textColorBound = 0xffffd700;
@@ -665,27 +665,27 @@ class OptionsMenuKeyBindLabel final : public CBaseUILabel {
         if(!this->bVisible) return;
         CBaseUILabel::update(c);
 
-        const auto newKeyCode = this->key->getVal<SCANCODE>();
-        if(this->keyCode == newKeyCode) return;
+        const SCANCODE newKeyCode = this->bind->get();
+        if(this->scanCode == newKeyCode) return;
 
-        this->keyCode = newKeyCode;
+        this->scanCode = newKeyCode;
 
         // succ
         std::string labelText;
 
         // handle bound/unbound
         // HACKHACK: show mouse left/right for LEFT_CLICK_2/RIGHT_CLICK_2 if not bound to keyboard keys
-        const bool isUnboundKey1_2 = this->key == &keys::LEFT_CLICK_2 && this->keyCode == 0;
-        const bool isUnboundKey2_2 = this->key == &keys::RIGHT_CLICK_2 && this->keyCode == 0;
-        const bool isUnbound = this->keyCode == 0 && !(isUnboundKey1_2 || isUnboundKey2_2);
+        const bool isUnboundKey1_2 = this->bind->getCvar() == binds::LEFT_CLICK_2.getCvar() && this->scanCode == 0;
+        const bool isUnboundKey2_2 = this->bind->getCvar() == binds::RIGHT_CLICK_2.getCvar() && this->scanCode == 0;
+        const bool isUnbound = this->scanCode == 0 && !(isUnboundKey1_2 || isUnboundKey2_2);
         if(isUnboundKey1_2) {
             labelText = "Mouse Left";
         } else if(isUnboundKey2_2) {
             labelText = "Mouse Right";
-        } else if(this->keyCode == 0) {
+        } else if(this->scanCode == 0) {
             labelText = "<UNBOUND>";
         } else {
-            labelText = env->scanCodeToString(this->keyCode);
+            labelText = env->scanCodeToString(this->scanCode);
             if(labelText.find('?') != std::string::npos) {
                 labelText.append(fmt::format("  ({})", newKeyCode));
             }
@@ -706,12 +706,12 @@ class OptionsMenuKeyBindLabel final : public CBaseUILabel {
         this->bindButton->click(left, right);
     }
 
-    ConVar *key;
+    OsuKeyBinds::Bind *bind;
     CBaseUIButton *bindButton;
 
     Color textColorBound;
     Color textColorUnbound;
-    SCANCODE keyCode;
+    SCANCODE scanCode;
 };
 
 class KeyBindButton final : public UIButton {
@@ -1407,56 +1407,56 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     resetAllKeyBindingsButton->setClickCallback(
         SA::MakeDelegate<&OptionsOverlayImpl::onKeyBindingsResetAllPressed>(this));
     this->addSubSection("Keys - In-Game", keyboardSectionTags);
-    this->addKeyBindButton("Left Click", &keys::LEFT_CLICK);
-    this->addKeyBindButton("Right Click", &keys::RIGHT_CLICK);
-    this->addKeyBindButton("Left Click (2)", &keys::LEFT_CLICK_2);
-    this->addKeyBindButton("Right Click (2)", &keys::RIGHT_CLICK_2);
-    this->addKeyBindButton("Smoke", &keys::SMOKE);
-    this->addKeyBindButton("Game Pause", &keys::GAME_PAUSE)->setDisallowLeftMouseClickBinding(true);
-    this->addKeyBindButton("Skip Cutscene", &keys::SKIP_CUTSCENE);
-    this->addKeyBindButton("Toggle Scoreboard", &keys::TOGGLE_SCOREBOARD);
-    this->addKeyBindButton("Scrubbing (+ Click Drag!)", &keys::SEEK_TIME);
-    this->addKeyBindButton("Quick Seek -5sec <<<", &keys::SEEK_TIME_BACKWARD);
-    this->addKeyBindButton("Quick Seek +5sec >>>", &keys::SEEK_TIME_FORWARD);
-    this->addKeyBindButton("Increase Local Song Offset", &keys::INCREASE_LOCAL_OFFSET);
-    this->addKeyBindButton("Decrease Local Song Offset", &keys::DECREASE_LOCAL_OFFSET);
-    this->addKeyBindButton("Quick Retry (hold briefly)", &keys::QUICK_RETRY);
-    this->addKeyBindButton("Quick Save", &keys::QUICK_SAVE);
-    this->addKeyBindButton("Quick Load", &keys::QUICK_LOAD);
-    this->addKeyBindButton("Instant Replay", &keys::INSTANT_REPLAY);
+    this->addKeyBindButton("Left Click", &binds::LEFT_CLICK);
+    this->addKeyBindButton("Right Click", &binds::RIGHT_CLICK);
+    this->addKeyBindButton("Left Click (2)", &binds::LEFT_CLICK_2);
+    this->addKeyBindButton("Right Click (2)", &binds::RIGHT_CLICK_2);
+    this->addKeyBindButton("Smoke", &binds::SMOKE);
+    this->addKeyBindButton("Game Pause", &binds::GAME_PAUSE)->setDisallowLeftMouseClickBinding(true);
+    this->addKeyBindButton("Skip Cutscene", &binds::SKIP_CUTSCENE);
+    this->addKeyBindButton("Toggle Scoreboard", &binds::TOGGLE_SCOREBOARD);
+    this->addKeyBindButton("Scrubbing (+ Click Drag!)", &binds::SEEK_TIME);
+    this->addKeyBindButton("Quick Seek -5sec <<<", &binds::SEEK_TIME_BACKWARD);
+    this->addKeyBindButton("Quick Seek +5sec >>>", &binds::SEEK_TIME_FORWARD);
+    this->addKeyBindButton("Increase Local Song Offset", &binds::INCREASE_LOCAL_OFFSET);
+    this->addKeyBindButton("Decrease Local Song Offset", &binds::DECREASE_LOCAL_OFFSET);
+    this->addKeyBindButton("Quick Retry (hold briefly)", &binds::QUICK_RETRY);
+    this->addKeyBindButton("Quick Save", &binds::QUICK_SAVE);
+    this->addKeyBindButton("Quick Load", &binds::QUICK_LOAD);
+    this->addKeyBindButton("Instant Replay", &binds::INSTANT_REPLAY);
     this->addSubSection("Keys - FPoSu", keyboardSectionTags);
-    this->addKeyBindButton("Zoom", &keys::FPOSU_ZOOM);
+    this->addKeyBindButton("Zoom", &binds::FPOSU_ZOOM);
     this->addSubSection("Keys - Universal", keyboardSectionTags);
-    this->addKeyBindButton("Toggle chat", &keys::TOGGLE_CHAT);
-    this->addKeyBindButton("Toggle user list", &keys::TOGGLE_EXTENDED_CHAT);
+    this->addKeyBindButton("Toggle chat", &binds::TOGGLE_CHAT);
+    this->addKeyBindButton("Toggle user list", &binds::TOGGLE_EXTENDED_CHAT);
     if(cv::enable_screenshots.getBool()) {
-        this->addKeyBindButton("Save Screenshot", &keys::SAVE_SCREENSHOT);
+        this->addKeyBindButton("Save Screenshot", &binds::SAVE_SCREENSHOT);
     }
-    this->addKeyBindButton("Increase Volume", &keys::INCREASE_VOLUME);
-    this->addKeyBindButton("Decrease Volume", &keys::DECREASE_VOLUME);
-    this->addKeyBindButton("Disable Mouse Buttons", &keys::DISABLE_MOUSE_BUTTONS);
-    this->addKeyBindButton("Toggle Map Background", &keys::TOGGLE_MAP_BACKGROUND);
-    this->addKeyBindButton("Boss Key (Minimize)", &keys::BOSS_KEY);
-    this->addKeyBindButton("Open Skin Selection Menu", &keys::OPEN_SKIN_SELECT_MENU);
+    this->addKeyBindButton("Increase Volume", &binds::INCREASE_VOLUME);
+    this->addKeyBindButton("Decrease Volume", &binds::DECREASE_VOLUME);
+    this->addKeyBindButton("Disable Mouse Buttons", &binds::DISABLE_MOUSE_BUTTONS);
+    this->addKeyBindButton("Toggle Map Background", &binds::TOGGLE_MAP_BACKGROUND);
+    this->addKeyBindButton("Boss Key (Minimize)", &binds::BOSS_KEY);
+    this->addKeyBindButton("Open Skin Selection Menu", &binds::OPEN_SKIN_SELECT_MENU);
     this->addSubSection("Keys - Song Select", keyboardSectionTags);
-    this->addKeyBindButton("Toggle Mod Selection Screen", &keys::TOGGLE_MODSELECT)
+    this->addKeyBindButton("Toggle Mod Selection Screen", &binds::TOGGLE_MODSELECT)
         ->setTooltipText("(F1 can not be unbound. This is just an additional key.)");
-    this->addKeyBindButton("Random Beatmap", &keys::RANDOM_BEATMAP)
+    this->addKeyBindButton("Random Beatmap", &binds::RANDOM_BEATMAP)
         ->setTooltipText("(F2 can not be unbound. This is just an additional key.)");
     this->addSubSection("Keys - Mod Select", keyboardSectionTags);
-    this->addKeyBindButton("Easy", &keys::MOD_EASY);
-    this->addKeyBindButton("No Fail", &keys::MOD_NOFAIL);
-    this->addKeyBindButton("Half Time", &keys::MOD_HALFTIME);
-    this->addKeyBindButton("Hard Rock", &keys::MOD_HARDROCK);
-    this->addKeyBindButton("Sudden Death", &keys::MOD_SUDDENDEATH);
-    this->addKeyBindButton("Double Time", &keys::MOD_DOUBLETIME);
-    this->addKeyBindButton("Hidden", &keys::MOD_HIDDEN);
-    this->addKeyBindButton("Flashlight", &keys::MOD_FLASHLIGHT);
-    this->addKeyBindButton("Relax", &keys::MOD_RELAX);
-    this->addKeyBindButton("Autopilot", &keys::MOD_AUTOPILOT);
-    this->addKeyBindButton("Spunout", &keys::MOD_SPUNOUT);
-    this->addKeyBindButton("Auto", &keys::MOD_AUTO);
-    this->addKeyBindButton("Score V2", &keys::MOD_SCOREV2);
+    this->addKeyBindButton("Easy", &binds::MOD_EASY);
+    this->addKeyBindButton("No Fail", &binds::MOD_NOFAIL);
+    this->addKeyBindButton("Half Time", &binds::MOD_HALFTIME);
+    this->addKeyBindButton("Hard Rock", &binds::MOD_HARDROCK);
+    this->addKeyBindButton("Sudden Death", &binds::MOD_SUDDENDEATH);
+    this->addKeyBindButton("Double Time", &binds::MOD_DOUBLETIME);
+    this->addKeyBindButton("Hidden", &binds::MOD_HIDDEN);
+    this->addKeyBindButton("Flashlight", &binds::MOD_FLASHLIGHT);
+    this->addKeyBindButton("Relax", &binds::MOD_RELAX);
+    this->addKeyBindButton("Autopilot", &binds::MOD_AUTOPILOT);
+    this->addKeyBindButton("Spunout", &binds::MOD_SPUNOUT);
+    this->addKeyBindButton("Auto", &binds::MOD_AUTO);
+    this->addKeyBindButton("Score V2", &binds::MOD_SCOREV2);
 
     //**************************************************************************************************************************//
 
@@ -3465,9 +3465,11 @@ void OptionsOverlayImpl::onKeyBindingsResetAllPressed(CBaseUIButton * /*button*/
     if(this->iNumResetAllKeyBindingsPressed > (numRequiredPressesUntilReset - 1)) {
         this->iNumResetAllKeyBindingsPressed = 0;
 
-        for(const auto &[bind, sc] : OsuKeyBinds::getAll()) {
-            bind->setValue(sc);
+        for(auto *bind : OsuKeyBinds::getAll()) {
+            bind->reset();
         }
+
+        this->scheduleLayoutUpdate();
 
         ui->getNotificationOverlay()->addNotification("All key bindings have been reset.", 0xff00ff00);
     } else {
@@ -3729,8 +3731,8 @@ void OptionsOverlayImpl::onResetUpdate(ResetButton *resbtn) {
                 break;
             case BINDBTN: {
                 const auto binds = OsuKeyBinds::getAll();
-                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
-                    resbtn->setEnabled(it->sc != cv->getVal<SCANCODE>());
+                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::getCvar); it != binds.end()) {
+                    resbtn->setEnabled(!(*it)->isDefault());
                 }
                 break;
             }
@@ -3764,9 +3766,8 @@ void OptionsOverlayImpl::onResetClicked(ResetButton *resbtn) {
                 break;
             case BINDBTN: {
                 const auto binds = OsuKeyBinds::getAll();
-                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
-                    const SCANCODE defSC = it->sc;
-                    cv->setValue(defSC);
+                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::getCvar); it != binds.end()) {
+                    (*it)->reset();
                 }
             } break;
             default:
@@ -3786,15 +3787,10 @@ void OptionsOverlayImpl::onResetEverythingClicked(CBaseUIButton * /*button*/) {
     if(this->iNumResetEverythingPressed > (numRequiredPressesUntilReset - 1)) {
         this->iNumResetEverythingPressed = 0;
 
-        // first reset all settings
+        // reset all settings
         for(const auto &element : this->elemContainers) {
             ResetButton *resetButton = element->resetButton.get();
             if(resetButton != nullptr && resetButton->isEnabled()) resetButton->click();
-        }
-
-        // and then all key bindings (since these don't use the yellow reset button system)
-        for(const auto &[bind, sc] : OsuKeyBinds::getAll()) {
-            bind->setValue(sc);
         }
 
         ui->getNotificationOverlay()->addNotification("All settings have been reset.", 0xff00ff00);
@@ -3952,7 +3948,7 @@ OptionsElement *OptionsOverlayImpl::addButtonButtonLabel(const std::string &text
     return this->elemContainers.back().get();
 }
 
-KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, ConVar *cvar) {
+KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, OsuKeyBinds::Bind *bind) {
     /// UString unbindIconString; unbindIconString.insert(0, Icons::UNDO);
     auto *unbindButton = new UIButton(0, 0, this->options->getSize().x, 50, text, "");
     unbindButton->setTooltipText("Unbind");
@@ -3968,7 +3964,7 @@ KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, Con
     bindButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onKeyBindingButtonPressed>(this));
     this->options->container.addBaseUIElement(bindButton);
 
-    auto *label = new OptionsMenuKeyBindLabel(0, 0, this->options->getSize().x, 50, "", "", cvar, bindButton);
+    auto *label = new OptionsMenuKeyBindLabel(0, 0, this->options->getSize().x, 50, "", "", bind, bindButton);
     label->setDrawFrame(false);
     label->setDrawBackground(false);
     this->options->container.addBaseUIElement(label);
@@ -3979,9 +3975,9 @@ KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, Con
     e->baseElems.emplace_back(unbindButton);
     e->baseElems.emplace_back(bindButton);
     e->baseElems.emplace_back(label);
-    e->cvars[e->resetButton.get()] = cvar;
-    e->cvars[unbindButton] = cvar;
-    e->cvars[bindButton] = cvar;
+    e->cvars[e->resetButton.get()] = bind->getCvar();
+    e->cvars[unbindButton] = bind->getCvar();
+    e->cvars[bindButton] = bind->getCvar();
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[unbindButton] = last.get();
     this->uiToOptElemMap[bindButton] = last.get();

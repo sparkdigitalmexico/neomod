@@ -280,9 +280,9 @@ MainMenu::MainMenu() : UIScreen() {
                     }
                 }
                 if(version < 40.00) {
-                    for(const auto &[cvar, sc] : OsuKeyBinds::getAll()) {
-                        if(cvar->getVal<SCANCODE>() == sc) continue;
-                        cvar->setValue(KeyBindings::old_keycode_to_sdl_scancode(cvar->getInt()));
+                    for(auto *bind : OsuKeyBinds::getAll()) {
+                        if(bind->isDefault()) continue;
+                        bind->set(KeyBindings::old_keycode_to_sdl_scancode(bind->get()));
                     }
                     shouldSave = true;
                 }

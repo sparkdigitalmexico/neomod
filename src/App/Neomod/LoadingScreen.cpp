@@ -61,7 +61,7 @@ void LoadingScreen::drawLoadingSpinner() {
 void LoadingScreen::onKeyDown(KeyboardEvent& e) {
     if(e.isConsumed()) return;
 
-    if(e == KEY_ESCAPE || e == keys::GAME_PAUSE.getVal<SCANCODE>()) {
+    if(e == KEY_ESCAPE || e == binds::GAME_PAUSE) {
         e.consume();
         this->onFinished();
     }

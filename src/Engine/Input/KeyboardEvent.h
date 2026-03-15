@@ -25,8 +25,8 @@ class KeyboardEvent {
     [[nodiscard]] constexpr forceinline char32_t getCharCode() const { return this->charCode; }
     [[nodiscard]] constexpr forceinline uint64_t getTimestamp() const { return this->timestamp; }
 
-    inline bool operator==(const SCANCODE &rhs) const { return this->scanCode == rhs; }
-    inline bool operator!=(const SCANCODE &rhs) const { return this->scanCode != rhs; }
+    inline bool operator==(SCANCODE rhs) const { return this->scanCode == rhs; }
+    inline bool operator!=(SCANCODE rhs) const { return this->scanCode != rhs; }
 
     explicit operator SCANCODE() const { return this->scanCode; }
 
