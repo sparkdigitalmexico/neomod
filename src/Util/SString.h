@@ -107,7 +107,7 @@ inline std::string to_lower(const std::string_view str) {
     return lstr;
 }
 
-static inline std::unique_ptr<char[]> strcpy_u(std::string_view sv) {
+inline std::unique_ptr<char[]> strcpy_u(std::string_view sv) {
     if(sv.empty()) return nullptr;
 
     const size_t len = sv.length();
@@ -118,7 +118,7 @@ static inline std::unique_ptr<char[]> strcpy_u(std::string_view sv) {
     return ret;
 }
 
-static inline std::unique_ptr<char[]> strcpy_u(const char* data) {
+inline std::unique_ptr<char[]> strcpy_u(const char* data) {
     if(!data) return nullptr;
 
     const size_t len = std::strlen(data);

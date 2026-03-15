@@ -998,9 +998,6 @@ void MainMenu::update(CBaseUIEventCtx &c) {
         this->versionButton->setText(versionString);
     }
 
-    this->discordButton->setVisible(!cv::adblock.getBool());
-    this->twitterButton->setVisible(!cv::adblock.getBool());
-
     this->updateLayout();
 
     // update and focus handling

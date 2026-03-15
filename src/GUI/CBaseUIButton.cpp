@@ -9,14 +9,14 @@
 #include "ResourceManager.h"
 #include "Font.h"
 
-CBaseUIButton::CBaseUIButton(std::nullptr_t notext, float xPos, float yPos, float xSize, float ySize)
+CBaseUIButton::CBaseUIButton(std::nullptr_t notext, f32 xPos, f32 yPos, f32 xSize, f32 ySize)
     : CBaseUIElement(xPos, yPos, xSize, ySize, notext) {
     // this->setGrabClicks(true); // shouldn't this be set?
 
     this->font = engine->getDefaultFont();
 }
 
-CBaseUIButton::CBaseUIButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
+CBaseUIButton::CBaseUIButton(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name, std::string text)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->font = engine->getDefaultFont();
 
@@ -41,7 +41,7 @@ void CBaseUIButton::draw() {
     }
 
     // draw hover rects
-    const int hoverRectOffset = std::round(3.f * ((float)this->font->getDPI() / 96.f));  // NOTE: abusing font dpi
+    const int hoverRectOffset = std::round(3.f * ((f32)this->font->getDPI() / 96.f));  // NOTE: abusing font dpi
     g->setColor(this->frameColor);
     if(this->bEnabled && this->isMouseInside()) {
         if(!this->bActive && !mouse->isLeftDown())
@@ -59,12 +59,9 @@ void CBaseUIButton::drawText() {
     if(this->font == nullptr || !this->isVisible() || !this->isVisibleOnScreen() || this->getText().length() < 1)
         return;
 
-    const int shadowOffset = std::round(1.f * ((float)this->font->getDPI() / 96.f));  // NOTE: abusing font dpi
-
     // NOTE: don't decrease the size of this clip rect, console box suggestion text gets cut off at the bottom
     g->pushClipRect(McRect(this->getPos().x + 1, this->getPos().y + 1, this->getSize().x - 1, this->getSize().y));
     {
-        g->setColor(this->textColor);
         g->pushTransform();
         {
             // Justification logic pasted from CBaseUILabel::drawText()
@@ -83,17 +80,16 @@ void CBaseUIButton::drawText() {
             g->translate((i32)(this->getPos().x + xPosAdd),
                          (i32)(this->getPos().y + this->getSize().y / 2.f + this->fStringHeight / 2.f));
 
-            // shadow
+            const Color textColor = this->textBrightColor ? this->textBrightColor : this->textColor;
             if(this->bDrawShadow) {
-                g->translate(shadowOffset, shadowOffset);
-                g->setColor(this->textDarkColor ? this->textDarkColor : Colors::invert(this->textColor));
+                const f32 shadowOffset = std::round((f32)this->font->getDPI() / 96.f);  // NOTE: abusing font dpi
+                const Color shadowColor = this->textDarkColor ? this->textDarkColor : Colors::invert(textColor);
+                g->drawString(this->font, this->getText(),
+                              TextShadow{.col_text = textColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
+            } else {
+                g->setColor(textColor);
                 g->drawString(this->font, this->getText());
-                g->translate(-shadowOffset, -shadowOffset);
             }
-
-            // top
-            g->setColor(this->textBrightColor ? this->textBrightColor : this->textColor);
-            g->drawString(this->font, this->getText());
         }
         g->popTransform();
     }

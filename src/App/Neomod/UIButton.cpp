@@ -23,18 +23,18 @@ void UIButton::draw() {
     const Image *buttonMiddle = this->bDefaultSkin ? skin->i_button_mid_default : skin->i_button_mid;
     const Image *buttonRight = this->bDefaultSkin ? skin->i_button_right_default : skin->i_button_right;
 
-    float leftScale = Osu::getImageScaleToFitResolution(buttonLeft, this->getSize());
-    float leftWidth = buttonLeft->getWidth() * leftScale;
+    f32 leftScale = Osu::getImageScaleToFitResolution(buttonLeft, this->getSize());
+    f32 leftWidth = buttonLeft->getWidth() * leftScale;
 
-    float rightScale = Osu::getImageScaleToFitResolution(buttonRight, this->getSize());
-    float rightWidth = buttonRight->getWidth() * rightScale;
+    f32 rightScale = Osu::getImageScaleToFitResolution(buttonRight, this->getSize());
+    f32 rightWidth = buttonRight->getWidth() * rightScale;
 
-    float middleWidth = this->getSize().x - leftWidth - rightWidth;
+    f32 middleWidth = this->getSize().x - leftWidth - rightWidth;
 
     {
         auto color = this->is_loading ? rgba(0x33, 0x33, 0x33, 0xff) : this->color;
 
-        float brightness = 1.f + (this->fHoverAlpha * 0.2f);
+        f32 brightness = 1.f + (this->fHoverAlpha * 0.2f);
         color = Colors::scale(color, brightness);
 
         g->setColor(color);
@@ -61,7 +61,7 @@ void UIButton::draw() {
     buttonRight->unbind();
 
     if(this->is_loading) {
-        const float scale = (this->getSize().y * 0.8) / skin->i_loading_spinner.getSize().y;
+        const f32 scale = (this->getSize().y * 0.8) / skin->i_loading_spinner.getSize().y;
         g->setColor(0xffffffff);
         g->pushTransform();
         g->rotate(engine->getTime() * 180, 0, 0, 1);
@@ -91,7 +91,7 @@ void UIButton::update(CBaseUIEventCtx &c) {
     this->bFocusStolenDelay = false;
 }
 
-static float button_sound_cooldown = 0.f;
+static f32 button_sound_cooldown = 0.f;
 void UIButton::onMouseInside() {
     CBaseUIButton::onMouseInside();
     if(this->bFocusStolenDelay) return;
@@ -135,7 +135,7 @@ UIButton *UIButton::setTooltipText(std::string_view text) {
 }
 
 UIButtonVertical *UIButtonVertical::setSizeToContent(int horizontalBorderSize, int verticalBorderSize) {
-    this->setSize(this->fStringHeight + 2 * horizontalBorderSize, this->fStringWidth + 2 * verticalBorderSize);
+    this->setSize(this->fStringHeight + 2 * verticalBorderSize, this->fStringWidth + 2 * horizontalBorderSize);
     return this;
 }
 
@@ -143,9 +143,6 @@ void UIButtonVertical::drawText() {
     if(this->font == nullptr || !this->isVisible() || !this->isVisibleOnScreen() || this->getText().length() < 1)
         return;
 
-    const int shadowOffset = std::round(1.f * ((float)this->font->getDPI() / 96.f));  // NOTE: abusing font dpi
-
-    g->setColor(this->textColor);
     g->pushTransform();
     {
         const f32 scale = 1.f;
@@ -155,17 +152,16 @@ void UIButtonVertical::drawText() {
         g->translate((i32)(this->getPos().x + xPosAdd),
                      (i32)(this->getPos().y + (this->fStringWidth / 2.f) * scale + this->getSize().y / 2.f));
 
-        // shadow
+        const Color textColor = this->textBrightColor ? this->textBrightColor : this->textColor;
         if(this->bDrawShadow) {
-            g->translate(shadowOffset, shadowOffset);
-            g->setColor(this->textDarkColor ? this->textDarkColor : Colors::invert(this->textColor));
+            const f32 shadowOffset = std::round((f32)this->font->getDPI() / 96.f);  // NOTE: abusing font dpi
+            const Color shadowColor = this->textDarkColor ? this->textDarkColor : Colors::invert(textColor);
+            g->drawString(this->font, this->getText(),
+                          TextShadow{.col_text = textColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
+        } else {
+            g->setColor(textColor);
             g->drawString(this->font, this->getText());
-            g->translate(-shadowOffset, -shadowOffset);
         }
-
-        // top
-        g->setColor(this->textBrightColor ? this->textBrightColor : this->textColor);
-        g->drawString(this->font, this->getText());
     }
     g->popTransform();
 }
