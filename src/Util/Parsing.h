@@ -247,7 +247,7 @@ inline char* strtok_x(char d, char** str) {
 // _s for "safe"
 // does not modify "inout" unless parsing succeeded
 template <typename T>
-static inline bool strto_s(std::string_view str, T& inout) {
+inline bool strto_s(std::string_view str, T& inout) {
     if(unlikely(str.empty())) return false;
 
     // from cppreference: "leading whitespace is not ignored."
@@ -311,7 +311,7 @@ static inline bool strto_s(std::string_view str, T& inout) {
 
 // same as e.g. strtol if you never checked errno anyways but supports non-cstrings
 template <typename T>
-static inline T strto(std::string_view str) {
+inline T strto(std::string_view str) {
     T ret{};
     (void)strto_s(str, ret);
     return ret;

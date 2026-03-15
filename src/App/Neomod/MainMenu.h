@@ -33,10 +33,10 @@ class PauseButton final : public CBaseUIButton {
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
     void draw() override;
-    inline void setPaused(bool paused) { this->bIsPaused = paused; }
+    inline void setPaused(bool paused) { this->isPaused = paused; }
 
    private:
-    bool bIsPaused{true};
+    bool isPaused{true};
 };
 
 class MainMenu final : public UIScreen, public MouseListener {
@@ -68,7 +68,7 @@ class MainMenu final : public UIScreen, public MouseListener {
 
     friend class CubeButton;
     friend class MainButton;
-    float button_sound_cooldown{0.f};
+    float buttonSoundCooldown{0.f};
 
     void drawVersionInfo();
     void drawMainButton();
@@ -95,20 +95,19 @@ class MainMenu final : public UIScreen, public MouseListener {
     void onUpdatePressed();
     void onVersionPressed();
 
-    float fUpdateStatusTime;
-    float fUpdateButtonTextTime;
-    float fUpdateButtonAnimTime;
-    AnimFloat fUpdateButtonAnim;
-    bool bHasClickedUpdate;
-    bool shuffling = false;
+    float updateStatusTime;
+    float updateButtonTextTime;
+    float updateButtonAnimTime;
+    AnimFloat updateButtonAnim;
+    bool hasClickedUpdate;
 
     vec2 vSize{0.f};
     vec2 vCenter{0.f};
-    AnimFloat fSizeAddAnim;
-    AnimFloat fCenterOffsetAnim;
+    AnimFloat sizeAddAnim;
+    AnimFloat centerOffsetAnim;
 
-    bool bMenuElementsVisible;
-    float fMainMenuButtonCloseTime = 0.f;
+    bool menuElementsVisible;
+    float mainMenuButtonCloseTime{0.f};
 
     CubeButton *cube;
     std::vector<MainButton *> menuElements;
@@ -123,40 +122,39 @@ class MainMenu final : public UIScreen, public MouseListener {
     UIButtonWithIcon *discordButton{nullptr};
     UIButtonWithIcon *twitterButton{nullptr};
 
-    bool bDrawVersionNotificationArrow;
-    bool bDidUserUpdateFromOlderVersion;
+    bool drawVersionNotificationArrow;
+    bool didUserUpdateFromOlderVersion;
 
     // custom
-    float fMainMenuAnimTime;
-    float fMainMenuAnimDuration;
-    AnimFloat fMainMenuAnim;
-    AnimFloat fMainMenuAnim1;
-    AnimFloat fMainMenuAnim2;
-    AnimFloat fMainMenuAnim3;
-    float fMainMenuAnim1Target;
-    float fMainMenuAnim2Target;
-    float fMainMenuAnim3Target;
-    bool bInMainMenuRandomAnim;
-    int iMainMenuRandomAnimType;
-    unsigned int iMainMenuAnimBeatCounter;
+    float menuAnimTime;
+    float menuAnimDuration;
+    AnimFloat menuAnim;
+    AnimFloat menuAnim1;
+    AnimFloat menuAnim2;
+    AnimFloat menuAnim3;
+    float menuAnim1Target;
+    float menuAnim2Target;
+    float menuAnim3Target;
+    bool inRandomAnim;
+    int randomAnimType;
+    unsigned int animBeatCounter;
 
-    bool bMainMenuAnimFriend;
-    bool bMainMenuAnimFadeToFriendForNextAnim;
-    bool bMainMenuAnimFriendScheduled;
-    float fMainMenuAnimFriendPercent;
-    AnimFloat fMainMenuAnimFriendEyeFollowX;
-    AnimFloat fMainMenuAnimFriendEyeFollowY;
+    bool friendAnimEnabled;
+    bool shouldFadeToFriendForNextAnim;
+    bool friendAnimScheduled;
+    float friendAnimPercent;
+    AnimVec2 mainMenuAnimFriendEyeFollow;
 
-    float fShutdownScheduledTime;
-    bool bWasCleanShutdown;
+    float shutdownScheduledTime;
+    bool wasCleanShutdown;
 
-    bool bStartupAnim{true};
-    AnimFloat fStartupAnim;
-    AnimFloat fStartupAnim2;
-    float fPrevShuffleTime{0.f};
+    bool isStartupAnim{true};
+    AnimFloat startupAnim;
+    AnimFloat startupAnim2;
+    float prevShuffleTime{0.f};
 
-    Downloader::DownloadHandle server_icon_dl;
-    const Image *logo_img;
+    Downloader::DownloadHandle serverIconDL;
+    const Image *logoImg;
 
     const DatabaseBeatmap *currentMap{nullptr};
     const DatabaseBeatmap *lastMap{nullptr};

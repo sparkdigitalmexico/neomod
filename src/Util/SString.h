@@ -55,7 +55,7 @@ std::string join(const std::vector<std::string>& strings, S delim = ' ');
 bool alnum_comp(std::string_view a, std::string_view b);
 
 // in-place whitespace/newline trimming (both sides)
-static forceinline void trim_inplace(std::string& str) {
+inline void trim_inplace(std::string& str) {
     if(str.empty()) return;
     str.erase(0, str.find_first_not_of(" \t\r\n"));
     str.erase(str.find_last_not_of(" \t\r\n") + 1);
@@ -63,7 +63,7 @@ static forceinline void trim_inplace(std::string& str) {
 
 // in-place whitespace/newline trimming (both sides)
 // adjusts the view to exclude leading/trailing whitespace
-static forceinline void trim_inplace(std::string_view& str) {
+inline void trim_inplace(std::string_view& str) {
     if(str.empty()) return;
     size_t start = str.find_first_not_of(" \t\r\n");
     if(start == std::string_view::npos) {
@@ -75,32 +75,32 @@ static forceinline void trim_inplace(std::string_view& str) {
 }
 
 // case-insensitive strstr
-static forceinline bool contains_ncase(const std::string_view haystack, const std::string_view needle) {
+inline bool contains_ncase(const std::string_view haystack, const std::string_view needle) {
     return !haystack.empty() && !std::ranges::search(haystack, needle, [](unsigned char ch1, unsigned char ch2) {
                                      return std::tolower(ch1) == std::tolower(ch2);
                                  }).empty();
 }
 
 // empty or whitespace only
-static forceinline bool is_wspace_only(const std::string_view str) {
+inline bool is_wspace_only(const std::string_view str) {
     return str.empty() || std::ranges::all_of(str, [](unsigned char c) { return std::isspace(c) != 0; });
 }
 
 // check if first non-whitespace sequence matches comment token
-static forceinline bool is_comment(const std::string_view str, const std::string_view token = "//") {
+inline bool is_comment(const std::string_view str, const std::string_view token = "//") {
     size_t start = str.find_first_not_of(" \t\r\n");
     if(start == std::string_view::npos) return false;
     return str.substr(start).starts_with(token);
 }
 
 // only really valid for ASCII
-static forceinline void lower_inplace(std::string& str) {
+inline void lower_inplace(std::string& str) {
     if(str.empty()) return;
     std::ranges::transform(str, str.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
 // only really valid for ASCII
-static forceinline std::string to_lower(const std::string_view str) {
+inline std::string to_lower(const std::string_view str) {
     std::string lstr{str.data(), str.length()};
     if(str.empty()) return lstr;
     lower_inplace(lstr);

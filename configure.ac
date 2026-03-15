@@ -1092,6 +1092,10 @@ AS_IF([test "x$enable_lto" != "xno"], [
     ])
 ])
 
+# AX_CHECK_COMPILE_FLAG([-Wexit-time-destructors -Wglobal-constructors -Wpessimizing-move -Wrange-loop-construct], [
+#     NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -Wexit-time-destructors -Wglobal-constructors -Wpessimizing-move -Wrange-loop-construct"
+# ])
+
 # check for -Wl,--build-id (makes some debugging tools work better)
 AX_CHECK_LINK_FLAG([-Wl,--build-id], [
     LDFLAGS="$LDFLAGS -Wl,--build-id"

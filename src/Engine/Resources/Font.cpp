@@ -892,7 +892,7 @@ bool McFontImpl::initializeFreeType() {
         }
     }
 
-    if(FT_Select_Charmap(m_ftFace, ft_encoding_unicode)) {
+    if(FT_Select_Charmap(m_ftFace, FT_ENCODING_UNICODE)) {
         engine->showMessageError("Font Error", "FT_Select_Charmap() failed!");
         FT_Done_Face(m_ftFace);
         return false;
@@ -1407,7 +1407,7 @@ bool loadFallbackFont(const std::string &fontPath, bool isSystemFont) {
         return false;
     }
 
-    if(FT_Select_Charmap(face, ft_encoding_unicode)) {
+    if(FT_Select_Charmap(face, FT_ENCODING_UNICODE)) {
         logIfCV(r_debug_font_unicode, "Font Warning: Failed to select unicode charmap for fallback font: {:s}",
                 fontPath);
         FT_Done_Face(face);
