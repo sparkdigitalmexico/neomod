@@ -63,7 +63,7 @@ struct UI final {
     void onResolutionChange(vec2 newResolution);
     void stealFocus();
 
-    [[nodiscard]] inline UIScreen* getActiveScreen() { return this->active_screen; }
+    [[nodiscard]] inline UIScreen* getActiveScreen() const { return this->active_screen; }
     inline void setScreen(std::nullptr_t) { this->hide(); }
     void setScreen(UIScreen* screen);
 
@@ -78,27 +78,46 @@ struct UI final {
     std::unique_ptr<UIOverlay> popOverlay(UIOverlay* overlay);
 
     // created early, in ctor, for error notifications
-    [[nodiscard]] inline NotificationOverlay* getNotificationOverlay() { return this->notificationOverlay; }
+    [[nodiscard]] inline NotificationOverlay* getNotificationOverlay() const { return this->notificationOverlay; }
+    [[nodiscard]] UIScreen* getNotificationOverlayBase() const;
 
     // rest are created on init()
-    [[nodiscard]] inline VolumeOverlay* getVolumeOverlay() { return this->volumeOverlay; }
-    [[nodiscard]] inline PromptOverlay* getPromptOverlay() { return this->promptOverlay; }
-    [[nodiscard]] inline ModSelector* getModSelector() { return this->modSelector; }
-    [[nodiscard]] inline UIUserContextMenuScreen* getUserActions() { return this->userActionsOverlay; }
-    [[nodiscard]] inline RoomScreen* getRoom() { return this->room; }
-    [[nodiscard]] inline Chat* getChat() { return this->chatOverlay; }
-    [[nodiscard]] inline OptionsOverlay* getOptionsOverlay() { return this->optionsOverlay; }
-    [[nodiscard]] inline RankingScreen* getRankingScreen() { return this->rankingScreen; }
-    [[nodiscard]] inline UserStatsScreen* getUserStatsScreen() { return this->userStatsScreen; }
-    [[nodiscard]] inline SpectatorScreen* getSpectatorScreen() { return this->spectatorScreen; }
-    [[nodiscard]] inline PauseOverlay* getPauseOverlay() { return this->pauseOverlay; }
-    [[nodiscard]] inline HUD* getHUD() { return this->hud; }
-    [[nodiscard]] inline SongBrowser* getSongBrowser() { return this->songBrowser; }
-    [[nodiscard]] inline OsuDirectScreen* getOsuDirectScreen() { return this->osuDirectScreen; }
-    [[nodiscard]] inline Lobby* getLobby() { return this->lobby; }
-    [[nodiscard]] inline Changelog* getChangelog() { return this->changelog; }
-    [[nodiscard]] inline MainMenu* getMainMenu() { return this->mainMenu; }
-    [[nodiscard]] inline TooltipOverlay* getTooltipOverlay() { return this->tooltipOverlay; }
+    [[nodiscard]] inline VolumeOverlay* getVolumeOverlay() const { return this->volumeOverlay; }
+    [[nodiscard]] UIScreen* getVolumeOverlayBase() const;
+    [[nodiscard]] inline PromptOverlay* getPromptOverlay() const { return this->promptOverlay; }
+    [[nodiscard]] UIScreen* getPromptOverlayBase() const;
+    [[nodiscard]] inline ModSelector* getModSelector() const { return this->modSelector; }
+    [[nodiscard]] UIScreen* getModSelectorBase() const;
+    [[nodiscard]] inline UIUserContextMenuScreen* getUserActions() const { return this->userActionsOverlay; }
+    [[nodiscard]] UIScreen* getUserActionsBase() const;
+    [[nodiscard]] inline RoomScreen* getRoom() const { return this->room; }
+    [[nodiscard]] UIScreen* getRoomBase() const;
+    [[nodiscard]] inline Chat* getChat() const { return this->chatOverlay; }
+    [[nodiscard]] UIScreen* getChatBase() const;
+    [[nodiscard]] inline OptionsOverlay* getOptionsOverlay() const { return this->optionsOverlay; }
+    [[nodiscard]] UIScreen* getOptionsOverlayBase() const;
+    [[nodiscard]] inline RankingScreen* getRankingScreen() const { return this->rankingScreen; }
+    [[nodiscard]] UIScreen* getRankingScreenBase() const;
+    [[nodiscard]] inline UserStatsScreen* getUserStatsScreen() const { return this->userStatsScreen; }
+    [[nodiscard]] UIScreen* getUserStatsScreenBase() const;
+    [[nodiscard]] inline SpectatorScreen* getSpectatorScreen() const { return this->spectatorScreen; }
+    [[nodiscard]] UIScreen* getSpectatorScreenBase() const;
+    [[nodiscard]] inline PauseOverlay* getPauseOverlay() const { return this->pauseOverlay; }
+    [[nodiscard]] UIScreen* getPauseOverlayBase() const;
+    [[nodiscard]] inline HUD* getHUD() const { return this->hud; }
+    [[nodiscard]] UIScreen* getHUDBase() const;
+    [[nodiscard]] inline SongBrowser* getSongBrowser() const { return this->songBrowser; }
+    [[nodiscard]] UIScreen* getSongBrowserBase() const;
+    [[nodiscard]] inline OsuDirectScreen* getOsuDirectScreen() const { return this->osuDirectScreen; }
+    [[nodiscard]] UIScreen* getOsuDirectScreenBase() const;
+    [[nodiscard]] inline Lobby* getLobby() const { return this->lobby; }
+    [[nodiscard]] UIScreen* getLobbyBase() const;
+    [[nodiscard]] inline Changelog* getChangelog() const { return this->changelog; }
+    [[nodiscard]] UIScreen* getChangelogBase() const;
+    [[nodiscard]] inline MainMenu* getMainMenu() const { return this->mainMenu; }
+    [[nodiscard]] UIScreen* getMainMenuBase() const;
+    [[nodiscard]] inline TooltipOverlay* getTooltipOverlay() const { return this->tooltipOverlay; }
+    [[nodiscard]] UIScreen* getTooltipOverlayBase() const;
 
    private:
     friend UIScreen;

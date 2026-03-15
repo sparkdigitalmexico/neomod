@@ -1,34 +1,26 @@
 #include "VolumeOverlay.h"
 
-#include "AnimationHandler.h"
-#include "BeatmapInterface.h"
-#include "CBaseUIContainer.h"
-#include "Changelog.h"
-#include "Chat.h"
-#include "Environment.h"
-#include "OsuConVars.h"
-#include "OsuDirectScreen.h"
-#include "Engine.h"
-#include "KeyBindings.h"
-#include "Keyboard.h"
-#include "ModSelector.h"
-#include "Mouse.h"
-#include "OptionsOverlay.h"
 #include "Osu.h"
-#include "OsuKeyBinds.h"
-#include "Graphics.h"
+#include "OsuConVars.h"
 #include "MakeDelegateWrapper.h"
-#include "PauseOverlay.h"
-#include "RankingScreen.h"
-#include "Skin.h"
-#include "SongBrowser/SongBrowser.h"
+#include "AnimationHandler.h"
+#include "UIVolumeSlider.h"
+#include "UI.h"
+#include "Engine.h"
 #include "Sound.h"
 #include "SoundEngine.h"
-#include "UI.h"
+#include "Graphics.h"
+#include "Mouse.h"
+#include "Keyboard.h"
+#include "OsuKeyBinds.h"
+#include "KeyBindings.h"
+#include "OptionsOverlay.h"
+#include "ModSelector.h"
 #include "UIContextMenu.h"
-#include "UIVolumeSlider.h"
-#include "UserStatsScreen.h"
 #include "Database.h"
+#include "Environment.h"
+#include "BeatmapInterface.h"
+#include "Skin.h"
 
 VolumeOverlay::VolumeOverlay() : UIScreen() {
     cv::volume_master.setCallback(SA::MakeDelegate<&VolumeOverlay::onMasterVolumeChange>(this));
@@ -230,8 +222,8 @@ void VolumeOverlay::onKeyDown(KeyboardEvent &key) {
         const bool volIncreaseIsUp = binds::INCREASE_VOLUME == KEY_UP;
         const bool volDecreaseIsDown = binds::DECREASE_VOLUME == KEY_DOWN;
 
-        if(key == KEY_VOLUMEUP || (key == binds::INCREASE_VOLUME &&
-                                   (!volIncreaseIsUp || this->isVisible() || this->canChangeVolume()))) {
+        if(key == KEY_VOLUMEUP ||
+           (key == binds::INCREASE_VOLUME && (!volIncreaseIsUp || this->isVisible() || this->canChangeVolume()))) {
             this->volumeUp();
             key.consume();
         } else if(key == KEY_VOLUMEDOWN || (key == binds::DECREASE_VOLUME &&
@@ -282,20 +274,20 @@ bool VolumeOverlay::isVisible() { return engine->getTime() < this->fVolumeChange
 // needless to say, this is not a good way of doing things
 bool VolumeOverlay::canChangeVolume() {
     const bool can_scroll =
-        this->isBusy() || keyboard->isAltDown() ||                                                  //
-        (                                                                                           //
-            !(osu->isInPlayMode() && cv::disable_mousewheel.getBool()) &&                           //
-            (osu->getVirtScreenRect().contains(mouse->getPos())) &&                                 //
-            !(ui->getPauseOverlay()->isVisible()) &&                                                //
-            !(ui->getSongBrowser()->isVisible() && db->isFinished()) &&                             //
-            !(ui->getOsuDirectScreen()->isVisible()) &&                                             //
-            !(ui->getOptionsOverlay()->isVisible() && ui->getOptionsOverlay()->isMouseInside()) &&  //
-            !(ui->getOptionsOverlay()->getContextMenu()->isVisible()) &&                            //
-            !(ui->getChangelog()->isVisible()) &&                                                   //
-            !(ui->getRankingScreen()->isVisible()) &&                                               //
-            !(ui->getModSelector()->isMouseInScrollView()) &&                                       //
-            !(ui->getChat()->isMouseInside()) &&                                                    //
-            !(ui->getUserStatsScreen()->isVisible())                                                //
+        this->isBusy() || keyboard->isAltDown() ||                                                          //
+        (                                                                                                   //
+            !(osu->isInPlayMode() && cv::disable_mousewheel.getBool()) &&                                   //
+            (osu->getVirtScreenRect().contains(mouse->getPos())) &&                                         //
+            !(ui->getPauseOverlayBase()->isVisible()) &&                                                    //
+            !(ui->getSongBrowserBase()->isVisible() && db->isFinished()) &&                                 //
+            !(ui->getOsuDirectScreenBase()->isVisible()) &&                                                 //
+            !(ui->getOptionsOverlayBase()->isVisible() && ui->getOptionsOverlayBase()->isMouseInside()) &&  //
+            !(ui->getOptionsOverlay()->getContextMenu()->isVisible()) &&                                    //
+            !(ui->getChangelogBase()->isVisible()) &&                                                       //
+            !(ui->getRankingScreenBase()->isVisible()) &&                                                   //
+            !(ui->getModSelector()->isMouseInScrollView()) &&                                               //
+            !(ui->getChatBase()->isMouseInside()) &&                                                        //
+            !(ui->getUserStatsScreenBase()->isVisible())                                                    //
         );
 
     return can_scroll;

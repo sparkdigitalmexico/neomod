@@ -111,6 +111,26 @@ void UI::setScreenByName(std::string_view screenGetterNameWithoutGet) {
     }
 }
 
+UIScreen *UI::getNotificationOverlayBase() const { return this->notificationOverlay; }
+UIScreen *UI::getVolumeOverlayBase() const { return this->volumeOverlay; }
+UIScreen *UI::getPromptOverlayBase() const { return this->promptOverlay; }
+UIScreen *UI::getModSelectorBase() const { return this->modSelector; }
+UIScreen *UI::getUserActionsBase() const { return this->userActionsOverlay; }
+UIScreen *UI::getRoomBase() const { return this->room; }
+UIScreen *UI::getChatBase() const { return this->chatOverlay; }
+UIScreen *UI::getOptionsOverlayBase() const { return this->optionsOverlay; }
+UIScreen *UI::getRankingScreenBase() const { return this->rankingScreen; }
+UIScreen *UI::getUserStatsScreenBase() const { return this->userStatsScreen; }
+UIScreen *UI::getSpectatorScreenBase() const { return this->spectatorScreen; }
+UIScreen *UI::getPauseOverlayBase() const { return this->pauseOverlay; }
+UIScreen *UI::getHUDBase() const { return this->hud; }
+UIScreen *UI::getSongBrowserBase() const { return this->songBrowser; }
+UIScreen *UI::getOsuDirectScreenBase() const { return this->osuDirectScreen; }
+UIScreen *UI::getLobbyBase() const { return this->lobby; }
+UIScreen *UI::getChangelogBase() const { return this->changelog; }
+UIScreen *UI::getMainMenuBase() const { return this->mainMenu; }
+UIScreen *UI::getTooltipOverlayBase() const { return this->tooltipOverlay; }
+
 UI *ui{nullptr};
 
 UI::UI() {
