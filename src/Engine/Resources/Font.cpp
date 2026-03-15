@@ -19,7 +19,6 @@
 #include "TextureAtlas.h"
 #include "Logging.h"
 #include "Environment.h"
-#include "SyncMutex.h"
 #include "Image.h"
 #include "Hashing.h"
 #include "CDynArray.h"
@@ -87,8 +86,6 @@ FT_Face s_sharedEmojiFace{nullptr};
 
 bool s_sharedFtLibraryInitialized{false};
 bool s_sharedFallbacksInitialized{false};
-
-Sync::shared_mutex s_sharedResourcesMutex;
 
 // face size tracking to avoid redundant setFaceSize calls
 struct LastSizedFTFace {
@@ -884,12 +881,9 @@ bool McFontImpl::initializeFreeType() {
     assert(s_sharedFtLibraryInitialized);
 
     // load this font's primary face
-    {
-        Sync::unique_lock<Sync::shared_mutex> lock(s_sharedResourcesMutex);
-        if(FT_New_Face(s_sharedFtLibrary, m_sActualFilePath.c_str(), 0, &m_ftFace)) {
-            engine->showMessageError("Font Error", "Couldn't load font file!");
-            return false;
-        }
+    if(FT_New_Face(s_sharedFtLibrary, m_sActualFilePath.c_str(), 0, &m_ftFace)) {
+        engine->showMessageError("Font Error", "Couldn't load font file!");
+        return false;
     }
 
     if(FT_Select_Charmap(m_ftFace, FT_ENCODING_UNICODE)) {
@@ -1138,7 +1132,6 @@ bool McFontImpl::initializeAtlas() {
 FT_Face McFontImpl::getFontFaceForGlyph(char32_t ch) {
     // quick blacklist check
     if(m_bTryFindFallbacks && m_parent->isAsyncReady()) {  // skip blacklisting during initial load
-        Sync::shared_lock<Sync::shared_mutex> lock(s_sharedResourcesMutex);
         if(s_sharedFallbackFaceBlacklist.contains(ch)) {
             return nullptr;
         }
@@ -1162,14 +1155,11 @@ FT_Face McFontImpl::getFontFaceForGlyph(char32_t ch) {
 
     // search through shared fallback fonts
     FT_Face foundFace = nullptr;
-    {
-        Sync::shared_lock<Sync::shared_mutex> lock(s_sharedResourcesMutex);
-        for(auto &fallback : s_sharedFallbackFonts) {
-            glyphIndex = FT_Get_Char_Index(fallback.face, ch);
-            if(glyphIndex != 0) {
-                foundFace = fallback.face;
-                break;
-            }
+    for(auto &fallback : s_sharedFallbackFonts) {
+        glyphIndex = FT_Get_Char_Index(fallback.face, ch);
+        if(glyphIndex != 0) {
+            foundFace = fallback.face;
+            break;
         }
     }
 
@@ -1179,7 +1169,6 @@ FT_Face McFontImpl::getFontFaceForGlyph(char32_t ch) {
     // NOTE: skip blacklisting during initial load to allow lazier synchronization
     // with other fonts that may be loading simultaneously
     if(m_parent->isAsyncReady()) {
-        Sync::unique_lock<Sync::shared_mutex> lock(s_sharedResourcesMutex);
         s_sharedFallbackFaceBlacklist.insert(ch);
     }
 
