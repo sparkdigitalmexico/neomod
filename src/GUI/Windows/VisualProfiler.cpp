@@ -199,6 +199,7 @@ void VisualProfiler::draw() {
 
                     addTextLine(fmt::format("Platform: {:s}"_cf, RuntimePlatform::current_string()), textFont,
                                 this->textLines);
+                    addTextLine("Compiler: " MC_COMPILERSTR, textFont, this->textLines);
                     addTextLine(fmt::format("ConVars: {:d}"_cf, cvars().getNumConVars()), textFont, this->textLines);
                     addTextLine(fmt::format("Monitor: [{:d}] of {:d}"_cf, env->getMonitor(), env->getMonitors().size()),
                                 textFont, this->textLines);

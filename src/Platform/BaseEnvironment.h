@@ -307,3 +307,21 @@ MC_MESSAGE("WARNING: unknown compilation arch??")
 #ifndef OS_NAME
 #error "OS not currently supported"
 #endif
+
+#if defined(__clang__)
+#ifdef _MSC_VER
+#define MC_COMPILERSTR                                                                                \
+    "Clang (MSVC) " MC_STRINGIZE(__clang_major__) "." MC_STRINGIZE(__clang_minor__) "." MC_STRINGIZE( \
+        __clang_patchlevel__)
+#else
+#define MC_COMPILERSTR \
+    "Clang " MC_STRINGIZE(__clang_major__) "." MC_STRINGIZE(__clang_minor__) "." MC_STRINGIZE(__clang_patchlevel__)
+#endif
+#elif defined(__GNUC__)
+#define MC_COMPILERSTR \
+    "GCC " MC_STRINGIZE(__GNUC__) "." MC_STRINGIZE(__GNUC_MINOR__) "." MC_STRINGIZE(__GNUC_PATCHLEVEL__)
+#elif defined(_MSC_VER)
+#define MC_COMPILERSTR "MSVC (cl) " MC_STRINGIZE(_MSC_FULL_VER)
+#else
+#define MC_COMPILERSTR "?"
+#endif
