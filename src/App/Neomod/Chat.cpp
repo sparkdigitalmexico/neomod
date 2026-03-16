@@ -792,7 +792,9 @@ void Chat::onKeyUp(KeyboardEvent &key) {
 }
 
 void Chat::onChar(KeyboardEvent &key) {
-    if(!this->bVisible || key.isConsumed()) return;
+    if(!this->bVisible || key.isConsumed() ||
+       (keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown())))
+        return;
 
     this->input_box->onChar(key);
     key.consume();

@@ -439,7 +439,8 @@ void CBaseUITextbox::onChar(KeyboardEvent &e) {
     // ignore any control characters, we only want text
     // funny story: Windows 10 still has this bug even today, where when editing the name of any shortcut/folder on the
     // desktop, hitting CTRL + BACKSPACE will insert an invalid character
-    if(e.getCharCode() < 32 || (keyboard->isControlDown() && !keyboard->isAltDown())) return;
+    if(e.getCharCode() < 32 || (keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown())))
+        return;
 
     // Linux inserts a weird character when pressing the delete key
     if(e.getCharCode() == 127) return;

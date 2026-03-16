@@ -2218,7 +2218,8 @@ void OptionsOverlayImpl::onChar(KeyboardEvent &e) {
     if(e.isConsumed()) return;
 
     // handle searching
-    if(e.getCharCode() < 32 || !parent->bVisible || (keyboard->isControlDown() && !keyboard->isAltDown()) ||
+    if(e.getCharCode() < 32 || !parent->bVisible ||
+       ((keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown()))) ||
        this->fSearchOnCharKeybindHackTime > engine->getTime())
         return;
 

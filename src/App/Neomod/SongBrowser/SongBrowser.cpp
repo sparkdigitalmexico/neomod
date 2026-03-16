@@ -1117,7 +1117,9 @@ void SongBrowser::onChar(KeyboardEvent &e) {
     this->contextMenu->onChar(e);
     if(e.isConsumed()) return;
 
-    if(e.getCharCode() < 32 || !this->bVisible || (keyboard->isControlDown() && !keyboard->isAltDown())) return;
+    if(e.getCharCode() < 32 || !this->bVisible ||
+       (keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown())))
+        return;
     if(this->bF1Pressed || this->bF2Pressed || this->bF3Pressed) return;
 
     // handle searching
