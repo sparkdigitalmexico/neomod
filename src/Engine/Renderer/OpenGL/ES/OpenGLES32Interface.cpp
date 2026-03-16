@@ -250,8 +250,9 @@ void OpenGLES32Interface::setAlpha(float alpha) {
 }
 
 void OpenGLES32Interface::drawRectf(const RectOptions &opts) {
-    if(opts.cornerRadius <= 0.f) {
-        // delegate to shared impl if we're not drawing rounded
+    if(opts.cornerRadius <= 0.f || opts.lineThickness > 1.f) {
+        // delegate to shared impl if we're not drawing rounded, or if line thickness > 1
+        // (glLineWidth > 1 isn't reliably supported in GLES)
         ModernGraphicsShared::drawRectf(opts);
     } else {
         this->updateTransform();

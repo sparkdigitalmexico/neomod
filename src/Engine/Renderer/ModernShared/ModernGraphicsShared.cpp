@@ -65,12 +65,12 @@ void ModernGraphicsShared::drawRectf(const RectOptions &opts) {
     this->setTexturing(false);
 
     if(opts.cornerRadius > 0.f) {
-        // draw as a 1px-wide filled triangle strip to avoid line rasterization differences
+        // draw as a filled triangle strip to avoid line rasterization differences
         // NOTE: GL_LINE_LOOP looks a lot cleaner than what seems to be possible with a LINE_STRIP in DX11/SDL_gpu,
         // so GLES3.2 overrides this case
         const float r = opts.cornerRadius;
         const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
-        constexpr float hw = 0.5f;
+        const float hw = opts.lineThickness / 2.f;
         const float rInner = r - hw, rOuter = r + hw;
         static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
         {
