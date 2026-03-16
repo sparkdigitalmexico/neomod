@@ -6,6 +6,23 @@
 
 #include <utility>
 
+Resource::Resource(Resource &&o) noexcept {
+    this->resType = o.resType;
+
+    this->sFilePath = std::move(o.sFilePath);
+    this->sName = std::move(o.sName);
+    this->sDebugIdentifier = std::move(o.sDebugIdentifier);
+
+    this->bReady.store(o.bReady.load(std::memory_order_acquire), std::memory_order_release);
+    this->bAsyncReady.store(o.bAsyncReady.load(std::memory_order_acquire), std::memory_order_release);
+    this->bInterrupted.store(o.bInterrupted.load(std::memory_order_acquire), std::memory_order_release);
+
+    o.bReady.store(false);
+    o.bAsyncReady.store(false);
+    o.bInterrupted.store(false);
+}
+
+
 Resource::Resource(Type resType, std::string filepath, bool doFilesystemExistenceCheck) : resType(resType) {
     this->sFilePath = std::move(filepath);
 
@@ -39,7 +56,7 @@ void Resource::setName(std::string_view name) {
 }
 
 // separate helper for possible reload with new path
-bool Resource::doPathFixup(std::string& input) {
+bool Resource::doPathFixup(std::string &input) {
     bool file_found = true;
     if(File::existsCaseInsensitive(input) != File::FILETYPE::FILE) {  // modifies the input string if found
         debugLog("Resource Warning: File {:s} does not exist!", input);
@@ -49,9 +66,7 @@ bool Resource::doPathFixup(std::string& input) {
     return file_found;
 }
 
-void Resource::load() {
-    this->init();
-}
+void Resource::load() { this->init(); }
 
 void Resource::loadAsync() {
     this->bInterrupted.store(false, std::memory_order_release);

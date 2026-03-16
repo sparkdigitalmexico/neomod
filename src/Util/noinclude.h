@@ -35,13 +35,13 @@ inline bool isInt(float f) { return (f == static_cast<float>(static_cast<int>(f)
    private:
 
 // only move constructable, nothing else
-#define MOVEONLY(classname__)                             \
-   public:                                                \
-    classname__(const classname__ &) = delete;            \
-    classname__ &operator=(const classname__ &) = delete; \
-    classname__(classname__ &&) = default;                \
-    classname__ &operator=(classname__ &&) = delete;      \
-                                                          \
+#define MOVECONSTRUCTONLY(classname__)                        \
+   public:                                                    \
+    classname__(const classname__ &) = delete;                \
+    classname__ &operator=(const classname__ &) = delete;     \
+    classname__(classname__ &&) noexcept = default;           \
+    classname__ &operator=(classname__ &&) noexcept = delete; \
+                                                              \
    private:
 
 // create string view literal

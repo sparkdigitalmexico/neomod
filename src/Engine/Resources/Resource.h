@@ -23,7 +23,12 @@ class VertexArrayObject;
 class RenderTarget;
 
 class Resource {
-    NOCOPY_NOMOVE(Resource)
+   public:
+    Resource(const Resource &) = delete;
+    Resource &operator=(const Resource &) = delete;
+    Resource(Resource &&o) noexcept;
+    Resource &operator=(Resource &&o) noexcept = delete;
+   private:
     friend class ResourceManager;
     friend struct ResourceManagerImpl;
 

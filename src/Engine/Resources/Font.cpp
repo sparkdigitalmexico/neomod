@@ -58,7 +58,7 @@ constexpr const float ATLAS_OCCUPANCY_TARGET{0.75f};  // target atlas occupancy 
 // we initially pack the ASCII characters + initial characters into a region,
 // then dynamically loaded glyphs are placed in the remaining space in fixed-size slots (not packed)
 // this maximizes the amount of fallback glyphs we can have loaded at once for a fixed amount of memory usage
-constexpr const size_t ATLAS_SIZE_MULTIPLIER{4};
+constexpr const size_t ATLAS_SIZE_MULTIPLIER{3};
 
 constexpr const size_t MIN_ATLAS_SIZE{256};
 constexpr const size_t MAX_ATLAS_SIZE{4096};
@@ -68,7 +68,8 @@ constexpr const char32_t UNKNOWN_CHAR{U'?'};  // ASCII '?'
 constexpr const size_t VERTS_PER_VAO{Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? 6 : 4};
 
 // this is still a very conservative amount of memory
-constexpr const size_t CACHED_STRINGS_PER_FONT{4096};
+constexpr const size_t CACHED_STRINGS_PER_FONT{Env::cfg(OS::WASM) ? 1024
+                                                                  : 4096};  // be more conservative in WASM (32bit)
 size_t stringToCacheIndex(std::string_view str) { return std::hash<std::string_view>{}(str) % CACHED_STRINGS_PER_FONT; }
 
 // other shared-across-instances things
@@ -94,6 +95,16 @@ struct LastSizedFTFace {
     int dpi{0};
     [[nodiscard]] inline bool operator==(const LastSizedFTFace &) const = default;
 } s_lastSizedFace{};
+
+class TextVAO : public VertexArrayObject {
+    MOVECONSTRUCTONLY(TextVAO)
+   public:
+    constexpr TextVAO(DrawPrimitive primitive = DrawPrimitive{2} /* TRIANGLES */,
+                      DrawUsageType usage = DrawUsageType{0} /* STATIC */, bool keepInSystemMemory = false)
+        : VertexArrayObject(primitive, usage, keepInSystemMemory) {}
+    ~TextVAO() override = default;
+    friend McFontImpl;
+};
 
 }  // namespace
 
@@ -122,56 +133,46 @@ struct McFontImpl final {
         bool occupied;
     };
 
-    struct VerTexMetCacheEntry {
+    struct VerTexMetCacheEntry final {
         std::string string;
-        bool hasColorGlyphs{false};
 
         void clear() {
             string.clear();
-            verts.clear();
-            texcoords.clear();
+            VAO.clear();
+            emojiVAO.clear();
             metrics.clear();
-            emojiVerts.clear();
-            emojiTexcoords.clear();
-            hasColorGlyphs = false;
         }
 
-        void resize(size_t numVerts, size_t numMetrics) {
-            verts.resize(numVerts);
-            texcoords.resize(numVerts);
-            metrics.resize(numMetrics);
-        }
-
-        [[nodiscard]] size_t numVerts() const { return verts.size(); }
-        [[nodiscard]] size_t numMetrics() const { return metrics.size(); }
-
-        CDynArray<vec3> &getVerts() { return verts; }
-        CDynArray<vec2> &getTexcoords() { return texcoords; }
+        CDynArray<vec3> &getVerts() { return VAO.vertices; }
+        CDynArray<vec2> &getTexcoords() { return VAO.texcoords; }
         CDynArray<const GLYPH_METRICS *> &getMetrics() { return metrics; }
 
-        [[nodiscard]] const CDynArray<vec3> &getVerts() const { return verts; }
-        [[nodiscard]] const CDynArray<vec2> &getTexcoords() const { return texcoords; }
+        [[nodiscard]] const CDynArray<vec3> &getVerts() const { return VAO.vertices; }
+        [[nodiscard]] const CDynArray<vec2> &getTexcoords() const { return VAO.texcoords; }
         [[nodiscard]] const CDynArray<const GLYPH_METRICS *> &getMetrics() const { return metrics; }
 
-        CDynArray<vec3> &getEmojiVerts() { return emojiVerts; }
-        CDynArray<vec2> &getEmojiTexcoords() { return emojiTexcoords; }
-        [[nodiscard]] const CDynArray<vec3> &getEmojiVerts() const { return emojiVerts; }
-        [[nodiscard]] const CDynArray<vec2> &getEmojiTexcoords() const { return emojiTexcoords; }
+        CDynArray<vec3> &getEmojiVerts() { return emojiVAO.vertices; }
+        CDynArray<vec2> &getEmojiTexcoords() { return emojiVAO.texcoords; }
+        [[nodiscard]] const CDynArray<vec3> &getEmojiVerts() const { return emojiVAO.vertices; }
+        [[nodiscard]] const CDynArray<vec2> &getEmojiTexcoords() const { return emojiVAO.texcoords; }
+
+        [[nodiscard]] VertexArrayObject *getVAO() { return &VAO; }
+        [[nodiscard]] VertexArrayObject *getEmojiVAO() { return &emojiVAO; }
 
        private:
-        CDynArray<vec3> verts{};
-        CDynArray<vec2> texcoords{};
+        TextVAO VAO{
+            Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS,
+            DrawUsageType::DYNAMIC};
+        TextVAO emojiVAO{
+            Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS,
+            DrawUsageType::DYNAMIC};
         CDynArray<const GLYPH_METRICS *> metrics{};
-        CDynArray<vec3> emojiVerts{};
-        CDynArray<vec2> emojiTexcoords{};
     };
 
     std::string m_sActualFilePath;
 
     std::vector<char32_t> m_vInitialGlyphs;
     std::unordered_map<char32_t, std::unique_ptr<GLYPH_METRICS>> m_mGlyphMetrics;
-
-    std::unique_ptr<VertexArrayObject> m_vao;
 
     std::unique_ptr<TextureAtlas> m_textureAtlas{nullptr};
 
@@ -277,9 +278,9 @@ struct McFontImpl final {
     // fallback font management
     FT_Face getFontFaceForGlyph(char32_t ch);
 
-    // writes glyph quad into buffer at startVertex, returns end vertex.
-    // if gm.isColor, also appends to the buffer's emoji overlay arrays.
-    size_t buildGlyphGeometry(VerTexMetCacheEntry &buffer, const GLYPH_METRICS &gm, float advanceX, size_t startVertex);
+    // puts a glyph quad/tri into given vertex/texcoord buffer at startIndex
+    void buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
+                            float advanceX, size_t startIndex);
 
     // builds full string geometry into buffer, including emoji overlay arrays.
     void buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs);
@@ -341,11 +342,7 @@ std::vector<std::string> McFont::wrap(std::string_view text, f64 max_width) cons
 
 // they are initialized in constructor()
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
-McFontImpl::McFontImpl(McFont *parent, int fontSize, bool antialiasing, int fontDPI)
-    : m_parent(parent),
-      m_vao(g->createVertexArrayObject(
-          (Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS),
-          DrawUsageType::DYNAMIC, true)) {
+McFontImpl::McFontImpl(McFont *parent, int fontSize, bool antialiasing, int fontDPI) : m_parent(parent) {
     // initialize with basic ASCII, load the rest as needed
     std::array<char32_t, 96> characters;  // NOLINT
     std::ranges::iota(characters, 32);
@@ -356,10 +353,7 @@ McFontImpl::McFontImpl(McFont *parent, int fontSize, bool antialiasing, int font
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
 McFontImpl::McFontImpl(McFont *parent, const std::span<const char32_t> &characters, int fontSize, bool antialiasing,
                        int fontDPI)
-    : m_parent(parent),
-      m_vao(g->createVertexArrayObject(
-          (Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS),
-          DrawUsageType::DYNAMIC, true)) {
+    : m_parent(parent) {
     // don't try to find fallbacks if we had an explicitly-passed character set on construction
     m_bTryFindFallbacks = false;
     constructor(characters, fontSize, antialiasing, fontDPI);
@@ -499,8 +493,6 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
     const auto numCodepoints = UniString::num_codepoints(text);
     if(numCodepoints == 0 || numCodepoints > cv::r_drawstring_max_string_length.getInt()) return;
 
-    m_vao->clear();
-
     // cache entire strings' vertex/texcoord representations,
     // and only do the minimal work necessary if needing to re-upload them to the texture atlas
     const bool useCache = numCodepoints >= 8 && numCodepoints <= 384;  // arbitrary limits
@@ -523,16 +515,22 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
         }
 
         if(m_bAtlasNeedsReload) {
-            size_t currentVertex = 0;
-            buffer.hasColorGlyphs = false;
-            buffer.getEmojiVerts().clear();
-            buffer.getEmojiTexcoords().clear();
-
+            size_t emojiStartIndex{0}, regularStartIndex{0};
             float advanceX = 0.0f;
             for(const GLYPH_METRICS *gm : metrics) {
-                currentVertex = buildGlyphGeometry(buffer, *gm, advanceX, currentVertex);
+                if(gm->isColor) {
+                    buildGlyphGeometry(buffer.getEmojiVerts(), buffer.getEmojiTexcoords(), *gm, advanceX,
+                                       emojiStartIndex);
+                    emojiStartIndex += VERTS_PER_VAO;
+                } else {
+                    buildGlyphGeometry(buffer.getVerts(), buffer.getTexcoords(), *gm, advanceX, regularStartIndex);
+                    regularStartIndex += VERTS_PER_VAO;
+                }
                 advanceX += gm->advance_x;
             }
+            // these assertions should hold because we're reusing the same buffer
+            assert(emojiStartIndex == buffer.getEmojiVerts().size());
+            assert(regularStartIndex == buffer.getVerts().size());
 
             m_textureAtlas->reloadAtlasImage();
             m_bAtlasNeedsReload = false;
@@ -543,44 +541,52 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
         const size_t totalVerts = numCodepoints * VERTS_PER_VAO;
         const size_t maxGlyphs = std::min(numCodepoints, (size_t)((double)totalVerts / (double)VERTS_PER_VAO));
 
-        buffer.resize(totalVerts, maxGlyphs);
+        buffer.getMetrics().resize(maxGlyphs);
+        buffer.getVAO()->clear();
+        buffer.getEmojiVAO()->clear();
 
         buildStringGeometry(buffer, maxGlyphs);
     }
 
-    m_vao->reserve(buffer.getVerts().size());
-
-    m_vao->setVertices(buffer.getVerts());
-    m_vao->setTexcoords(buffer.getTexcoords());
-
     m_textureAtlas->getAtlasImage()->bind();
 
-    if(const auto &shadOpt = shadow; shadOpt.has_value() && shadOpt->col_shadow.a > 0) {
-        const auto &shadowConf = *shadOpt;
+    const bool drawShadow = shadow.has_value() && shadow->col_shadow.a > 0;
+    if(drawShadow) {
+        const auto &shadowConf = *shadow;
         const float px = shadowConf.offs_px;
 
         g->translate(px, px);
         g->setColor(shadowConf.col_shadow);
 
-        g->drawVAO(m_vao.get());
+        g->drawVAO(buffer.getVAO());
 
         g->translate(-px, -px);
         g->setColor(shadowConf.col_text);
     }
 
-    g->drawVAO(m_vao.get());
+    g->drawVAO(buffer.getVAO());
 
-    // redraw emoji glyphs with their original colors
-    if(buffer.hasColorGlyphs && !buffer.getEmojiVerts().empty()) {
+    // redraw emoji parts, untinted (allow alpha though)
+    if(!buffer.getEmojiVerts().empty()) {
         const Color savedColor = g->getColor();
+        if(drawShadow) {
+            // also draw shadow if desired
+            const auto &shadowConf = *shadow;
+            const float px = shadowConf.offs_px;
 
-        m_vao->clear();
-        m_vao->reserve(buffer.getEmojiVerts().size());
-        m_vao->setVertices(buffer.getEmojiVerts());
-        m_vao->setTexcoords(buffer.getEmojiTexcoords());
+            g->translate(px, px);
+            g->setColor(shadowConf.col_shadow);  // allow tinting the shadow (it should be mostly invisible anyways)
 
-        g->setColor((Color)-1);  // don't tint emojis
-        g->drawVAO(m_vao.get());
+            g->drawVAO(buffer.getEmojiVAO());
+
+            g->translate(-px, -px);
+
+            g->setColor(argb(shadowConf.col_text.a, 255, 255, 255));
+        } else {
+            g->setColor(argb(savedColor.a, 255, 255, 255));
+        }
+
+        g->drawVAO(buffer.getEmojiVAO());
 
         g->setColor(savedColor);
     }
@@ -1242,11 +1248,8 @@ FT_BitmapGlyph McFontImpl::loadBitmapGlyph(char32_t ch, FT_Face face, bool store
     return bitmapGlyph;
 }
 
-size_t McFontImpl::buildGlyphGeometry(VerTexMetCacheEntry &buffer, const GLYPH_METRICS &gm, float advanceX,
-                                      size_t startVertex) {
-    auto &vertsOut = buffer.getVerts();
-    auto &texcoordsOut = buffer.getTexcoords();
-
+void McFontImpl::buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
+                                    float advanceX, size_t startIndex) {
     const float atlasWidth{static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth())};
     const float atlasHeight{static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight())};
 
@@ -1275,70 +1278,70 @@ size_t McFontImpl::buildGlyphGeometry(VerTexMetCacheEntry &buffer, const GLYPH_M
     if constexpr(VERTS_PER_VAO > 4) {
         // triangles (quads are slower for GL ES because they need to be converted to triangles at submit time)
         // first triangle (bottom-left, top-left, top-right)
-        vertsOut[startVertex] = bottomLeft;
-        vertsOut[startVertex + 1] = topLeft;
-        vertsOut[startVertex + 2] = topRight;
+        vertsOut[startIndex] = bottomLeft;
+        vertsOut[startIndex + 1] = topLeft;
+        vertsOut[startIndex + 2] = topRight;
 
-        texcoordsOut[startVertex] = texBottomLeft;
-        texcoordsOut[startVertex + 1] = texTopLeft;
-        texcoordsOut[startVertex + 2] = texTopRight;
+        texcoordsOut[startIndex] = texBottomLeft;
+        texcoordsOut[startIndex + 1] = texTopLeft;
+        texcoordsOut[startIndex + 2] = texTopRight;
 
         // second triangle (bottom-left, top-right, bottom-right)
-        vertsOut[startVertex + 3] = bottomLeft;
-        vertsOut[startVertex + 4] = topRight;
-        vertsOut[startVertex + 5] = bottomRight;
+        vertsOut[startIndex + 3] = bottomLeft;
+        vertsOut[startIndex + 4] = topRight;
+        vertsOut[startIndex + 5] = bottomRight;
 
-        texcoordsOut[startVertex + 3] = texBottomLeft;
-        texcoordsOut[startVertex + 4] = texTopRight;
-        texcoordsOut[startVertex + 5] = texBottomRight;
+        texcoordsOut[startIndex + 3] = texBottomLeft;
+        texcoordsOut[startIndex + 4] = texTopRight;
+        texcoordsOut[startIndex + 5] = texBottomRight;
     } else {
         // quads
-        vertsOut[startVertex] = bottomLeft;       // bottom-left
-        vertsOut[startVertex + 1] = topLeft;      // top-left
-        vertsOut[startVertex + 2] = topRight;     // top-right
-        vertsOut[startVertex + 3] = bottomRight;  // bottom-right
+        vertsOut[startIndex] = bottomLeft;       // bottom-left
+        vertsOut[startIndex + 1] = topLeft;      // top-left
+        vertsOut[startIndex + 2] = topRight;     // top-right
+        vertsOut[startIndex + 3] = bottomRight;  // bottom-right
 
-        texcoordsOut[startVertex] = texBottomLeft;
-        texcoordsOut[startVertex + 1] = texTopLeft;
-        texcoordsOut[startVertex + 2] = texTopRight;
-        texcoordsOut[startVertex + 3] = texBottomRight;
+        texcoordsOut[startIndex] = texBottomLeft;
+        texcoordsOut[startIndex + 1] = texTopLeft;
+        texcoordsOut[startIndex + 2] = texTopRight;
+        texcoordsOut[startIndex + 3] = texBottomRight;
     }
 
-    const size_t endVertex = startVertex + VERTS_PER_VAO;
-
-    // append to emoji overlay buffer if this is a color glyph
-    if(gm.isColor) {
-        buffer.hasColorGlyphs = true;
-        for(size_t v = startVertex; v < endVertex; v++) {
-            buffer.getEmojiVerts().push_back(vertsOut[v]);
-            buffer.getEmojiTexcoords().push_back(texcoordsOut[v]);
-        }
-    }
-
-    return endVertex;
+    return;
 }
 
 void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs) {
-    float advanceX = 0.0f;
-    size_t startVertex = 0;
-    buffer.hasColorGlyphs = false;
-    buffer.getEmojiVerts().clear();
-    buffer.getEmojiTexcoords().clear();
+    auto &verts = buffer.getVerts();
+    auto &TCs = buffer.getTexcoords();
+    auto &emojiVerts = buffer.getEmojiVerts();
+    auto &emojiTCs = buffer.getEmojiTexcoords();
+    auto &metrics = buffer.getMetrics();
 
+    size_t emojiStartIndex{0}, regularStartIndex{0};
+    float advanceX = 0.0f;
     for(int i = -1; char32_t ch : UniString::codepoints(buffer.string)) {
         ++i;
         if(i >= maxGlyphs) break;
 
         const GLYPH_METRICS &gm = getGlyphMetrics(ch);
-
-        startVertex = buildGlyphGeometry(buffer, gm, advanceX, startVertex);
+        if(gm.isColor) {
+            emojiVerts.resize(emojiVerts.size() + VERTS_PER_VAO);
+            emojiTCs.resize(emojiTCs.size() + VERTS_PER_VAO);
+            buildGlyphGeometry(emojiVerts, emojiTCs, gm, advanceX, emojiStartIndex);
+            emojiStartIndex += VERTS_PER_VAO;
+        } else {
+            verts.resize(verts.size() + VERTS_PER_VAO);
+            TCs.resize(TCs.size() + VERTS_PER_VAO);
+            buildGlyphGeometry(verts, TCs, gm, advanceX, regularStartIndex);
+            regularStartIndex += VERTS_PER_VAO;
+        }
         advanceX += gm.advance_x;
 
         // mark dynamic slot as recently used (if this character is in a dynamic slot)
         markSlotUsed(ch);
 
         // add glyph metrics to out parameter
-        buffer.getMetrics()[i] = &gm;
+        metrics[i] = &gm;
     }
 
     // reload atlas if new glyphs were added to dynamic slots

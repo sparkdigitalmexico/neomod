@@ -1384,7 +1384,10 @@ MouseButtonFlags Environment::getCurrentlyHeldMouseButtons() const {
         // try global mouse state (sanity 2) (these are only performed on focus in/out, so it's worth trying to check everything)
         sdlFlags = SDL_GetGlobalMouseState(&dummyX, &dummyY);
     }
-    return static_cast<MouseButtonFlags>(SDL_BUTTON_MASK(sdlFlags));
+    if(sdlFlags > 0) {
+        return static_cast<MouseButtonFlags>(SDL_BUTTON_MASK(sdlFlags));
+    }
+    return {};
 }
 
 KEYMOD Environment::getCurrentlyHeldKeyModifiers() const { return SDL_GetModState(); }

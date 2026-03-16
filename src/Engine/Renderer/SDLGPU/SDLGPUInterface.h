@@ -258,28 +258,9 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     u32 m_depthTextureWidth{0};
     u32 m_depthTextureHeight{0};
 
-    // vertex staging buffer for deferred batching
-    // ~16mb should be more than enough
-    static constexpr uSz MAX_STAGING_VERTS{(16ULL * 1024 * 1024) / sizeof(SDLGPUSimpleVertex)};
-    struct StagingVertexBuffer : public std::unique_ptr<SDLGPUSimpleVertex[]> {
-        StagingVertexBuffer() : unique_ptr(std::make_unique_for_overwrite<SDLGPUSimpleVertex[]>(MAX_STAGING_VERTS)) {}
-        uSz sz{0};
-
-        [[nodiscard]] constexpr inline uSz size() const noexcept { return sz; }
-        [[nodiscard]] constexpr inline bool empty() const noexcept { return sz == 0; }
-        inline void clear() { sz = 0; }
-        inline void resize(uSz size) {
-            assert(size <= MAX_STAGING_VERTS && "StagingVertexBuffer::resize: size > 16MB limit");
-            sz = size;
-        }
-        [[nodiscard]] constexpr inline SDLGPUSimpleVertex *data() noexcept { return this->get(); }
-        [[nodiscard]] constexpr inline const SDLGPUSimpleVertex *data() const noexcept { return this->get(); }
-        [[nodiscard]] constexpr inline const SDLGPUSimpleVertex &operator[](uSz i) const noexcept {
-            return (this->get())[i];
-        }
-        [[nodiscard]] constexpr inline SDLGPUSimpleVertex &operator[](uSz i) noexcept { return (this->get())[i]; }
-    };
-    StagingVertexBuffer m_stagingVertices;
+    // vertex staging buffer for deferred batching (how much to do in 1 go)
+    static constexpr uSz MAX_STAGING_VERTS{(8ULL * 1024 * 1024) / sizeof(SDLGPUSimpleVertex)};
+    Mc::CDynArray<SDLGPUSimpleVertex> m_stagingVertices;
 
     SDL_GPUBuffer *m_vertexBuffer{nullptr};
     SDL_GPUTransferBuffer *m_transferBuffer{nullptr};
@@ -427,6 +408,7 @@ class SDLGPUInterface final : public ModernGraphicsShared {
 };
 
 extern template struct Mc::CDynArray<SDLGPUInterface::DrawCommand>;
+extern template struct Mc::CDynArray<SDLGPUSimpleVertex>;
 
 #endif
 

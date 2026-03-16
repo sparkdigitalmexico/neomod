@@ -81,7 +81,7 @@ class McFont final : public Resource {
 
    private:
     friend struct McFontImpl;
-    StaticPImpl<McFontImpl, 768> pImpl;
+    StaticPImpl<McFontImpl, sizeof(void *) == 8 ? 1000 : 768> pImpl;
 };
 
 #endif

@@ -796,7 +796,7 @@ void SDLGPUInterface::drawVAO(VertexArrayObject *vao) {
     const uSz srcStep{_srcStepTmp}, outStep{_outStepTmp};
 
     // append vertices to staging buffer, converting primitives to triangles as needed.
-    // performing more than 1 loop here should be basically impossible in realistic scenarios,
+    // performing more than 1 loop here should be rare in realistic scenarios,
     // but still worth handling out of precaution
     while(srcIdx < vertices.size()) {
         if(m_stagingVertices.size() + outStep > MAX_STAGING_VERTS) {

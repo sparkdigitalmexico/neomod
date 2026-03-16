@@ -17,7 +17,7 @@ extern template struct Mc::CDynArray<vec3>;
 extern template struct Mc::CDynArray<Color>;
 
 class VertexArrayObject : public Resource {
-    NOCOPY_NOMOVE(VertexArrayObject)
+    MOVECONSTRUCTONLY(VertexArrayObject)
    public:
     constexpr VertexArrayObject(DrawPrimitive primitive = DrawPrimitive{2} /* TRIANGLES */,
                                 DrawUsageType usage = DrawUsageType{0} /* STATIC */, bool keepInSystemMemory = false)
