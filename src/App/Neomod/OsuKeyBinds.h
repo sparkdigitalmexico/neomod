@@ -10,13 +10,12 @@ class KeyboardEvent;
 enum MC_Scancode : unsigned int;
 
 namespace OsuKeyBinds {
-struct Bind {
-    Bind(ConVar *cv) : cvar(cv) {}
+struct Bind final {
+    ConVar *cvar;
 
     [[nodiscard]] bool isDefault() const;
     [[nodiscard]] SCANCODE getDefault() const;
     [[nodiscard]] SCANCODE get() const;
-    [[nodiscard]] inline ConVar *getCvar() const { return cvar; }
 
     void reset();
     void set(SCANCODE bindKey);
@@ -37,9 +36,6 @@ struct Bind {
     [[nodiscard]] bool operator!=(const KeyboardEvent &rhs) const;
 
     operator SCANCODE() const;
-
-   private:
-    ConVar *cvar;
 };
 
 extern std::span<Bind *> getAll();

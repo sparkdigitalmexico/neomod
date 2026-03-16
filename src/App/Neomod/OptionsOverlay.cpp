@@ -675,8 +675,8 @@ class OptionsMenuKeyBindLabel final : public CBaseUILabel {
 
         // handle bound/unbound
         // HACKHACK: show mouse left/right for LEFT_CLICK_2/RIGHT_CLICK_2 if not bound to keyboard keys
-        const bool isUnboundKey1_2 = this->bind->getCvar() == binds::LEFT_CLICK_2.getCvar() && this->scanCode == 0;
-        const bool isUnboundKey2_2 = this->bind->getCvar() == binds::RIGHT_CLICK_2.getCvar() && this->scanCode == 0;
+        const bool isUnboundKey1_2 = this->bind->cvar == binds::LEFT_CLICK_2.cvar && this->scanCode == 0;
+        const bool isUnboundKey2_2 = this->bind->cvar == binds::RIGHT_CLICK_2.cvar && this->scanCode == 0;
         const bool isUnbound = this->scanCode == 0 && !(isUnboundKey1_2 || isUnboundKey2_2);
         if(isUnboundKey1_2) {
             labelText = "Mouse Left";
@@ -898,6 +898,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
 
     this->addSubSection("Songbrowser");
     this->addCheckbox("Prefer metadata in original language", &cv::prefer_cjk);
+    this->elemContainers.back()->searchTags = "native character cjk";
     this->addCheckbox("Draw Strain Graph in Songbrowser",
                       "Hold either SHIFT/CTRL to show only speed/aim strains.\nSpeed strain is red, aim strain is "
                       "green.\n(See osu_hud_scrubbing_timeline_strains_*)",
@@ -2468,6 +2469,14 @@ void OptionsOverlayImpl::updateLayout() {
                     if(this->elemContainers[s]->type == SECT)  // stop at next section
                         break;
 
+                    if(!this->elemContainers[s]->searchTags.empty()) {
+                        const std::string sTags{SString::to_lower(this->elemContainers[s]->searchTags)};
+                        if(sTags.find(search) != std::string::npos) {
+                            sectionMatch = true;
+                            break;
+                        }
+                    }
+
                     for(const auto &element : this->elemContainers[s]->baseElems) {
                         if(!element->getName().empty()) {
                             const std::string tags{SString::to_lower(element->getName())};
@@ -2497,6 +2506,14 @@ void OptionsOverlayImpl::updateLayout() {
                 for(int s = i + 1; s < this->elemContainers.size(); s++) {
                     if(this->elemContainers[s]->type == SUBSECT)  // stop at next subsection
                         break;
+
+                    if(!this->elemContainers[s]->searchTags.empty()) {
+                        const std::string sTags{SString::to_lower(this->elemContainers[s]->searchTags)};
+                        if(sTags.find(search) != std::string::npos) {
+                            subSectionMatch = true;
+                            break;
+                        }
+                    }
 
                     for(const auto &element : this->elemContainers[s]->baseElems) {
                         if(!element->getName().empty()) {
@@ -2530,6 +2547,9 @@ void OptionsOverlayImpl::updateLayout() {
                         }
                     }
 
+                    if(!contentMatch && !searchTags.empty() && searchTags.find(search) != std::string::npos) {
+                        contentMatch = true;
+                    }
                     // if section or subsection titles match, then include all content of that (sub)section (even if
                     // content doesn't match)
                     inSkipContent = !contentMatch;
@@ -3743,7 +3763,7 @@ void OptionsOverlayImpl::onResetUpdate(ResetButton *resbtn) {
                 break;
             case BINDBTN: {
                 const auto binds = OsuKeyBinds::getAll();
-                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::getCvar); it != binds.end()) {
+                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
                     resbtn->setEnabled(!(*it)->isDefault());
                 }
                 break;
@@ -3778,7 +3798,7 @@ void OptionsOverlayImpl::onResetClicked(ResetButton *resbtn) {
                 break;
             case BINDBTN: {
                 const auto binds = OsuKeyBinds::getAll();
-                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::getCvar); it != binds.end()) {
+                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
                     (*it)->reset();
                 }
             } break;
@@ -3987,9 +4007,9 @@ KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, Osu
     e->baseElems.emplace_back(unbindButton);
     e->baseElems.emplace_back(bindButton);
     e->baseElems.emplace_back(label);
-    e->cvars[e->resetButton.get()] = bind->getCvar();
-    e->cvars[unbindButton] = bind->getCvar();
-    e->cvars[bindButton] = bind->getCvar();
+    e->cvars[e->resetButton.get()] = bind->cvar;
+    e->cvars[unbindButton] = bind->cvar;
+    e->cvars[bindButton] = bind->cvar;
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[unbindButton] = last.get();
     this->uiToOptElemMap[bindButton] = last.get();
