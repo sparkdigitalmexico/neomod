@@ -565,8 +565,7 @@ const std::string &Environment::getPathToSelf(const char *argv0) {
     if constexpr(Env::cfg(OS::LINUX))
         exe_path = fs::canonical("/proc/self/exe", ec);
     else {
-        std::wstring wPath{UniString::to_wide(std::string_view{argv0})};
-        exe_path = fs::canonical(fs::path(wPath), ec);
+        exe_path = fs::canonical(UniString::to_wide(std::string_view{argv0}), ec);
     }
 
     if(!ec && !exe_path.empty())  // canonical path found
@@ -1610,10 +1609,11 @@ std::string Environment::getThingFromPathHelper(std::string_view path, bool fold
             auto status = fs::status(abs_path, ec);
             // if it's already a directory or it doesn't have a parent path then just return it directly
             if(ec || status.type() == fs::file_type::directory || !abs_path.has_parent_path())
-                retPath = abs_path.string();
+                retPath = Env::cfg(OS::WINDOWS) ? UniString::to_utf8(abs_path.wstring()) : abs_path.string();
             // else return the parent directory for the file
             else if(abs_path.has_parent_path() && !abs_path.parent_path().empty())
-                retPath = abs_path.parent_path().string();
+                retPath = Env::cfg(OS::WINDOWS) ? UniString::to_utf8(abs_path.parent_path().wstring())
+                                                : abs_path.parent_path().string();
         } else if(!endsWithSeparator)  // canonical failed, handle manually (if it's not already a directory)
         {
             if(lastSlash != std::string::npos)  // return parent

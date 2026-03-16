@@ -705,7 +705,7 @@ void Osu::update() {
 
     // background image cache tick
     // NOTE: must be before the asynchronous ui toggles due to potential 1-frame unloads after invisible songbrowser
-    this->backgroundImageHandler->update(ui->getSongBrowser()->isVisible());
+    this->backgroundImageHandler->update(!this->isInPlayMode());
 
     this->updateCursorVisibility();
 

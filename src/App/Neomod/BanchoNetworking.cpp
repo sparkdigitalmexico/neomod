@@ -203,10 +203,8 @@ void update_networking() {
     last_update = current_time;
 
     // Initialize last_packet_tms on first call
-    static bool initialized = false;
-    if(!initialized) {
+    if(last_packet_ms == 0) {
         last_packet_ms = Timing::getTicksMS();
-        initialized = true;
     }
 
     // Poll login if we need to
