@@ -12,6 +12,7 @@
 #include "Font.h"
 #include "File.h"
 #include "Timing.h"
+#include "UIButtonRounded.h"
 #include "UniString.h"
 #include "crypto.h"
 #include "SString.h"
@@ -350,15 +351,15 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
     this->songInfo = new InfoLabel(0, 0, 0, 0, "");
     this->topbarLeft->addBaseUIElement(this->songInfo);
 
-    this->filterScoresDropdown = new CBaseUIButton(0, 0, 0, 0, "", "Local");
+    this->filterScoresDropdown = new UIButtonRounded(0, 0, 0, 0, "", "Local", 5);
     this->filterScoresDropdown->setClickCallback(SA::MakeDelegate<&SongBrowser::onFilterScoresClicked>(this));
     this->topbarLeft->addBaseUIElement(this->filterScoresDropdown);
 
-    this->sortScoresDropdown = new CBaseUIButton(0, 0, 0, 0, "", "By score");
+    this->sortScoresDropdown = new UIButtonRounded(0, 0, 0, 0, "", "By score", 5);
     this->sortScoresDropdown->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortScoresClicked>(this));
     this->topbarLeft->addBaseUIElement(this->sortScoresDropdown);
 
-    this->webButton = new CBaseUIButton(0, 0, 0, 0, "", "Web");
+    this->webButton = new UIButtonRounded(0, 0, 0, 0, "", "Web", 5);
     this->webButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onWebClicked>(this));
     this->topbarLeft->addBaseUIElement(this->webButton);
 
@@ -377,7 +378,7 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
         this->groupLabel->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->groupLabel);
 
-        this->groupButton = new CBaseUIButton(0, 0, 0, 0, "", "No Grouping");
+        this->groupButton = new UIButtonRounded(0, 0, 0, 0, "", "No Grouping", 5);
         this->groupButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onGroupClicked>(this));
         this->groupButton->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->groupButton);
@@ -394,28 +395,28 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
         this->sortLabel->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->sortLabel);
 
-        this->sortButton = new CBaseUIButton(0, 0, 0, 0, "", "By Date Added");
+        this->sortButton = new UIButtonRounded(0, 0, 0, 0, "", "By Date Added", 5);
         this->sortButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortClicked>(this));
         this->sortButton->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->sortButton);
 
         // "hardcoded" grouping tabs
-        this->groupByCollectionBtn = new CBaseUIButton(0, 0, 0, 0, "", "Collections");
+        this->groupByCollectionBtn = new UIButtonRounded(0, 0, 0, 0, "", "Collections", 5);
         this->groupByCollectionBtn->setHandleRightMouse(true);
         this->groupByCollectionBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByCollectionBtn->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->groupByCollectionBtn);
-        this->groupByArtistBtn = new CBaseUIButton(0, 0, 0, 0, "", "By Artist");
+        this->groupByArtistBtn = new UIButtonRounded(0, 0, 0, 0, "", "By Artist", 5);
         this->groupByArtistBtn->setHandleRightMouse(true);
         this->groupByArtistBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByArtistBtn->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->groupByArtistBtn);
-        this->groupByDifficultyBtn = new CBaseUIButton(0, 0, 0, 0, "", "By Difficulty");
+        this->groupByDifficultyBtn = new UIButtonRounded(0, 0, 0, 0, "", "By Difficulty", 5);
         this->groupByDifficultyBtn->setHandleRightMouse(true);
         this->groupByDifficultyBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByDifficultyBtn->setGrabClicks(true);
         this->topbarRight->addBaseUIElement(this->groupByDifficultyBtn);
-        this->groupByNothingBtn = new CBaseUIButton(0, 0, 0, 0, "", "No Grouping");
+        this->groupByNothingBtn = new UIButtonRounded(0, 0, 0, 0, "", "No Grouping", 5);
         this->groupByNothingBtn->setHandleRightMouse(true);
         this->groupByNothingBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByNothingBtn->setGrabClicks(true);
@@ -2081,13 +2082,13 @@ void SongBrowser::updateLayout() {
     this->webButton->setRelPos(this->topbarLeft->getSize().x - (topbarLeftButtonMargin + topbarLeftButtonWidth),
                                dropdowns_y);
 
-    this->filterScoresDropdown->setSize(dropdowns_width / 2, topbarLeftButtonHeight);
+    this->filterScoresDropdown->setSize((dropdowns_width / 2) - 1, topbarLeftButtonHeight);
     this->filterScoresDropdown->onResized();  // HACKHACK: framework bug (should update string metrics on setSize())
     this->filterScoresDropdown->setRelPos(topbarLeftButtonMargin, dropdowns_y);
 
-    this->sortScoresDropdown->setSize(dropdowns_width / 2, topbarLeftButtonHeight);
+    this->sortScoresDropdown->setSize((dropdowns_width / 2) - 1, topbarLeftButtonHeight);
     this->sortScoresDropdown->onResized();  // HACKHACK: framework bug (should update string metrics on setSize())
-    this->sortScoresDropdown->setRelPos(topbarLeftButtonMargin + (dropdowns_width / 2), dropdowns_y);
+    this->sortScoresDropdown->setRelPos(topbarLeftButtonMargin + (dropdowns_width / 2) + 1, dropdowns_y);
 
     this->topbarLeft->update_pos();
 
@@ -2120,17 +2121,17 @@ void SongBrowser::updateLayout() {
     const float group_margin = 10.f * dpiScale;
     const i32 group_btn_width =
         std::clamp<i32>((this->topbarRight->getSize().x - 2 * group_margin) / 4, 0, 200 * dpiScale);
-    this->groupByCollectionBtn->setSize(group_btn_width, 30 * dpiScale);
-    this->groupByCollectionBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (4 * group_btn_width)),
+    this->groupByCollectionBtn->setSize(group_btn_width - 1, 30 * dpiScale);
+    this->groupByCollectionBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (4 * (group_btn_width + 1))),
                                           this->topbarRight->getSize().y - 30 * dpiScale);
-    this->groupByArtistBtn->setSize(group_btn_width, 30 * dpiScale);
-    this->groupByArtistBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (3 * group_btn_width)),
+    this->groupByArtistBtn->setSize(group_btn_width - 1, 30 * dpiScale);
+    this->groupByArtistBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (3 * (group_btn_width + 1))),
                                       this->topbarRight->getSize().y - 30 * dpiScale);
-    this->groupByDifficultyBtn->setSize(group_btn_width, 30 * dpiScale);
-    this->groupByDifficultyBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (2 * group_btn_width)),
+    this->groupByDifficultyBtn->setSize(group_btn_width - 1, 30 * dpiScale);
+    this->groupByDifficultyBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (2 * (group_btn_width + 1))),
                                           this->topbarRight->getSize().y - 30 * dpiScale);
-    this->groupByNothingBtn->setSize(group_btn_width, 30 * dpiScale);
-    this->groupByNothingBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (1 * group_btn_width)),
+    this->groupByNothingBtn->setSize(group_btn_width - 1, 30 * dpiScale);
+    this->groupByNothingBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (1 * (group_btn_width + 1))),
                                        this->topbarRight->getSize().y - 30 * dpiScale);
 
     this->topbarRight->update_pos();
