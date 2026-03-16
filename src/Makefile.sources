@@ -167,6 +167,7 @@ neomod_SOURCES = \
 	src/App/Neomod/UIAvatar.cpp \
 	src/App/Neomod/UIBackButton.cpp \
 	src/App/Neomod/UIButton.cpp \
+	src/App/Neomod/UIButtonRounded.cpp \
 	src/App/Neomod/UIButtonWithIcon.cpp \
 	src/App/Neomod/UICheckbox.cpp \
 	src/App/Neomod/UIContextMenu.cpp \

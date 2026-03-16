@@ -9,7 +9,7 @@
 #include "BanchoNetworking.h"
 #include "BeatmapInterface.h"
 #include "Changelog.h"
-#include "CBaseUIButton.h"
+#include "UIButtonRounded.h"
 #include "CBaseUIContainer.h"
 #include "CBaseUILabel.h"
 #include "Chat.h"
@@ -95,13 +95,13 @@ class MainMenu::CubeButton final : public CBaseUIButton {
     MainMenu *mm;
 };
 
-class MainMenu::MainButton final : public CBaseUIButton {
+class MainMenu::MainButton final : public UIButtonRounded {
    public:
     MainButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
-        : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {}
+        : UIButtonRounded(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {}
 
     void update(CBaseUIEventCtx &c) override {
-        CBaseUIButton::update(c);
+        UIButtonRounded::update(c);
         if(c.mouse_consumed()) {
             this->showSaveTooltip = false;
             return;
@@ -119,22 +119,22 @@ class MainMenu::MainButton final : public CBaseUIButton {
     }
 
     bool isMouseInside() override {
-        return this->isEnabled() && CBaseUIButton::isMouseInside() && !this->mm->cube->isMouseInside();
+        return this->isEnabled() && UIButtonRounded::isMouseInside() && !this->mm->cube->isMouseInside();
     }
 
     void onMouseDownInside(bool left = true, bool right = false) override {
         if(this->mm->cube->isMouseInside()) return;
-        CBaseUIButton::onMouseDownInside(left, right);
+        UIButtonRounded::onMouseDownInside(left, right);
     }
 
     void onMouseOutside() override {
-        CBaseUIButton::onMouseOutside();
+        UIButtonRounded::onMouseOutside();
         this->showSaveTooltip = false;
     }
 
     void onMouseInside() override {
         if(this->mm->cube->isMouseInside()) return;
-        CBaseUIButton::onMouseInside();
+        UIButtonRounded::onMouseInside();
         const bool isSave = this->getText() == "Save";
         if(isSave) {
             this->showSaveTooltip = true;
@@ -335,8 +335,7 @@ MainMenu::MainMenu() : UIScreen() {
     this->addMainMenuButton("Singleplayer")->setClickCallback(SA::MakeDelegate<&MainMenu::onPlayButtonPressed>(this));
     this->addMainMenuButton("Multiplayer")
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onMultiplayerButtonPressed>(this));
-    this->addMainMenuButton("Options")
-        ->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
+    this->addMainMenuButton("Options")->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
 
     std::string lastButtonText = Env::cfg(OS::WASM) ? "Save" : "Exit";
     this->addMainMenuButton(std::move(lastButtonText))

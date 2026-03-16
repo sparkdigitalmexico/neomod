@@ -30,29 +30,37 @@ void CBaseUIButton::draw() {
 
     // draw background
     if(this->bDrawBackground) {
-        g->setColor(this->backgroundColor);
-        g->fillRect(this->getPos().x + 1, this->getPos().y + 1, this->getSize().x - 1, this->getSize().y - 1);
+        this->drawBackground();
     }
 
     // draw frame
     if(this->bDrawFrame) {
-        g->setColor(this->frameColor);
-        g->drawRect(this->getPos(), this->getSize());
+        this->drawFrame();
     }
 
     // draw hover rects
-    const int hoverRectOffset = std::round(3.f * ((f32)this->font->getDPI() / 96.f));  // NOTE: abusing font dpi
+    const int hoverRectOffset = (int)std::round(3.f * ((f32)this->font->getDPI() / 96.f));  // NOTE: abusing font dpi
     g->setColor(this->frameColor);
-    if(this->bEnabled && this->isMouseInside()) {
-        if(!this->bActive && !mouse->isLeftDown())
-            this->drawHoverRect(hoverRectOffset);
-        else if(this->bActive)
-            this->drawHoverRect(hoverRectOffset);
+    if(this->bEnabled && this->isMouseInside() && (this->bActive || (!mouse->isLeftDown()))) {
+        this->drawHoverRect(hoverRectOffset);
     }
-    if(this->bActive && this->bEnabled) this->drawHoverRect(hoverRectOffset * 2);
+    if(this->bActive && this->bEnabled) {
+        this->drawHoverRect(hoverRectOffset * 2);
+    }
 
     // draw text
     this->drawText();
+}
+
+void CBaseUIButton::drawBackground() {
+    g->setColor(this->backgroundColor);
+    g->fillRect((int)this->getPos().x + 1, (int)this->getPos().y + 1, (int)this->getSize().x - 1,
+                (int)this->getSize().y - 1);
+}
+
+void CBaseUIButton::drawFrame() {
+    g->setColor(this->frameColor);
+    g->drawRect(this->getPos(), this->getSize());
 }
 
 void CBaseUIButton::drawText() {
@@ -98,14 +106,12 @@ void CBaseUIButton::drawText() {
 }
 
 void CBaseUIButton::drawHoverRect(int distance) {
-    g->drawLine(this->getPos().x, this->getPos().y - distance, this->getPos().x + this->getSize().x + 1,
-                this->getPos().y - distance);
-    g->drawLine(this->getPos().x, this->getPos().y + this->getSize().y + distance,
-                this->getPos().x + this->getSize().x + 1, this->getPos().y + this->getSize().y + distance);
-    g->drawLine(this->getPos().x - distance, this->getPos().y, this->getPos().x - distance,
-                this->getPos().y + this->getSize().y + 1);
-    g->drawLine(this->getPos().x + this->getSize().x + distance, this->getPos().y,
-                this->getPos().x + this->getSize().x + distance, this->getPos().y + this->getSize().y + 1);
+    const ivec2 pos{this->getPos()};
+    const ivec2 size{this->getSize()};
+    g->drawLine(pos.x, pos.y - distance, pos.x + size.x + 1, pos.y - distance);
+    g->drawLine(pos.x, pos.y + size.y + distance, pos.x + size.x + 1, pos.y + size.y + distance);
+    g->drawLine(pos.x - distance, pos.y, pos.x - distance, pos.y + size.y + 1);
+    g->drawLine(pos.x + size.x + distance, pos.y, pos.x + size.x + distance, pos.y + size.y + 1);
 }
 
 void CBaseUIButton::onMouseUpInside(bool left, bool right) { this->onClicked(left, right); }

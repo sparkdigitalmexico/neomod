@@ -79,13 +79,14 @@ void UIButton::update(CBaseUIEventCtx &c) {
     CBaseUIButton::update(c);
 
     if(this->isMouseInside() && this->tooltipTextLines.size() > 0 && !this->bFocusStolenDelay) {
-        ui->getTooltipOverlay()->begin();
+        auto *ttoverlay = ui->getTooltipOverlay();
+        ttoverlay->begin();
         {
             for(const auto &tooltipTextLine : this->tooltipTextLines) {
-                ui->getTooltipOverlay()->addLine(tooltipTextLine);
+                ttoverlay->addLine(tooltipTextLine);
             }
         }
-        ui->getTooltipOverlay()->end();
+        ttoverlay->end();
     }
 
     this->bFocusStolenDelay = false;
