@@ -283,45 +283,48 @@ Image::ImageDecodeResult Image::decodeSTBFromMemory(const u8 *inData, u64 size) 
     return SUCCESS;
 }
 
-bool Image::saveToImage(const u8 *data, i32 width, i32 height, u8 channels, std::string filepath) {
+namespace {
+void pngWriteToMemory(png_structp png_ptr, png_bytep outBytes, png_size_t byteCount) {
+    auto *buf = static_cast<std::vector<u8> *>(png_get_io_ptr(png_ptr));
+    buf->insert(buf->end(), outBytes, outBytes + byteCount);
+}
+
+void pngFlushMemory(png_structp /*unused*/) {}
+}  // namespace
+
+std::vector<u8> Image::encodeToPNG(const u8 *data, i32 width, i32 height, u8 channels) {
     if(channels != 3 && channels != 4) {
-        debugLog("PNG Error: Can only save 3 or 4 channel image data.");
-        return false;
+        debugLog("PNG Error: Can only encode 3 or 4 channel image data.");
+        return {};
     }
 
     garbage_zlib();
-    debugLog("Saving image to {:s} ...", filepath);
-    FILE *fp = File::fopen_c(filepath.c_str(), "wb");
-    if(!fp) {
-        debugLog("PNG error: Could not open file {:s} for writing", filepath);
-        return false;
-    }
 
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
     if(!png_ptr) {
-        fclose(fp);
         debugLog("PNG error: png_create_write_struct failed");
-        return false;
+        return {};
     }
 
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if(!info_ptr) {
         png_destroy_write_struct(&png_ptr, nullptr);
-        fclose(fp);
         debugLog("PNG error: png_create_info_struct failed");
-        return false;
+        return {};
     }
+
+    std::vector<u8> buffer;
+    // rough estimate: compressed PNG is rarely larger than raw, but reserve something reasonable
+    buffer.reserve(static_cast<size_t>(width) * height * channels / 4);
 
     if(setjmp(&png_jmpbuf(png_ptr)[0])) {
         png_destroy_write_struct(&png_ptr, &info_ptr);
-        fclose(fp);
-        debugLog("PNG error during write");
-        return false;
+        debugLog("PNG error during encode");
+        return {};
     }
 
-    png_init_io(png_ptr, fp);
+    png_set_write_fn(png_ptr, &buffer, pngWriteToMemory, pngFlushMemory);
 
-    // write header (8 bit colour depth, RGB(A))
     const int pngChannelType = (channels == 4 ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB);
 
     png_set_IHDR(png_ptr, info_ptr, width, height, 8, pngChannelType, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
@@ -329,16 +332,33 @@ bool Image::saveToImage(const u8 *data, i32 width, i32 height, u8 channels, std:
 
     png_write_info(png_ptr, info_ptr);
 
-    // write row by row directly from the RGB(A) data
     for(sSz y = 0; y < height; y++) {
         png_write_row(png_ptr, &data[y * width * channels]);
     }
 
     png_write_end(png_ptr, nullptr);
     png_destroy_write_struct(&png_ptr, &info_ptr);
+
+    return buffer;
+}
+
+bool Image::saveToImage(const u8 *data, i32 width, i32 height, u8 channels, std::string filepath) {
+    debugLog("Saving image to {:s} ...", filepath);
+
+    auto pngData = encodeToPNG(data, width, height, channels);
+    if(pngData.empty()) return false;
+
+    FILE *fp = File::fopen_c(filepath.c_str(), "wb");
+    if(!fp) {
+        debugLog("PNG error: Could not open file {:s} for writing", filepath);
+        return false;
+    }
+
+    const bool ok = fwrite(pngData.data(), 1, pngData.size(), fp) == pngData.size();
     fclose(fp);
 
-    return true;
+    if(!ok) debugLog("PNG error: Failed to write to {:s}", filepath);
+    return ok;
 }
 
 Image::Image(std::string filepath, bool mipmapped, bool keepInSystemMemory)

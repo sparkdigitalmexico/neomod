@@ -976,12 +976,10 @@ void Osu::onKeyDown(KeyboardEvent &key) {
             }
 
             // handle skipping
-            if(key == KEY_ENTER || key == KEY_NUMPAD_ENTER || key == binds::SKIP_CUTSCENE)
-                this->bSkipScheduled = true;
+            if(key == KEY_ENTER || key == KEY_NUMPAD_ENTER || key == binds::SKIP_CUTSCENE) this->bSkipScheduled = true;
 
             // toggle ui
-            if(!key.isConsumed() && key == binds::TOGGLE_SCOREBOARD &&
-               !this->bScoreboardToggleCheck) {
+            if(!key.isConsumed() && key == binds::TOGGLE_SCOREBOARD && !this->bScoreboardToggleCheck) {
                 this->bScoreboardToggleCheck = true;
 
                 if(keyboard->isShiftDown()) {
@@ -1053,8 +1051,7 @@ void Osu::onKeyDown(KeyboardEvent &key) {
         // while paused or maybe not paused
 
         // handle quick restart
-        if(((key == binds::QUICK_RETRY ||
-             (keyboard->isControlDown() && !keyboard->isAltDown() && key == KEY_R)) &&
+        if(((key == binds::QUICK_RETRY || (keyboard->isControlDown() && !keyboard->isAltDown() && key == KEY_R)) &&
             !this->bQuickRetryDown)) {
             this->bQuickRetryDown = true;
             this->fQuickRetryTime = engine->getTime() + cv::quick_retry_delay.getFloat();
@@ -1075,8 +1072,7 @@ void Osu::onKeyDown(KeyboardEvent &key) {
         handle = false;
         // toggle pause menu
         // ignore repeat events when key is held down
-        const bool pressed_pause =
-            ((key == binds::GAME_PAUSE) || (key == KEY_ESCAPE)) && !key.isRepeat();
+        const bool pressed_pause = ((key == binds::GAME_PAUSE) || (key == KEY_ESCAPE)) && !key.isRepeat();
         if(pressed_pause) {
             key.consume();
 
@@ -1299,53 +1295,87 @@ void Osu::saveScreenshot() {
         const vec2 graphicsRes = g->getResolution();
 
         Async::submit(
-            [graphicsRes, currentRes, pixels = std::move(pixelData), screenshotFilename]() -> bool {
+            [graphicsRes, currentRes, pixels = std::move(pixelData), screenshotFilename]() -> std::vector<u8> {
                 const f32 outerWidth = graphicsRes.x;
                 const f32 outerHeight = graphicsRes.y;
                 const f32 innerWidth = currentRes.getWidth();
                 const f32 innerHeight = currentRes.getHeight();
 
-                // don't need cropping
-                if(!cv::crop_screenshots.getBool() || (graphicsRes == currentRes.getSize())) {
-                    return Image::saveToImage(pixels.data(), static_cast<i32>(outerWidth),
-                                              static_cast<i32>(outerHeight), screenshotChannels, screenshotFilename);
+                const u8 *finalPixels = pixels.data();
+                i32 finalWidth = static_cast<i32>(outerWidth);
+                i32 finalHeight = static_cast<i32>(outerHeight);
+
+                std::vector<u8> croppedPixels;
+
+                // crop if needed
+                if(cv::crop_screenshots.getBool() && (graphicsRes != currentRes.getSize())) {
+                    f32 offsetXpct = 0, offsetYpct = 0;
+                    if(cv::letterboxing.getBool()) {
+                        offsetXpct = cv::letterboxing_offset_x.getFloat();
+                        offsetYpct = cv::letterboxing_offset_y.getFloat();
+                    }
+
+                    const i32 startX =
+                        std::clamp<i32>(static_cast<i32>((outerWidth - innerWidth) * (1 + offsetXpct) / 2), 0,
+                                        static_cast<i32>(outerWidth - innerWidth));
+                    const i32 startY =
+                        std::clamp<i32>(static_cast<i32>((outerHeight - innerHeight) * (1 + offsetYpct) / 2), 0,
+                                        static_cast<i32>(outerHeight - innerHeight));
+
+                    finalWidth = static_cast<i32>(innerWidth);
+                    finalHeight = static_cast<i32>(innerHeight);
+                    croppedPixels.resize(static_cast<size_t>(finalWidth) * finalHeight * screenshotChannels);
+
+                    for(sSz y = 0; y < finalHeight; ++y) {
+                        auto srcRowStart = pixels.begin() +
+                                           ((startY + y) * static_cast<sSz>(outerWidth) + startX) * screenshotChannels;
+                        auto destRowStart =
+                            croppedPixels.begin() + (y * static_cast<sSz>(finalWidth)) * screenshotChannels;
+                        std::ranges::copy_n(srcRowStart, static_cast<sSz>(finalWidth) * screenshotChannels,
+                                            destRowStart);
+                    }
+
+                    finalPixels = croppedPixels.data();
                 }
 
-                // need cropping
-                f32 offsetXpct = 0, offsetYpct = 0;
-                if((graphicsRes != currentRes.getSize()) && cv::letterboxing.getBool()) {
-                    offsetXpct = cv::letterboxing_offset_x.getFloat();
-                    offsetYpct = cv::letterboxing_offset_y.getFloat();
+                // encode to PNG
+                auto pngData = Image::encodeToPNG(finalPixels, finalWidth, finalHeight, screenshotChannels);
+                if(pngData.empty()) return {};
+
+                // write to file
+                debugLog("Saving image to {:s} ...", screenshotFilename);
+                FILE *fp = File::fopen_c(screenshotFilename.c_str(), "wb");
+                if(!fp) {
+                    debugLog("PNG error: Could not open file {:s} for writing", screenshotFilename);
+                    return {};
+                }
+                const bool ok = fwrite(pngData.data(), 1, pngData.size(), fp) == pngData.size();
+                fclose(fp);
+                if(!ok) {
+                    debugLog("PNG error: Failed to write to {:s}", screenshotFilename);
+                    return {};
                 }
 
-                const i32 startX = std::clamp<i32>(static_cast<i32>((outerWidth - innerWidth) * (1 + offsetXpct) / 2),
-                                                   0, static_cast<i32>(outerWidth - innerWidth));
-                const i32 startY = std::clamp<i32>(static_cast<i32>((outerHeight - innerHeight) * (1 + offsetYpct) / 2),
-                                                   0, static_cast<i32>(outerHeight - innerHeight));
-
-                std::vector<u8> croppedPixels(static_cast<size_t>(innerWidth * innerHeight * screenshotChannels));
-
-                for(sSz y = 0; y < static_cast<sSz>(innerHeight); ++y) {
-                    auto srcRowStart =
-                        pixels.begin() + ((startY + y) * static_cast<sSz>(outerWidth) + startX) * screenshotChannels;
-                    auto destRowStart = croppedPixels.begin() + (y * static_cast<sSz>(innerWidth)) * screenshotChannels;
-                    // copy the entire row
-                    std::ranges::copy_n(srcRowStart, static_cast<sSz>(innerWidth) * screenshotChannels, destRowStart);
-                }
-
-                return Image::saveToImage(croppedPixels.data(), static_cast<i32>(innerWidth),
-                                          static_cast<i32>(innerHeight), screenshotChannels, screenshotFilename);
+                return pngData;
             },
             Lane::Background)
-            .then_on_main([screenshotFilename](bool res) {
+            .then_on_main([screenshotFilename](std::vector<u8> pngData) {
                 if(!osu || !osu->UIReady()) return;
-                if(!res) {
-                    ui->getNotificationOverlay()->addNotification("Error: Couldn't grab a screenshot :(", 0xffff0000,
-                                                                  false, 3.0f);
+                auto *notif = ui->getNotificationOverlay();
+                if(pngData.empty()) {
+                    notif->addNotification("Error: Couldn't grab a screenshot :(", 0xffff0000, false, 3.0f);
                 } else {
-                    ui->getNotificationOverlay()->addToast(
-                        fmt::format("Saved screenshot to {}", screenshotFilename), CHAT_TOAST,
-                        [screenshotFilename] { env->openFileBrowser(screenshotFilename); });
+                    std::string toastString;
+                    // put it in the clipboard as well
+                    if(cv::screenshot_clipboard.getBool() && env->setClipBoardImage(std::move(pngData))) {
+                        toastString =
+                            fmt::format("Screenshot copied to clipboard and saved to {:s}", screenshotFilename);
+                    } else {
+                        toastString = fmt::format("Screenshot saved to {:s}", screenshotFilename);
+                    }
+
+                    notif->addToast(std::move(toastString), CHAT_TOAST,
+                                    [screenshotFilename] { env->openFileBrowser(screenshotFilename); });
                 }
             });
     };

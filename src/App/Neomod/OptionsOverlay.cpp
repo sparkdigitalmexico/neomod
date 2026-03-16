@@ -1726,6 +1726,22 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->addCheckbox("Draw 300s", &cv::hitresult_draw_300s);
 
     auto *sectionMisc = this->addSection("Miscellaneous");
+#ifndef MCENGINE_PLATFORM_WASM
+    this->addSubSection("Testing");
+    this->addCheckbox("Use bleeding edge release stream", &cv::bleedingedge);
+#endif
+
+    if(cv::enable_screenshots.getBool()) {  // TODO: why is this even a convar (its only used during constructor)
+        this->addSubSection("Screenshots");
+        this->addCheckbox("Crop Screenshots",
+                          "Crop screenshots to the letterbox resolution,\nif letterboxing is enabled.",
+                          &cv::crop_screenshots);
+        this->addCheckbox("Copy Screenshots to Clipboard",
+                          "If screenshots should be copied to the system clipboard\nalong with saving them to the "
+                          "screenshots/ folder.",
+                          &cv::screenshot_clipboard);
+    }
+
     this->addSubSection("Nags", "tip menu social links");
 
     this->addCheckbox("Show Main Menu Tips", &cv::main_menu_tips);
@@ -1778,11 +1794,6 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     UIButton *resetAllSettingsButton = this->addButton("Reset all settings");
     resetAllSettingsButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResetEverythingClicked>(this));
     resetAllSettingsButton->setColor(0xffd90000);
-
-#ifndef MCENGINE_PLATFORM_WASM
-    this->addSubSection("Testing");
-    this->addCheckbox("Use bleeding edge release stream", &cv::bleedingedge);
-#endif
 
     this->addSpacer();
     this->addSpacer();

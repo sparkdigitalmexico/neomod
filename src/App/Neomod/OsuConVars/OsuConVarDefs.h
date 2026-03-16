@@ -612,6 +612,7 @@ CONVAR(confine_cursor_fullscreen, true, CLIENT | SKINS | SERVER);
 CONVAR(confine_cursor_windowed, false, CLIENT | SKINS | SERVER);
 CONVAR(confine_cursor_never, false, CLIENT | SKINS | SERVER);
 CONVAR(crop_screenshots, true, CLIENT, "whether to crop screenshots to the letterboxed resolution");
+CONVAR(screenshot_clipboard, true, CLIENT, "copy screenshots to the clipboard as PNG");
 CONVAR(cursor_alpha, 1.0f, CLIENT | SKINS | SERVER);
 CONVAR(cursor_expand_duration, 0.1f, CLIENT | SKINS | SERVER);
 CONVAR(cursor_expand_scale_multiplier, 1.3f, CLIENT | SKINS | SERVER);

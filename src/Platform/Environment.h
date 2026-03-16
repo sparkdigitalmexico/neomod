@@ -26,6 +26,9 @@ typedef struct SDL_Rect SDL_Rect;
 class Graphics;
 class Engine;
 namespace Mc {
+template <typename T>
+struct CDynArray;
+
 struct AppDescriptor;
 void initEnvBlock();
 }  // namespace Mc
@@ -180,6 +183,8 @@ class Environment {
     // clipboard
     [[nodiscard]] std::string_view getClipBoardText();
     void setClipBoardText(std::string text);
+    // returns false if failed/unsupported
+    bool setClipBoardImage(std::vector<u8> pngData);
 
     // dialogs & message boxes
     static void showDialog(const char *title, const char *message,
@@ -273,7 +278,7 @@ class Environment {
 
     void setCursor(CURSORTYPE cur);
     void setCursorVisible(bool visible);
-    void setCursorClip(bool clip, McRect rect);
+    void setCursorClip(bool clip, const McRect &rect);
     void setRawMouseInput(bool raw);  // enable/disable OS-level rawinput
 
     void setOSMousePos(vec2 pos);

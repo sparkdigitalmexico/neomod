@@ -29,6 +29,9 @@ class Image : public Resource {
     // returns false on failure
     static bool saveToImage(const u8 *data, i32 width, i32 height, u8 channels, std::string filepath);
 
+    // encodes raw pixel data to PNG in memory; returns empty vector on failure
+    static std::vector<u8> encodeToPNG(const u8 *data, i32 width, i32 height, u8 channels);
+
     enum class TYPE : uint8_t { TYPE_RGBA, TYPE_PNG, TYPE_JPG };
 
    public:

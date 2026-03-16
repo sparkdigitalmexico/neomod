@@ -38,9 +38,10 @@ Changelog::Changelog() : ScreenBackable() {
     v43_07.title = "43.07 (" CHANGELOG_TIMESTAMP ")";
     v43_07.changes = {
         R"(- Added emoji support)",
-        R"(- Started adding some main menu tips)",
+        R"(- Added support for copying screenshots to clipboard)",
         R"(- Added reset buttons to key binds)",
         R"(- Fixed issues with "Freeze Frame" mod rendering)",
+        R"(- Started adding some main menu tips)",
         R"(- Updated Discord app ID (for neosu->neomod rename))",
         R"(- Made release downloads smaller)",
     };

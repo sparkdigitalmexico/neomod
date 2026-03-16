@@ -12,6 +12,7 @@
 #include "Logging.h"
 #include "ConVar.h"
 #include "Thread.h"
+#include "CDynArray.h"
 
 #include "UniString.h"
 
@@ -680,6 +681,53 @@ void Environment::setClipBoardText(std::string text) {
     SDL_SetClipboardText(m_sCurrClipboardText.c_str());
 }
 
+namespace {
+struct ClipboardImageState final {
+    static inline constinit const char *imageMimeTypes[]{"image/png"};
+    std::vector<u8> data;
+
+    static void *operator new(size_t sz) noexcept { return SDL_malloc(sz); }
+    static void operator delete(void *ptr) noexcept { SDL_free(ptr); }
+
+    static void cleanupData(void *userdata) { delete static_cast<ClipboardImageState *>(userdata); }
+
+    static const void *getData(void *userdata, const char *mime_type, size_t *size) {
+        auto *self = static_cast<ClipboardImageState *>(userdata);
+        if(mime_type && std::string_view{mime_type} == imageMimeTypes[0] && !self->data.empty()) {
+            *size = self->data.size();
+            return self->data.data();
+        }
+        *size = 0;
+        return nullptr;
+    }
+
+    static bool setClipboardData(std::vector<u8> pngData) {
+        auto *clipState = new ClipboardImageState();
+        if(!clipState) return false;
+        clipState->data = std::move(pngData);
+
+        const bool success = SDL_SetClipboardData(
+            // data callback
+            getData,  //
+            // cleanup callback
+            cleanupData,  //
+            clipState, &imageMimeTypes[0], 1);
+        if(!success) {
+            delete clipState;
+            debugLog("setting clipboard data failed: {:s}", SDL_GetError());
+            return false;
+        }
+        return true;
+    }
+};
+
+}  // namespace
+
+bool Environment::setClipBoardImage(std::vector<u8> pngData) {
+    // cleanup is handled by SDL internally
+    return ClipboardImageState::setClipboardData(std::move(pngData));
+}
+
 // static helper for class methods below (defaults to flags = error, modalWindow = null)
 void Environment::showDialog(const char *title, const char *message, unsigned int flags, void *modalWindow) {
     auto *actualWin{static_cast<SDL_Window *>(modalWindow)};
@@ -1144,7 +1192,7 @@ void Environment::setCursorVisible(bool visible) {
     }
 }
 
-void Environment::setCursorClip(bool clip, McRect rect) {
+void Environment::setCursorClip(bool clip, const McRect &rect) {
     m_cursorClipRect = rect;
     if(clip) {
         const SDL_Rect sdlClip = McRectToSDLRect(rect);
