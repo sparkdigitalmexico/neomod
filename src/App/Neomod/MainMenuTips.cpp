@@ -45,28 +45,30 @@ static std::array s_tips{
         [&b = binds::TOGGLE_MODSELECT]() -> std::string
         { return fmt::format(R"(Press {:s} during gameplay to change mods in realtime.)", env->scanCodeToString(b.get())); }
     },
+#if !defined(MCENGINE_PLATFORM_WASM) // irrelevant for web
 #if defined(MCENGINE_FEATURE_BASS) && defined(MCENGINE_FEATURE_SOLOUD)
-#ifdef MCENGINE_PLATFORM_WINDOWS
+#if defined(MCENGINE_PLATFORM_WINDOWS)
 	Tip{R"(Launch with the neomod-BASS shortcut to use BASS (ASIO/Exclusive mode) for audio.)"},
 #else
 	Tip{R"(Launch with "-sound bass" as a commandline argument to use BASS for audio.)"},
-#endif
-#endif
-#ifdef MCENGINE_FEATURE_SDLGPU
-#ifdef MCENGINE_PLATFORM_WINDOWS
+#endif // defined(MCENGINE_PLATFORM_WINDOWS)
+#endif // defined(MCENGINE_FEATURE_BASS) && defined(MCENGINE_FEATURE_SOLOUD)
+#if defined(MCENGINE_FEATURE_SDLGPU)
+#if defined(MCENGINE_PLATFORM_WINDOWS)
     Tip{R"(Put "-gpu" after the "Target:" field in a shortcut to neomod to use the D3D12 renderer.)"},
     Tip{R"(Put "-gpu vk" after the "Target:" field in a shortcut to neomod to use the Vulkan renderer.)"},
 #else
     Tip{R"(Launch with "-sdlgpu" as a commandline argument to use the Vulkan renderer.)"},
-#endif
-#endif
-#ifdef MCENGINE_FEATURE_DIRECTX11
-#ifdef MCENGINE_PLATFORM_WINDOWS
+#endif // defined(MCENGINE_PLATFORM_WINDOWS)
+#endif // defined(MCENGINE_FEATURE_SDLGPU)
+#if defined(MCENGINE_FEATURE_DIRECTX11)
+#if defined(MCENGINE_PLATFORM_WINDOWS)
     Tip{R"(Put "-dx11" after the "Target:" field in a shortcut to neomod to use the D3D11 renderer.)"},
 #else
     Tip{R"(Launch with "-dx11" as a commandline argument to use the D3D11 renderer.)"},
-#endif
-#endif
+#endif // defined(MCENGINE_PLATFORM_WINDOWS)
+#endif // defined(MCENGINE_FEATURE_DIRECTX11)
+#endif // !defined(MCENGINE_PLATFORM_WASM)
     Tip{R"(Press Ctrl + O to open the options menu from anywhere.)"},
         // clang-format on
     };
