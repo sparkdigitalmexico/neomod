@@ -1744,10 +1744,8 @@ void PauseButton::draw() {
     const bool drawClickHeldRect = this->bActive && this->bEnabled;
     const bool drawHoverRect =
         !drawClickHeldRect && (this->bEnabled && this->isMouseInside() && (this->bActive || (!mouse->isLeftDown())));
-    if(drawHoverRect) {
-        this->drawHoverRect(3);
-    } else if(drawClickHeldRect) {
-        this->drawHoverRect(6);
+    if(drawHoverRect || drawClickHeldRect) {
+        this->drawHoverRect(3, drawClickHeldRect);
     }
 };
 

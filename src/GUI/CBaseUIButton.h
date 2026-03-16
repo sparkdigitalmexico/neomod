@@ -146,7 +146,7 @@ class CBaseUIButton : public CBaseUIElement {
 
     virtual void drawBackground();
     virtual void drawFrame();
-    virtual void drawHoverRect(int distance);
+    virtual void drawHoverRect(int distance, bool isClickHeld);
 
     void updateStringMetrics();
 

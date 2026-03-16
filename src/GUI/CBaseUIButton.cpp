@@ -42,11 +42,10 @@ void CBaseUIButton::draw() {
     const int hoverRectOffset = (int)std::round(3.f * ((f32)this->font->getDPI() / 96.f));  // NOTE: abusing font dpi
     g->setColor(this->frameColor);
     const bool drawClickHeldRect = this->bActive && this->bEnabled;
-    const bool drawHoverRect = !drawClickHeldRect && (this->bEnabled && this->isMouseInside() && (this->bActive || (!mouse->isLeftDown())));
-    if(drawHoverRect) {
-        this->drawHoverRect(hoverRectOffset);
-    } else if(drawClickHeldRect) {
-        this->drawHoverRect(hoverRectOffset * 2);
+    const bool drawHoverRect =
+        !drawClickHeldRect && (this->bEnabled && this->isMouseInside() && (this->bActive || (!mouse->isLeftDown())));
+    if(drawHoverRect || drawClickHeldRect) {
+        this->drawHoverRect(hoverRectOffset, drawClickHeldRect);
     }
 
     // draw text
@@ -106,7 +105,10 @@ void CBaseUIButton::drawText() {
     g->popClipRect();
 }
 
-void CBaseUIButton::drawHoverRect(int distance) {
+void CBaseUIButton::drawHoverRect(int distance, bool isClickHeld) {
+    if(isClickHeld) {
+        distance *= 2;
+    }
     const ivec2 pos{this->getPos()};
     const ivec2 size{this->getSize()};
     g->drawLine(pos.x, pos.y - distance, pos.x + size.x + 1, pos.y - distance);

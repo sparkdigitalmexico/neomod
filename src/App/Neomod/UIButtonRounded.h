@@ -14,7 +14,7 @@ class UIButtonRounded : public CBaseUIButton {
    protected:
     void drawBackground() override;
     void drawFrame() override;
-    void drawHoverRect(int hoverRectOffset) override;
+    void drawHoverRect(int hoverRectOffset, bool isClickHeld) override;
 
     // based on font dpi (more rounded for higher dpi)
     [[nodiscard]] int getRealCornerRadius() const;

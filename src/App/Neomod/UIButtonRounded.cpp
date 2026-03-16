@@ -24,14 +24,26 @@ void UIButtonRounded::drawFrame() {
     g->drawRoundedRect(this->getPos(), this->getSize(), this->getRealCornerRadius());
 }
 
-void UIButtonRounded::drawHoverRect(int hoverRectOffset) {
-    // small fudge (square hover rect distance is a bit too much)
-    if(hoverRectOffset > 1) {
-        hoverRectOffset = (int)std::ceil((f32)hoverRectOffset / 2.f);
+void UIButtonRounded::drawHoverRect(int hoverRectOffset, bool isClickHeld) {
+    // rounded buttons need about half the distance of square hover rects
+    float distance = std::round((float)hoverRectOffset / 2.f);
+    float thickness = 1.f;
+
+    if(isClickHeld && distance > 1.f) {
+        // thick outline close to the button for a "pressed" look;
+        // band spans from ~button edge (distance - thickness/2) to just past hover distance
+        distance = std::ceil(distance / 2.f);
+        thickness = distance * 2.f + 1.f;
     }
-    g->drawRoundedRect((int)this->getPos().x - hoverRectOffset, (int)this->getPos().y - hoverRectOffset,
-                       (int)this->getSize().x + hoverRectOffset * 2, (int)this->getSize().y + hoverRectOffset * 2,
-                       this->getRealCornerRadius() + hoverRectOffset);
+
+    g->drawRectf(Graphics::RectOptions{
+        .x = (float)(int)this->getPos().x - distance + 0.5f,
+        .y = (float)(int)this->getPos().y - distance + 0.5f,
+        .width = (float)(int)this->getSize().x + distance * 2.f,
+        .height = (float)(int)this->getSize().y + distance * 2.f,
+        .lineThickness = thickness,
+        .cornerRadius = (float)this->getRealCornerRadius() + distance,
+    });
 }
 
 // based on font dpi (more rounded for higher dpi)

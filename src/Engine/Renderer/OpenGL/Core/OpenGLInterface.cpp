@@ -167,6 +167,18 @@ void emitArcVertices(float cx, float cy, float radius, float startAngle, float e
     }
     glVertex2d(radius * std::cos((double)endAngle) + cx, radius * std::sin((double)endAngle) + cy);
 }
+
+// emit outer/inner vertex pairs for a triangle strip outline
+void emitArcStripVertices(float cx, float cy, float rInner, float rOuter, float startAngle, float endAngle) {
+    const int numSteps = std::max(1, (int)((endAngle - startAngle) / 0.05f));
+    const float step = (endAngle - startAngle) / (float)numSteps;
+    for(int i = 0; i <= numSteps; i++) {
+        const float a = (i < numSteps) ? startAngle + (float)i * step : endAngle;
+        const float c = std::cos(a), s = std::sin(a);
+        glVertex2f(rOuter * c + cx, rOuter * s + cy);
+        glVertex2f(rInner * c + cx, rInner * s + cy);
+    }
+}
 }  // namespace
 
 void OpenGLInterface::drawRectf(const RectOptions &opts) {
@@ -181,14 +193,33 @@ void OpenGLInterface::drawRectf(const RectOptions &opts) {
 
     if(opts.cornerRadius > 0.f) {
         const float r = opts.cornerRadius;
-        glBegin(GL_LINE_LOOP);
-        {
-            emitArcVertices(opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
-            emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
-            emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * (float)PI);
-            emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * (float)PI, (float)PI);
+
+        if(opts.lineThickness > 1.f) {
+            // use triangle strip for thick lines to avoid join gaps
+            const float hw = opts.lineThickness / 2.f;
+            const float rInner = r - hw, rOuter = r + hw;
+            const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
+            glBegin(GL_TRIANGLE_STRIP);
+            {
+                emitArcStripVertices(opts.x + r, opts.y + r, rInner, rOuter, (float)PI, 1.5f * (float)PI);
+                emitArcStripVertices(x2 - r, opts.y + r, rInner, rOuter, 1.5f * (float)PI, 2.f * (float)PI);
+                emitArcStripVertices(x2 - r, y2 - r, rInner, rOuter, 0.f, 0.5f * (float)PI);
+                emitArcStripVertices(opts.x + r, y2 - r, rInner, rOuter, 0.5f * (float)PI, (float)PI);
+                // close back to first vertex pair
+                glVertex2f(opts.x - hw, opts.y + r);
+                glVertex2f(opts.x + hw, opts.y + r);
+            }
+            glEnd();
+        } else {
+            glBegin(GL_LINE_LOOP);
+            {
+                emitArcVertices(opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
+                emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
+                emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * (float)PI);
+                emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * (float)PI, (float)PI);
+            }
+            glEnd();
         }
-        glEnd();
 
         if(opts.lineThickness != 1.0f) {
             glLineWidth(1.0f);
