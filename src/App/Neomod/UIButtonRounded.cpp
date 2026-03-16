@@ -27,7 +27,7 @@ void UIButtonRounded::drawFrame() {
 void UIButtonRounded::drawHoverRect(int hoverRectOffset) {
     // small fudge (square hover rect distance is a bit too much)
     if(hoverRectOffset > 1) {
-        hoverRectOffset = (int)std::ceil((f32)hoverRectOffset / 1.5f);
+        hoverRectOffset = (int)std::ceil((f32)hoverRectOffset / 2.f);
     }
     g->drawRoundedRect((int)this->getPos().x - hoverRectOffset, (int)this->getPos().y - hoverRectOffset,
                        (int)this->getSize().x + hoverRectOffset * 2, (int)this->getSize().y + hoverRectOffset * 2,

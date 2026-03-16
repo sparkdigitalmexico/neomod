@@ -36,8 +36,12 @@ void CBaseUICheckbox::draw() {
     // draw hover rects
     const int hoverRectOffset = std::round(3.0f * dpiScale);
     g->setColor(this->frameColor);
-    if(this->bEnabled && this->isMouseInside()) this->drawHoverRect(hoverRectOffset);
-    if(this->bActive) this->drawHoverRect(hoverRectOffset * 2);
+    const bool drawClickHeldRect = this->bActive;
+    const bool drawHoverRect = !drawClickHeldRect && (this->bEnabled && this->isMouseInside());
+    if(drawHoverRect)
+        this->drawHoverRect(hoverRectOffset);
+    else if(drawClickHeldRect)
+        this->drawHoverRect(hoverRectOffset * 2);
 
     // draw block
     const int innerBlockPosOffset = std::round(2.0f * dpiScale);

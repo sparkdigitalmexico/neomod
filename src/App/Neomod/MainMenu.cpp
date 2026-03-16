@@ -1741,13 +1741,14 @@ void PauseButton::draw() {
 
     // draw hover rects
     g->setColor(this->frameColor);
-    if(this->bEnabled && this->isMouseInside()) {
-        if(!this->bActive && !mouse->isLeftDown())
-            this->drawHoverRect(3);
-        else if(this->bActive)
-            this->drawHoverRect(3);
+    const bool drawClickHeldRect = this->bActive && this->bEnabled;
+    const bool drawHoverRect =
+        !drawClickHeldRect && (this->bEnabled && this->isMouseInside() && (this->bActive || (!mouse->isLeftDown())));
+    if(drawHoverRect) {
+        this->drawHoverRect(3);
+    } else if(drawClickHeldRect) {
+        this->drawHoverRect(6);
     }
-    if(this->bActive && this->bEnabled) this->drawHoverRect(6);
 };
 
 void MainMenu::submitSongsFolderEnum() {
