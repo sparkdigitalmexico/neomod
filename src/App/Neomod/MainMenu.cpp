@@ -146,7 +146,7 @@ class MainMenu::MainButton final : public CBaseUIButton {
                 soundEngine->play(osu->getSkin()->s_hover_sp);
             } else if(this->getText() == "Multiplayer") {
                 soundEngine->play(osu->getSkin()->s_hover_mp);
-            } else if(this->getText() == "Options (CTRL + O)" || isSave) {
+            } else if(this->getText() == "Options" || isSave) {
                 soundEngine->play(osu->getSkin()->s_hover_options);
             } else if(this->getText() == "Exit") {
                 soundEngine->play(osu->getSkin()->s_hover_exit);
@@ -335,7 +335,7 @@ MainMenu::MainMenu() : UIScreen() {
     this->addMainMenuButton("Singleplayer")->setClickCallback(SA::MakeDelegate<&MainMenu::onPlayButtonPressed>(this));
     this->addMainMenuButton("Multiplayer")
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onMultiplayerButtonPressed>(this));
-    this->addMainMenuButton("Options (CTRL + O)")
+    this->addMainMenuButton("Options")
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
 
     std::string lastButtonText = Env::cfg(OS::WASM) ? "Save" : "Exit";

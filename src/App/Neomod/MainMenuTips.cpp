@@ -67,6 +67,7 @@ static std::array s_tips{
     Tip{R"(Launch with "-dx11" as a commandline argument to use the D3D11 renderer.)"},
 #endif
 #endif
+    Tip{R"(Press Ctrl + O to open the options menu from anywhere.)"},
         // clang-format on
     };
 
