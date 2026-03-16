@@ -6,6 +6,7 @@
 #include <span>
 #include <string_view>
 #include <string>
+#include <functional>
 
 class McFont;
 
@@ -20,6 +21,9 @@ class WrappedText final : public CBaseUIContainer {
     WrappedText *setFont(McFont *font);
 
     WrappedText *setText(const std::string &text);
+    WrappedText *setOnMouseUpInsideCallback(std::function<void(bool, bool)> cb);
+
+    void onMouseUpInside(bool left = true, bool right = false) override;
 
     void setVisibleCallback(float visible) { (void)this->setVisible(!!static_cast<int>(visible)); }
 
@@ -27,9 +31,13 @@ class WrappedText final : public CBaseUIContainer {
     McFont *font;
     std::string lastText;
     float lastWrapWidth{0.f};
+    std::function<void(bool, bool)> onMouseUpCB{nullptr};
 };
 
 std::string getCurrentTip();
+
+void cycleTip(int addIndex);
+void cycleToPreviousTip();
 void cycleToNextTip();
 
 }  // namespace neomod::mainmenu

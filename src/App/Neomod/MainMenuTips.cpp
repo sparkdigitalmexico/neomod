@@ -34,7 +34,7 @@ struct Tip {
     std::unique_ptr<DynamicTipFunc> dynamicTipFunc{nullptr};
 };
 
-std::span<Tip> getAllTips() {
+std::span<const Tip> getAllTips() {
     // clang-format off
 // NOTE: must have at least 1 non-empty tip in here
 static std::array s_tips{
@@ -79,10 +79,16 @@ int s_currentIdx{-1};
 
 WrappedText::WrappedText(McFont *font, float xPos, float yPos, float xSize, float ySize)
     : CBaseUIContainer(xPos, yPos, xSize, ySize), font(font) {}
+
 WrappedText::~WrappedText() = default;
 
 WrappedText *WrappedText::setFont(McFont *font) {
     this->font = font;
+    return this;
+}
+
+WrappedText *WrappedText::setOnMouseUpInsideCallback(std::function<void(bool, bool)> cb) {
+    this->onMouseUpCB = std::move(cb);
     return this;
 }
 
@@ -111,6 +117,12 @@ WrappedText *WrappedText::setText(const std::string &text) {
     return this;
 }
 
+void WrappedText::onMouseUpInside(bool left, bool right) {
+    if(this->onMouseUpCB) {
+        this->onMouseUpCB(left, right);
+    }
+}
+
 std::string getCurrentTip() {
     std::string current;
     if(s_currentIdx == -1 || (current = getAllTips()[s_currentIdx].get()).empty()) {
@@ -121,15 +133,34 @@ std::string getCurrentTip() {
     return fmt::format("Tip: {:s}", current);
 }
 
-void cycleToNextTip() {
+void cycleTip(int addIndex) {
     assert(getAllTips().size() > 0);
+    if(addIndex > 0) {
+        addIndex = std::min(addIndex, static_cast<int>(getAllTips().size() - 1));
+    } else if(addIndex < 0) {
+        addIndex = -std::min(-addIndex, static_cast<int>(getAllTips().size() - 1));
+    }
+    if(addIndex == 0) {
+        return;
+    }
+
     bool foundNonEmpty = false;
-    for(int iteratedOver = 0; !foundNonEmpty && iteratedOver < getAllTips().size(); ++iteratedOver) {
+    for(int iteratedOver = 0; !foundNonEmpty && iteratedOver < getAllTips().size(); iteratedOver += addIndex) {
         const int lastTip = cv::main_menu_last_tip_index.getInt();
-        s_currentIdx = (lastTip + 1) % static_cast<int>(getAllTips().size());
+        s_currentIdx = (lastTip + addIndex) % static_cast<int>(getAllTips().size());
         cv::main_menu_last_tip_index.setValue(s_currentIdx);
         foundNonEmpty = !getAllTips()[s_currentIdx].get().empty();
     }
+    return;
+}
+
+void cycleToPreviousTip() {
+    cycleTip(-1);
+    return;
+}
+
+void cycleToNextTip() {
+    cycleTip(1);
     return;
 }
 
