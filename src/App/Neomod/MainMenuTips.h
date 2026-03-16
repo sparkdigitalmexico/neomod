@@ -19,18 +19,17 @@ class WrappedText final : public CBaseUIContainer {
     ~WrappedText() override;
     WrappedText *setFont(McFont *font);
 
-    WrappedText *setText(std::string_view text);
+    WrappedText *setText(const std::string &text);
 
     void setVisibleCallback(float visible) { (void)this->setVisible(!!static_cast<int>(visible)); }
 
    private:
     McFont *font;
-    std::string_view lastText;
+    std::string lastText;
     float lastWrapWidth{0.f};
 };
 
-std::span<const std::string_view> getAllTips();
-std::string_view getCurrentTip();
-std::string_view getNextTip();
+std::string getCurrentTip();
+void cycleToNextTip();
 
 }  // namespace neomod::mainmenu

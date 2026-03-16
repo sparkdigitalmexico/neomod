@@ -1311,7 +1311,7 @@ CBaseUIContainer *MainMenu::setVisible(bool visible) {
     if(visible) {
         if(changed) {
             // move to next tip
-            mainmenu::getNextTip();
+            mainmenu::cycleToNextTip();
         }
         // Clear background change animation, to avoid "fade" when backing out from song browser
         {
