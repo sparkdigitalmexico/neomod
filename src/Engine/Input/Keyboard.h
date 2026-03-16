@@ -40,13 +40,15 @@ class Keyboard final : public InputDevice {
     [[nodiscard]] bool areModsHeld(KEYMOD keymodMask) const;
 
     // don't use KEY_ prefixed keys here, use KEYMOD_ ones!
-    [[nodiscard]] bool areModsHeld(KEYCODE keymodMask) = delete;
+    [[nodiscard]] bool areModsHeld(KEYCODE keymodMask) const = delete;
 
    private:
     // events received in main loop
     friend SDLMain;
-    void onKey(SDL_KeyboardEvent keyEvent);
-    void onChar(SDL_TextInputEvent textEvent);
+
+    void onKeyEvent(u64 timestamp, u32 keyboardID, KEYCODE layoutDependentKeycode, KEYMOD heldModifiersAsOfEvent,
+                    SCANCODE layoutIndependentScancode, bool isKeyDown, bool isRepeatEvent);
+    void onCharEvent(u64 timestamp, const char *text);
 
     struct KeyboardImpl;
     StaticPImpl<KeyboardImpl, sizeof(void *) == 8 ? 64 : 32> m_impl;

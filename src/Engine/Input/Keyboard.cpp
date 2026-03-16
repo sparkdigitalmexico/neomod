@@ -3,112 +3,115 @@
 
 #include "Engine.h"
 #include "Environment.h"
-#include "Logging.h"
 #include "KeyboardEvent.h"
 #include "UniString.h"
-
-#include <SDL3/SDL_events.h>
 
 #include <cstring>
 #include <utility>
 
-namespace {
-
-constexpr unsigned char ALLOCATED_FLAG = 255;
-static constexpr size_t TEXT_OFFSET = offsetof(SDL_TextInputEvent, text);
-
 // NOLINTBEGIN(cppcoreguidelines-pro-type-const-cast,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
-struct CapturedState final {
-    CapturedState() = default;
-    ~CapturedState() {
-        auto* dataBytes = reinterpret_cast<unsigned char*>(&fullEv);
-        if(dataBytes[sizeof(fullEv) - 1] == ALLOCATED_FLAG) {
-            std::free(const_cast<void*>(reinterpret_cast<const void*>(textEv.text)));
+namespace {
+struct OSEvent final {
+    enum EvType : u8 { KEYB_KEYDOWN, KEYB_KEYUP, KEYB_CHAR };
+
+    OSEvent() = delete;
+    OSEvent(u64 timestamp, u32 keyboardID, KEYCODE layoutDependentKeycode, KEYMOD heldModifiersAsOfEvent,
+            SCANCODE layoutIndependentScancode, bool isKeyDown, bool isRepeatEvent) {
+        keyev.type = isKeyDown ? EvType::KEYB_KEYDOWN : EvType::KEYB_KEYUP;
+        keyev.timestamp = timestamp;
+        keyev.keyboardID = keyboardID;
+        keyev.layoutDependentKeycode = layoutDependentKeycode;
+        keyev.heldModifiersAsOfEvent = heldModifiersAsOfEvent;
+        keyev.layoutIndependentScancode = layoutIndependentScancode;
+        keyev.isRepeat = isRepeatEvent;
+
+        charev.allocatedFlag = false;
+    }
+    OSEvent(u64 timestamp, const char* text) {
+        assert(!!text && text[0] != '\0');
+
+        charev.type = EvType::KEYB_CHAR;
+        charev.timestamp = timestamp;
+
+        // make a deep copy of the text
+        charev.textLen = static_cast<u32>(std::strlen(text));
+        if(charev.textLen <= sizeof(charev.staticText)) {
+            // the text can fit inside staticText, just copy it in there
+            charev.allocatedFlag = false;
+
+            std::memcpy(static_cast<void*>(&charev.staticText[0]), static_cast<const void*>(text), charev.textLen);
+            charev.text = &charev.staticText[0];
+        } else {
+            // too long to fit inside a full event, allocate
+            charev.allocatedFlag = true;
+
+            charev.text = static_cast<char*>(std::malloc(charev.textLen));
+            std::memcpy(static_cast<void*>(charev.text), static_cast<const void*>(text), charev.textLen);
         }
     }
 
-    CapturedState(CapturedState&& o) noexcept {
-        std::memcpy(static_cast<void*>(&fullEv), static_cast<const void*>(&o.fullEv), sizeof(fullEv));
-        if(o.type() == SDL_EVENT_TEXT_INPUT) {
-            auto* ourDataBytes = reinterpret_cast<unsigned char*>(&fullEv);
-            if(ourDataBytes[sizeof(fullEv) - 1] != ALLOCATED_FLAG && textEv.text != nullptr) {
-                textEv.text = reinterpret_cast<const char*>(&ourDataBytes[TEXT_OFFSET + sizeof(void*)]);
-            }
+    ~OSEvent() {
+        if(charev.allocatedFlag) {
+            std::free(static_cast<void*>(charev.text));
         }
-        std::memset(static_cast<void*>(&o.fullEv), 0, sizeof(fullEv));
     }
-
-    CapturedState& operator=(CapturedState&& o) noexcept {
+    OSEvent(OSEvent&& o) noexcept {
+        std::memcpy(static_cast<void*>(this), static_cast<const void*>(&o), sizeof(OSEvent));
+        if(type == KEYB_CHAR && !charev.allocatedFlag) charev.text = &charev.staticText[0];
+        std::memset(static_cast<void*>(&o), 0, sizeof(OSEvent));
+    }
+    OSEvent& operator=(OSEvent&& o) noexcept {
         if(this != &o) {
             // clean up existing state
-            auto* dataBytes = reinterpret_cast<unsigned char*>(&fullEv);
-            if(dataBytes[sizeof(fullEv) - 1] == ALLOCATED_FLAG) {
-                std::free(const_cast<void*>(reinterpret_cast<const void*>(textEv.text)));
+            if(type == KEYB_CHAR && charev.allocatedFlag && charev.text) {
+                std::free(static_cast<void*>(charev.text));
             }
 
-            std::memcpy(static_cast<void*>(&fullEv), static_cast<const void*>(&o.fullEv), sizeof(fullEv));
-            if(o.type() == SDL_EVENT_TEXT_INPUT) {
-                if(dataBytes[sizeof(fullEv) - 1] != ALLOCATED_FLAG && textEv.text != nullptr) {
-                    textEv.text = reinterpret_cast<const char*>(&dataBytes[TEXT_OFFSET + sizeof(void*)]);
-                }
-            }
-            std::memset(static_cast<void*>(&o.fullEv), 0, sizeof(fullEv));
+            std::memcpy(static_cast<void*>(this), static_cast<const void*>(&o), sizeof(OSEvent));
+            if(type == KEYB_CHAR && !charev.allocatedFlag) charev.text = &charev.staticText[0];
+            std::memset(static_cast<void*>(&o), 0, sizeof(OSEvent));
         }
         return *this;
     }
 
-    CapturedState(const CapturedState&) = delete;
-    CapturedState& operator=(const CapturedState&) = delete;
+    OSEvent(const OSEvent&) = delete;
+    OSEvent& operator=(const OSEvent&) = delete;
 
-    CapturedState(const SDL_KeyboardEvent& sdlKeyboardEvent) {
-        std::memcpy(static_cast<void*>(&keyEv), static_cast<const void*>(&sdlKeyboardEvent), sizeof(keyEv));
-        auto* dataBytes = reinterpret_cast<unsigned char*>(&fullEv);
-        dataBytes[sizeof(fullEv) - 1] = 0;
-    }
+    struct KeyEvent {
+        u64 timestamp;
+        u32 keyboardID;
+        KEYCODE layoutDependentKeycode;
+        KEYMOD heldModifiersAsOfEvent;
+        SCANCODE layoutIndependentScancode;
+        EvType type;
+        bool isRepeat;
+    };
 
-    CapturedState(const SDL_TextInputEvent& sdlTextEvent) {
-        std::memcpy(static_cast<void*>(&textEv), static_cast<const void*>(&sdlTextEvent), sizeof(textEv));
-        auto* ourDataBytes = reinterpret_cast<unsigned char*>(&fullEv);
-        ourDataBytes[sizeof(fullEv) - 1] = 0;
-        // make a deep copy of the text
-        if(!!sdlTextEvent.text && *sdlTextEvent.text != '\0') {
-            const size_t len = std::strlen(sdlTextEvent.text);
-            if(len < (sizeof(fullEv) - TEXT_OFFSET) - sizeof(void*)) {
-                // the text can fit inside the unused padding between the const char * and end of the full SDL_Event, just copy it into there
-                std::memcpy(static_cast<void*>(&ourDataBytes[TEXT_OFFSET + sizeof(void*)]),
-                            static_cast<const void*>(sdlTextEvent.text), len);
-                ourDataBytes[TEXT_OFFSET + sizeof(void*) + len] = '\0';
-                textEv.text = reinterpret_cast<const char*>(&ourDataBytes[TEXT_OFFSET + sizeof(void*)]);
-            } else {
-                // too long to fit inside a full SDL_Event, allocate
-                char* ptr = static_cast<char*>(std::malloc(len + 1));
-                std::memcpy(static_cast<void*>(ptr), static_cast<const void*>(sdlTextEvent.text), len);
-                ptr[len] = '\0';
-                textEv.text = ptr;
-                ourDataBytes[sizeof(fullEv) - 1] = ALLOCATED_FLAG;
-            }
-        }
-    }
-
-    [[nodiscard]] unsigned int type() const { return fullEv.type; }
-
-    [[nodiscard]] operator const SDL_KeyboardEvent&() const {
-        assert(type() == SDL_EVENT_KEY_DOWN || type() == SDL_EVENT_KEY_UP);
-        return keyEv;
-    }
-
-    [[nodiscard]] operator const SDL_TextInputEvent&() const {
-        assert(type() == SDL_EVENT_TEXT_INPUT);
-        return textEv;
-    }
+    struct CharEvent {
+        u64 timestamp;
+        u32 textLen;
+        bool allocatedFlag;
+        u8 _pad[offsetof(KeyEvent, type) - sizeof(timestamp) - sizeof(textLen) - sizeof(allocatedFlag)];
+        EvType type;
+        char staticText[(64 - sizeof(char*)) - (offsetof(KeyEvent, type) + sizeof(type))];
+        char* text;  // NOTE: not null-terminated
+    };
 
     union {
-        SDL_KeyboardEvent keyEv;
-        SDL_TextInputEvent textEv;
-        SDL_Event fullEv;
+        KeyEvent keyev;
+        CharEvent charev;
+        struct {
+            u8 _pad[offsetof(KeyEvent, type)];
+            EvType type;
+            u8 _pad2[sizeof(CharEvent) - (sizeof(_pad) + sizeof(type))];
+        };
     };
 };
+
+static_assert(offsetof(OSEvent::KeyEvent, type) == offsetof(OSEvent::CharEvent, type));
+static_assert(offsetof(OSEvent, type) == offsetof(OSEvent::CharEvent, type) &&
+              sizeof(OSEvent) == sizeof(OSEvent::CharEvent));
 
 }  // namespace
 
@@ -120,46 +123,47 @@ struct Keyboard::KeyboardImpl {
     void dispatchChar(KeyboardEvent event);
     std::vector<KeyboardListener*> listeners;
 
-    std::vector<CapturedState> eventQueue;
+    std::vector<OSEvent> eventQueue;
 
+    // global keyboard modifier state as of the last keydown/up event
     KEYCODE modstate{};
 };
 
-Keyboard::Keyboard() : m_impl() {}
+Keyboard::Keyboard() : m_impl() { m_impl->eventQueue.reserve(8); }
 Keyboard::~Keyboard() = default;
 
 void Keyboard::draw() {}
 
 void Keyboard::update() {
     for(auto& event : m_impl->eventQueue) {
-        switch(event.type()) {
-            case SDL_EVENT_KEY_DOWN: {
-                const auto& kevent{static_cast<const SDL_KeyboardEvent&>(event)};
-                m_impl->modstate = kevent.mod;
-                m_impl->dispatchKeyDown({static_cast<SCANCODE>(kevent.scancode), kevent.key,
-                                         static_cast<char32_t>(kevent.key), kevent.timestamp, kevent.repeat});
+        switch(event.type) {
+            using enum OSEvent::EvType;
+            case KEYB_KEYDOWN: {
+                const auto& kevent{event.keyev};
+                m_impl->modstate = kevent.heldModifiersAsOfEvent;
+                m_impl->dispatchKeyDown({kevent.layoutIndependentScancode, kevent.layoutDependentKeycode,
+                                         static_cast<char32_t>(kevent.layoutDependentKeycode), kevent.timestamp,
+                                         kevent.isRepeat});
                 break;
             }
 
-            case SDL_EVENT_KEY_UP: {
-                const auto& kevent{static_cast<const SDL_KeyboardEvent&>(event)};
-                m_impl->modstate = kevent.mod;
-                m_impl->dispatchKeyUp({static_cast<SCANCODE>(kevent.scancode), kevent.key,
-                                       static_cast<char32_t>(kevent.key), kevent.timestamp, kevent.repeat});
+            case KEYB_KEYUP: {
+                const auto& kevent{event.keyev};
+                m_impl->modstate = kevent.heldModifiersAsOfEvent;
+                m_impl->dispatchKeyUp({kevent.layoutIndependentScancode, kevent.layoutDependentKeycode,
+                                       static_cast<char32_t>(kevent.layoutDependentKeycode), kevent.timestamp,
+                                       kevent.isRepeat});
                 break;
             }
 
-            case SDL_EVENT_TEXT_INPUT: {
-                const auto& tevent{static_cast<const SDL_TextInputEvent&>(event)};
-                const char* evtextstr = tevent.text;
-                if(unlikely(!evtextstr || evtextstr[0] == '\0'))
-                    continue;  // probably should be assert() but there's no point in microoptimizing that hard
+            case KEYB_CHAR: {
+                const auto& tevent{event.charev};
+                assert(tevent.text && tevent.text[0] != '\0');
 
-                size_t length = strlen(evtextstr);
-                if(likely(length == 1)) {
-                    m_impl->dispatchChar({0, 0, static_cast<char32_t>(evtextstr[0]), tevent.timestamp, false});
+                if(likely(tevent.textLen == 1)) {
+                    m_impl->dispatchChar({0, 0, static_cast<char32_t>(tevent.text[0]), tevent.timestamp, false});
                 } else {
-                    for(char32_t chr : UniString::codepoints(std::string_view{evtextstr, length}))
+                    for(char32_t chr : UniString::codepoints(std::string_view{tevent.text, tevent.textLen}))
                         m_impl->dispatchChar({0, 0, chr, tevent.timestamp, false});
                 }
                 break;
@@ -175,8 +179,18 @@ void Keyboard::update() {
     m_impl->eventQueue.clear();
 }
 
-void Keyboard::onKey(SDL_KeyboardEvent event) { m_impl->eventQueue.emplace_back(event); }
-void Keyboard::onChar(SDL_TextInputEvent event) { m_impl->eventQueue.emplace_back(event); }
+void Keyboard::onKeyEvent(u64 timestamp, u32 keyboardID, KEYCODE layoutDependentKeycode, KEYMOD heldModifiersAsOfEvent,
+                          SCANCODE layoutIndependentScancode, bool isKeyDown, bool isRepeatEvent) {
+    m_impl->eventQueue.emplace_back(timestamp, keyboardID, layoutDependentKeycode, heldModifiersAsOfEvent,
+                                    layoutIndependentScancode, isKeyDown, isRepeatEvent);
+}
+
+void Keyboard::onCharEvent(u64 timestamp, const char* text) {
+    // should not normally happen, but we can just ignore events with literally no text at all
+    if(likely(text && text[0] != '\0')) {
+        m_impl->eventQueue.emplace_back(timestamp, text);
+    }
+}
 
 // actually, don't throw away queued events (otherwise we might not dispatch a queued key up for a key down we got)
 void Keyboard::reset() { m_impl->modstate = env->getCurrentlyHeldKeyModifiers(); }

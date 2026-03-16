@@ -1,4 +1,6 @@
 #pragma once
+#ifndef PLATFORM_BASEENVIRONMENT_H
+#define PLATFORM_BASEENVIRONMENT_H
 // Copyright (c) 2025, WH, All rights reserved.
 
 #include "config.h"
@@ -324,4 +326,6 @@ MC_MESSAGE("WARNING: unknown compilation arch??")
 #define MC_COMPILERSTR "MSVC (cl) " MC_STRINGIZE(_MSC_FULL_VER)
 #else
 #define MC_COMPILERSTR "?"
-#endif
+#endif /* defined(__clang__)*/
+
+#endif /* PLATFORM_BASEENVIRONMENT_H */

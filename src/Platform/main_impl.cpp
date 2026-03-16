@@ -497,11 +497,13 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
         // keyboard events
         case SDL_EVENT_KEY_UP:
         case SDL_EVENT_KEY_DOWN:
-            keyboard->onKey(event->key);
+            keyboard->onKeyEvent(event->key.timestamp, event->key.which, event->key.key, event->key.mod,
+                                 event->key.scancode,
+                                 /*isKeyDown=*/event->key.type == SDL_EVENT_KEY_DOWN, event->key.repeat);
             break;
 
         case SDL_EVENT_TEXT_INPUT:
-            keyboard->onChar(event->text);
+            keyboard->onCharEvent(event->text.timestamp, event->text.text);
             break;
 
         // mouse events
