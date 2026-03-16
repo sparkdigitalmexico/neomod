@@ -152,14 +152,14 @@ void UIButtonVertical::drawText() {
         g->translate((i32)(this->getPos().x + xPosAdd),
                      (i32)(this->getPos().y + (this->fStringWidth / 2.f) * scale + this->getSize().y / 2.f));
 
-        const Color textColor = this->textBrightColor ? this->textBrightColor : this->textColor;
+        const Color actualTextColor{this->textBrightColor ? this->textBrightColor : this->textColor};
         if(this->bDrawShadow) {
             const f32 shadowOffset = std::round((f32)this->font->getDPI() / 96.f);  // NOTE: abusing font dpi
-            const Color shadowColor = this->textDarkColor ? this->textDarkColor : Colors::invert(textColor);
+            const Color shadowColor{this->textDarkColor ? this->textDarkColor : Colors::invert(this->textColor)};
             g->drawString(this->font, this->getText(),
-                          TextShadow{.col_text = textColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
+                          TextShadow{.col_text = actualTextColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
         } else {
-            g->setColor(textColor);
+            g->setColor(actualTextColor);
             g->drawString(this->font, this->getText());
         }
     }
