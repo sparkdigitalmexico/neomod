@@ -1305,7 +1305,7 @@ void MainMenu::onResolutionChange(vec2 /*newResolution*/) {
 }
 
 CBaseUIContainer *MainMenu::setVisible(bool visible) {
-    const bool changed = this->bVisible == visible;
+    const bool changed = this->bVisible != visible;
     this->bVisible = visible;
 
     if(visible) {
