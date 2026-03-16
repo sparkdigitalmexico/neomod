@@ -339,6 +339,7 @@ std::vector<u8> Image::encodeToPNG(const u8 *data, i32 width, i32 height, u8 cha
     png_write_end(png_ptr, nullptr);
     png_destroy_write_struct(&png_ptr, &info_ptr);
 
+    buffer.shrink_to_fit();
     return buffer;
 }
 

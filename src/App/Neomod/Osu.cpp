@@ -1261,23 +1261,14 @@ void Osu::showNotification(const NotificationInfo &info) {
 void Osu::reloadMapInterface() { this->map_iface = std::make_unique<BeatmapInterface>(); }
 
 void Osu::saveScreenshot() {
-    static i32 screenshotNumber = 0;
+    static std::atomic<i32> screenshotNumber{0};
 
     if(!cv::enable_screenshots.getBool()) return;
 
-    if(!env->directoryExists(NEOMOD_SCREENSHOTS_PATH) && !env->createDirectory(NEOMOD_SCREENSHOTS_PATH)) {
-        ui->getNotificationOverlay()->addNotification("Error: Couldn't create screenshots folder.", 0xffff0000, false,
-                                                      3.0f);
-        return;
-    }
-
-    while(env->fileExists(fmt::format(NEOMOD_SCREENSHOTS_PATH "/screenshot{}.png", screenshotNumber)))
-        screenshotNumber++;
-
     constexpr u8 screenshotChannels{3};
 
-    auto saveFunc = [screenshotFilename{fmt::format(NEOMOD_SCREENSHOTS_PATH "/screenshot{}.png", screenshotNumber)},
-                     currentRes = this->internalRect, &skin = this->skin](std::vector<u8> pixelData) -> void {
+    auto saveFunc = [internalRes = this->internalRect.getSize(),
+                     &skin = this->skin](std::vector<u8> pixelData) -> void {
         if(!osu) return;  // paranoia
         if(pixelData.empty()) {
             static uint8_t once = 0;
@@ -1292,14 +1283,32 @@ void Osu::saveScreenshot() {
             soundEngine->play(skin->s_shutter);
         }
 
-        const vec2 graphicsRes = g->getResolution();
+        struct SaveResult {
+            std::string savePath;
+            std::vector<u8> pngData;
+            std::string error;
+        };
 
         Async::submit(
-            [graphicsRes, currentRes, pixels = std::move(pixelData), screenshotFilename]() -> std::vector<u8> {
+            [graphicsRes = g->getResolution(), internalRes, pixels = std::move(pixelData)]() -> SaveResult {
+                SaveResult ret;
+                if(!Environment::directoryExists(NEOMOD_SCREENSHOTS_PATH) &&
+                   !Environment::createDirectory(NEOMOD_SCREENSHOTS_PATH)) {
+                    ret.error = "Error: Couldn't create screenshots folder.";
+                    return ret;
+                }
+
+                ret.error = "Error: Couldn't grab a screenshot :(";  // default error
+
+                do {
+                    ret.savePath =
+                        fmt::format(NEOMOD_SCREENSHOTS_PATH "/screenshot{}.png", screenshotNumber.fetch_add(1));
+                } while(Environment::fileExists(ret.savePath));
+
                 const f32 outerWidth = graphicsRes.x;
                 const f32 outerHeight = graphicsRes.y;
-                const f32 innerWidth = currentRes.getWidth();
-                const f32 innerHeight = currentRes.getHeight();
+                const f32 innerWidth = internalRes.x;
+                const f32 innerHeight = internalRes.y;
 
                 const u8 *finalPixels = pixels.data();
                 i32 finalWidth = static_cast<i32>(outerWidth);
@@ -1308,7 +1317,7 @@ void Osu::saveScreenshot() {
                 std::vector<u8> croppedPixels;
 
                 // crop if needed
-                if(cv::crop_screenshots.getBool() && (graphicsRes != currentRes.getSize())) {
+                if(cv::crop_screenshots.getBool() && (graphicsRes != internalRes)) {
                     f32 offsetXpct = 0, offsetYpct = 0;
                     if(cv::letterboxing.getBool()) {
                         offsetXpct = cv::letterboxing_offset_x.getFloat();
@@ -1340,30 +1349,31 @@ void Osu::saveScreenshot() {
 
                 // encode to PNG
                 auto pngData = Image::encodeToPNG(finalPixels, finalWidth, finalHeight, screenshotChannels);
-                if(pngData.empty()) return {};
+                if(pngData.empty()) return ret;
 
                 // write to file
-                debugLog("Saving image to {:s} ...", screenshotFilename);
-                FILE *fp = File::fopen_c(screenshotFilename.c_str(), "wb");
+                debugLog("Saving image to {:s} ...", ret.savePath);
+                FILE *fp = File::fopen_c(ret.savePath.c_str(), "wb");
                 if(!fp) {
-                    debugLog("PNG error: Could not open file {:s} for writing", screenshotFilename);
-                    return {};
+                    ret.error = fmt::format("Screenshot error: Could not open file {:s} for writing", ret.savePath);
+                    return ret;
                 }
                 const bool ok = fwrite(pngData.data(), 1, pngData.size(), fp) == pngData.size();
                 fclose(fp);
                 if(!ok) {
-                    debugLog("PNG error: Failed to write to {:s}", screenshotFilename);
-                    return {};
+                    ret.error = fmt::format("Screenshot error: Failed to write to {:s}", ret.savePath);
+                    return ret;
                 }
-
-                return pngData;
+                ret.pngData = std::move(pngData);
+                return ret;
             },
             Lane::Background)
-            .then_on_main([screenshotFilename](std::vector<u8> pngData) {
+            .then_on_main([](SaveResult screenshotRes) {
                 if(!osu || !osu->UIReady()) return;
+                auto [screenshotFilename, pngData, error]{std::move(screenshotRes)};
                 auto *notif = ui->getNotificationOverlay();
                 if(pngData.empty()) {
-                    notif->addNotification("Error: Couldn't grab a screenshot :(", 0xffff0000, false, 3.0f);
+                    notif->addNotification(std::move(error), 0xffff0000, false, 3.0f);
                 } else {
                     std::string toastString;
                     // put it in the clipboard as well
@@ -1375,7 +1385,7 @@ void Osu::saveScreenshot() {
                     }
 
                     notif->addToast(std::move(toastString), CHAT_TOAST,
-                                    [screenshotFilename] { env->openFileBrowser(screenshotFilename); });
+                                    [file = std::move(screenshotFilename)] { env->openFileBrowser(file); });
                 }
             });
     };
