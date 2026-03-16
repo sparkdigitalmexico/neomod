@@ -31,16 +31,6 @@ void VertexArrayObject::clear() {
 
     this->partialUpdateVertexIndices.clear();
     this->partialUpdateColorIndices.clear();
-
-    if(!this->bKeepInSystemMemory) {
-        this->vertices.shrink_to_fit();
-        this->texcoords.shrink_to_fit();
-        this->normals.shrink_to_fit();
-        this->colors.shrink_to_fit();
-
-        this->partialUpdateVertexIndices.shrink_to_fit();
-        this->partialUpdateColorIndices.shrink_to_fit();
-    }
     // NOTE: do NOT set m_iNumVertices to 0! (also don't change m_bHasTexcoords)
 }
 

@@ -32,9 +32,9 @@ class OpenGLInterface : public Graphics {
     void drawPixel(int x, int y) final;
     void drawLinef(float x1, float y1, float x2, float y2) final;
     void drawRectf(const RectOptions &opt) final;
-    void fillRectf(float x, float y, float width, float height) final;
-
-    void fillRoundedRect(int x, int y, int width, int height, int radius) final;
+    using Graphics::fillRectf;
+    void fillRectf(const FillRectOptions &opt) final;
+    void drawArcf(float cx, float cy, float radius, float startAngle, float endAngle) final;
     void fillGradient(int x, int y, int width, int height, Color topLeftColor, Color topRightColor,
                       Color bottomLeftColor, Color bottomRightColor) final;
 
@@ -82,8 +82,8 @@ class OpenGLInterface : public Graphics {
     void flush() final;
 
     // renderer info
-    vec2 getResolution() const final { return this->vResolution; }
-    inline const char *getName() const override { return "OpenGL Legacy"; }
+    [[nodiscard]] vec2 getResolution() const final { return this->vResolution; }
+    [[nodiscard]] inline const char *getName() const override { return "OpenGL Legacy"; }
 
     // callbacks
     void onResolutionChange(vec2 newResolution) final;

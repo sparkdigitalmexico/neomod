@@ -115,8 +115,8 @@ class DirectX11Interface final : public ModernGraphicsShared {
     void flush() override;
 
     // renderer info
-    inline const char *getName() const override { return "DirectX11"; }
-    vec2 getResolution() const override { return this->vResolution; }
+    [[nodiscard]] inline const char *getName() const override { return "DirectX11"; }
+    [[nodiscard]] vec2 getResolution() const override { return this->vResolution; }
     std::string getVendor() override;
     std::string getModel() override;
     std::string getVersion() override;

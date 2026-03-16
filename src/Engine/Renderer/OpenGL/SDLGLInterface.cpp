@@ -160,6 +160,7 @@ int SDLGLInterface::getVRAMRemaining() {
 std::unordered_map<DrawPrimitive, int> SDLGLInterface::primitiveToOpenGLMap = {
     {DrawPrimitive::LINES, GL_LINES},
     {DrawPrimitive::LINE_STRIP, GL_LINE_STRIP},
+    {DrawPrimitive::LINE_LOOP, GL_LINE_LOOP},
     {DrawPrimitive::TRIANGLES, GL_TRIANGLES},
     {DrawPrimitive::TRIANGLE_FAN, GL_TRIANGLE_FAN},
     {DrawPrimitive::TRIANGLE_STRIP, GL_TRIANGLE_STRIP},

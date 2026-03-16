@@ -2984,9 +2984,9 @@ void OptionsOverlayImpl::onSkinSelectOpened() {
                 std::ranges::sort(skinFolders, SString::alnum_comp);
             } else {
                 // more stable-like sorting (i.e. "-     Cookiezi" comes before "Cookiezi")
-                std::ranges::sort(
-                    skinFolders, [](const char *s1, const char *s2) { return strcasecmp(s1, s2) < 0; },
-                    [](const std::string &str) -> const char * { return str.c_str(); });
+                std::ranges::sort(skinFolders, [](const std::string &s1, const std::string &s2) {
+                    return strcasecmp(s1.c_str(), s2.c_str()) < 0;
+                });
             }
             return skinFolders;
         },
@@ -3145,7 +3145,7 @@ void OptionsOverlayImpl::onOutputDeviceSelect() {
     this->contextMenu->setRelPos(this->outputDeviceSelectButton->getRelPos());
     this->contextMenu->begin();
     for(const auto &device : soundEngine->getOutputDevices()) {
-        CBaseUIButton *button = this->contextMenu->addButton(std::string{device.name});
+        CBaseUIButton *button = this->contextMenu->addButton(device.name);
         if(device.name == soundEngine->getOutputDeviceName()) button->setTextBrightColor(0xff00ff00);
     }
     this->contextMenu->end(false, true);

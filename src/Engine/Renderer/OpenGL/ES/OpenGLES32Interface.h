@@ -37,6 +37,7 @@ class OpenGLES32Interface : public ModernGraphicsShared {
     void setAlpha(float alpha) final;
 
     // 2d primitive drawing (implemented in ModernGraphicsShared)
+    void drawRectf(const RectOptions &opts) final; // exception: overridden because GL_LINE_LOOP works better
 
     // 2d resource drawing
     void drawImage(const Image *image, AnchorPoint anchor = AnchorPoint::CENTER, float edgeSoftness = 0.0f,
@@ -82,7 +83,7 @@ class OpenGLES32Interface : public ModernGraphicsShared {
 
     // renderer info
     [[nodiscard]] vec2 getResolution() const final { return m_vResolution; }
-    inline const char *getName() const override { return "OpenGL ES"; }
+    [[nodiscard]] inline const char *getName() const override { return "OpenGL ES"; }
 
     // callbacks
     void onResolutionChange(vec2 newResolution) final;

@@ -44,7 +44,7 @@ enum class AnchorPoint : uint8_t {
     RIGHT          // x,y at middle right
 };
 
-enum class DrawPrimitive : uint8_t { LINES, LINE_STRIP, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP, QUADS };
+enum class DrawPrimitive : uint8_t { LINES, LINE_STRIP, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP, QUADS, LINE_LOOP };
 
 enum class DrawUsageType : uint8_t { STATIC, DYNAMIC, STREAM };
 
@@ -74,8 +74,14 @@ class Graphics {
    public:
     struct RectOptions {
         float x{0.f}, y{0.f}, width{0.f}, height{0.f}, lineThickness{1.f};
+        float cornerRadius{0.f};
         Color top{(Color)-1}, right{(Color)-1}, bottom{(Color)-1}, left{(Color)-1};
         bool withColor{false};
+    };
+
+    struct FillRectOptions {
+        float x{0.f}, y{0.f}, width{0.f}, height{0.f};
+        float cornerRadius{0.f};
     };
 
     struct ScreenshotParams {
@@ -108,11 +114,9 @@ class Graphics {
     virtual void drawLinef(float x1, float y1, float x2, float y2) = 0;
 
     virtual void drawRectf(const RectOptions &opt) = 0;  // this is the main drawrect function
+    virtual void fillRectf(const FillRectOptions &opt) = 0;
+    virtual void drawArcf(float cx, float cy, float radius, float startAngle, float endAngle) = 0;
 
-    // TODO: more of these could be inline passthroughs to a single drawRectf implementation
-    // e.g. add "cornerRadius" and "fill" option to RectOptions
-    virtual void fillRectf(float x, float y, float width, float height) = 0;
-    virtual void fillRoundedRect(int x, int y, int width, int height, int radius) = 0;
     virtual void fillGradient(int x, int y, int width, int height, Color topLeftColor, Color topRightColor,
                               Color bottomLeftColor, Color bottomRightColor) = 0;
 
@@ -156,6 +160,24 @@ class Graphics {
         return this->drawRect(rect.getMin(), rect.getSize(), top, right, bottom, left);
     }
 
+    inline void drawRoundedRect(int x, int y, int width, int height, int radius) {
+        return this->drawRectf(RectOptions{.x = (float)x + 0.5f,
+                                           .y = (float)y + 0.5f,
+                                           .width = (float)width,
+                                           .height = (float)height,
+                                           .cornerRadius = (float)radius});
+    }
+    inline void drawRoundedRect(vec2 pos, vec2 size, int radius) {
+        return this->drawRoundedRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y, radius);
+    }
+
+    inline void drawArc(int cx, int cy, int radius, float startAngle, float endAngle) {
+        return this->drawArcf((float)cx + 0.5f, (float)cy + 0.5f, (float)radius, startAngle, endAngle);
+    }
+
+    inline void fillRectf(float x, float y, float width, float height) {
+        return this->fillRectf(FillRectOptions{.x = x, .y = y, .width = width, .height = height});
+    }
     inline void fillRect(int x, int y, int width, int height) {
         return this->fillRectf((float)x, (float)y, (float)width, (float)height);
     }
@@ -165,6 +187,13 @@ class Graphics {
 
     inline void fillRect(const McRect &rect) { return this->fillRect(rect.getMin(), rect.getSize()); }
 
+    inline void fillRoundedRect(int x, int y, int width, int height, int radius) {
+        return this->fillRectf(FillRectOptions{.x = (float)x,
+                                               .y = (float)y,
+                                               .width = (float)width,
+                                               .height = (float)height,
+                                               .cornerRadius = (float)radius});
+    }
     inline void fillRoundedRect(vec2 pos, vec2 size, int radius) {
         return this->fillRoundedRect((int)pos.x, (int)pos.y, (int)size.x, (int)size.y, radius);
     }

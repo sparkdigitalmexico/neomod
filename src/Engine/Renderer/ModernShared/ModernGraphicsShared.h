@@ -15,8 +15,9 @@ class ModernGraphicsShared : public Graphics {
     void drawPixel(int x, int y) override;
     void drawLinef(float x1, float y1, float x2, float y2) override;
     void drawRectf(const RectOptions &opt) override;
-    void fillRectf(float x, float y, float width, float height) override;
-    void fillRoundedRect(int x, int y, int width, int height, int radius) override;
+    using Graphics::fillRectf;
+    void fillRectf(const FillRectOptions &opt) override;
+    void drawArcf(float cx, float cy, float radius, float startAngle, float endAngle) override;
     void fillGradient(int x, int y, int width, int height, Color topLeftColor, Color topRightColor,
                       Color bottomLeftColor, Color bottomRightColor) override;
 
@@ -24,7 +25,12 @@ class ModernGraphicsShared : public Graphics {
     void drawQuad(vec2 topLeft, vec2 topRight, vec2 bottomRight, vec2 bottomLeft, Color topLeftColor,
                   Color topRightColor, Color bottomRightColor, Color bottomLeftColor) override;
 
+   protected:
     virtual void setTexturing(bool enabled, bool force = false) = 0;
+
+    // helper for arc drawing
+    static void addArcVertices(VertexArrayObject &vao, float cx, float cy, float radius, float startAngle,
+                               float endAngle);
 };
 
 #endif

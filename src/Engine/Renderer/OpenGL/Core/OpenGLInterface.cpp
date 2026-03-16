@@ -157,6 +157,18 @@ void OpenGLInterface::drawLinef(float x1, float y1, float x2, float y2) {
     glEnd();
 }
 
+namespace {
+void emitArcVertices(float cx, float cy, float radius, float startAngle, float endAngle) {
+    constexpr double step = 0.05;
+    const int numSteps = (int)((endAngle - startAngle) / step);
+    for(int i = 0; i <= numSteps; i++) {
+        const double a = startAngle + i * step;
+        glVertex2d(radius * std::cos(a) + cx, radius * std::sin(a) + cy);
+    }
+    glVertex2d(radius * std::cos((double)endAngle) + cx, radius * std::sin((double)endAngle) + cy);
+}
+}  // namespace
+
 void OpenGLInterface::drawRectf(const RectOptions &opts) {
     updateTransform();
 
@@ -165,6 +177,23 @@ void OpenGLInterface::drawRectf(const RectOptions &opts) {
     // set line width if specified
     if(opts.lineThickness != 1.0f) {
         glLineWidth(opts.lineThickness);
+    }
+
+    if(opts.cornerRadius > 0.f) {
+        const float r = opts.cornerRadius;
+        glBegin(GL_LINE_LOOP);
+        {
+            emitArcVertices(opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
+            emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
+            emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * (float)PI);
+            emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * (float)PI, (float)PI);
+        }
+        glEnd();
+
+        if(opts.lineThickness != 1.0f) {
+            glLineWidth(1.0f);
+        }
+        return;
     }
 
     glBegin(opts.withColor ? GL_LINES : GL_LINE_LOOP);
@@ -198,56 +227,42 @@ void OpenGLInterface::drawRectf(const RectOptions &opts) {
     }
 }
 
-void OpenGLInterface::fillRectf(float x, float y, float width, float height) {
+void OpenGLInterface::fillRectf(const FillRectOptions &opts) {
     updateTransform();
 
     glDisable(GL_TEXTURE_2D);
 
-    glBegin(GL_QUADS);
-    {
-        glVertex2f(x, y);
-        glVertex2f(x, (y + height));
-        glVertex2f((x + width), (y + height));
-        glVertex2f((x + width), y);
+    if(opts.cornerRadius > 0.f) {
+        const float r = opts.cornerRadius;
+
+        glBegin(GL_POLYGON);
+        {
+            emitArcVertices(opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
+            emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
+            emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * (float)PI);
+            emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * (float)PI, (float)PI);
+        }
+        glEnd();
+    } else {
+        glBegin(GL_QUADS);
+        {
+            glVertex2f(opts.x, opts.y);
+            glVertex2f(opts.x, opts.y + opts.height);
+            glVertex2f(opts.x + opts.width, opts.y + opts.height);
+            glVertex2f(opts.x + opts.width, opts.y);
+        }
+        glEnd();
     }
-    glEnd();
 }
 
-void OpenGLInterface::fillRoundedRect(int x, int y, int width, int height, int radius) {
-    float xOffset = x + radius;
-    float yOffset = y + radius;
-
-    double i = 0;
-    const double factor = 0.05;
-
+void OpenGLInterface::drawArcf(float cx, float cy, float radius, float startAngle, float endAngle) {
     updateTransform();
 
     glDisable(GL_TEXTURE_2D);
 
-    glBegin(GL_POLYGON);
+    glBegin(GL_LINE_STRIP);
     {
-        // top left
-        for(i = PI; i <= (1.5 * PI); i += factor) {
-            glVertex2d(radius * std::cos(i) + xOffset, radius * std::sin(i) + yOffset);
-        }
-
-        // top right
-        xOffset = x + width - radius;
-        for(i = (1.5 * PI); i <= (2 * PI); i += factor) {
-            glVertex2d(radius * std::cos(i) + xOffset, radius * std::sin(i) + yOffset);
-        }
-
-        // bottom right
-        yOffset = y + height - radius;
-        for(i = 0; i <= (0.5 * PI); i += factor) {
-            glVertex2d(radius * std::cos(i) + xOffset, radius * std::sin(i) + yOffset);
-        }
-
-        // bottom left
-        xOffset = x + radius;
-        for(i = (0.5 * PI); i <= PI; i += factor) {
-            glVertex2d(radius * std::cos(i) + xOffset, radius * std::sin(i) + yOffset);
-        }
+        emitArcVertices(cx, cy, radius, startAngle, endAngle);
     }
     glEnd();
 }
@@ -436,7 +451,7 @@ void OpenGLInterface::drawVAO(VertexArrayObject *vao) {
 
     // HACKHACK: disable texturing for special primitives, also for untextured vaos
     if(vao->getPrimitive() == DrawPrimitive::LINES || vao->getPrimitive() == DrawPrimitive::LINE_STRIP ||
-       !vao->hasTexcoords())
+       vao->getPrimitive() == DrawPrimitive::LINE_LOOP || !vao->hasTexcoords())
         glDisable(GL_TEXTURE_2D);
 
     // if baked, then we can directly draw the buffer

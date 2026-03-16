@@ -1647,6 +1647,7 @@ SDLGPUPrimitiveType SDLGPUInterface::primitiveToSDLGPUPrimitive(DrawPrimitive pr
             gpuPrimitive = SDL_GPU_PRIMITIVETYPE_LINELIST;
             break;
         case DrawPrimitive::LINE_STRIP:
+        case DrawPrimitive::LINE_LOOP:  // no native line loop, close vertex in data
             gpuPrimitive = SDL_GPU_PRIMITIVETYPE_LINESTRIP;
             break;
         case DrawPrimitive::TRIANGLE_STRIP:

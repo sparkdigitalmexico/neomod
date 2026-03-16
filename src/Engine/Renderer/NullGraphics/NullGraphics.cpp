@@ -27,8 +27,8 @@ void NullGraphics::drawPixels(int /*x*/, int /*y*/, int /*width*/, int /*height*
 void NullGraphics::drawPixel(int /*x*/, int /*y*/) {}
 void NullGraphics::drawLinef(float /*x1*/, float /*y1*/, float /*x2*/, float /*y2*/) {}
 void NullGraphics::drawRectf(const RectOptions & /*opt*/) {}
-void NullGraphics::fillRectf(float /*x*/, float /*y*/, float /*width*/, float /*height*/) {}
-void NullGraphics::fillRoundedRect(int /*x*/, int /*y*/, int /*width*/, int /*height*/, int /*radius*/) {}
+void NullGraphics::fillRectf(const FillRectOptions & /*opt*/) {}
+void NullGraphics::drawArcf(float /*cx*/, float /*cy*/, float /*radius*/, float /*startAngle*/, float /*endAngle*/) {}
 void NullGraphics::fillGradient(int /*x*/, int /*y*/, int /*width*/, int /*height*/, Color /*topLeftColor*/,
                                 Color /*topRightColor*/, Color /*bottomLeftColor*/, Color /*bottomRightColor*/) {}
 

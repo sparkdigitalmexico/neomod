@@ -450,6 +450,7 @@ void DirectX11Interface::setAlpha(float alpha) {
     this->setColor(newColor);
 }
 
+// TODO: move to ModernGraphicsShared
 void DirectX11Interface::drawPixel(int x, int y) {
     this->updateTransform();
 
@@ -1224,6 +1225,7 @@ int DirectX11Interface::primitiveToDirectX(DrawPrimitive primitive) {
         case DrawPrimitive::LINES:
             return D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
         case DrawPrimitive::LINE_STRIP:
+        case DrawPrimitive::LINE_LOOP:  // NOTE: no native line loop, close vertex in data
             return D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
         case DrawPrimitive::TRIANGLES:
             return D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;

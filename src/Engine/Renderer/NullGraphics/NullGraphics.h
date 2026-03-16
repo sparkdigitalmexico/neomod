@@ -22,8 +22,9 @@ class NullGraphics : public Graphics {
     void drawPixel(int x, int y) override;
     void drawLinef(float x1, float y1, float x2, float y2) override;
     void drawRectf(const RectOptions &opt) override;
-    void fillRectf(float x, float y, float width, float height) override;
-    void fillRoundedRect(int x, int y, int width, int height, int radius) override;
+    using Graphics::fillRectf;
+    void fillRectf(const FillRectOptions &opt) override;
+    void drawArcf(float cx, float cy, float radius, float startAngle, float endAngle) override;
     void fillGradient(int x, int y, int width, int height, Color topLeftColor, Color topRightColor,
                       Color bottomLeftColor, Color bottomRightColor) override;
 
