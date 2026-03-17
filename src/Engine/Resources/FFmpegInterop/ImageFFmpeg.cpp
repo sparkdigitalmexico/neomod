@@ -26,18 +26,44 @@ bool loadffmpeg() {
     });
     return ffmpeg_available;
 }
+
+// auto ffmpeg state cleanup
+struct FFState {  // NOLINT
+    AVFormatContext *fmtCtx{};
+    AVIOContext *avioCtx{};
+    AVCodecContext *codecCtx{};
+    AVPacket *pkt{};
+    AVFrame *frame{};
+    SwsContext *swsCtx{};
+    ~FFState() {
+        if(swsCtx) sws_freeContext(swsCtx);
+        if(pkt) av_packet_free(&pkt);
+        if(frame) av_frame_free(&frame);
+        if(codecCtx) avcodec_free_context(&codecCtx);
+        if(fmtCtx) avformat_close_input(&fmtCtx);
+        if(avioCtx) {
+            // explicitly free this buffer, ffmpeg may have reallocated it internally
+            // (just annoying ffmpeg things)
+            av_free(avioCtx->buffer);
+            avioCtx->buffer = nullptr;
+            avio_context_free(&avioCtx);
+        }
+    }
+};
+
+// memory reader for custom AVIO
+struct MemReader {
+    const u8 *data;
+    u64 size;
+    u64 pos;
+};
+
 }  // namespace
 
 ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 size) {
     if(!loadffmpeg()) return ImageDecodeResult::UNAVAILABLE;
     using enum ImageDecodeResult;
 
-    // memory reader for custom AVIO
-    struct MemReader {
-        const u8 *data;
-        u64 size;
-        u64 pos;
-    };
     MemReader mem{inData, size, 0};
 
     constexpr int avioBufSize = 32768;
@@ -86,29 +112,7 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
         return FAIL;
     }
 
-    // cleanup for all FFmpeg resources
-    struct FFState {  // NOLINT
-        AVFormatContext *fmtCtx{};
-        AVIOContext *avioCtx{};
-        AVCodecContext *codecCtx{};
-        AVPacket *pkt{};
-        AVFrame *frame{};
-        SwsContext *swsCtx{};
-        ~FFState() {
-            if(swsCtx) sws_freeContext(swsCtx);
-            if(pkt) av_packet_free(&pkt);
-            if(frame) av_frame_free(&frame);
-            if(codecCtx) avcodec_free_context(&codecCtx);
-            if(fmtCtx) avformat_close_input(&fmtCtx);
-            if(avioCtx) {
-                // explicitly free this buffer, ffmpeg may have reallocated it internally
-                // (just annoying ffmpeg things)
-                av_free(avioCtx->buffer);
-                avioCtx->buffer = nullptr;
-                avio_context_free(&avioCtx);
-            }
-        }
-    } ff{.avioCtx = avioCtx};
+    FFState ff{.avioCtx = avioCtx};
 
     ff.fmtCtx = avformat_alloc_context();
     if(!ff.fmtCtx) {

@@ -87,7 +87,7 @@ using ::AVMEDIA_TYPE_VIDEO;
 // generate function pointer types and declarations
 #define DECLARE_FFMPEG_FUNCTION(name)  \
     using name##_t = decltype(::name); \
-    extern name##_t *(name);
+    extern name##_t *name;  // NOLINT(bugprone-macro-parentheses)
 
 ALL_FFMPEG_FUNCTIONS(DECLARE_FFMPEG_FUNCTION)
 

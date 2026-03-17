@@ -15,7 +15,7 @@
 namespace Mc::FFmpeg {
 namespace funcs {
 // generate function pointer definitions
-#define DEFINE_FFMPEG_FUNCTION(name) name##_t *(name){nullptr};
+#define DEFINE_FFMPEG_FUNCTION(name) name##_t *name{nullptr};  // NOLINT(bugprone-macro-parentheses)
 ALL_FFMPEG_FUNCTIONS(DEFINE_FFMPEG_FUNCTION)
 }  // namespace funcs
 using namespace funcs;
