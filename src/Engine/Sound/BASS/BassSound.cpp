@@ -58,9 +58,9 @@ void BassSound::initAsync() {
         }
         [[nodiscard]] auto plat_str() const {
             if constexpr(Env::cfg(OS::WINDOWS)) {
-                return narrow.c_str();
-            } else {
                 return wide.c_str();
+            } else {
+                return narrow.c_str();
             }
         }
         std::string narrow;

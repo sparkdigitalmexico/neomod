@@ -78,9 +78,9 @@ struct VolNormalization::LoudnessCalcThread {
             }
             [[nodiscard]] auto plat_str() const {
                 if constexpr(Env::cfg(OS::WINDOWS)) {
-                    return narrow.c_str();
-                } else {
                     return wide.c_str();
+                } else {
+                    return narrow.c_str();
                 }
             }
             [[nodiscard]] bool operator==(const std::string &other) const { return narrow == other; }
