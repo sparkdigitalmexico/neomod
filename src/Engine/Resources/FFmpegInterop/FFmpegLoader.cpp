@@ -15,7 +15,7 @@
 namespace Mc::FFmpeg {
 namespace funcs {
 // generate function pointer definitions
-#define DEFINE_FFMPEG_FUNCTION(name) name##_t name{nullptr};
+#define DEFINE_FFMPEG_FUNCTION(name) name##_t *(name){nullptr};
 ALL_FFMPEG_FUNCTIONS(DEFINE_FFMPEG_FUNCTION)
 }  // namespace funcs
 using namespace funcs;
@@ -157,8 +157,8 @@ bool load_full_ff_lib(const std::array<FFmpegFuncset, 4> &ffmpeg_funcsets) {
             return false;
         }
 
-#define LOAD_LIB_FUNCS_BODY(fname)                                                                                 \
-    failed_count += !((fname) = load_func<std::remove_pointer_t<fname##_t>>(current_library_outer_macro, #fname)); \
+#define LOAD_LIB_FUNCS_BODY(fname)                                                          \
+    failed_count += !((fname) = load_func<fname##_t>(current_library_outer_macro, #fname)); \
     if(!(fname)) ld_ctx().error_string.append(missing_prefix_outer_macro + #fname + "\n");
 
         // then load the functions using the x-macro list for the current lib

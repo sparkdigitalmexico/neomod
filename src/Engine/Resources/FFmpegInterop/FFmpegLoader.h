@@ -85,9 +85,9 @@ using ::AVMEDIA_TYPE_VIDEO;
     SWSCALE_FUNCTIONS(X)
 
 // generate function pointer types and declarations
-#define DECLARE_FFMPEG_FUNCTION(name)   \
-    using name##_t = decltype(&::name); \
-    extern name##_t name;
+#define DECLARE_FFMPEG_FUNCTION(name)  \
+    using name##_t = decltype(::name); \
+    extern name##_t *(name);
 
 ALL_FFMPEG_FUNCTIONS(DECLARE_FFMPEG_FUNCTION)
 
