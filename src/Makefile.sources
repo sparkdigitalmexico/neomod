@@ -62,6 +62,13 @@ BASS_SOURCES := \
 	$(NULL)
 endif
 
+if USE_FFMPEG
+FFMPEG_SOURCES := \
+	src/Engine/Resources/FFmpegInterop/FFmpegLoader.cpp \
+	src/Engine/Resources/FFmpegInterop/ImageFFmpeg.cpp \
+	$(NULL)
+endif
+
 if WIN_PLATFORM
 WIN_SOURCES := \
 	src/Platform/Windows/CrashHandler.cpp \
@@ -276,4 +283,5 @@ neomod_SOURCES = \
 	$(SOLOUD_SOURCES) \
 	$(BASS_SOURCES) \
 	$(WIN_SOURCES) \
+	$(FFMPEG_SOURCES) \
 	$(NULL)

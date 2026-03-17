@@ -135,6 +135,8 @@ $(DEPS_CACHE)/SoundTouch-$(SOUNDTOUCH_VERSION).tar.gz:
 	$(CURLCOMMAND) "https://codeberg.org/soundtouch/soundtouch/archive/$(SOUNDTOUCH_VERSION).tar.gz" || { rm -f $@; exit 1; }
 
 # --with-ffmpeg
+# if changing build params, to invalidate .built stamps (without updating version)
+FFMPEG_EPOCH := 4
 # newer releases are broken for windows xp
 FFMPEG_VERSION_REAL := $(if $(ubercompat),2456a39581c3388bcf6f61c66aef36a887537c23,$(FFMPEG_VERSION))
 FFMPEG_URL := $(if $(ubercompat),https://github.com/FFmpeg/FFmpeg/archive/$(FFMPEG_VERSION_REAL).tar.gz,https://ffmpeg.org/releases/ffmpeg-$(FFMPEG_VERSION_REAL).tar.xz)
@@ -594,7 +596,7 @@ AUDIO_LIBS += $(shell $(PKG_CONFIG) --libs soloud) $(shell $(PKG_CONFIG) --libs 
 SOLOUD_FFMPEG_DEP =
 
 if USE_FFMPEG
-SOLOUD_FFMPEG_DEP += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built
+SOLOUD_FFMPEG_DEP += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 
 FFMPEG_INCDIR := $(DEPS_PREFIX)/include
 FFMPEG_LIBDIR := $(DEPS_PREFIX)/lib
@@ -603,21 +605,25 @@ FFMPEG_CONFIGURE_FLAGS += --enable-gpl
 FFMPEG_CONFIGURE_FLAGS += --enable-shared --disable-static --disable-autodetect
 FFMPEG_CONFIGURE_FLAGS += --disable-programs
 FFMPEG_CONFIGURE_FLAGS += --disable-doc
-FFMPEG_CONFIGURE_FLAGS += --disable-avdevice --disable-swscale --disable-avfilter --disable-network --disable-iamf --disable-pixelutils
+FFMPEG_CONFIGURE_FLAGS += --disable-avdevice --disable-avfilter --disable-network --disable-iamf --disable-pixelutils
 FFMPEG_CONFIGURE_FLAGS += --disable-everything
-FFMPEG_CONFIGURE_FLAGS += --enable-decoder=mp3,aac,vorbis,opus,flac,pcm_s16le,pcm_f32le
-FFMPEG_CONFIGURE_FLAGS += --enable-demuxer=mp3,aac,ogg,flac,wav,mov,m4a,matroska
-FFMPEG_CONFIGURE_FLAGS += --enable-parser=aac,flac,mpegaudio,vorbis,opus
+FFMPEG_CONFIGURE_FLAGS += --enable-pic
+FFMPEG_CONFIGURE_FLAGS += --enable-decoder=mp3,aac,vorbis,opus,flac,pcm_s16le,pcm_f32le,mjpeg,bmp,gif,tiff,webp,tga
+FFMPEG_CONFIGURE_FLAGS += --enable-demuxer=mp3,aac,ogg,flac,wav,mov,m4a,matroska,image2,image2pipe,image_jpeg_pipe,image_bmp_pipe,image_gif_pipe,image_tiff_pipe,image_webp_pipe
+FFMPEG_CONFIGURE_FLAGS += --enable-parser=aac,flac,mpegaudio,vorbis,opus,mjpeg
 FFMPEG_CONFIGURE_FLAGS += --enable-protocol=file
 FFMPEG_CONFIGURE_FLAGS += --arch=$(host_cpu)
 FFMPEG_CONFIGURE_FLAGS += --target-os=$(if $(findstring mingw,$(host_os)),mingw32,linux)
-FFMPEG_CONFIGURE_FLAGS += --ar=$(AR) --cc=$(CC) --cxx=$(CXX) --ld=$(CXX)
+FFMPEG_CONFIGURE_FLAGS += --ranlib=$(RANLIB) --ar=$(AR) --cc=$(CC) --cxx=$(CXX) --ld=$(CC)
 FFMPEG_CONFIGURE_FLAGS += $(if $(findstring mingw,$(host_os)),--disable-w32threads --enable-pthreads --windres=$(WINDRES),)
 FFMPEG_CONFIGURE_FLAGS += $(if $(ffmpeg_strip),,--disable-stripping)
 FFMPEG_CONFIGURE_FLAGS += $(if $(findstring $(host),$(build)),,--enable-cross-compile)
 FFMPEG_EXTRA_FLAGS := $(if $(findstring mingw,$(host_os)),-fno-lto $(if $(findstring whole-program,$(CXXFLAGS)),-fno-whole-program-vtables,),)
+FFMPEG_EXTRA_FLAGS += -fvisibility=default  # because it's shared (wouldn't be able to load things dynamically if symbols are hidden)
 
-$(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built: $(DEPS_CACHE)/$(FFMPEG_TARBALL) $(DEPS_PREFIX)/winpthread-noversion.built
+AUDIO_CFLAGS += -I$(FFMPEG_INCDIR)  # so we find our build of ffmpeg's headers for FFmpegLoader
+
+$(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built: $(DEPS_CACHE)/$(FFMPEG_TARBALL) $(DEPS_PREFIX)/winpthread-noversion.built
 	rm -rf $(DEPS_PREFIX)/ffmpeg
 	$(MKDIR_P) $(DEPS_PREFIX)/ffmpeg/build $(DEPS_PREFIX)/lib/pkgconfig
 	$(TAR) xf $(DEPS_CACHE)/$(FFMPEG_TARBALL) -C $(DEPS_PREFIX)/ffmpeg --strip-components=1 && \
@@ -629,7 +635,7 @@ $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built: $(DEPS_CACHE)/$(FFMPEG_TARBA
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
 	touch $@
-INSTALL_LIB_DEPS += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built
+INSTALL_LIB_DEPS += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 endif
 
 $(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built: $(DEPS_CACHE)/SoLoud-$(SOLOUD_VERSION).tar.gz $(SOLOUD_FFMPEG_DEP) $(DEPS_PREFIX)/SDL3-$(SDL3_VERSION).built $(DEPS_PREFIX)/mpg123-$(MPG123_VERSION).built
@@ -644,11 +650,11 @@ $(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built: $(DEPS_CACHE)/SoLoud-$(SOLOUD_VER
 		-D CMAKE_SYSTEM_NAME="$(CMAKE_SYSTEM_NAME)" \
 		-D CMAKE_SYSTEM_PROCESSOR="$(host_cpu)" \
 		-D CMAKE_C_COMPILER="$(CC)" \
-		-D CMAKE_C_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(if $(FFMPEG_INCDIR),-I$(FFMPEG_INCDIR) )$(CFLAGS)" \
-		-D CMAKE_C_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(if $(FFMPEG_INCDIR),-I$(FFMPEG_INCDIR) )$(CFLAGS)" \
+		-D CMAKE_C_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CFLAGS)" \
+		-D CMAKE_C_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CFLAGS)" \
 		-D CMAKE_CXX_COMPILER="$(CXX)" \
-		-D CMAKE_CXX_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(if $(FFMPEG_INCDIR),-I$(FFMPEG_INCDIR) )$(CXXFLAGS)" \
-		-D CMAKE_CXX_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(if $(FFMPEG_INCDIR),-I$(FFMPEG_INCDIR) )$(CXXFLAGS)" \
+		-D CMAKE_CXX_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CXXFLAGS)" \
+		-D CMAKE_CXX_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CXXFLAGS)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
@@ -1449,7 +1455,7 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/curl-$(CURL_VERSION).built
 
 if !WASM_PLATFORM
-BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION)/certbundle/cacert.pem $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL).built
+BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION)/certbundle/cacert.pem $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 endif
 
 # (this is also disabled in CI by default, because we dont cache the pch there, so there's no point)
@@ -1722,7 +1728,7 @@ if USE_SOLOUD
 	$(if $(STATICBUILD),,@cp -Pu "$(SOLOUD_PREFIX)/lib"/*$(LIBPREFIX)soloud*$(DLLEXT)* "$(DESTDIR)$(bindir)/$(LIBDEST)")
 	$(if $(STATICBUILD),,@cp -Pu "$(SOUNDTOUCH_PREFIX)/lib"/*$(LIBPREFIX)SoundTouch*$(DLLEXT)* "$(DESTDIR)$(bindir)/$(LIBDEST)")
 if USE_FFMPEG
-	@find $(DEPS_PREFIX)/lib $(DEPS_PREFIX)/bin '(' -name '*avutil*' -o -name '*avcodec*' -o -name '*avformat*' -o -name '*swresample*' ')' -a '(' -name '*'$(DLLEXT) -o -name '*.so.*' ')' -exec cp -Pu '{}' "$(DESTDIR)$(bindir)/" ';' 2>/dev/null || true
+	@find $(DEPS_PREFIX)/lib $(DEPS_PREFIX)/bin '(' -name '*avutil*' -o -name '*avcodec*' -o -name '*avformat*' -o -name '*swresample*' -o -name '*swscale*' ')' -a '(' -name '*'$(DLLEXT) -o -name '*.so.*' ')' -exec cp -Pu '{}' "$(DESTDIR)$(bindir)/" ';' 2>/dev/null || true
 endif
 if BUILD_MPG123
 	$(if $(STATICBUILD),,@`find $(MPG123_PREFIX) '(' -iname '*mpg*'$(DLLEXT) -o -iname '*mpg*''.so.*' ')' -exec cp -Pu '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)

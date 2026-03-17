@@ -9,6 +9,8 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
+#include "config.h"
+
 #include "noinclude.h"
 #include "types.h"
 
@@ -23,6 +25,22 @@
 
 enum class TextureFilterMode : u8;
 enum class TextureWrapMode : u8;
+enum class ImageDecodeResult : u8 {
+    SUCCESS,
+    FAIL,
+    INTERRUPTED,
+    UNAVAILABLE  // decoder unavailable
+};
+
+namespace Mc::FFmpeg {
+#ifdef MCENGINE_FEATURE_FFMPEG
+ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 size);
+#else
+inline ImageDecodeResult decodeFFmpegFromMemory(Image * /*this_*/, const u8 * /*inData*/, u64 /*size*/) {
+    return ImageDecodeResult::UNAVAILABLE;
+}
+#endif
+}  // namespace Mc::FFmpeg
 
 class Image : public Resource {
    public:
@@ -175,18 +193,13 @@ class Image : public Resource {
     bool bLoadedImageEntirelyTransparent{false};
 
    private:
-    enum class ImageDecodeResult : u8 {
-        SUCCESS,
-        FAIL,
-        INTERRUPTED,
-    };
-
     [[nodiscard]] bool isRawImageCompletelyTransparent() const;
     static bool canHaveTransparency(const u8 *data, u64 size);
 
     ImageDecodeResult decodeJPEGFromMemory(const u8 *inData, u64 size);
     ImageDecodeResult decodePNGFromMemory(const u8 *inData, u64 size);
     ImageDecodeResult decodeSTBFromMemory(const u8 *inData, u64 size);
+    friend ImageDecodeResult Mc::FFmpeg::decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 size);
 };
 
 #endif

@@ -46,6 +46,7 @@ cond_sources "if USE_DX11"     "DX11_SOURCES"      src/Engine/Renderer/DirectX11
 cond_sources "if USE_SDLGPU"   "SDLGPU_SOURCES"    src/Engine/Renderer/SDLGPU
 cond_sources "if USE_SOLOUD"   "SOLOUD_SOURCES"    src/Engine/Sound/SoLoud
 cond_sources "if USE_BASS"     "BASS_SOURCES"      src/Engine/Sound/BASS
+cond_sources "if USE_FFMPEG"   "FFMPEG_SOURCES"    src/Engine/Resources/FFmpegInterop # i don't know what folder this should really go in, whatever
 cond_sources "if WIN_PLATFORM" "WIN_SOURCES"       src/Platform/Windows
 
 # glad (needed for native GL/GLES builds; WASM has its own loader)
@@ -72,6 +73,7 @@ cond_sources "if WIN_PLATFORM" "WIN_SOURCES"       src/Platform/Windows
         -not -path 'src/Engine/Sound/BASS/*' \
         -not -path 'src/Engine/Sound/SoLoud/*' \
         -not -path 'src/Platform/Windows/*' \
+        -not -path 'src/Engine/Resources/FFmpegInterop/*' \
         -not -path 'libraries/glad/*'
 
     cat << 'EOF'
@@ -84,6 +86,7 @@ cond_sources "if WIN_PLATFORM" "WIN_SOURCES"       src/Platform/Windows
 	$(SOLOUD_SOURCES) \
 	$(BASS_SOURCES) \
 	$(WIN_SOURCES) \
+	$(FFMPEG_SOURCES) \
 	$(NULL)
 EOF
 } >> "$SOURCES_FILE"

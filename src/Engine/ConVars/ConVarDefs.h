@@ -193,6 +193,9 @@ CONVAR(debug_vprof, false, CLIENT | SERVER);
 CONVAR(debug_opengl, false, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(debug_snd, false, CLIENT | NOSAVE);
 CONVAR(debug_disable_async_free, false, CLIENT | SERVER);
+#ifdef MCENGINE_FEATURE_FFMPEG
+extern ConVar debug_ffmpeg;  // FFmpegLoader.cpp
+#endif
 CONVAR(r_3dscene_zf, 5000.0f, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(r_3dscene_zn, 5.0f, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(r_debug_disable_3dscene, false, CLIENT | PROTECTED | GAMEPLAY);

@@ -100,7 +100,7 @@ void pngReadFromMemory(png_structp png_ptr, png_bytep outBytes, png_size_t byteC
 }
 }  // namespace
 
-Image::ImageDecodeResult Image::decodePNGFromMemory(const u8 *inData, u64 size) {
+ImageDecodeResult Image::decodePNGFromMemory(const u8 *inData, u64 size) {
     garbage_zlib();
     using enum ImageDecodeResult;
 
@@ -195,7 +195,7 @@ Image::ImageDecodeResult Image::decodePNGFromMemory(const u8 *inData, u64 size) 
     return SUCCESS;
 }
 
-Image::ImageDecodeResult Image::decodeJPEGFromMemory(const u8 *inData, u64 size) {
+ImageDecodeResult Image::decodeJPEGFromMemory(const u8 *inData, u64 size) {
     using enum ImageDecodeResult;
     // decode jpeg
     tjhandle tjInstance = tj3Init(TJINIT_DECOMPRESS);
@@ -246,11 +246,11 @@ Image::ImageDecodeResult Image::decodeJPEGFromMemory(const u8 *inData, u64 size)
     return SUCCESS;
 }
 
-Image::ImageDecodeResult Image::decodeSTBFromMemory(const u8 *inData, u64 size) {
+ImageDecodeResult Image::decodeSTBFromMemory(const u8 *inData, u64 size) {
     using enum ImageDecodeResult;
 
     // use stbi_info to validate dimensions before decoding
-    i32 outWidth, outHeight, channels;
+    i32 outWidth, outHeight, channels;  // NOLINT
     if(!stbi_info_from_memory(inData, static_cast<i32>(size), &outWidth, &outHeight, &channels)) {
         debugLog("Image Error: stb_image info query failed: {:s}", stbi_failure_reason());
         return FAIL;
@@ -554,7 +554,12 @@ bool Image::loadRawImage() {
             if(isPNG || isJPEG) {
                 debugLog("Image Warning: Primary decoder failed for {:s}, trying fallback...", this->sFilePath);
             }
-            res = decodeSTBFromMemory(fileBuffer.get(), fileSize);
+
+            // first try ffmpeg, then finally stb (stb returns corrupted data on some formats without giving an error, so it's not reliable to try first)
+            if((res = Mc::FFmpeg::decodeFFmpegFromMemory(this, fileBuffer.get(), fileSize)) !=
+               ImageDecodeResult::SUCCESS) {
+                res = decodeSTBFromMemory(fileBuffer.get(), fileSize);
+            }
         }
 
         // final result check
