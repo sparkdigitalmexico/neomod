@@ -25,11 +25,14 @@ class Shader;
 class RenderTarget;
 class VertexArrayObject;
 
-// shadow offset pixels to the bottom right
+// text effects: shadow, outline. offset pixels to the bottom right
 struct TextShadow {
     Color col_text{rgb(255, 255, 255)};
     Color col_shadow{rgb(0, 0, 0)};
-    float offs_px{1.f};  // not scaled to display DPI
+    float offs_px{1.f};                   // not scaled to display DPI
+    Color col_outline{argb(0, 0, 0, 0)};  // disabled by default (alpha=0)
+    float outline_px{1.f};                // only used when col_outline.a > 0
+    float shadow_softness_px{0.f};        // 0 = hard, >0 = blur spread in pixels
 };
 
 enum class AnchorPoint : uint8_t {

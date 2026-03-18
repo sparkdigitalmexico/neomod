@@ -14,7 +14,7 @@ class TextureAtlas final : public Resource {
     NOCOPY_NOMOVE(TextureAtlas)
    public:
     // should basically never need to be changed
-    static constexpr const int ATLAS_PADDING{1};
+    static constexpr const int ATLAS_PADDING{5};
 
     struct PackRect {
         int x, y, width, height;

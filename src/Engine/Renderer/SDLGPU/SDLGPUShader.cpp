@@ -361,7 +361,13 @@ std::vector<SDLGPUShader::UniformBlock> SDLGPUShader::parseUniformBlocks(const s
     for(auto blockMatch : ctre::search_all<blockPat>(glsl)) {
         auto setStr = blockMatch.get<1>().to_view();
         auto bindStr = blockMatch.get<2>().to_view();
-        auto blockBody = blockMatch.get<4>().to_view();
+
+        // strip // comments from block body before parsing variables
+        std::string blockBody{blockMatch.get<4>().to_view()};
+        for(auto pos = blockBody.find("//"); pos != std::string::npos; pos = blockBody.find("//", pos)) {
+            auto eol = blockBody.find('\n', pos);
+            blockBody.erase(pos, (eol != std::string::npos ? eol : blockBody.size()) - pos);
+        }
 
         u32 set = 0, binding = 0;
         std::from_chars(setStr.data(), setStr.data() + setStr.size(), set);

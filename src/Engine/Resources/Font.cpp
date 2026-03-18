@@ -23,6 +23,7 @@
 #include "Hashing.h"
 #include "CDynArray.h"
 #include "Graphics.h"
+#include "Shader.h"
 #include "UniString.h"
 
 #include <algorithm>
@@ -95,6 +96,9 @@ struct LastSizedFTFace {
     int dpi{0};
     [[nodiscard]] inline bool operator==(const LastSizedFTFace &) const = default;
 } s_lastSizedFace{};
+
+// text effect shader (shadow/outline in a single pass)
+[[maybe_unused]] Shader *s_textShader{nullptr};
 
 class TextVAO : public VertexArrayObject {
     MOVECONSTRUCTONLY(TextVAO)
@@ -550,45 +554,84 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
 
     m_textureAtlas->getAtlasImage()->bind();
 
-    const bool drawShadow = shadow.has_value() && shadow->col_shadow.a > 0;
-    if(drawShadow) {
-        const auto &shadowConf = *shadow;
-        const float px = shadowConf.offs_px;
+    const bool hasEffects = shadow.has_value() && (shadow->col_shadow.a > 0 || shadow->col_outline.a > 0);
+    bool usedShader = false;
 
-        g->translate(px, px);
-        g->setColor(shadowConf.col_shadow);
+    if(Env::cfg(REND::SDLGPU) && env->usingSDLGPU()) {
+        if(hasEffects) {
+            if(!s_textShader) s_textShader = resourceManager->createShaderAuto("text");
 
-        g->drawVAO(buffer.getVAO());
+            if(s_textShader != nullptr && s_textShader->isReady()) {
+                const auto &sc = *shadow;
+                const float atlasW = static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth());
+                const float atlasH = static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight());
 
-        g->translate(-px, -px);
-        g->setColor(shadowConf.col_text);
+                s_textShader->enable();
+                s_textShader->setUniform4f("col", sc.col_text.Rf(), sc.col_text.Gf(), sc.col_text.Bf(),
+                                           sc.col_text.Af());
+                s_textShader->setUniform4f("col_shadow", sc.col_shadow.Rf(), sc.col_shadow.Gf(), sc.col_shadow.Bf(),
+                                           sc.col_shadow.Af());
+                s_textShader->setUniform4f("col_outline", sc.col_outline.Rf(), sc.col_outline.Gf(), sc.col_outline.Bf(),
+                                           sc.col_outline.Af());
+                s_textShader->setUniform4f("params", sc.offs_px / atlasW, sc.offs_px / atlasH, sc.outline_px / atlasW,
+                                           sc.outline_px / atlasH);
+                s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH,
+                                           0.f, 0.f);
+
+                if(!buffer.getVerts().empty()) {
+                    g->drawVAO(buffer.getVAO());
+                }
+
+                if(!buffer.getEmojiVerts().empty()) {
+                    // emoji: use texture RGB directly (color glyphs), keep shadow/outline
+                    s_textShader->setUniform4f("col", 1.f, 1.f, 1.f, sc.col_text.Af());
+                    s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW,
+                                               sc.shadow_softness_px / atlasH, 1.f, 0.f);
+                    g->drawVAO(buffer.getEmojiVAO());
+                }
+
+                s_textShader->disable();
+                usedShader = true;
+            }
+        }
     }
 
-    g->drawVAO(buffer.getVAO());
+    if(!usedShader) {
+        // fallback: original double-draw for non-SDLGPU or shader not ready
+        if(!buffer.getVerts().empty()) {
+            if(hasEffects) {
+                const auto &shadowConf = *shadow;
+                const float px = shadowConf.offs_px;
 
-    // redraw emoji parts, untinted (allow alpha though)
-    if(!buffer.getEmojiVerts().empty()) {
-        const Color savedColor = g->getColor();
-        if(drawShadow) {
-            // also draw shadow if desired
-            const auto &shadowConf = *shadow;
-            const float px = shadowConf.offs_px;
+                g->translate(px, px);
+                g->setColor(shadowConf.col_shadow);
+                g->drawVAO(buffer.getVAO());
+                g->translate(-px, -px);
+                g->setColor(shadowConf.col_text);
+            }
 
-            g->translate(px, px);
-            g->setColor(shadowConf.col_shadow);  // allow tinting the shadow (it should be mostly invisible anyways)
-
-            g->drawVAO(buffer.getEmojiVAO());
-
-            g->translate(-px, -px);
-
-            g->setColor(argb(shadowConf.col_text.a, 255, 255, 255));
-        } else {
-            g->setColor(argb(savedColor.a, 255, 255, 255));
+            g->drawVAO(buffer.getVAO());
         }
 
-        g->drawVAO(buffer.getEmojiVAO());
+        // emoji
+        if(!buffer.getEmojiVerts().empty()) {
+            const Color savedColor = g->getColor();
+            if(hasEffects) {
+                const auto &shadowConf = *shadow;
+                const float px = shadowConf.offs_px;
 
-        g->setColor(savedColor);
+                g->translate(px, px);
+                g->setColor(shadowConf.col_shadow);
+                g->drawVAO(buffer.getEmojiVAO());
+                g->translate(-px, -px);
+                g->setColor(argb(shadowConf.col_text.a, 255, 255, 255));
+            } else {
+                g->setColor(argb(savedColor.a, 255, 255, 255));
+            }
+
+            g->drawVAO(buffer.getEmojiVAO());
+            g->setColor(savedColor);
+        }
     }
 
     if(cv::r_debug_drawstring_unbind.getBool()) {
