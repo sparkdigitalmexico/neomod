@@ -136,7 +136,7 @@ $(DEPS_CACHE)/SoundTouch-$(SOUNDTOUCH_VERSION).tar.gz:
 
 # --with-ffmpeg
 # if changing build params, to invalidate .built stamps (without updating version)
-FFMPEG_EPOCH := 4
+FFMPEG_EPOCH := 5
 # newer releases are broken for windows xp
 FFMPEG_VERSION_REAL := $(if $(ubercompat),2456a39581c3388bcf6f61c66aef36a887537c23,$(FFMPEG_VERSION))
 FFMPEG_URL := $(if $(ubercompat),https://github.com/FFmpeg/FFmpeg/archive/$(FFMPEG_VERSION_REAL).tar.gz,https://ffmpeg.org/releases/ffmpeg-$(FFMPEG_VERSION_REAL).tar.xz)
@@ -607,7 +607,7 @@ FFMPEG_CONFIGURE_FLAGS += --disable-programs
 FFMPEG_CONFIGURE_FLAGS += --disable-doc
 FFMPEG_CONFIGURE_FLAGS += --disable-avdevice --disable-avfilter --disable-network --disable-iamf --disable-pixelutils
 FFMPEG_CONFIGURE_FLAGS += --disable-everything
-FFMPEG_CONFIGURE_FLAGS += --enable-pic
+FFMPEG_CONFIGURE_FLAGS += --enable-pic --enable-small
 FFMPEG_CONFIGURE_FLAGS += --enable-decoder=mp3,aac,vorbis,opus,flac,pcm_s16le,pcm_f32le,mjpeg,bmp,gif,tiff,webp,tga
 FFMPEG_CONFIGURE_FLAGS += --enable-demuxer=mp3,aac,ogg,flac,wav,mov,m4a,matroska,image2,image2pipe,image_jpeg_pipe,image_bmp_pipe,image_gif_pipe,image_tiff_pipe,image_webp_pipe
 FFMPEG_CONFIGURE_FLAGS += --enable-parser=aac,flac,mpegaudio,vorbis,opus,mjpeg

@@ -92,7 +92,7 @@ int parse_log_level_from_string(std::string_view str) {
 // awkwardly sandwiched in here to avoid needing to forward declare it
 namespace cv {
 ConVar debug_ffmpeg("debug_ffmpeg", "fatal", CLIENT,
-                    "(0/empty/false/none);fatal;error;warn;info;verbose;debug_trace;max", [](std::string_view value) {
+                    "(0/empty/false/none);fatal;error;warn;info;verbose;debug;trace;max", [](std::string_view value) {
                         if(Mc::FFmpeg::funcs::av_log_set_level) {
                             Mc::FFmpeg::funcs::av_log_set_level(Mc::FFmpeg::parse_log_level_from_string(value));
                         }
@@ -158,7 +158,7 @@ bool load_full_ff_lib(const std::array<FFmpegFuncset, 4> &ffmpeg_funcsets) {
         }
 
 #define LOAD_LIB_FUNCS_BODY(fname)                                                          \
-    failed_count += !((fname) = load_func<fname##_t>(current_library_outer_macro, #fname)); \
+    failed_count += !((fname) = dynutils::load_func<fname##_t>(current_library_outer_macro, #fname)); \
     if(!(fname)) ld_ctx().error_string.append(missing_prefix_outer_macro + #fname + "\n");
 
         // then load the functions using the x-macro list for the current lib

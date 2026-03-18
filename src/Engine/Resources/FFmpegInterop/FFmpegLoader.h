@@ -10,7 +10,6 @@
 
 #include <string>
 
-// include ffmpeg headers in their own namespace for type derivation
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
