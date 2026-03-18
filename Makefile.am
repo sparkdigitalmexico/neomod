@@ -598,7 +598,7 @@ SOLOUD_FFMPEG_DEP =
 if USE_FFMPEG
 SOLOUD_FFMPEG_DEP += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 
-FFMPEG_INCDIR := $(DEPS_PREFIX)/include
+FFMPEG_INCFLAG := -I$(DEPS_PREFIX)/include
 FFMPEG_LIBDIR := $(DEPS_PREFIX)/lib
 FFMPEG_CONFIGURE_FLAGS := --prefix="$(DEPS_PREFIX)"
 FFMPEG_CONFIGURE_FLAGS += --enable-gpl
@@ -618,10 +618,12 @@ FFMPEG_CONFIGURE_FLAGS += --ranlib=$(RANLIB) --ar=$(AR) --cc=$(CC) --cxx=$(CXX) 
 FFMPEG_CONFIGURE_FLAGS += $(if $(findstring mingw,$(host_os)),--disable-w32threads --enable-pthreads --windres=$(WINDRES),)
 FFMPEG_CONFIGURE_FLAGS += $(if $(ffmpeg_strip),,--disable-stripping)
 FFMPEG_CONFIGURE_FLAGS += $(if $(findstring $(host),$(build)),,--enable-cross-compile)
-FFMPEG_EXTRA_FLAGS := $(if $(findstring mingw,$(host_os)),-fno-lto $(if $(findstring whole-program,$(CXXFLAGS)),-fno-whole-program-vtables,),)
+# LTO is just broken on mingw so disable it entirely there
+# GCC LTO partitioning breaks ffmpeg's inline asm direct symbol refs (static const data gets split into a different ltrans unit from the asm referencing it by name)
+FFMPEG_EXTRA_FLAGS := $(if $(findstring mingw,$(host_os)),-fno-lto $(if $(findstring whole-program,$(CXXFLAGS)),-fno-whole-program-vtables,),$(if $(findstring fuse-linker-plugin,$(CXXFLAGS)),-flto-partition=none,))
 FFMPEG_EXTRA_FLAGS += -fvisibility=default  # because it's shared (wouldn't be able to load things dynamically if symbols are hidden)
 
-AUDIO_CFLAGS += -I$(FFMPEG_INCDIR)  # so we find our build of ffmpeg's headers for FFmpegLoader
+AUDIO_CFLAGS += $(FFMPEG_INCFLAG)  # so we find our build of ffmpeg's headers for FFmpegLoader
 
 $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built: $(DEPS_CACHE)/$(FFMPEG_TARBALL) $(DEPS_PREFIX)/winpthread-noversion.built
 	rm -rf $(DEPS_PREFIX)/ffmpeg
@@ -650,11 +652,11 @@ $(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built: $(DEPS_CACHE)/SoLoud-$(SOLOUD_VER
 		-D CMAKE_SYSTEM_NAME="$(CMAKE_SYSTEM_NAME)" \
 		-D CMAKE_SYSTEM_PROCESSOR="$(host_cpu)" \
 		-D CMAKE_C_COMPILER="$(CC)" \
-		-D CMAKE_C_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CFLAGS)" \
-		-D CMAKE_C_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CFLAGS)" \
+		-D CMAKE_C_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCFLAG) $(CFLAGS)" \
+		-D CMAKE_C_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCFLAG) $(CFLAGS)" \
 		-D CMAKE_CXX_COMPILER="$(CXX)" \
-		-D CMAKE_CXX_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CXXFLAGS)" \
-		-D CMAKE_CXX_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCDIR) $(CXXFLAGS)" \
+		-D CMAKE_CXX_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCFLAG) $(CXXFLAGS)" \
+		-D CMAKE_CXX_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCFLAG) $(CXXFLAGS)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \

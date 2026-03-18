@@ -1049,7 +1049,6 @@ AS_IF([test "x$enable_omp" = "xyes"], [
     AC_SUBST([OPENMP], [1])
 ])
 
-_using_gcc_lto=
 AS_IF([test "x$enable_lto" != "xno"], [
     AX_CHECK_COMPILE_FLAG([-flto=thin], [
         # -fwhole-program-vtables causes LTO unit splitting issues with emscripten
@@ -1071,7 +1070,6 @@ AS_IF([test "x$enable_lto" != "xno"], [
         ])], [
         # gcc
         AX_CHECK_LINK_FLAG([-flto=auto -ffat-lto-objects -fuse-linker-plugin -fdevirtualize-at-ltrans], [
-            _using_gcc_lto=1
             CXXFLAGS="$CXXFLAGS -flto=auto -ffat-lto-objects -fuse-linker-plugin -fdevirtualize-at-ltrans"
             CFLAGS="$CFLAGS -flto=auto -ffat-lto-objects -fuse-linker-plugin -fdevirtualize-at-ltrans"
             LDFLAGS="$LDFLAGS -flto=auto -ffat-lto-objects -fuse-linker-plugin -fdevirtualize-at-ltrans"

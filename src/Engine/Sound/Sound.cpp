@@ -49,10 +49,8 @@ void Sound::initAsync() {
         this->bIgnored = false;
     }
 
-    if(isRebuild) {
-        // this is technically racy, since sFilePath is not synchronized, and we are probably running async
-        this->sFilePath = toLoad;
-    }
+    // this is technically racy, since sFilePath is not synchronized, and we are probably running async
+    this->sFilePath = toLoad;
 }
 
 void Sound::rebuild(std::string_view newFilePath, bool async) {
