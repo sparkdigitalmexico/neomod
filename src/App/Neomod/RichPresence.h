@@ -1,6 +1,6 @@
 #pragma once
 // Copyright (c) 2018, PG, All rights reserved.
-#include "BanchoProtocol.h"
+enum class Action : unsigned char;
 
 namespace RichPresence {
 void refreshStatus();  // re-run last callback
