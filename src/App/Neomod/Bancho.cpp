@@ -328,31 +328,6 @@ void BanchoState::handle_packet(Packet &packet) {
             auto action = (Action)packet.read<u8>();
 
             UserInfo *user = BANCHO::User::get_user_info(stats_user_id);
-            if(action != user->action) {
-                // TODO @kiwec: i think client is supposed to regularly poll for friend stats
-                if(user->is_friend() && cv::notify_friend_status_change.getBool() &&
-                   (size_t)action < (size_t)Action::MAX) {
-                    static constexpr auto actions = std::array{
-                        "idle"sv,         "afk"sv,           "playing"sv,
-                        "editing"sv,      "modding"sv,       "in a multiplayer lobby"sv,
-                        "spectating"sv,   "vibing"sv,        "testing"sv,
-                        "submitting"sv,   "pausing"sv,       "testing"sv,
-                        "multiplaying"sv, "browsing maps"sv,
-                    };
-                    static_assert((size_t)Action::MAX == actions.size(), "missing action name");
-                    std::string text{fmt::format("{} is now {}", user->name, actions[(size_t)action])};
-                    auto open_dms = [uid = stats_user_id]() -> void {
-                        UserInfo *user = BANCHO::User::get_user_info(uid);
-                        ui->getChat()->openChannel(user->name);
-                    };
-
-                    // TODO: figure out what stable does and do that. for now just throttling to avoid endless spam
-                    if(user->stats_tms + 10000 < Timing::getTicksMS() && action != Action::SUBMITTING) {
-                        ui->getNotificationOverlay()->addToast(text, STATUS_TOAST, open_dms, ToastElement::TYPE::CHAT);
-                    }
-                }
-            }
-
             user->irc_user = is_irc_user;
             user->stats_tms = Timing::getTicksMS();
             user->action = action;
@@ -736,6 +711,15 @@ void BanchoState::handle_packet(Packet &packet) {
             if(presence_user_id == BanchoState::get_uid()) {
                 BanchoState::username = user->name;
                 osu->onUserCardChange(user->name);
+            }
+
+            if(user->is_friend() && cv::notify_friend_status_change.getBool()) {
+                auto text = fmt::format("{} is now online", user->name);
+                auto open_dms = [uid = presence_user_id]() -> void {
+                    UserInfo *user = BANCHO::User::try_get_user_info(uid);
+                    if(user) ui->getChat()->openChannel(user->name);
+                };
+                ui->getNotificationOverlay()->addToast(text, STATUS_TOAST, open_dms, ToastElement::TYPE::CHAT);
             }
 
             ui->getChat()->updateUserList();
