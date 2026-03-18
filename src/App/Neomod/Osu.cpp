@@ -705,7 +705,13 @@ void Osu::update() {
 
     // background image cache tick
     // NOTE: must be before the asynchronous ui toggles due to potential 1-frame unloads after invisible songbrowser
-    this->backgroundImageHandler->update(!this->isInPlayMode());
+    {
+        // songbrowser gets hidden when mod selector opens, so the image can be potentially marked stale and unloaded
+        // which can cause a flicker when exiting mod selector
+        // side TODO: make mod selector partially transparent and don't hide song browser?
+        const bool allowCacheEviction = !this->isInPlayMode() && !this->ui_memb->getModSelector()->isVisible();
+        this->backgroundImageHandler->update(allowCacheEviction);
+    }
 
     this->updateCursorVisibility();
 
