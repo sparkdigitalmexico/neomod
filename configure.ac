@@ -1615,6 +1615,7 @@ AC_CONFIG_FILES([Makefile src/build_timestamp.h])
 AC_OUTPUT
 
 AC_MSG_NOTICE([
+Timestamp:              ${_tstamp}
 neomod build configuration:
     Build target:       ${target}
     Install prefix:     ${prefix}
