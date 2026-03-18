@@ -9,7 +9,6 @@
 #include "SyncMutex.h"
 #include "SyncCV.h"
 
-
 #include "SyncJthread.h"
 
 namespace AsyncPPC {
@@ -263,17 +262,18 @@ void set_map(const DatabaseBeatmap* new_map) {
     const bool had_map = (current_map != nullptr);
     current_map = new_map;
 
+    // stop the worker thread before clearing caches (use-after-free!)
+    if(thr.joinable()) {
+        thr.request_stop();
+        thr.join();
+    }
+
     if(had_map) {
         clear_caches();
     }
 
-    if(!had_map && new_map != nullptr) {
+    if(new_map != nullptr) {
         thr = Sync::jthread(run_thread);
-    } else if(had_map && new_map == nullptr) {
-        if(thr.joinable()) {
-            thr.request_stop();
-            thr.join();
-        }
     }
 }
 
