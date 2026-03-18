@@ -24,7 +24,10 @@ using fmt::literals::operator""_cf;
 
 namespace cv {
 static ConVar vprof_sysinfo_refresh_interval("vprof_sysinfo_refresh_interval", 0.5f, CLIENT);
-}
+static ConVar vprof_details_textshadow(
+    "vprof_details_textshadow", true, CLIENT,
+    "whether the vprof details text (shown by vprof_spike 2) should have shadows (increases overhead)");
+}  // namespace cv
 
 struct VProfGatherer final {
     struct InfoBundle {
@@ -361,6 +364,12 @@ void VisualProfiler::draw() {
         if(this->spike.node.node != nullptr) {
             if(cv::vprof_spike.getInt() == 2) {
                 VPROF_BUDGET("DebugText", VPROF_BUDGETGROUP_DRAW);
+                std::optional<TextShadow> shadow = std::nullopt;
+                if(cv::vprof_details_textshadow.getBool()) {
+                    shadow = TextShadow{.col_text = 0xffcccccc,
+                                        .col_shadow = Colors::invert(0xffcccccc),
+                                        .offs_px = 1.5f * env->getDPIScale()};
+                }
 
                 g->setColor(0xffcccccc);
                 g->pushTransform();
@@ -370,12 +379,13 @@ void VisualProfiler::draw() {
                     for(int i = this->spikeNodes.size() - 1; i >= 0; i--) {
                         g->pushTransform();
                         {
-                            g->translate(this->font->getHeight() * 3 * (this->spikeNodes[i].node.depth - 1), 0);
-                            g->drawString(
-                                this->font,
+                            const std::string text =
                                 fmt::format("[{:s}] - {:s} = {:f} ms"_cf, this->spikeNodes[i].node.node->getName(),
                                             this->profile->getGroupName(this->spikeNodes[i].node.node->getGroupID()),
-                                            this->spikeNodes[i].timeLastFrame * 1000.0));
+                                            this->spikeNodes[i].timeLastFrame * 1000.0);
+
+                            g->translate(this->font->getHeight() * 3 * (this->spikeNodes[i].node.depth - 1), 0);
+                            g->drawString(this->font, text, shadow);
                         }
                         g->popTransform();
 
