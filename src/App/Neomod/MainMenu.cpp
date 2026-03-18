@@ -1376,12 +1376,13 @@ void MainMenu::updateLayout() {
                                         screenSize.y - this->updateAvailableButton->getSize().y - 10 * dpiScale);
 
     {
+        this->tipLabel->setSizeX(screenSize.x * (3.f / 4.f));
+        this->tipLabel->setText(mainmenu::getCurrentTip());
+
         const bool updateButtonVis = this->updateAvailableButton->isVisible();
         const f32 tipLabelStartY = updateButtonVis ? this->updateAvailableButton->getPos().y : screenSize.y;
         const f32 tipLabelMargin = (updateButtonVis ? 10.f : 30.f) * dpiScale;
         const f32 tipLabelYPos = tipLabelStartY - this->tipLabel->getSize().y - tipLabelMargin;
-        this->tipLabel->setSizeX(screenSize.x * (3.f / 4.f));
-        this->tipLabel->setText(mainmenu::getCurrentTip());
         this->tipLabel->setRelPos((screenSize.x - this->tipLabel->getSize().x) / 2.f, tipLabelYPos);
     }
 
