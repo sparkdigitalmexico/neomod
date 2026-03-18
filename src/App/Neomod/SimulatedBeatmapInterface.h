@@ -6,6 +6,8 @@
 class SimulatedBeatmapInterface final : public AbstractBeatmapInterface {
     NOCOPY_NOMOVE(SimulatedBeatmapInterface)
    public:
+    using DBBreak = neomod::DatabaseBeatmapTypes::BREAK;
+
     SimulatedBeatmapInterface() = delete;
     SimulatedBeatmapInterface(DatabaseBeatmap *map, const Replay::Mods &mods_);
     ~SimulatedBeatmapInterface() override;
@@ -79,7 +81,7 @@ class SimulatedBeatmapInterface final : public AbstractBeatmapInterface {
     [[nodiscard]] u32 getLength() const override;
     [[nodiscard]] u32 getLengthPlayable() const override;
     [[nodiscard]] u32 getBreakDurationTotal() const override;
-    [[nodiscard]] DatabaseBeatmapTypes::BREAK getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const;
+    [[nodiscard]] DBBreak getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const;
 
     // HitObject and other helper functions
     LiveHitResult addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta, bool isEndOfCombo = false,
@@ -104,7 +106,7 @@ class SimulatedBeatmapInterface final : public AbstractBeatmapInterface {
     f64 fDrainRate = 0.0;
 
     // breaks
-    std::vector<DatabaseBeatmapTypes::BREAK> breaks;
+    std::vector<DBBreak> breaks;
     bool bInBreak = false;
     HitObject *currentHitObject = nullptr;
     i32 iNextHitObjectTime = 0;

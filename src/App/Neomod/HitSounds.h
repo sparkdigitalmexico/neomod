@@ -2,32 +2,19 @@
 // Copyright (c) 2025, kiwec, All rights reserved.
 
 #include "types.h"
-
 #include "DatabaseBeatmapTypes.h"
 
 #include <string>
 #include <vector>
 #include <memory>
 
-namespace SampleSetType {
-enum : u8 {
-    NORMAL = 1,
-    SOFT = 2,
-    DRUM = 3,
-};
-}
+class BeatmapInterface;
 
-namespace HitSoundType {
-enum : u8 {
-    NORMAL = (1 << 0),
-    WHISTLE = (1 << 1),
-    FINISH = (1 << 2),
-    CLAP = (1 << 3),
+namespace neomod::HitSoundUtils {
+using DBHitSample = DatabaseBeatmapTypes::HITSAMPLE_BITS;
 
-    VALID_HITSOUNDS = NORMAL | WHISTLE | FINISH | CLAP,
-    VALID_SLIDER_HITSOUNDS = NORMAL | WHISTLE,
-};
-}
+using DatabaseBeatmapTypes::HitSoundType;
+using DatabaseBeatmapTypes::SampleSetType;
 
 // all external state that hitsound resolution depends on, gathered from globals at the call site
 struct HitSoundContext {
@@ -55,9 +42,6 @@ struct ResolvedSliderTick {
     u8 set;  // 0=normal, 1=soft, 2=drum
 };
 
-using DBHitSample = DatabaseBeatmapTypes::HITSAMPLE_BITS;
-
-namespace HitSamples {
 // played sample indices for passing to stop()
 struct Set_Slider_Hit {
     u8 set;
@@ -65,20 +49,18 @@ struct Set_Slider_Hit {
     u8 hit;
 };
 
-std::vector<Set_Slider_Hit> play(DBHitSample info, f32 pan, i32 delta, i32 play_time = -1,
+std::vector<Set_Slider_Hit> play(BeatmapInterface *pf, DBHitSample info, f32 pan, i32 delta, i32 play_time = -1,
                                  bool is_sliderslide = false);
 
-void stopSliderSounds(const std::vector<Set_Slider_Hit> &specific_sets);
+void stopSliderSounds(BeatmapInterface *pf, const std::vector<Set_Slider_Hit> &specific_sets);
 
 // pure versions that take all dependencies as parameters
 [[nodiscard]] u8 getNormalSet(DBHitSample info, const HitSoundContext &ctx);
 [[nodiscard]] u8 getAdditionSet(DBHitSample info, const HitSoundContext &ctx);
-[[nodiscard]] f32 getVolume(DBHitSample info, const HitSoundContext &ctx, u8 hitSoundType,
-                            bool is_sliderslide);
+[[nodiscard]] f32 getVolume(DBHitSample info, const HitSoundContext &ctx, u8 hitSoundType, bool is_sliderslide);
 
 // determines which sounds should be played without actually playing them
-[[nodiscard]] std::vector<ResolvedHitSound> resolve(DBHitSample info, const HitSoundContext &ctx,
-                                                    bool is_sliderslide);
+[[nodiscard]] std::vector<ResolvedHitSound> resolve(DBHitSample info, const HitSoundContext &ctx, bool is_sliderslide);
 
 [[nodiscard]] ResolvedSliderTick resolveSliderTick(DBHitSample info, const HitSoundContext &ctx);
-}  // namespace HitSamples
+}  // namespace neomod::HitSoundUtils

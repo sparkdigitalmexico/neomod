@@ -14,7 +14,6 @@
 #include "SyncCV.h"
 #include "ContainerRanges.h"
 
-
 #include "binary_embed.h"
 #include <curl/curl.h>
 
@@ -402,7 +401,6 @@ void NetworkImpl::processCompletedRequests() {
 }
 
 void NetworkImpl::websocketSend() {
-
     for(auto& [handle, req] : this->active_requests) {
         if(!req->websocket || req->websocket->status.load(std::memory_order_relaxed) != WSStatus::CONNECTED) continue;
         auto& ws = req->websocket;
@@ -482,7 +480,7 @@ int curlDebugCallback(CURL* /*handle*/, curl_infotype type, char* data, size_t s
     }
 
     if(!sv.empty()) {
-        logRawChannel(CHAN_NETWORK, sv);
+        logRawChannel(Logger::CHAN_NETWORK, sv);
     }
 
     return 0;

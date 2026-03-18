@@ -34,6 +34,9 @@ struct Click {
 class BeatmapInterface final : public AbstractBeatmapInterface {
     NOCOPY_NOMOVE(BeatmapInterface)
    public:
+    using DBTimingInfo = neomod::DatabaseBeatmapTypes::TIMING_INFO;
+    using DBBreak = neomod::DatabaseBeatmapTypes::BREAK;
+
     // for handling transition from unloaded database to loaded database
     static inline constinit MD5Hash loading_reselect_map{};
 
@@ -143,9 +146,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     void setMusicSpeed(f32 speed);
     void setMusicPitch(f32 pitch);
     void seekMS(u32 ms);
-    [[nodiscard]] inline DatabaseBeatmapTypes::TIMING_INFO getCurrentTimingInfo() const {
-        return this->cur_timing_info;
-    }
+    [[nodiscard]] inline DBTimingInfo getCurrentTimingInfo() const { return this->cur_timing_info; }
     [[nodiscard]] inline u8 getDefaultSampleSet() const { return this->default_sample_set; }
 
     [[nodiscard]] inline Sound *getMusic() const { return this->music; }
@@ -232,9 +233,9 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     [[nodiscard]] inline f32 shouldFlashSectionFail() const { return this->fShouldFlashSectionFail; }
     [[nodiscard]] bool isWaiting() const override { return this->bIsWaiting; }
 
-    [[nodiscard]] inline const std::vector<DatabaseBeatmapTypes::BREAK> &getBreaks() const { return this->breaks; }
+    [[nodiscard]] inline const std::vector<DBBreak> &getBreaks() const { return this->breaks; }
     [[nodiscard]] u32 getBreakDurationTotal() const override;
-    [[nodiscard]] DatabaseBeatmapTypes::BREAK getBreakForTimeRange(i64 startMS, i64 positionMS, i64 endMS) const;
+    [[nodiscard]] DBBreak getBreakForTimeRange(i64 startMS, i64 positionMS, i64 endMS) const;
 
     // HitObject and other helper functions
     LiveHitResult addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta, bool isEndOfCombo = false,
@@ -302,7 +303,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     bool bIsFirstMissSound;
     bool bIsWaitingForPreview{false};
     bool bIsAsyncMusicLoadHandled{true};
-    DatabaseBeatmapTypes::TIMING_INFO cur_timing_info{};
+    DBTimingInfo cur_timing_info{};
     u8 default_sample_set{1};
 
     // health
@@ -315,7 +316,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     f64 fDrainRate;
 
     // breaks
-    std::vector<DatabaseBeatmapTypes::BREAK> breaks;
+    std::vector<DBBreak> breaks;
     AnimFloat fBreakBackgroundFade;
     bool bInBreak;
     HitObject *currentHitObject;

@@ -6,7 +6,7 @@
 #include "HitSounds.h"
 
 namespace Mc::Tests {
-using namespace HitSamples;
+using namespace neomod::HitSoundUtils;
 
 // see https://github.com/ppy/osu/blob/69c27478832d873d8c376c017708784c6653e79c/osu.Game.Tests/Gameplay/TestSceneHitObjectSamples.cs
 // for test reference
@@ -73,14 +73,16 @@ void HitSoundTest::runTests() {
     TEST_SECTION("getNormalSet");
     {
         // hitobject normalSet wins over timing point
-        DBHitSample s{.normalSet = SampleSetType::DRUM};
+        DBHitSample s{};
+        s.normalSet = SampleSetType::DRUM;
         auto ctx = defaultCtx();
         ctx.timingPointSampleSet = SampleSetType::SOFT;
         TEST_ASSERT_EQ(getNormalSet(s, ctx), (i32)SampleSetType::DRUM, "hitobject normalSet overrides timing point");
     }
     {
         // timing point wins when hitobject normalSet is 0
-        DBHitSample s{.normalSet = 0};
+        DBHitSample s{};
+        s.normalSet = 0;
         auto ctx = defaultCtx();
         ctx.timingPointSampleSet = SampleSetType::SOFT;
         TEST_ASSERT_EQ(getNormalSet(s, ctx), (i32)SampleSetType::SOFT,
@@ -88,7 +90,8 @@ void HitSoundTest::runTests() {
     }
     {
         // default wins when both hitobject and timing point are 0
-        DBHitSample s{.normalSet = 0};
+        DBHitSample s{};
+        s.normalSet = 0;
         auto ctx = defaultCtx();
         ctx.timingPointSampleSet = 0;
         ctx.defaultSampleSet = SampleSetType::DRUM;
@@ -96,7 +99,8 @@ void HitSoundTest::runTests() {
     }
     {
         // forced sample set overrides everything
-        DBHitSample s{.normalSet = SampleSetType::SOFT};
+        DBHitSample s{};
+        s.normalSet = SampleSetType::SOFT;
         auto ctx = defaultCtx();
         ctx.timingPointSampleSet = SampleSetType::DRUM;
         ctx.forcedSampleSet = SampleSetType::NORMAL;
@@ -110,19 +114,25 @@ void HitSoundTest::runTests() {
     TEST_SECTION("getAdditionSet");
     {
         // hitobject additionSet used directly
-        DBHitSample s{.normalSet = SampleSetType::NORMAL, .additionSet = SampleSetType::DRUM};
+        DBHitSample s{};
+        s.normalSet = SampleSetType::NORMAL;
+        s.additionSet = SampleSetType::DRUM;
         auto ctx = defaultCtx();
         TEST_ASSERT_EQ(getAdditionSet(s, ctx), (i32)SampleSetType::DRUM, "hitobject additionSet used directly");
     }
     {
         // falls back to normalSet when additionSet is 0
-        DBHitSample s{.normalSet = SampleSetType::SOFT, .additionSet = 0};
+        DBHitSample s{};
+        s.normalSet = SampleSetType::SOFT;
+        s.additionSet = 0;
         auto ctx = defaultCtx();
         TEST_ASSERT_EQ(getAdditionSet(s, ctx), (i32)SampleSetType::SOFT, "additionSet falls back to normalSet");
     }
     {
         // falls through the full chain: additionSet=0 -> normalSet=0 -> timing point
-        DBHitSample s{.normalSet = 0, .additionSet = 0};
+        DBHitSample s{};
+        s.normalSet = 0;
+        s.additionSet = 0;
         auto ctx = defaultCtx();
         ctx.timingPointSampleSet = SampleSetType::DRUM;
         TEST_ASSERT_EQ(getAdditionSet(s, ctx), (i32)SampleSetType::DRUM,
@@ -130,7 +140,8 @@ void HitSoundTest::runTests() {
     }
     {
         // forced sample set overrides additionSet too
-        DBHitSample s{.additionSet = SampleSetType::SOFT};
+        DBHitSample s{};
+        s.additionSet = SampleSetType::SOFT;
         auto ctx = defaultCtx();
         ctx.forcedSampleSet = SampleSetType::DRUM;
         TEST_ASSERT_EQ(getAdditionSet(s, ctx), (i32)SampleSetType::DRUM, "forced sample set overrides additionSet");
@@ -142,7 +153,8 @@ void HitSoundTest::runTests() {
     TEST_SECTION("getVolume");
     {
         // hitobject volume overrides timing point volume
-        DBHitSample s{.volume = 50};
+        DBHitSample s{};
+        s.volume = 50;
         auto ctx = defaultCtx();
         ctx.timingPointVolume = 80;
         f32 vol = getVolume(s, ctx, HitSoundType::NORMAL, false);
@@ -151,7 +163,8 @@ void HitSoundTest::runTests() {
     }
     {
         // timing point volume used when hitobject volume is 0
-        DBHitSample s{.volume = 0};
+        DBHitSample s{};
+        s.volume = 0;
         auto ctx = defaultCtx();
         ctx.timingPointVolume = 80;
         f32 vol = getVolume(s, ctx, HitSoundType::NORMAL, false);
@@ -160,7 +173,8 @@ void HitSoundTest::runTests() {
     }
     {
         // hitcircle sound type modifiers
-        DBHitSample s{.volume = 100};
+        DBHitSample s{};
+        s.volume = 100;
         auto ctx = defaultCtx();
         TEST_ASSERT_NEAR(getVolume(s, ctx, HitSoundType::NORMAL, false), 0.8f, 0.001f, "NORMAL volume modifier is 0.8");
         TEST_ASSERT_NEAR(getVolume(s, ctx, HitSoundType::WHISTLE, false), 0.85f, 0.001f,
@@ -170,7 +184,8 @@ void HitSoundTest::runTests() {
     }
     {
         // slider sounds have no hitcircle modifier
-        DBHitSample s{.volume = 100};
+        DBHitSample s{};
+        s.volume = 100;
         auto ctx = defaultCtx();
         TEST_ASSERT_NEAR(getVolume(s, ctx, HitSoundType::NORMAL, true), 1.0f, 0.001f,
                          "slider NORMAL has no volume modifier");
@@ -179,7 +194,8 @@ void HitSoundTest::runTests() {
     }
     {
         // ignore_beatmap_sample_volume skips all volume scaling from map
-        DBHitSample s{.volume = 50};
+        DBHitSample s{};
+        s.volume = 50;
         auto ctx = defaultCtx();
         ctx.ignoreSampleVolume = true;
         f32 vol = getVolume(s, ctx, HitSoundType::NORMAL, false);
@@ -188,7 +204,8 @@ void HitSoundTest::runTests() {
     }
     {
         // volume boost applies logarithmic curve to non-slider sounds
-        DBHitSample s{.volume = 100};
+        DBHitSample s{};
+        s.volume = 100;
         auto ctx = defaultCtx();
         ctx.boostVolume = true;
         f32 vol = getVolume(s, ctx, HitSoundType::NORMAL, false);
@@ -198,7 +215,8 @@ void HitSoundTest::runTests() {
     }
     {
         // volume boost does not apply to slider sounds
-        DBHitSample s{.volume = 50};
+        DBHitSample s{};
+        s.volume = 50;
         auto ctx = defaultCtx();
         ctx.boostVolume = true;
         f32 vol = getVolume(s, ctx, HitSoundType::NORMAL, true);
@@ -212,7 +230,8 @@ void HitSoundTest::runTests() {
     TEST_SECTION("resolve");
     {
         // hitSounds=0 -> plays hitnormal only
-        DBHitSample s{.hitSounds = 0};
+        DBHitSample s{};
+        s.hitSounds = 0;
         auto ctx = defaultCtx();
         auto r = resolve(s, ctx, false);
         TEST_ASSERT_EQ((int)r.size(), 1, "hitSounds=0 resolves to 1 sound");
@@ -223,7 +242,8 @@ void HitSoundTest::runTests() {
     }
     {
         // single hitsound: just WHISTLE
-        DBHitSample s{.hitSounds = HitSoundType::WHISTLE};
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::WHISTLE;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = false;
         auto r = resolve(s, ctx, false);
@@ -235,7 +255,8 @@ void HitSoundTest::runTests() {
     }
     {
         // layered hitsounds: WHISTLE + forced hitnormal
-        DBHitSample s{.hitSounds = HitSoundType::WHISTLE};
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::WHISTLE;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = true;
         auto r = resolve(s, ctx, false);
@@ -248,7 +269,8 @@ void HitSoundTest::runTests() {
     }
     {
         // layered disabled, hitSounds=0 -> still plays hitnormal (special case)
-        DBHitSample s{.hitSounds = 0};
+        DBHitSample s{};
+        s.hitSounds = 0;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = false;
         auto r = resolve(s, ctx, false);
@@ -259,7 +281,8 @@ void HitSoundTest::runTests() {
     }
     {
         // multiple hitsounds: WHISTLE | CLAP with layered
-        DBHitSample s{.hitSounds = HitSoundType::WHISTLE | HitSoundType::CLAP};
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::WHISTLE | HitSoundType::CLAP;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = true;
         auto r = resolve(s, ctx, false);
@@ -274,8 +297,8 @@ void HitSoundTest::runTests() {
     }
     {
         // all four hitsounds
-        DBHitSample s{.hitSounds =
-                          HitSoundType::NORMAL | HitSoundType::WHISTLE | HitSoundType::FINISH | HitSoundType::CLAP};
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::NORMAL | HitSoundType::WHISTLE | HitSoundType::FINISH | HitSoundType::CLAP;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = false;
         auto r = resolve(s, ctx, false);
@@ -294,11 +317,10 @@ void HitSoundTest::runTests() {
     TEST_SECTION("resolve sample set routing");
     {
         // normal sound uses normalSet, addition sounds use additionSet
-        DBHitSample s{
-            .hitSounds = HitSoundType::NORMAL | HitSoundType::WHISTLE,
-            .normalSet = SampleSetType::DRUM,
-            .additionSet = SampleSetType::SOFT,
-        };
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::NORMAL | HitSoundType::WHISTLE;
+        s.normalSet = SampleSetType::DRUM;
+        s.additionSet = SampleSetType::SOFT;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = false;
         auto r = resolve(s, ctx, false);
@@ -311,11 +333,10 @@ void HitSoundTest::runTests() {
     }
     {
         // with layered: hitnormal uses normalSet, addition uses additionSet
-        DBHitSample s{
-            .hitSounds = HitSoundType::CLAP,
-            .normalSet = SampleSetType::SOFT,
-            .additionSet = SampleSetType::DRUM,
-        };
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::CLAP;
+        s.normalSet = SampleSetType::SOFT;
+        s.additionSet = SampleSetType::DRUM;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = true;
         auto r = resolve(s, ctx, false);
@@ -332,7 +353,8 @@ void HitSoundTest::runTests() {
     TEST_SECTION("resolve slider sounds");
     {
         // slider sounds use slider index
-        DBHitSample s{.hitSounds = HitSoundType::NORMAL};
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::NORMAL;
         auto ctx = defaultCtx();
         auto r = resolve(s, ctx, true);
         TEST_ASSERT_EQ((int)r.size(), 1, "slider NORMAL -> 1 sound");
@@ -344,8 +366,8 @@ void HitSoundTest::runTests() {
     }
     {
         // slider FINISH and CLAP are filtered out (SOUND_METHODS has nullptr for those)
-        DBHitSample s{.hitSounds =
-                          HitSoundType::NORMAL | HitSoundType::WHISTLE | HitSoundType::FINISH | HitSoundType::CLAP};
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::NORMAL | HitSoundType::WHISTLE | HitSoundType::FINISH | HitSoundType::CLAP;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = false;
         auto r = resolve(s, ctx, true);
@@ -362,7 +384,9 @@ void HitSoundTest::runTests() {
     TEST_SECTION("resolve zero volume");
     {
         // timing point volume=0 with hitobject volume=0 -> 0 volume -> skipped
-        DBHitSample s{.hitSounds = HitSoundType::NORMAL, .volume = 0};
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::NORMAL;
+        s.volume = 0;
         auto ctx = defaultCtx();
         ctx.timingPointVolume = 0;
         auto r = resolve(s, ctx, false);
@@ -374,11 +398,10 @@ void HitSoundTest::runTests() {
     // -------------------------------------------------------
     TEST_SECTION("resolve forced sample set");
     {
-        DBHitSample s{
-            .hitSounds = HitSoundType::NORMAL | HitSoundType::WHISTLE,
-            .normalSet = SampleSetType::SOFT,
-            .additionSet = SampleSetType::DRUM,
-        };
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::NORMAL | HitSoundType::WHISTLE;
+        s.normalSet = SampleSetType::SOFT;
+        s.additionSet = SampleSetType::DRUM;
         auto ctx = defaultCtx();
         ctx.forcedSampleSet = SampleSetType::NORMAL;
         ctx.layeredHitSounds = false;
@@ -396,10 +419,9 @@ void HitSoundTest::runTests() {
     // -------------------------------------------------------
     TEST_SECTION("resolve volume values");
     {
-        DBHitSample s{
-            .hitSounds = HitSoundType::NORMAL | HitSoundType::FINISH,
-            .volume = 80,
-        };
+        DBHitSample s{};
+        s.hitSounds = HitSoundType::NORMAL | HitSoundType::FINISH;
+        s.volume = 80;
         auto ctx = defaultCtx();
         ctx.layeredHitSounds = false;
         auto r = resolve(s, ctx, false);
@@ -418,17 +440,18 @@ void HitSoundTest::runTests() {
     TEST_SECTION("resolveSliderTick");
     {
         // slider ticks use the normal sample set, not the addition set (per osu! reference)
-        DBHitSample s{
-            .normalSet = SampleSetType::DRUM,
-            .additionSet = SampleSetType::SOFT,
-        };
+        DBHitSample s{};
+        s.normalSet = SampleSetType::DRUM;
+        s.additionSet = SampleSetType::SOFT;
         auto ctx = defaultCtx();
         auto tick = resolveSliderTick(s, ctx);
         TEST_ASSERT_EQ(tick.set, 2, "slider tick uses normalSet=DRUM (idx 2), not additionSet");
     }
     {
         // slider tick falls back through normalSet chain: hitobject=0 -> timing point
-        DBHitSample s{.normalSet = 0, .additionSet = SampleSetType::DRUM};
+        DBHitSample s{};
+        s.normalSet = 0;
+        s.additionSet = SampleSetType::DRUM;
         auto ctx = defaultCtx();
         ctx.timingPointSampleSet = SampleSetType::SOFT;
         auto tick = resolveSliderTick(s, ctx);
@@ -436,7 +459,8 @@ void HitSoundTest::runTests() {
     }
     {
         // slider tick falls back to default sample set
-        DBHitSample s{.normalSet = 0};
+        DBHitSample s{};
+        s.normalSet = 0;
         auto ctx = defaultCtx();
         ctx.timingPointSampleSet = 0;
         ctx.defaultSampleSet = SampleSetType::DRUM;
@@ -445,7 +469,8 @@ void HitSoundTest::runTests() {
     }
     {
         // forced sample set overrides slider tick set
-        DBHitSample s{.normalSet = SampleSetType::SOFT};
+        DBHitSample s{};
+        s.normalSet = SampleSetType::SOFT;
         auto ctx = defaultCtx();
         ctx.forcedSampleSet = SampleSetType::DRUM;
         auto tick = resolveSliderTick(s, ctx);
@@ -453,14 +478,16 @@ void HitSoundTest::runTests() {
     }
     {
         // slider tick volume from hitobject
-        DBHitSample s{.volume = 60};
+        DBHitSample s{};
+        s.volume = 60;
         auto ctx = defaultCtx();
         auto tick = resolveSliderTick(s, ctx);
         TEST_ASSERT_NEAR(tick.volume, 0.6f, 0.001f, "slider tick volume from hitobject = 60/100");
     }
     {
         // slider tick volume from timing point
-        DBHitSample s{.volume = 0};
+        DBHitSample s{};
+        s.volume = 0;
         auto ctx = defaultCtx();
         ctx.timingPointVolume = 40;
         auto tick = resolveSliderTick(s, ctx);
@@ -468,7 +495,8 @@ void HitSoundTest::runTests() {
     }
     {
         // slider tick volume with ignoreSampleVolume
-        DBHitSample s{.volume = 50};
+        DBHitSample s{};
+        s.volume = 50;
         auto ctx = defaultCtx();
         ctx.ignoreSampleVolume = true;
         auto tick = resolveSliderTick(s, ctx);

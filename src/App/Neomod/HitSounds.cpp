@@ -3,14 +3,13 @@
 #include "BeatmapInterface.h"
 #include "OsuConVars.h"
 // #include "Logging.h"
-#include "Osu.h"
 #include "ResourceManager.h"
 #include "Skin.h"
 #include "DatabaseBeatmap.h"
 #include "SoundEngine.h"
 #include "Sound.h"
 
-namespace HitSamples {
+namespace neomod::HitSoundUtils {
 
 u8 getNormalSet(DBHitSample info, const HitSoundContext &ctx) {
     if(ctx.forcedSampleSet > 0) return ctx.forcedSampleSet;
@@ -156,7 +155,7 @@ static constexpr u8 hitSoundToIndex(u8 hitSound) {
 std::vector<ResolvedHitSound> resolve(DBHitSample info, const HitSoundContext &ctx, bool is_sliderslide) {
     std::vector<ResolvedHitSound> result;
 
-    namespace HT = HitSoundType;
+    using HT = HitSoundType;
     for(const auto type : {HT::NORMAL, HT::WHISTLE, HT::FINISH, HT::CLAP}) {
         // special case for NORMAL (play if info.hitSounds == 0 or layered hitsounds are enabled)
 
@@ -203,14 +202,14 @@ ResolvedSliderTick resolveSliderTick(DBHitSample info, const HitSoundContext &ct
 
 // global-dependent methods (delegate to pure versions)
 
-std::vector<Set_Slider_Hit> play(DBHitSample info, f32 pan, i32 delta, i32 play_time, bool is_sliderslide) {
-    const auto *map_iface = osu->getMapInterface();
-    if(unlikely(!map_iface)) return {};  // sanity
+std::vector<Set_Slider_Hit> play(BeatmapInterface *pf, DBHitSample info, f32 pan, i32 delta, i32 play_time,
+                                 bool is_sliderslide) {
+    assert(pf);
 
     // Don't play hitsounds when seeking
-    if(unlikely(map_iface->bWasSeekFrame)) return {};
+    if(unlikely(pf->bWasSeekFrame)) return {};
 
-    const Skin *skin = map_iface->getSkin();
+    const Skin *skin = pf->getSkin();
     if(unlikely(!skin)) return {};  // sanity
 
     if(!cv::sound_panning.getBool() || (cv::mod_fposu.getBool() && !cv::mod_fposu_sound_panning.getBool()) ||
@@ -222,19 +221,19 @@ std::vector<Set_Slider_Hit> play(DBHitSample info, f32 pan, i32 delta, i32 play_
 
     f32 pitch = 0.f;
     if(cv::snd_pitch_hitsounds.getBool()) {
-        f32 range = map_iface->getHitWindow100();
+        f32 range = pf->getHitWindow100();
         pitch = (f32)delta / range * cv::snd_pitch_hitsounds_factor.getFloat();
     }
 
     // build context from current state
-    const BeatmapDifficulty *beatmap = map_iface->getBeatmap();
+    const BeatmapDifficulty *beatmap = pf->getBeatmap();
     const auto ti = (play_time != -1 && beatmap)
                         ? beatmap->getTimingInfoForTime(play_time + cv::timingpoints_offset.getInt())
-                        : map_iface->getCurrentTimingInfo();
+                        : pf->getCurrentTimingInfo();
     HitSoundContext ctx{
         .timingPointSampleSet = ti.sampleSet,
         .timingPointVolume = ti.volume,
-        .defaultSampleSet = map_iface->getDefaultSampleSet(),
+        .defaultSampleSet = pf->getDefaultSampleSet(),
         .forcedSampleSet = cv::skin_force_hitsound_sample_set.getVal<u8>(),
         .layeredHitSounds = skin->o_layered_hitsounds,
         .ignoreSampleVolume = cv::ignore_beatmap_sample_volume.getBool(),
@@ -258,11 +257,11 @@ std::vector<Set_Slider_Hit> play(DBHitSample info, f32 pan, i32 delta, i32 play_
     return played_list;
 }
 
-void stopSliderSounds(const std::vector<Set_Slider_Hit> &specific_sets) {
+void stopSliderSounds(BeatmapInterface *pf, const std::vector<Set_Slider_Hit> &specific_sets) {
+    assert(pf);
+
     // TODO @kiwec: map hitsounds are not supported
-    const auto *map_iface = osu->getMapInterface();
-    if(unlikely(!map_iface)) return;  // sanity
-    const Skin *skin = map_iface->getSkin();
+    const Skin *skin = pf->getSkin();
     if(unlikely(!skin)) return;  // sanity
 
     // stop specified previously played sounds, otherwise stop everything
@@ -298,4 +297,4 @@ void stopSliderSounds(const std::vector<Set_Slider_Hit> &specific_sets) {
     }
 }
 
-}  // namespace HitSamples
+}  // namespace neomod::HitSoundUtils

@@ -1,6 +1,7 @@
 // Copyright (c) 2019, PG & Francesco149 & Khangaroo & Givikap120, All rights reserved.
 #include "DifficultyCalculator.h"
 
+#include "DatabaseBeatmapTypes.h"
 #include "SliderCurves.h"
 #include "GameRules.h"
 #include "ModFlags.h"
@@ -43,15 +44,18 @@ namespace DiffCalc {
 const u32 PP_ALGORITHM_VERSION{20251008};
 }  // namespace DiffCalc
 
+using SLIDER_SCORING_TIME = DifficultyHitObject::SLIDER_SCORING_TIME;
+using SliderCurve = DifficultyHitObject::SliderCurve;
+
 DifficultyHitObject::DifficultyHitObject(TYPE type, vec2 pos, i32 time) : DifficultyHitObject(type, pos, time, time) {}
 
 DifficultyHitObject::DifficultyHitObject(TYPE type, vec2 pos, i32 time, i32 endTime)
-    : DifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<vec2>(), 0.0f,
+    : DifficultyHitObject(type, pos, time, endTime, 0.0f, SLIDERCURVETYPE{}, std::vector<vec2>(), 0.0f,
                           std::vector<SLIDER_SCORING_TIME>(), 0, true) {}
 
 DifficultyHitObject::DifficultyHitObject(TYPE type, vec2 pos, i32 time, i32 endTime, f32 spanDuration,
-                                         i8 osuSliderCurveType, const std::vector<vec2> &controlPoints, f32 pixelLength,
-                                         std::vector<SLIDER_SCORING_TIME> scoringTimes, i32 repeats,
+                                         SLIDERCURVETYPE osuSliderCurveType, const std::vector<vec2> &controlPoints,
+                                         f32 pixelLength, std::vector<SLIDER_SCORING_TIME> scoringTimes, i32 repeats,
                                          bool calculateSliderCurveInConstructor)
     : pos(pos),
       time(time),
@@ -518,8 +522,8 @@ f64 DifficultyCalculator::recomputeStarRating(const RawDifficultyValues &raw, co
     const f64 adjAR = GameRules::arWithSpeed(beatmapData.AR, beatmapData.speedMultiplier);
     const f64 adjOD = adjustOverallDifficultyByClockRate(beatmapData.OD, beatmapData.speedMultiplier);
 
-    const f64 aim = computeAimRating(raw.aim, numDiffObjects, adjAR, adjOD, mechanicalDifficultyRating, sliderFactor,
-                                     beatmapData);
+    const f64 aim =
+        computeAimRating(raw.aim, numDiffObjects, adjAR, adjOD, mechanicalDifficultyRating, sliderFactor, beatmapData);
     const f64 speed =
         computeSpeedRating(raw.speed, numDiffObjects, adjAR, adjOD, mechanicalDifficultyRating, beatmapData);
 
@@ -529,8 +533,8 @@ f64 DifficultyCalculator::recomputeStarRating(const RawDifficultyValues &raw, co
 void DifficultyCalculator::calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &b,
                                                       i32 upToObjectIndex) {
     // Nested score per object
-    const f64 big_tick_score = 30;
-    const f64 small_tick_score = 10;
+    constexpr f64 bigTickScore = 30;
+    constexpr f64 smallTickScore = 10;
 
     f64 sliderScore = 0;
     f64 spinnerScore = 0;
@@ -554,7 +558,7 @@ void DifficultyCalculator::calculateScoreV1Attributes(DifficultyAttributes &attr
                 if(nestedHitObject.type == SLIDER_SCORING_TIME::TYPE::TICK) amountOfSmallTicks++;
             }
 
-            sliderScore += amountOfBigTicks * big_tick_score + amountOfSmallTicks * small_tick_score;
+            sliderScore += amountOfBigTicks * bigTickScore + amountOfSmallTicks * smallTickScore;
         } else if(hitObject.type == DifficultyHitObject::TYPE::SPINNER)
             spinnerScore += calculateScoreV1SpinnerScore(hitObject.baseEndTime - hitObject.baseTime);
     }
@@ -570,7 +574,7 @@ void DifficultyCalculator::calculateScoreV1Attributes(DifficultyAttributes &attr
 
     // Maximum combo score
     const f64 score_increase = 300.;
-    i32 combo = 0;
+    u32 combo = 0;
     attributes.MaximumLegacyComboScore = 0;
 
     for(i32 i = 0; i < upToObjectIndex; i++) {
@@ -584,8 +588,10 @@ void DifficultyCalculator::calculateScoreV1Attributes(DifficultyAttributes &attr
             combo++;
         }
 
-        attributes.MaximumLegacyComboScore +=
-            (i32)(std::max(0, combo - 1) * (score_increase / 25. * attributes.LegacyScoreBaseMultiplier));
+        if(combo > 0) {
+            attributes.MaximumLegacyComboScore +=
+                (u32)(combo * (score_increase / 25. * attributes.LegacyScoreBaseMultiplier));
+        }
 
         // We have already increased combo for slider
         if(hitObject.type != DifficultyHitObject::TYPE::SLIDER) combo++;
@@ -1704,7 +1710,7 @@ f64 DifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill diff_t
                 f64 deltaDifference = std::max(prevDelta, currDelta) / std::min(prevDelta, currDelta);
 
                 // Take only the fractional part of the value since we're only interested in punishing multiples
-                f64 deltaDifferenceFraction = deltaDifference - std::trunc(deltaDifference);
+                f64 deltaDifferenceFraction = deltaDifference - (i64)(deltaDifference);
 
                 f64 currRatio =
                     1.0 + rhythm_ratio_multiplier * std::min(0.5, smoothstepBellCurve(deltaDifferenceFraction));

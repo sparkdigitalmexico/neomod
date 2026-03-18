@@ -11,17 +11,9 @@
 
 #include <vector>
 
-// TODO: messy
-struct SLIDER_SCORING_TIME;  // DifficultyCalculator.h
+enum class SLIDERCURVETYPE : char;  // see SliderCurves.h
 
-namespace DatabaseBeatmapTypes {
-
-struct HITSAMPLE_BITS {
-    u8 hitSounds{0};    // bitfield of HitSoundTypes to play
-    u8 normalSet{0};    // SampleSetType of the normal sound
-    u8 additionSet{0};  // SampleSetType of the whistle, finish and clap sounds
-    u8 volume{0};       // volume of the sample, 1-100. if 0, use timing point volume instead
-};
+namespace neomod::DatabaseBeatmapTypes {
 
 // raw structs (not editable, we're following db format directly)
 struct TIMINGPOINT final {
@@ -43,7 +35,7 @@ struct BREAK final {
     i64 endTime;
 };
 
-struct TIMING_INFO {
+struct TIMING_INFO final {
     i32 offset{0};
 
     f32 beatLengthBase{0.f};
@@ -58,51 +50,100 @@ struct TIMING_INFO {
     bool operator==(const TIMING_INFO &) const = default;
 };
 
+namespace NSSampleSetType {
+enum t : u8 {
+    NORMAL = 1,
+    SOFT = 2,
+    DRUM = 3,
+};
+}
+
+using SampleSetType = NSSampleSetType::t;
+
+namespace NSHitSoundType {
+enum t : u8 {
+    NORMAL = (1 << 0),
+    WHISTLE = (1 << 1),
+    FINISH = (1 << 2),
+    CLAP = (1 << 3),
+
+    VALID_HITSOUNDS = NORMAL | WHISTLE | FINISH | CLAP,
+    VALID_SLIDER_HITSOUNDS = NORMAL | WHISTLE,
+};
+}
+
+using HitSoundType = NSHitSoundType::t;
+
+struct HITSAMPLE_BITS final {
+    u8 hitSounds;    // bitfield of HitSoundTypes to play
+    u8 normalSet;    // SampleSetType of the normal sound
+    u8 additionSet;  // SampleSetType of the whistle, finish and clap sounds
+    u8 volume;       // volume of the sample, 1-100. if 0, use timing point volume instead
+};
+
+namespace NSPpyHitObjectType {
+enum t : u8 {
+    CIRCLE = (1 << 0),
+    SLIDER = (1 << 1),
+    NEW_COMBO = (1 << 2),
+    SPINNER = (1 << 3),
+    // 4, 5, 6: 3-bit integer specifying how many combo colors to skip (if NEW_COMBO is set)
+    MANIA_HOLD_NOTE = (1 << 7),
+};
+}
+
+using PpyHitObjectType = NSPpyHitObjectType::t;
+
 // primitive objects
 
 struct HITCIRCLE final {
-    int x, y;
+    f32 x, y;
     i32 time;
-    int number;
-    int colorCounter;
-    int colorOffset;
-    bool clicked;
+    i32 number;
+    i32 colorCounter;
+    i32 colorOffset;
+    // bool clicked; // not sure what this was supposed to be used for
     HITSAMPLE_BITS samples;
 };
 
+struct SLIDER_SCORING_TIME final {  // for star calc
+    enum class TYPE : u8 {
+        TICK,
+        REPEAT,
+        END,
+    };
+
+    f32 time;
+    TYPE type;
+};
+
 struct SLIDER final {
-    // needs extern ctors/dtors due to SLIDER_SCORING_TIME being externally defined
-    SLIDER() noexcept;
-    ~SLIDER() noexcept;
-
-    SLIDER(const SLIDER &) noexcept;
-    SLIDER &operator=(const SLIDER &) noexcept;
-    SLIDER(SLIDER &&) noexcept;
-    SLIDER &operator=(SLIDER &&) noexcept;
-
-    int x, y;
-    char type;
-    int repeat;
-    float pixelLength;
+    f32 x, y;
+    i32 repeat;
+    f32 pixelLength;
     i32 time;
-    int number;
-    int colorCounter;
-    int colorOffset;
-    std::vector<vec2> points;
-    HITSAMPLE_BITS hoverSamples;
-    std::vector<HITSAMPLE_BITS> edgeSamples;
+    i32 number;
+    i32 colorCounter;
+    i32 colorOffset;
 
-    float sliderTime;
-    float sliderTimeWithoutRepeats;
-    std::vector<float> ticks;
+    f32 sliderTime;
+    f32 sliderTimeWithoutRepeats;
 
     std::vector<SLIDER_SCORING_TIME> scoringTimesForStarCalc;
+
+    std::vector<vec2> points;
+    std::vector<f32> ticks;
+
+    std::vector<HITSAMPLE_BITS> edgeSamples;
+    HITSAMPLE_BITS hoverSamples;
+
+    SLIDERCURVETYPE type;
 };
 
 struct SPINNER final {
-    int x, y;
+    f32 x, y;
     i32 time;
     i32 endTime;
     HITSAMPLE_BITS samples;
 };
-}  // namespace DatabaseBeatmapTypes
+}  // namespace neomod::DatabaseBeatmapTypes

@@ -25,28 +25,25 @@ using std::stop_token;
 #include <algorithm>
 #include <cmath>
 
+enum class SLIDERCURVETYPE : char;
 enum class ModFlags : u64;
-
+namespace neomod {
 class SliderCurve;
+namespace DatabaseBeatmapTypes {
+struct SLIDER_SCORING_TIME;
+}
+}  // namespace neomod
+
 class ConVar;
 class AbstractBeatmapInterface;
 class DatabaseBeatmap;
 
 struct FinishedScore;
 
-struct SLIDER_SCORING_TIME {
-    enum class TYPE : u8 {
-        TICK,
-        REPEAT,
-        END,
-    };
-
-    TYPE type;
-    f32 time;
-};
-
 class DifficultyHitObject {
    public:
+    using SLIDER_SCORING_TIME = neomod::DatabaseBeatmapTypes::SLIDER_SCORING_TIME;
+    using SliderCurve = neomod::SliderCurve;
     enum class TYPE : u8 {
         INVALID = 0,
         CIRCLE,
@@ -59,8 +56,8 @@ class DifficultyHitObject {
 
     DifficultyHitObject(TYPE type, vec2 pos, i32 time);               // circle
     DifficultyHitObject(TYPE type, vec2 pos, i32 time, i32 endTime);  // spinner
-    DifficultyHitObject(TYPE type, vec2 pos, i32 time, i32 endTime, f32 spanDuration, i8 osuSliderCurveType,
-                        const std::vector<vec2> &controlPoints, f32 pixelLength,
+    DifficultyHitObject(TYPE type, vec2 pos, i32 time, i32 endTime, f32 spanDuration,
+                        SLIDERCURVETYPE osuSliderCurveType, const std::vector<vec2> &controlPoints, f32 pixelLength,
                         std::vector<SLIDER_SCORING_TIME> scoringTimes, i32 repeats,
                         bool calculateSliderCurveInConstructor);  // slider
     ~DifficultyHitObject();
@@ -109,7 +106,7 @@ class DifficultyHitObject {
     vec2 originalPos;
 
     TYPE type;
-    i8 osuSliderCurveType;
+    SLIDERCURVETYPE osuSliderCurveType;
     bool scheduledCurveAlloc;
 };
 

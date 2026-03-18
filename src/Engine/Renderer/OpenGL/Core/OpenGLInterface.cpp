@@ -201,10 +201,10 @@ void OpenGLInterface::drawRectf(const RectOptions &opts) {
             const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
             glBegin(GL_TRIANGLE_STRIP);
             {
-                emitArcStripVertices(opts.x + r, opts.y + r, rInner, rOuter, (float)PI, 1.5f * (float)PI);
-                emitArcStripVertices(x2 - r, opts.y + r, rInner, rOuter, 1.5f * (float)PI, 2.f * (float)PI);
-                emitArcStripVertices(x2 - r, y2 - r, rInner, rOuter, 0.f, 0.5f * (float)PI);
-                emitArcStripVertices(opts.x + r, y2 - r, rInner, rOuter, 0.5f * (float)PI, (float)PI);
+                emitArcStripVertices(opts.x + r, opts.y + r, rInner, rOuter, PI_F, 1.5f * PI_F);
+                emitArcStripVertices(x2 - r, opts.y + r, rInner, rOuter, 1.5f * PI_F, 2.f * PI_F);
+                emitArcStripVertices(x2 - r, y2 - r, rInner, rOuter, 0.f, 0.5f * PI_F);
+                emitArcStripVertices(opts.x + r, y2 - r, rInner, rOuter, 0.5f * PI_F, PI_F);
                 // close back to first vertex pair
                 glVertex2f(opts.x - hw, opts.y + r);
                 glVertex2f(opts.x + hw, opts.y + r);
@@ -213,10 +213,10 @@ void OpenGLInterface::drawRectf(const RectOptions &opts) {
         } else {
             glBegin(GL_LINE_LOOP);
             {
-                emitArcVertices(opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
-                emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
-                emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * (float)PI);
-                emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * (float)PI, (float)PI);
+                emitArcVertices(opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
+                emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
+                emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * PI_F);
+                emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * PI_F, PI_F);
             }
             glEnd();
         }
@@ -268,10 +268,10 @@ void OpenGLInterface::fillRectf(const FillRectOptions &opts) {
 
         glBegin(GL_POLYGON);
         {
-            emitArcVertices(opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
-            emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
-            emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * (float)PI);
-            emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * (float)PI, (float)PI);
+            emitArcVertices(opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
+            emitArcVertices(opts.x + opts.width - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
+            emitArcVertices(opts.x + opts.width - r, opts.y + opts.height - r, r, 0.f, 0.5f * PI_F);
+            emitArcVertices(opts.x + r, opts.y + opts.height - r, r, 0.5f * PI_F, PI_F);
         }
         glEnd();
     } else {

@@ -681,7 +681,7 @@ std::pair<bool, float> MainMenu::getTimingpointPulseAmount() {
         cv::universal_offset_norate.getInt() - music->getRateBasedStreamDelayMS() - map->getLocalOffset() -
         map->getOnlineOffset() - (map->getVersion() < 5 ? cv::old_beatmap_offset.getInt() : 0);
 
-    DatabaseBeatmapTypes::TIMING_INFO t = map->getTimingInfoForTime(curMusicPos);
+    DBType::TIMING_INFO t = map->getTimingInfoForTime(curMusicPos);
 
     if(t.beatLengthBase == 0.0f)  // bah
         t.beatLengthBase = 1.0f;

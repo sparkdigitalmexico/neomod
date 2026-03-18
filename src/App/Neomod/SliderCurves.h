@@ -9,9 +9,14 @@
 #include <vector>
 #include <memory>
 
-using SLIDERCURVETYPE = char;
+enum class SLIDERCURVETYPE : char {
+    CATMULL = 'C',
+    BEZIER = 'B',
+    LINEAR = 'L',
+    PASSTHROUGH = 'P',
+};
 
-class SliderCurveBuilder;
+namespace neomod {
 
 //**********************//
 //	 Curve Base Class	//
@@ -20,9 +25,9 @@ class SliderCurveBuilder;
 class SliderCurve {
    public:
     static std::unique_ptr<SliderCurve> createCurve(SLIDERCURVETYPE type, std::vector<vec2> controlPoints,
-                                                    float pixelLength);
+                                                    f32 pixelLength);
     static std::unique_ptr<SliderCurve> createCurve(SLIDERCURVETYPE type, std::vector<vec2> controlPoints,
-                                                    float pixelLength, float curvePointsSeparation);
+                                                    f32 pixelLength, f32 curvePointsSeparation);
 
    public:
     SliderCurve() = delete;
@@ -33,44 +38,41 @@ class SliderCurve {
     SliderCurve &operator=(SliderCurve &&) = default;
     virtual ~SliderCurve() = default;
 
-    virtual void updateStackPosition(float stackMulStackOffset, bool HR);
+    virtual void updateStackPosition(f32 stackMulStackOffset, bool HR);
 
-    [[nodiscard]] virtual vec2 pointAt(float t) const = 0;          // with stacking
-    [[nodiscard]] virtual vec2 originalPointAt(float t) const = 0;  // without stacking
+    [[nodiscard]] virtual vec2 pointAt(f32 t) const = 0;          // with stacking
+    [[nodiscard]] virtual vec2 originalPointAt(f32 t) const = 0;  // without stacking
 
-    [[nodiscard]] inline float getStartAngle() const { return this->fStartAngle; }
-    [[nodiscard]] inline float getEndAngle() const { return this->fEndAngle; }
+    [[nodiscard]] inline f32 getStartAngle() const { return m_startAngle; }
+    [[nodiscard]] inline f32 getEndAngle() const { return m_endAngle; }
 
-    [[nodiscard]] inline const std::vector<vec2> &getPoints() const { return this->curvePoints; }
-    [[nodiscard]] inline const std::vector<std::vector<vec2>> &getPointSegments() const {
-        return this->curvePointSegments;
-    }
+    [[nodiscard]] inline const std::vector<vec2> &getPoints() const { return m_curvePoints; }
+    [[nodiscard]] inline const std::vector<std::vector<vec2>> &getPointSegments() const { return m_curvePointSegments; }
 
-    [[nodiscard]] inline float getPixelLength() const { return this->fPixelLength; }
+    [[nodiscard]] inline f32 getPixelLength() const { return m_pixelLength; }
 
-    [[nodiscard]] inline vec4 getBounds() const { return this->bounds; }                  // with stacking
-    [[nodiscard]] inline vec4 getOriginalBounds() const { return this->originalBounds; }  // without stacking
+    [[nodiscard]] inline vec4 getBounds() const { return m_vBounds; }                  // with stacking
+    [[nodiscard]] inline vec4 getOriginalBounds() const { return m_vOriginalBounds; }  // without stacking
 
    protected:
-    friend class SliderCurveBuilder;
-
-    SliderCurve(std::vector<vec2> controlPoints, float pixelLength);
+    SliderCurve(std::vector<vec2> controlPoints, f32 pixelLength);
 
     // original input values
-    std::vector<vec2> controlPoints;
+    std::vector<vec2> m_controlPoints;
 
     // these must be explicitly calculated/set in one of the subclasses
-    std::vector<std::vector<vec2>> curvePointSegments;
-    std::vector<std::vector<vec2>> originalCurvePointSegments;
-    std::vector<vec2> curvePoints;
-    std::vector<vec2> originalCurvePoints;
+    std::vector<std::vector<vec2>> m_curvePointSegments;
+    std::vector<std::vector<vec2>> m_originalCurvePointSegments;
+    std::vector<vec2> m_curvePoints;
+    std::vector<vec2> m_originalCurvePoints;
 
    private:
-    vec4 bounds;
-    vec4 originalBounds;
+    vec4 m_vBounds;
+    vec4 m_vOriginalBounds;
 
    protected:
-    float fStartAngle;
-    float fEndAngle;
-    float fPixelLength;
+    f32 m_startAngle;
+    f32 m_endAngle;
+    f32 m_pixelLength;
 };
+}  // namespace neomod

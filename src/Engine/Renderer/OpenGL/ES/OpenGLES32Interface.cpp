@@ -263,14 +263,14 @@ void OpenGLES32Interface::drawRectf(const RectOptions &opts) {
             static VertexArrayObject vao(DrawPrimitive::LINE_LOOP);
             {
                 vao.clear();
-                addArcVertices(vao, opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
-                addArcVertices(vao, x2 - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
+                addArcVertices(vao, opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
+                addArcVertices(vao, x2 - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
                 // extend the right edge 0.5px past the BR arc start to ensure the junction
                 // pixel is rasterized (diamond-exit rule: line ending exactly at pixel center
                 // doesn't exit the diamond, so the pixel isn't drawn without this)
                 vao.addVertex(x2, y2 - r + 0.5f);
-                addArcVertices(vao, x2 - r, y2 - r, r, 0.f, 0.5f * (float)PI);
-                addArcVertices(vao, opts.x + r, y2 - r, r, 0.5f * (float)PI, (float)PI);
+                addArcVertices(vao, x2 - r, y2 - r, r, 0.f, 0.5f * PI_F);
+                addArcVertices(vao, opts.x + r, y2 - r, r, 0.5f * PI_F, PI_F);
                 // close; also needed for backends without native line loop
                 vao.addVertex(opts.x, opts.y + r);
             }

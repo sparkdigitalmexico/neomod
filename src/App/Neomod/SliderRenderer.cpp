@@ -22,12 +22,12 @@ namespace SliderRenderer {
 namespace {  // static namespace
 
 Shader *s_BLEND_SHADER{nullptr};
-float s_UNIT_CIRCLE_VAO_DIAMETER{0.0f};
+f32 s_UNIT_CIRCLE_VAO_DIAMETER{0.0f};
 
 // base mesh
-float s_MESH_CENTER_HEIGHT{0.5f};   // Camera::buildMatrixOrtho2D() uses -1 to 1 for zn/zf, so don't make this too high
-int s_UNIT_CIRCLE_SUBDIVISIONS{0};  // see slider_body_unit_circle_subdivisions now
-std::vector<float> s_UNIT_CIRCLE;
+f32 s_MESH_CENTER_HEIGHT{0.5f};     // Camera::buildMatrixOrtho2D() uses -1 to 1 for zn/zf, so don't make this too high
+i32 s_UNIT_CIRCLE_SUBDIVISIONS{0};  // see slider_body_unit_circle_subdivisions now
+std::vector<f32> s_UNIT_CIRCLE;
 // managed by RM (renderer-bound baking)
 VertexArrayObject *s_UNIT_CIRCLE_VAO_BAKED{nullptr};
 
@@ -36,18 +36,18 @@ VertexArrayObject s_UNIT_CIRCLE_VAO{DrawPrimitive::TRIANGLE_FAN};
 VertexArrayObject s_UNIT_CIRCLE_VAO_TRIANGLES{DrawPrimitive::TRIANGLES};
 
 // tiny rendering optimization for RenderTarget
-float s_fBoundingBoxMinX{(std::numeric_limits<float>::max)()};
-float s_fBoundingBoxMaxX{0.0f};
-float s_fBoundingBoxMinY{(std::numeric_limits<float>::max)()};
-float s_fBoundingBoxMaxY{0.0f};
+f32 s_fBoundingBoxMinX{(std::numeric_limits<f32>::max)()};
+f32 s_fBoundingBoxMaxX{0.0f};
+f32 s_fBoundingBoxMinY{(std::numeric_limits<f32>::max)()};
+f32 s_fBoundingBoxMaxY{0.0f};
 
 struct UniformCache {
     // convar-dependent settings (updated by convar callbacks)
-    int style{-1};
-    float bodyAlphaMultiplier{-1.0f};
-    float bodyColorSaturation{-1.0f};
-    float borderSizeMultiplier{-1.0f};
-    float borderFeather{-1.0f};
+    i32 style{-1};
+    f32 bodyAlphaMultiplier{-1.0f};
+    f32 bodyColorSaturation{-1.0f};
+    f32 borderSizeMultiplier{-1.0f};
+    f32 borderFeather{-1.0f};
 
     // uniforms that change often (colors)
     Color lastBorderColor{0};
@@ -64,27 +64,27 @@ void updateColorUniforms(Color borderColor, Color bodyColor);
 void updateConfigUniforms();
 
 // forward decls
-void drawDebugLegacy(const std::vector<vec2> &points, float hitcircleDiameter, Color undimmedColor,
-                     float colorRGBMultiplier, float alpha, int drawFromIndex, int drawUpToIndex);
-void drawDebugVAO(VertexArrayObject *vao, vec2 translation, float scale, float from, float to, Color undimmedColor,
-                  float colorRGBMultiplier, float alpha);
+void drawDebugLegacy(const std::vector<vec2> &points, f32 hitcircleDiameter, Color undimmedColor,
+                     f32 colorRGBMultiplier, f32 alpha, uSz drawFromIndex, uSz drawUpToIndex);
+void drawDebugVAO(VertexArrayObject *vao, vec2 translation, f32 scale, f32 from, f32 to, Color undimmedColor,
+                  f32 colorRGBMultiplier, f32 alpha);
 
-void drawFillSliderBodyPeppy(const std::vector<vec2> &points, VertexArrayObject *circleMesh, float radius,
-                             int drawFromIndex, int drawUpToIndex);
-void checkUpdateVars(float hitcircleDiameter);
+void drawFillSliderBodyPeppy(const std::vector<vec2> &points, VertexArrayObject *circleMesh, f32 radius,
+                             uSz drawFromIndex, uSz drawUpToIndex);
+void checkUpdateVars(f32 hitcircleDiameter);
 
-Color getRainbowColor(i32 rainbowTime, float initOffset) {
-    const float frequency = 0.3f;
-    const float time = engine->getTime() * 20;
+Color getRainbowColor(i32 rainbowTime, f32 initOffset) {
+    const f64 frequency = .3f;
+    const f64 time = engine->getTime() * 20.;
 
-    const Channel red = std::sin(frequency * (time * initOffset) + 0 + rainbowTime) * 127 + 128;
-    const Channel green = std::sin(frequency * (time * initOffset) + 2 + rainbowTime) * 127 + 128;
-    const Channel blue = std::sin(frequency * (time * initOffset) + 4 + rainbowTime) * 127 + 128;
+    const Channel red = (Channel)(std::sin(frequency * (time * initOffset) + 0 + rainbowTime) * 127.) + 128;
+    const Channel green = (Channel)(std::sin(frequency * (time * initOffset) + 2 + rainbowTime) * 127.) + 128;
+    const Channel blue = (Channel)(std::sin(frequency * (time * initOffset) + 4 + rainbowTime) * 127.) + 128;
 
     return rgb(red, green, blue);
 }
 
-forceinline Color getBodyColor(bool doRainbow, i32 rainbowTime, float colorRGBMultiplier, Color undimmedColor) {
+forceinline Color getBodyColor(bool doRainbow, i32 rainbowTime, f32 colorRGBMultiplier, Color undimmedColor) {
     if(doRainbow) {
         return getRainbowColor(rainbowTime, 1.5f);
     } else {
@@ -95,7 +95,7 @@ forceinline Color getBodyColor(bool doRainbow, i32 rainbowTime, float colorRGBMu
     }
 }
 
-forceinline Color getBorderColor(bool doRainbow, i32 rainbowTime, float colorRGBMultiplier, Color undimmedColor) {
+forceinline Color getBorderColor(bool doRainbow, i32 rainbowTime, f32 colorRGBMultiplier, Color undimmedColor) {
     if(doRainbow) {
         return getRainbowColor(rainbowTime, 1.f);
     } else {
@@ -106,7 +106,7 @@ forceinline Color getBorderColor(bool doRainbow, i32 rainbowTime, float colorRGB
     }
 }
 
-forceinline void preDrawColorSetup(bool gradient, i32 sliderTime, float colorRGBMultiplier, Color undimmedColor) {
+forceinline void preDrawColorSetup(bool gradient, i32 sliderTime, f32 colorRGBMultiplier, Color undimmedColor) {
     if(gradient) {
         // this only affects the gradient image if used (meaning shaders
         // either don't work or are disabled on purpose)
@@ -129,8 +129,8 @@ forceinline void preDrawColorSetup(bool gradient, i32 sliderTime, float colorRGB
 // invalidate config uniforms (convar callbacks)
 void onUniformConfigChanged() { s_uniformCache.needsConfigUpdate = true; }
 
-std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, float hitcircleDiameter,
-                                               vec3 translation, bool skipOOBPoints) {
+std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, f32 hitcircleDiameter, vec3 translation,
+                                               bool skipOOBPoints) {
     resourceManager->requestNextLoadUnmanaged();
     std::unique_ptr<VertexArrayObject> vao{resourceManager->createVertexArrayObject()};
 
@@ -146,10 +146,10 @@ std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, 
     Mc::CDynArray<vec2> tempTexCoords{triangleMeshTCs.size() * points.size()};
     Mc::CDynArray<vec3> tempMeshVerts{triangleMeshVerts.size() * points.size()};
 
-    const float screenMinX = -hitcircleDiameter - GameRules::OSU_COORD_WIDTH * 2;
-    const float screenMaxX = osu->getVirtScreenWidth() + hitcircleDiameter + GameRules::OSU_COORD_WIDTH * 2;
-    const float screenMinY = -hitcircleDiameter - GameRules::OSU_COORD_HEIGHT * 2;
-    const float screenMaxY = osu->getVirtScreenHeight() + hitcircleDiameter + GameRules::OSU_COORD_HEIGHT * 2;
+    const f32 screenMinX = -hitcircleDiameter - GameRules::OSU_COORD_WIDTH * 2;
+    const f32 screenMaxX = osu->getVirtScreenWidth() + hitcircleDiameter + GameRules::OSU_COORD_WIDTH * 2;
+    const f32 screenMinY = -hitcircleDiameter - GameRules::OSU_COORD_HEIGHT * 2;
+    const f32 screenMaxY = osu->getVirtScreenHeight() + hitcircleDiameter + GameRules::OSU_COORD_HEIGHT * 2;
 
     size_t tempMeshVertOffset = 0;
     size_t tempMeshTCOffset = 0;
@@ -215,14 +215,14 @@ std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, 
     return vao;
 }
 
-void draw(const std::vector<vec2> &points, const std::vector<vec2> &alwaysPoints, float hitcircleDiameter, float from,
-          float to, Color undimmedColor, float colorRGBMultiplier, float alpha, i32 sliderTimeForRainbow) {
+void draw(const std::vector<vec2> &points, const std::vector<vec2> &alwaysPoints, f32 hitcircleDiameter, f32 from,
+          f32 to, Color undimmedColor, f32 colorRGBMultiplier, f32 alpha, i32 sliderTimeForRainbow) {
     if(cv::slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f) return;
 
     checkUpdateVars(hitcircleDiameter);
 
-    const int drawFromIndex = std::clamp<int>((int)std::round(points.size() * from), 0, points.size());
-    const int drawUpToIndex = std::clamp<int>((int)std::round(points.size() * to), 0, points.size());
+    const uSz drawFromIndex = std::clamp<uSz>((uSz)std::round((f64)points.size() * from), 0UZ, points.size());
+    const uSz drawUpToIndex = std::clamp<uSz>((uSz)std::round((f64)points.size() * to), 0UZ, points.size());
 
     // debug sliders
     if(cv::slider_debug_draw.getBool()) {
@@ -232,9 +232,9 @@ void draw(const std::vector<vec2> &points, const std::vector<vec2> &alwaysPoints
     }
 
     // reset
-    s_fBoundingBoxMinX = (std::numeric_limits<float>::max)();
+    s_fBoundingBoxMinX = (std::numeric_limits<f32>::max)();
     s_fBoundingBoxMaxX = 0.0f;
-    s_fBoundingBoxMinY = (std::numeric_limits<float>::max)();
+    s_fBoundingBoxMinY = (std::numeric_limits<f32>::max)();
     s_fBoundingBoxMaxY = 0.0f;
 
     // draw entire slider into framebuffer
@@ -267,20 +267,20 @@ void draw(const std::vector<vec2> &points, const std::vector<vec2> &alwaysPoints
     g->setDepthBuffer(false);
 
     // now draw the slider to the screen (with alpha blending enabled again)
-    const float pixelFudge = 2.0f;
+    const f32 pixelFudge = 2.0f;
     s_fBoundingBoxMinX -= pixelFudge;
     s_fBoundingBoxMaxX += pixelFudge;
     s_fBoundingBoxMinY -= pixelFudge;
     s_fBoundingBoxMaxY += pixelFudge;
 
     osu->getSliderFrameBuffer()->setColor(argb(alpha * cv::slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-    osu->getSliderFrameBuffer()->drawRect((int)s_fBoundingBoxMinX, (int)s_fBoundingBoxMinY,
-                                          (int)(s_fBoundingBoxMaxX - s_fBoundingBoxMinX),
-                                          (int)(s_fBoundingBoxMaxY - s_fBoundingBoxMinY));
+    osu->getSliderFrameBuffer()->drawRect((i32)s_fBoundingBoxMinX, (i32)s_fBoundingBoxMinY,
+                                          (i32)(s_fBoundingBoxMaxX - s_fBoundingBoxMinX),
+                                          (i32)(s_fBoundingBoxMaxY - s_fBoundingBoxMinY));
 }
 
-void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPoints, vec2 translation, float scale,
-          float hitcircleDiameter, float from, float to, Color undimmedColor, float colorRGBMultiplier, float alpha,
+void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPoints, vec2 translation, f32 scale,
+          f32 hitcircleDiameter, f32 from, f32 to, Color undimmedColor, f32 colorRGBMultiplier, f32 alpha,
           i32 sliderTimeForRainbow, bool doEnableRenderTarget, bool doDisableRenderTarget,
           bool doDrawSliderFrameBufferToScreen) {
     if((cv::slider_alpha_multiplier.getFloat() <= 0.0f && doDrawSliderFrameBufferToScreen) ||
@@ -295,9 +295,9 @@ void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPo
     }
 
     // reset
-    s_fBoundingBoxMinX = (std::numeric_limits<float>::max)();
+    s_fBoundingBoxMinX = (std::numeric_limits<f32>::max)();
     s_fBoundingBoxMaxX = 0.0f;
-    s_fBoundingBoxMinY = (std::numeric_limits<float>::max)();
+    s_fBoundingBoxMinY = (std::numeric_limits<f32>::max)();
     s_fBoundingBoxMaxY = 0.0f;
 
     // draw entire slider into framebuffer
@@ -312,7 +312,7 @@ void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPo
             preDrawColorSetup(useGradientImage, sliderTimeForRainbow, colorRGBMultiplier, undimmedColor);
 
             // draw curve mesh
-            vao->setDrawPercent(from, to, s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().size());
+            vao->setDrawPercent(from, to, (i32)s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().size());
             g->pushTransform();
             {
                 g->scale(scale, scale);
@@ -342,43 +342,39 @@ void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPo
 
     // optional bounds performance optimization to reduce rt blending overdraw
     if(bounds.x != 0.0f || bounds.y != 0.0f || bounds.z != 0.0f || bounds.w != 0.0f) {
-        const float pixelFudge = 2.0f;
+        const f32 pixelFudge = 2.0f;
         s_fBoundingBoxMinX = std::max(0.0f, bounds.x - hitcircleDiameter / 2.0f - pixelFudge);
-        s_fBoundingBoxMaxX =
-            std::min((float)osu->getVirtScreenWidth(), bounds.z + hitcircleDiameter / 2.0f + pixelFudge);
+        s_fBoundingBoxMaxX = std::min((f32)osu->getVirtScreenWidth(), bounds.z + hitcircleDiameter / 2.0f + pixelFudge);
         s_fBoundingBoxMinY = std::max(0.0f, bounds.y - hitcircleDiameter / 2.0f - pixelFudge);
         s_fBoundingBoxMaxY =
-            std::min((float)osu->getVirtScreenHeight(), bounds.w + hitcircleDiameter / 2.0f + pixelFudge);
+            std::min((f32)osu->getVirtScreenHeight(), bounds.w + hitcircleDiameter / 2.0f + pixelFudge);
     } else {
         s_fBoundingBoxMinX = 0.0f;
-        s_fBoundingBoxMaxX = (float)osu->getVirtScreenWidth();
+        s_fBoundingBoxMaxX = (f32)osu->getVirtScreenWidth();
         s_fBoundingBoxMinY = 0.0f;
-        s_fBoundingBoxMaxY = (float)osu->getVirtScreenHeight();
+        s_fBoundingBoxMaxY = (f32)osu->getVirtScreenHeight();
     }
 
     if(doDrawSliderFrameBufferToScreen) {
         osu->getSliderFrameBuffer()->setColor(argb(alpha * cv::slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-        osu->getSliderFrameBuffer()->drawRect((int)s_fBoundingBoxMinX, (int)s_fBoundingBoxMinY,
-                                              (int)(s_fBoundingBoxMaxX - s_fBoundingBoxMinX),
-                                              (int)(s_fBoundingBoxMaxY - s_fBoundingBoxMinY));
+        osu->getSliderFrameBuffer()->drawRect((i32)s_fBoundingBoxMinX, (i32)s_fBoundingBoxMinY,
+                                              (i32)(s_fBoundingBoxMaxX - s_fBoundingBoxMinX),
+                                              (i32)(s_fBoundingBoxMaxY - s_fBoundingBoxMinY));
     }
 }
 
 namespace {  // static
 
-void drawFillSliderBodyPeppy(const std::vector<vec2> &points, VertexArrayObject *circleMesh, float radius,
-                             int drawFromIndex, int drawUpToIndex) {
-    if(drawFromIndex < 0) drawFromIndex = 0;
-    if(drawUpToIndex < 0) drawUpToIndex = points.size();
-
+void drawFillSliderBodyPeppy(const std::vector<vec2> &points, VertexArrayObject *circleMesh, f32 radius,
+                             uSz drawFromIndex, uSz drawUpToIndex) {
     g->pushTransform();
     {
         // now, translate and draw the master vao for every curve point
-        float startX = 0.0f;
-        float startY = 0.0f;
-        for(int i = drawFromIndex; i < drawUpToIndex; ++i) {
-            const float x = points[i].x;
-            const float y = points[i].y;
+        f32 startX = 0.0f;
+        f32 startY = 0.0f;
+        for(uSz i = drawFromIndex; i < drawUpToIndex; ++i) {
+            const f32 x = points[i].x;
+            const f32 y = points[i].y;
 
             // fuck oob sliders
             if(x < -radius * 2 || x > osu->getVirtScreenWidth() + radius * 2 || y < -radius * 2 ||
@@ -400,7 +396,7 @@ void drawFillSliderBodyPeppy(const std::vector<vec2> &points, VertexArrayObject 
     g->popTransform();
 }
 
-void checkUpdateVars(float hitcircleDiameter) {
+void checkUpdateVars(f32 hitcircleDiameter) {
     // static globals
 
     if(!env->usingGL()) {
@@ -412,7 +408,7 @@ void checkUpdateVars(float hitcircleDiameter) {
     if(s_BLEND_SHADER == nullptr)  // only do this once
         s_BLEND_SHADER = resourceManager->createShaderAuto("slider");
 
-    const int subdivisions = cv::slider_body_unit_circle_subdivisions.getInt();
+    const i32 subdivisions = cv::slider_body_unit_circle_subdivisions.getInt();
     if(subdivisions != s_UNIT_CIRCLE_SUBDIVISIONS) {
         s_UNIT_CIRCLE_SUBDIVISIONS = subdivisions;
 
@@ -430,16 +426,16 @@ void checkUpdateVars(float hitcircleDiameter) {
             s_UNIT_CIRCLE.push_back(0.0f);
             s_UNIT_CIRCLE.push_back(s_MESH_CENTER_HEIGHT);
 
-            for(int j = 0; j < subdivisions; ++j) {
-                float phase = j * (float)PI * 2.0f / subdivisions;
+            for(i32 j = 0; j < subdivisions; ++j) {
+                const f32 phase = (f32)j * PI_F * 2.0f / (f32)subdivisions;
 
                 // texture coordinates
                 s_UNIT_CIRCLE.push_back(0.0f);
                 s_UNIT_CIRCLE.push_back(0.0f);
 
                 // positon
-                s_UNIT_CIRCLE.push_back((float)std::sin(phase));
-                s_UNIT_CIRCLE.push_back((float)std::cos(phase));
+                s_UNIT_CIRCLE.push_back((f32)std::sin(phase));
+                s_UNIT_CIRCLE.push_back((f32)std::cos(phase));
                 s_UNIT_CIRCLE.push_back(0.0f);
             }
 
@@ -448,8 +444,8 @@ void checkUpdateVars(float hitcircleDiameter) {
             s_UNIT_CIRCLE.push_back(0.0f);
 
             // positon
-            s_UNIT_CIRCLE.push_back((float)std::sin(0.0f));
-            s_UNIT_CIRCLE.push_back((float)std::cos(0.0f));
+            s_UNIT_CIRCLE.push_back((f32)std::sin(0.0f));
+            s_UNIT_CIRCLE.push_back((f32)std::cos(0.0f));
             s_UNIT_CIRCLE.push_back(0.0f);
         }
     }
@@ -462,14 +458,14 @@ void checkUpdateVars(float hitcircleDiameter) {
     // dynamic mods like minimize or wobble have to use the legacy renderer anyway, since the slider shape may change
     // every frame
     if(hitcircleDiameter != s_UNIT_CIRCLE_VAO_DIAMETER) {
-        const float radius = hitcircleDiameter / 2.0f;
+        const f32 radius = hitcircleDiameter / 2.0f;
 
         s_UNIT_CIRCLE_VAO_BAKED->release();
 
         // triangle fan
         s_UNIT_CIRCLE_VAO_DIAMETER = hitcircleDiameter;
         s_UNIT_CIRCLE_VAO.clear();
-        for(int i = 0; i < s_UNIT_CIRCLE.size() / 5; i++) {
+        for(i32 i = 0; i < s_UNIT_CIRCLE.size() / 5; i++) {
             vec3 vertexPos = vec3((radius * s_UNIT_CIRCLE[i * 5 + 2]), (radius * s_UNIT_CIRCLE[i * 5 + 3]),
                                   s_UNIT_CIRCLE[i * 5 + 4]);
             vec2 vertexTexcoord = vec2(s_UNIT_CIRCLE[i * 5 + 0], s_UNIT_CIRCLE[i * 5 + 1]);
@@ -489,7 +485,7 @@ void checkUpdateVars(float hitcircleDiameter) {
         vec3 startVertex =
             vec3((radius * s_UNIT_CIRCLE[0 * 5 + 2]), (radius * s_UNIT_CIRCLE[0 * 5 + 3]), s_UNIT_CIRCLE[0 * 5 + 4]);
         vec2 startUV = vec2(s_UNIT_CIRCLE[0 * 5 + 0], s_UNIT_CIRCLE[0 * 5 + 1]);
-        for(int i = 1; i < s_UNIT_CIRCLE.size() / 5 - 1; i++) {
+        for(i32 i = 1; i < s_UNIT_CIRCLE.size() / 5 - 1; i++) {
             // center
             s_UNIT_CIRCLE_VAO_TRIANGLES.addVertex(startVertex);
             s_UNIT_CIRCLE_VAO_TRIANGLES.addTexcoord(startUV);
@@ -527,11 +523,11 @@ void updateColorUniforms(Color borderColor, Color bodyColor) {
 void updateConfigUniforms() {
     if(!s_BLEND_SHADER || !s_uniformCache.needsConfigUpdate) return;
 
-    const int newStyle = cv::slider_osu_next_style.getBool() ? 1 : 0;
-    const float newBodyAlpha = cv::slider_body_alpha_multiplier.getFloat();
-    const float newBodySat = cv::slider_body_color_saturation.getFloat();
-    const float newBorderSize = cv::slider_border_size_multiplier.getFloat();
-    const float newBorderFeather = cv::slider_border_feather.getFloat();
+    const i32 newStyle = cv::slider_osu_next_style.getBool() ? 1 : 0;
+    const f32 newBodyAlpha = cv::slider_body_alpha_multiplier.getFloat();
+    const f32 newBodySat = cv::slider_body_color_saturation.getFloat();
+    const f32 newBorderSize = cv::slider_border_size_multiplier.getFloat();
+    const f32 newBorderFeather = cv::slider_border_feather.getFloat();
 
     if(s_uniformCache.style != newStyle) {
         s_BLEND_SHADER->setUniform1i("style", newStyle);
@@ -561,17 +557,17 @@ void updateConfigUniforms() {
     s_uniformCache.needsConfigUpdate = false;
 }
 
-void drawDebugLegacy(const std::vector<vec2> &points, float hitcircleDiameter, Color undimmedColor,
-                     float colorRGBMultiplier, float alpha, int drawFromIndex, int drawUpToIndex) {
-    const float circleImageScale = hitcircleDiameter / (float)osu->getSkin()->i_hitcircle.getWidth();
-    const float circleImageScaleInv = (1.0f / circleImageScale);
+void drawDebugLegacy(const std::vector<vec2> &points, f32 hitcircleDiameter, Color undimmedColor,
+                     f32 colorRGBMultiplier, f32 alpha, uSz drawFromIndex, uSz drawUpToIndex) {
+    const f32 circleImageScale = hitcircleDiameter / (f32)osu->getSkin()->i_hitcircle.getWidth();
+    const f32 circleImageScaleInv = (1.0f / circleImageScale);
 
-    const auto width = (float)osu->getSkin()->i_hitcircle.getWidth();
-    const auto height = (float)osu->getSkin()->i_hitcircle.getHeight();
+    const auto width = (f32)osu->getSkin()->i_hitcircle.getWidth();
+    const auto height = (f32)osu->getSkin()->i_hitcircle.getHeight();
 
-    const float x = (-width / 2.0f);
-    const float y = (-height / 2.0f);
-    const float z = -1.0f;
+    const f32 x = (-width / 2.0f);
+    const f32 y = (-height / 2.0f);
+    const f32 z = -1.0f;
 
     g->pushTransform();
     {
@@ -583,7 +579,7 @@ void drawDebugLegacy(const std::vector<vec2> &points, float hitcircleDiameter, C
 
         osu->getSkin()->i_hitcircle.bind();
         {
-            for(int i = drawFromIndex; i < drawUpToIndex; i++) {
+            for(uSz i = drawFromIndex; i < drawUpToIndex; i++) {
                 const vec2 point = points[i] * circleImageScaleInv;
 
                 static VertexArrayObject vao(DrawPrimitive::QUADS);
@@ -610,8 +606,8 @@ void drawDebugLegacy(const std::vector<vec2> &points, float hitcircleDiameter, C
     return;
 }
 
-void drawDebugVAO(VertexArrayObject *vao, vec2 translation, float scale, float from, float to, Color undimmedColor,
-                  float colorRGBMultiplier, float alpha) {
+void drawDebugVAO(VertexArrayObject *vao, vec2 translation, f32 scale, f32 from, f32 to, Color undimmedColor,
+                  f32 colorRGBMultiplier, f32 alpha) {
     const Color dimmedColor = Colors::scale(undimmedColor, colorRGBMultiplier);
 
     g->setColor(Color(dimmedColor).setA(alpha * cv::slider_alpha_multiplier.getFloat()));

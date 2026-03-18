@@ -228,8 +228,8 @@ u32 SimulatedBeatmapInterface::getBreakDurationTotal() const {
     return breakDurationTotal;
 }
 
-DatabaseBeatmapTypes::BREAK SimulatedBeatmapInterface::getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const {
-    DatabaseBeatmapTypes::BREAK curBreak;
+DBType::BREAK SimulatedBeatmapInterface::getBreakForTimeRange(i32 startMS, i32 positionMS, i32 endMS) const {
+    DBType::BREAK curBreak;
 
     curBreak.startTime = -1;
     curBreak.endTime = -1;
@@ -244,9 +244,8 @@ DatabaseBeatmapTypes::BREAK SimulatedBeatmapInterface::getBreakForTimeRange(i32 
 }
 
 LiveHitResult SimulatedBeatmapInterface::addHitResult(HitObject *hitObject, LiveHitResult hit, i32 delta,
-                                                       bool isEndOfCombo, bool ignoreOnHitErrorBar,
-                                                       bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore,
-                                                       bool ignoreHealth) {
+                                                      bool isEndOfCombo, bool ignoreOnHitErrorBar, bool hitErrorBarOnly,
+                                                      bool ignoreCombo, bool ignoreScore, bool ignoreHealth) {
     // handle perfect & sudden death
     if(this->mods.has(ModFlags::Perfect)) {
         if(!hitErrorBarOnly && hit != LiveHitResult::HIT_300 && hit != LiveHitResult::HIT_300G &&
@@ -624,7 +623,7 @@ void SimulatedBeatmapInterface::update(f64 frame_time) {
     }
 
     // break time detection
-    const DatabaseBeatmapTypes::BREAK breakEvent =
+    const DBType::BREAK breakEvent =
         this->getBreakForTimeRange(this->iPreviousHitObjectTime, this->iCurMusicPos, this->iNextHitObjectTime);
     const bool isInBreak =
         ((int)this->iCurMusicPos >= breakEvent.startTime && (int)this->iCurMusicPos <= breakEvent.endTime);
@@ -1058,7 +1057,7 @@ void SimulatedBeatmapInterface::computeDrainRate() {
 
                 int breakTime = 0;
                 if(breakCount > 0 && breakNumber < breakCount) {
-                    const DatabaseBeatmapTypes::BREAK &e = this->breaks[breakNumber];
+                    const DBType::BREAK &e = this->breaks[breakNumber];
                     if(e.startTime >= localLastTime && e.endTime <= h->getClickTime()) {
                         // consider break start equal to object end time for version 8+ since drain stops during this
                         // time
@@ -1082,9 +1081,9 @@ void SimulatedBeatmapInterface::computeDrainRate() {
                     // nested hitobjects
                     if(sliderPointer != nullptr) {
                         // startcircle
-                        testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                            LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
-                            testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
+                        testPlayer.increaseHealth(
+                            LiveScore::getHealthIncrease(LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
 
                         // ticks + repeats + repeat ticks
                         const std::vector<Slider::SLIDERCLICK> &clicks = sliderPointer->getClicks();
@@ -1104,9 +1103,9 @@ void SimulatedBeatmapInterface::computeDrainRate() {
                         }
 
                         // endcircle
-                        testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                            LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
-                            testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
+                        testPlayer.increaseHealth(
+                            LiveScore::getHealthIncrease(LiveHitResult::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal,
+                                                         testPlayer.hpMultiplierComboEnd, 1.0));  // slider30
                     } else if(spinnerPointer != nullptr) {
                         const int rotationsNeeded = (int)((f32)spinnerPointer->getDuration() / 1000.0f *
                                                           GameRules::getSpinnerSpinsPerSecond(this));
@@ -1125,9 +1124,9 @@ void SimulatedBeatmapInterface::computeDrainRate() {
 
                         // end of combo (new combo starts at next hitobject)
                         if((i == this->hitobjects.size() - 1) || this->hitobjects[i]->isEndOfCombo()) {
-                            testPlayer.increaseHealth(LiveScore::getHealthIncrease(
-                                LiveHitResult::HIT_300G, HP, testPlayer.hpMultiplierNormal,
-                                testPlayer.hpMultiplierComboEnd, 1.0));  // geki
+                            testPlayer.increaseHealth(
+                                LiveScore::getHealthIncrease(LiveHitResult::HIT_300G, HP, testPlayer.hpMultiplierNormal,
+                                                             testPlayer.hpMultiplierComboEnd, 1.0));  // geki
 
                             if(testPlayer.health < lowestHpComboEnd) {
                                 if(++comboTooLowCount > 2) {

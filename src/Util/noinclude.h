@@ -21,6 +21,9 @@
 #define PI 3.141592653589793238462643383279502884
 #define PIOVER180 0.017453292519943295769236907684886128
 
+#define PI_F static_cast<float>(PI)
+#define PIOVER180_F static_cast<float>(PIOVER180)
+
 inline bool isInt(float f) { return (f == static_cast<float>(static_cast<int>(f))); }
 
 // not copy or move constructable/assignable

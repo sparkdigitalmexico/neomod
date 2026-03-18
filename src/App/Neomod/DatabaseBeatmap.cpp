@@ -54,17 +54,6 @@ enum class HitObjectType : uint8_t {
     SPINNER,
 };
 
-namespace PpyHitObjectType {
-enum : uint8_t {
-    CIRCLE = (1 << 0),
-    SLIDER = (1 << 1),
-    NEW_COMBO = (1 << 2),
-    SPINNER = (1 << 3),
-    // 4, 5, 6: 3-bit integer specifying how many combo colors to skip (if NEW_COMBO is set)
-    MANIA_HOLD_NOTE = (1 << 7),
-};
-}
-
 #define BEATMAP_MAX_NUM_HITOBJECTS (u32)40000
 #define BEATMAP_MAX_NUM_SLIDER_SCORINGTIMES (i32)32768
 #define SLIDER_CURVE_MAX_LENGTH (65536.f / 2.f)
@@ -95,14 +84,6 @@ u32 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::getMaxComboAtIndex(uSz index) const {
     // otherwise return total
     return maxComboAtIndex.back();
 }
-
-SLIDER::SLIDER() noexcept = default;
-SLIDER::~SLIDER() noexcept = default;
-
-SLIDER::SLIDER(const SLIDER &) noexcept = default;
-SLIDER &SLIDER::operator=(const SLIDER &) noexcept = default;
-SLIDER::SLIDER(SLIDER &&) noexcept = default;
-SLIDER &SLIDER::operator=(SLIDER &&) noexcept = default;
 
 #ifndef BUILD_TOOLS_ONLY
 
@@ -624,13 +605,13 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
 
                 if(type & PpyHitObjectType::CIRCLE) {
                     HITCIRCLE h{};
-                    h.x = x;
-                    h.y = y;
+                    h.x = (f32)(i32)x;  // NOTE: lazer beatmaps do not truncate here
+                    h.y = (f32)(i32)y;
                     h.time = time;
                     h.number = comboNumber++;
                     h.colorCounter = colorCounter;
                     h.colorOffset = colorOffset;
-                    h.clicked = false;
+                    // h.clicked = false; // unknown what this field was supposed to be for
                     h.samples.hitSounds = (hitSounds & HitSoundType::VALID_HITSOUNDS);
 
                     if(csvs.size() > 5) {
@@ -649,7 +630,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                     std::vector<std::string_view> &curves = spbuf2;
                     SString::split(curves, csvs[5], '|');
 
-                    slider.type = curves[0][0];
+                    slider.type = SLIDERCURVETYPE{curves[0][0]};
                     curves.erase(curves.begin());
                     for(const auto &curvePoints : curves) {
                         f32 cpX{}, cpY{};
@@ -727,7 +708,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                             if(parts.size() >= 2) samples.additionSet = parse_sampleset_value(parts[1]);
                         }
 
-                        slider.edgeSamples.emplace_back(samples);
+                        slider.edgeSamples.push_back(samples);
                     }
 
                     // No start sample specified, use default
@@ -740,10 +721,12 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                         parse_hitsamples(hitsamplebuf, csvs[10], slider.hoverSamples);
                     }
 
-                    slider.x = xy.x;
-                    slider.y = xy.y;
+                    slider.x = (f32)(i32)x;  // NOTE: lazer beatmaps do not truncate here
+                    slider.y = (f32)(i32)y;
                     slider.repeat = std::clamp(slider.repeat, 0, sliderMaxRepeatRange);
-                    slider.pixelLength = std::clamp(slider.pixelLength, -sliderSanityRange, sliderSanityRange);
+                    slider.pixelLength = std::isnan(slider.pixelLength)
+                                             ? 0.f
+                                             : std::clamp(slider.pixelLength, -sliderSanityRange, sliderSanityRange);
                     slider.number = comboNumber++;
                     c.sliders.push_back(std::move(slider));
                 } else if(type & PpyHitObjectType::SPINNER) {
@@ -755,7 +738,11 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                         break;
                     }
 
-                    SPINNER s{.x = (i32)x, .y = (i32)y, .time = time, .endTime = endTime, .samples = {}};
+                    SPINNER s{.x = (f32)(i32)x,  // NOTE: lazer beatmaps do not truncate here
+                              .y = (f32)(i32)y,
+                              .time = time,
+                              .endTime = endTime,
+                              .samples = {}};
                     s.samples.hitSounds = (u8)(hitSounds & HitSoundType::VALID_HITSOUNDS);
 
                     if(csvs.size() > 6) {
@@ -823,7 +810,8 @@ DatabaseBeatmap::LoadError DatabaseBeatmap::calculateSliderTimesClicksTicks(
         static float getSliderTimeForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo,
                                             float sliderMultiplier) {
             const float duration = timingInfo.beatLength * (slider.pixelLength / sliderMultiplier) / 100.0f;
-            return duration >= 1.0f ? duration : 1.0f;  // sanity check
+            return (duration >= 1.0f && std::isfinite(duration) && !std::isnan(duration)) ? duration
+                                                                                          : 1.0f;  // sanity check
         }
 
         static float getSliderVelocity(const TIMING_INFO &timingInfo, float sliderMultiplier, float sliderTickRate) {
@@ -910,8 +898,8 @@ DatabaseBeatmap::LoadError DatabaseBeatmap::calculateSliderTimesClicksTicks(
         for(int i = 0; i < (s.repeat - 1); i++) {
             const f32 time = s.time + (s.sliderTimeWithoutRepeats * (i + 1));  // see Slider.cpp
             s.scoringTimesForStarCalc.push_back(SLIDER_SCORING_TIME{
-                .type = SLIDER_SCORING_TIME::TYPE::REPEAT,
                 .time = time,
+                .type = SLIDER_SCORING_TIME::TYPE::REPEAT,
             });
         }
 
@@ -924,8 +912,8 @@ DatabaseBeatmap::LoadError DatabaseBeatmap::calculateSliderTimesClicksTicks(
                     s.time + (s.sliderTimeWithoutRepeats * i) +
                     (tickPercentRelativeToRepeatFromStartAbs * s.sliderTimeWithoutRepeats);  // see Slider.cpp
                 s.scoringTimesForStarCalc.push_back(SLIDER_SCORING_TIME{
-                    .type = SLIDER_SCORING_TIME::TYPE::TICK,
                     .time = time,
+                    .type = SLIDER_SCORING_TIME::TYPE::TICK,
                 });
             }
         }
@@ -936,8 +924,8 @@ DatabaseBeatmap::LoadError DatabaseBeatmap::calculateSliderTimesClicksTicks(
             std::max(static_cast<f32>(s.time) + s.sliderTime / 2.0f,
                      (static_cast<f32>(s.time) + s.sliderTime) - static_cast<f32>(osuSliderEndInsideCheckOffset));
         s.scoringTimesForStarCalc.push_back(SLIDER_SCORING_TIME{
-            .type = SLIDER_SCORING_TIME::TYPE::END,
             .time = time,
+            .type = SLIDER_SCORING_TIME::TYPE::END,
         });
 
         if(dead.stop_requested()) {
@@ -1000,7 +988,7 @@ DatabaseBeatmap::LOAD_DIFFOBJ_RESULT DatabaseBeatmap::loadDifficultyHitObjects(P
     result.diffobjects.reserve(c.hitcircles.size() + c.sliders.size() + c.spinners.size());
 
     for(auto &hitcircle : c.hitcircles) {
-        result.diffobjects.emplace_back(DifficultyHitObject::TYPE::CIRCLE, vec2(hitcircle.x, hitcircle.y),
+        result.diffobjects.emplace_back(DifficultyHitObject::TYPE::CIRCLE, vec2{hitcircle.x, hitcircle.y},
                                         (i32)hitcircle.time);
     }
 
@@ -1014,11 +1002,11 @@ DatabaseBeatmap::LOAD_DIFFOBJ_RESULT DatabaseBeatmap::loadDifficultyHitObjects(P
 
         if(!calculateStarsInaccurately) {
             result.diffobjects.emplace_back(
-                DifficultyHitObject::TYPE::SLIDER, vec2(slider.x, slider.y), slider.time,
+                DifficultyHitObject::TYPE::SLIDER, vec2{slider.x, slider.y}, slider.time,
                 slider.time + (i32)slider.sliderTime, slider.sliderTimeWithoutRepeats, slider.type, slider.points,
                 slider.pixelLength, slider.scoringTimesForStarCalc, slider.repeat, calculateSliderCurveInConstructor);
         } else {
-            result.diffobjects.emplace_back(DifficultyHitObject::TYPE::SLIDER, vec2(slider.x, slider.y), slider.time,
+            result.diffobjects.emplace_back(DifficultyHitObject::TYPE::SLIDER, vec2{slider.x, slider.y}, slider.time,
                                             slider.time + (i32)slider.sliderTime, slider.sliderTimeWithoutRepeats,
                                             slider.type,
                                             std::vector<vec2>(),  // NOTE: ignore curve when calculating inaccurately
@@ -1031,7 +1019,7 @@ DatabaseBeatmap::LOAD_DIFFOBJ_RESULT DatabaseBeatmap::loadDifficultyHitObjects(P
     }
 
     for(const auto &spinner : c.spinners) {
-        result.diffobjects.emplace_back(DifficultyHitObject::TYPE::SPINNER, vec2(spinner.x, spinner.y),
+        result.diffobjects.emplace_back(DifficultyHitObject::TYPE::SPINNER, vec2{spinner.x, spinner.y},
                                         (i32)spinner.time, (i32)spinner.endTime);
     }
 
@@ -1077,8 +1065,8 @@ DatabaseBeatmap::LOAD_DIFFOBJ_RESULT DatabaseBeatmap::loadDifficultyHitObjects(P
             // peppy's algorithm
             // https://gist.github.com/peppy/1167470
 
-            for(int i = result.diffobjects.size() - 1; i >= 0; i--) {
-                int n = i;
+            for(sSz i = static_cast<sSz>(result.diffobjects.size()) - 1; i >= 0; i--) {
+                sSz n = i;
 
                 DifficultyHitObject *objectI = &result.diffobjects[i];
 
@@ -1104,7 +1092,7 @@ DatabaseBeatmap::LOAD_DIFFOBJ_RESULT DatabaseBeatmap::loadDifficultyHitObjects(P
                            vec::length(objectNEndPosition - objectI->getOriginalRawPosAt(objectI->time)) <
                                STACK_LENIENCE) {
                             int offset = objectI->stack - objectN->stack + 1;
-                            for(int j = n + 1; j <= i; j++) {
+                            for(sSz j = n + 1; j <= i; j++) {
                                 if(vec::length(objectNEndPosition - result.diffobjects[j].getOriginalRawPosAt(
                                                                         result.diffobjects[j].time)) < STACK_LENIENCE)
                                     result.diffobjects[j].stack = (result.diffobjects[j].stack - offset);
@@ -1669,8 +1657,8 @@ DatabaseBeatmap::LOAD_GAMEPLAY_RESULT DatabaseBeatmap::loadGameplay(BeatmapDiffi
         int maxPossibleCombo = 0;
 
         for(auto &h : c.hitcircles) {
-            result.hitobjects.push_back(std::make_unique<Circle>(h.x, h.y, h.time, h.samples, h.number, false,
-                                                                 h.colorCounter, h.colorOffset, beatmap));
+            result.hitobjects.emplace_back(
+                new Circle(vec2{h.x, h.y}, h.time, h.samples, h.number, false, h.colorCounter, h.colorOffset, beatmap));
         }
         maxPossibleCombo += c.hitcircles.size();
 
@@ -1680,17 +1668,16 @@ DatabaseBeatmap::LOAD_GAMEPLAY_RESULT DatabaseBeatmap::loadGameplay(BeatmapDiffi
 
             if(cv::mod_reverse_sliders.getBool()) std::ranges::reverse(s.points);
 
-            result.hitobjects.push_back(std::make_unique<Slider>(
-                s.type, s.repeat, s.pixelLength, s.points, s.ticks, s.sliderTime, s.sliderTimeWithoutRepeats, s.time,
-                s.hoverSamples, s.edgeSamples, s.number, false, s.colorCounter, s.colorOffset, beatmap));
+            result.hitobjects.emplace_back(new Slider(s.type, s.repeat, s.pixelLength, s.points, s.ticks, s.sliderTime,
+                                                      s.sliderTimeWithoutRepeats, s.time, s.hoverSamples, s.edgeSamples,
+                                                      s.number, false, s.colorCounter, s.colorOffset, beatmap));
 
             const int repeats = std::max((s.repeat - 1), 0);
             maxPossibleCombo += 2 + repeats + (repeats + 1) * s.ticks.size();  // start/end + repeat arrow + ticks
         }
 
         for(auto &s : c.spinners) {
-            result.hitobjects.push_back(
-                std::make_unique<Spinner>(s.x, s.y, s.time, s.samples, false, s.endTime, beatmap));
+            result.hitobjects.emplace_back(new Spinner(vec2{s.x, s.y}, s.time, s.samples, false, s.endTime, beatmap));
         }
         maxPossibleCombo += c.spinners.size();
 

@@ -38,9 +38,9 @@ void Quaternion::fromAxis(const vec3 &axis, float angleDeg) {
 }
 
 void Quaternion::fromEuler(float yawDeg, float pitchDeg, float rollDeg) {
-    float y = yawDeg * PIOVER180 / 2.0f;
-    float p = pitchDeg * PIOVER180 / 2.0f;
-    float r = rollDeg * PIOVER180 / 2.0f;
+    float y = yawDeg * PIOVER180_F / 2.0f;
+    float p = pitchDeg * PIOVER180_F / 2.0f;
+    float r = rollDeg * PIOVER180_F / 2.0f;
 
     float sinYaw = std::sin(y);
     float sinPitch = std::sin(p);

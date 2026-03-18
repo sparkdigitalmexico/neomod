@@ -110,7 +110,7 @@ void ff_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
 
     if(level > av_log_get_level()) return;
 
-    std::array<char, 1024> log_line;  // NOLINT
+    std::array<char, 1024> log_line{};
     Sync::scoped_lock lk(ff_log_mutex);
 
     int written = av_log_format_line2(avcl, level, fmt, vl, log_line.data(), static_cast<int>(log_line.size()),
@@ -157,7 +157,7 @@ bool load_full_ff_lib(const std::array<FFmpegFuncset, 4> &ffmpeg_funcsets) {
             return false;
         }
 
-#define LOAD_LIB_FUNCS_BODY(fname)                                                          \
+#define LOAD_LIB_FUNCS_BODY(fname)                                                                    \
     failed_count += !((fname) = dynutils::load_func<fname##_t>(current_library_outer_macro, #fname)); \
     if(!(fname)) ld_ctx().error_string.append(missing_prefix_outer_macro + #fname + "\n");
 

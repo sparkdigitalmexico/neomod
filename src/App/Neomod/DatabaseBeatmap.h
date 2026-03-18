@@ -28,27 +28,6 @@ using std::stop_token;
 
 using Color = uint32_t;
 
-// re-defining these to avoid needing to compile HitSounds.cpp (only need the definitions for diffcalc)
-namespace SampleSetType {
-enum : u8 {
-    NORMAL = 1,
-    SOFT = 2,
-    DRUM = 3,
-};
-}
-
-namespace HitSoundType {
-enum : u8 {
-    NORMAL = (1 << 0),
-    WHISTLE = (1 << 1),
-    FINISH = (1 << 2),
-    CLAP = (1 << 3),
-
-    VALID_HITSOUNDS = NORMAL | WHISTLE | FINISH | CLAP,
-    VALID_SLIDER_HITSOUNDS = NORMAL | WHISTLE,
-};
-}
-
 #endif
 
 #include <atomic>
@@ -78,7 +57,7 @@ using BeatmapDifficulty = DatabaseBeatmap;
 using BeatmapSet = DatabaseBeatmap;
 using DiffContainer = std::vector<std::unique_ptr<BeatmapDifficulty>>;
 
-namespace DBType = DatabaseBeatmapTypes;
+namespace DBType = neomod::DatabaseBeatmapTypes;
 
 // DatabaseBeatmap &operator=(DatabaseBeatmap other) already implements these...
 // NOLINTNEXTLINE(hicpp-special-member-functions, cppcoreguidelines-special-member-functions)

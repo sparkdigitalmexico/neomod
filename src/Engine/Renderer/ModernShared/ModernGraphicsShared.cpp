@@ -75,10 +75,10 @@ void ModernGraphicsShared::drawRectf(const RectOptions &opts) {
         static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
         {
             vao.clear();
-            addArcStripVertices(vao, opts.x + r, opts.y + r, rInner, rOuter, (float)PI, 1.5f * (float)PI);
-            addArcStripVertices(vao, x2 - r, opts.y + r, rInner, rOuter, 1.5f * (float)PI, 2.f * (float)PI);
-            addArcStripVertices(vao, x2 - r, y2 - r, rInner, rOuter, 0.f, 0.5f * (float)PI);
-            addArcStripVertices(vao, opts.x + r, y2 - r, rInner, rOuter, 0.5f * (float)PI, (float)PI);
+            addArcStripVertices(vao, opts.x + r, opts.y + r, rInner, rOuter, PI_F, 1.5f * PI_F);
+            addArcStripVertices(vao, x2 - r, opts.y + r, rInner, rOuter, 1.5f * PI_F, 2.f * PI_F);
+            addArcStripVertices(vao, x2 - r, y2 - r, rInner, rOuter, 0.f, 0.5f * PI_F);
+            addArcStripVertices(vao, opts.x + r, y2 - r, rInner, rOuter, 0.5f * PI_F, PI_F);
             // close back to first vertex pair
             vao.addVertex(opts.x - hw, opts.y + r);
             vao.addVertex(opts.x + hw, opts.y + r);
@@ -144,10 +144,10 @@ void ModernGraphicsShared::fillRectf(const FillRectOptions &opts) {
             vao.clear();
             vao.addVertex(opts.x + opts.width * 0.5f, opts.y + opts.height * 0.5f);  // center (fan hub)
 
-            addArcVertices(vao, opts.x + r, opts.y + r, r, (float)PI, 1.5f * (float)PI);
-            addArcVertices(vao, x2 - r, opts.y + r, r, 1.5f * (float)PI, 2.f * (float)PI);
-            addArcVertices(vao, x2 - r, y2 - r, r, 0.f, 0.5f * (float)PI);
-            addArcVertices(vao, opts.x + r, y2 - r, r, 0.5f * (float)PI, (float)PI);
+            addArcVertices(vao, opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
+            addArcVertices(vao, x2 - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
+            addArcVertices(vao, x2 - r, y2 - r, r, 0.f, 0.5f * PI_F);
+            addArcVertices(vao, opts.x + r, y2 - r, r, 0.5f * PI_F, PI_F);
             // close the fan back to the first perimeter vertex
             vao.addVertex(opts.x, opts.y + r);
         }
