@@ -1371,15 +1371,18 @@ void MainMenu::updateLayout() {
     this->pauseButton->setRelPos(screenSize.x - this->pauseButton->getSize().x * 2 - 10 * dpiScale,
                                  this->pauseButton->getSize().y + 10 * dpiScale);
 
-    this->tipLabel->setSizeX(screenSize.x * (3.f / 4.f));
-    this->tipLabel->setText(mainmenu::getCurrentTip());
-    this->tipLabel->setRelPos((screenSize.x - this->tipLabel->getSize().x) / 2.f,
-                              screenSize.y - this->tipLabel->getSize().y - 30 * dpiScale);
+    this->updateAvailableButton->setSize(375 * dpiScale, 50 * dpiScale);
+    this->updateAvailableButton->setPos(screenSize.x / 2 - this->updateAvailableButton->getSize().x / 2,
+                                        screenSize.y - this->updateAvailableButton->getSize().y - 10 * dpiScale);
 
     {
-        this->updateAvailableButton->setSize(375 * dpiScale, 50 * dpiScale);
-        this->updateAvailableButton->setPos(screenSize.x / 2 - this->updateAvailableButton->getSize().x / 2,
-                                            screenSize.y - this->updateAvailableButton->getSize().y - 10 * dpiScale);
+        const bool updateButtonVis = this->updateAvailableButton->isVisible();
+        const f32 tipLabelStartY = updateButtonVis ? this->updateAvailableButton->getPos().y : screenSize.y;
+        const f32 tipLabelMargin = (updateButtonVis ? 10.f : 30.f) * dpiScale;
+        const f32 tipLabelYPos = tipLabelStartY - this->tipLabel->getSize().y - tipLabelMargin;
+        this->tipLabel->setSizeX(screenSize.x * (3.f / 4.f));
+        this->tipLabel->setText(mainmenu::getCurrentTip());
+        this->tipLabel->setRelPos((screenSize.x - this->tipLabel->getSize().x) / 2.f, tipLabelYPos);
     }
 
     this->onlineBeatmapsButton->onResized();
