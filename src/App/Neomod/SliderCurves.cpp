@@ -23,7 +23,7 @@
 #endif
 
 namespace neomod {
-static constexpr const SLIDERCURVETYPE CIRCULAR{-(char)SLIDERCURVETYPE::PASSTHROUGH};
+static constexpr const SLIDERCURVETYPE CIRCULAR{(char)-(int)SLIDERCURVETYPE::PASSTHROUGH};
 
 //*******************//
 //	 Curve Builder	 //
