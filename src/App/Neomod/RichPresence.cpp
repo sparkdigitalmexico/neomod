@@ -29,6 +29,13 @@ namespace {  // static
 std::string last_status{"\nWaking up"};
 Action last_action = Action::IDLE;
 
+enum class MusicDependentCallback : u8 {
+    ON_NULL,
+    ON_MAINMENU,
+    ON_SONGBROWSER,
+};
+MusicDependentCallback last_callback{};
+
 void crop_to(const std::string& str, char* output, int max_len) {
     if(str.length() < max_len) {
         strcpy(output, str.c_str());
@@ -98,6 +105,20 @@ void set_activity_with_image(struct DiscordActivity* to_set) {
 }
 }  // namespace
 
+void refreshStatus() {
+    switch(last_callback) {
+        using enum MusicDependentCallback;
+        case ON_MAINMENU:
+            onMainMenu();
+            break;
+        case ON_SONGBROWSER:
+            onSongBrowser();
+            break;
+        case ON_NULL:
+            break;
+    }
+}
+
 void setBanchoStatus(const char* info_text, Action action) {
     if(osu == nullptr) return;
 
@@ -158,6 +179,7 @@ void updateBanchoMods() {
 }
 
 void onMainMenu() {
+    last_callback = MusicDependentCallback::ON_MAINMENU;
     bool force_not_afk =
         BanchoState::spectating || (ui->getChat()->isVisible() && ui->getChat()->user_list->isVisible());
     setBanchoStatus("Main Menu", force_not_afk ? Action::IDLE : Action::AFK);
@@ -179,6 +201,7 @@ void onMainMenu() {
 }
 
 void onSongBrowser() {
+    last_callback = MusicDependentCallback::ON_SONGBROWSER;
     auto activity = DiscRPC::create_base_activity();
 
     activity.type = DiscordActivityType_Playing;

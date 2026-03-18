@@ -1593,6 +1593,7 @@ void BeatmapInterface::loadMusic(bool reload, bool async) {
             if(!ui->getMainMenu()->isVisible() && db->isFinished()) {
                 loading_reselect_map.clear();
             }
+            RichPresence::refreshStatus();
         }
         return;
     }
@@ -1639,6 +1640,7 @@ void BeatmapInterface::checkHandleAsyncMusicLoadFinish() {
                 loading_reselect_map.clear();
             }
         }
+        RichPresence::refreshStatus();
     }
 }
 

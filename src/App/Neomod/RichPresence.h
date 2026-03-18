@@ -3,6 +3,7 @@
 #include "BanchoProtocol.h"
 
 namespace RichPresence {
+void refreshStatus();  // re-run last callback
 void onMainMenu();
 void onSongBrowser();
 void onPlayStart();
