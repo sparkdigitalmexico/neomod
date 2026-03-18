@@ -8,6 +8,7 @@
 #include "DatabaseBeatmapTypes.h"
 
 #include <vector>
+#include <memory>
 
 class ConVar;
 class ModFPoSu;
