@@ -34,8 +34,15 @@ Changelog::Changelog() : ScreenBackable() {
 
     std::vector<CHANGELOG> changelogs;
 
+    CHANGELOG v43_08;
+    v43_08.title = "43.08 (" CHANGELOG_TIMESTAMP ")";
+    v43_08.changes = {
+        R"()",
+    };
+    changelogs.push_back(v43_08);
+
     CHANGELOG v43_07;
-    v43_07.title = "43.07 (" CHANGELOG_TIMESTAMP ")";
+    v43_07.title = "43.07 (2026-03-18)";
     v43_07.changes = {
         R"(- Added emoji support)",
         R"(- Added support for copying screenshots to clipboard)",
