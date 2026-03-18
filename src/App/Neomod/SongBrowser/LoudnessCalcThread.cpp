@@ -174,7 +174,7 @@ struct VolNormalization::LoudnessCalcThread {
         f32 last_loudness = 0.f;
         const f32 fallback_loudness = std::clamp<f32>(cv::loudness_fallback.getFloat(), -16.f, 0.f);
 
-        SoLoud::WavStream ws(true /* prefer ffmpeg (faster) */);
+        SoLoud::WavStream ws{};
         ws.setLooping(false);
         ws.setAutoStop(true);
 
