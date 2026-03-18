@@ -40,7 +40,7 @@ std::span<const Tip> getAllTips() {
 static std::array s_tips{
     Tip{R"(Press Alt + Enter to toggle Fullscreen.)"},
     Tip{R"(Press Shift + F1 to open the in-game console.)"},
-    Tip{R"(Shift + Right Click on a skin in the dropdown list to change the source for base skin elements.)"},
+    Tip{R"(Shift + Click on a skin in the dropdown list to change the source for base skin elements.)"},
     Tip{
         [&b = binds::TOGGLE_MODSELECT]() -> std::string
         { return fmt::format(R"(Press {:s} during gameplay to change mods in realtime.)", env->scanCodeToString(b.get())); }
