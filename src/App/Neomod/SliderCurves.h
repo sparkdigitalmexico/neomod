@@ -35,31 +35,24 @@ class SliderCurve final {
     SliderCurve &operator=(SliderCurve &&) noexcept = default;
     ~SliderCurve() = default;
 
-    void updateStackPosition(f32 stackMulStackOffset, bool HR);
-
-    [[nodiscard]] vec2 pointAt(f32 t) const;          // with stacking
-    [[nodiscard]] vec2 originalPointAt(f32 t) const;  // without stacking
+    [[nodiscard]] vec2 pointAt(f32 t) const;  // NOTE: not adjusted for stacking/HR
 
     [[nodiscard]] inline f32 getStartAngle() const { return m_startAngle; }
     [[nodiscard]] inline f32 getEndAngle() const { return m_endAngle; }
 
-    [[nodiscard]] inline std::span<const vec2> getPoints() const { return m_curvePoints; }
-    [[nodiscard]] inline std::span<const std::vector<vec2>> getPointSegments() const { return m_curvePointSegments; }
+    [[nodiscard]] inline std::span<const vec2> getPoints() const {
+        return m_curvePoints;
+    }  // NOTE: not adjusted for stacking/HR
 
     [[nodiscard]] inline f32 getPixelLength() const { return m_pixelLength; }
 
-    [[nodiscard]] inline vec4 getBounds() const { return m_vBounds; }                  // with stacking
-    [[nodiscard]] inline vec4 getOriginalBounds() const { return m_vOriginalBounds; }  // without stacking
+    [[nodiscard]] inline vec4 getBounds() const { return m_vBounds; }  // NOTE: not adjusted for stacking/HR
 
    private:
-    /* these must be explicitly calculated/set in one of the subclasses */
     std::vector<std::vector<vec2>> m_curvePointSegments;
-    std::vector<std::vector<vec2>> m_originalCurvePointSegments;
     std::vector<vec2> m_curvePoints;
-    std::vector<vec2> m_originalCurvePoints;
 
     vec4 m_vBounds;
-    vec4 m_vOriginalBounds;
 
     f32 m_startAngle;
     f32 m_endAngle;
@@ -85,7 +78,6 @@ class SliderCurve final {
         struct {
             // type == CIRCULAR
             f32 m_vCircleCenterX, m_vCircleCenterY;
-            f32 m_vOriginalCircleCenterX, m_vOriginalCircleCenterY;
             f32 m_radius;
             f32 m_calcStartAngleDeg;
             f32 m_calcEndAngleDeg;

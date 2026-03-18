@@ -68,7 +68,6 @@ DifficultyHitObject::DifficultyHitObject(TYPE type, vec2 pos, i32 time, i32 endT
       spanDuration(spanDuration),
       pixelLength(pixelLength),
       repeats(repeats),
-      scheduledCurveAllocStackOffset(0.f),
       stack(0),
       originalPos(pos),
       type(type),
@@ -118,7 +117,6 @@ DifficultyHitObject::DifficultyHitObject(DifficultyHitObject &&dobj) noexcept
     this->curve = std::move(dobj.curve);
     this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
     this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
-    this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
     this->repeats = dobj.repeats;
 
     this->stack = dobj.stack;
@@ -146,7 +144,6 @@ DifficultyHitObject &DifficultyHitObject::operator=(DifficultyHitObject &&dobj) 
     this->stack = dobj.stack;
     this->originalPos = dobj.originalPos;
     this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
-    this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
 
     this->scoringTimes = std::move(dobj.scoringTimes);
     this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
@@ -156,16 +153,10 @@ DifficultyHitObject &DifficultyHitObject::operator=(DifficultyHitObject &&dobj) 
 }
 
 void DifficultyHitObject::updateStackPosition(f32 stackOffset) {
-    scheduledCurveAllocStackOffset = stackOffset;
-
     pos = originalPos - vec2(stack * stackOffset, stack * stackOffset);
-
-    updateCurveStackPosition(stackOffset);
 }
 
-void DifficultyHitObject::updateCurveStackPosition(f32 stackOffset) {
-    if(curve != nullptr) curve->updateStackPosition(stack * stackOffset, false);
-}
+vec2 DifficultyHitObject::curvePointAt(f32 t) const { return curve->pointAt(t) - (originalPos - pos); }
 
 vec2 DifficultyHitObject::getOriginalRawPosAt(i32 pos) const {
     // NOTE: the delayed curve creation has been deliberately disabled here for stacking purposes for beatmaps with insane slider counts for performance reasons
@@ -178,14 +169,14 @@ vec2 DifficultyHitObject::getOriginalRawPosAt(i32 pos) const {
     else {
         // new (correct)
         if(pos <= time)
-            return curve->originalPointAt(0.0f);
+            return curve->pointAt(0.0f);
         else if(pos >= endTime) {
             if(repeats % 2 == 0)
-                return curve->originalPointAt(0.0f);
+                return curve->pointAt(0.0f);
             else
-                return curve->originalPointAt(1.0f);
+                return curve->pointAt(1.0f);
         } else
-            return curve->originalPointAt(getT(pos, false));
+            return curve->pointAt(getT(pos, false));
     }
 }
 
@@ -263,7 +254,7 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
             else
                 endTimeMin = std::fmod(endTimeMin, 1.0);
 
-            slider.lazyEndPos = slider.ho->curve->pointAt(endTimeMin);
+            slider.lazyEndPos = slider.ho->curvePointAt(endTimeMin);
 
             vec2 cursor_pos = slider.ho->pos;
             f64 scaling_factor = 50.0 / circleRadius;
@@ -273,7 +264,7 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
 
                 if(slider.ho->scoringTimes[i].type == SLIDER_SCORING_TIME::TYPE::END) {
                     // NOTE: In lazer, the position of the slider end is at the visual end, but the time is at the scoring end
-                    diff = slider.ho->curve->pointAt(slider.ho->repeats % 2 ? 1.0 : 0.0) - cursor_pos;
+                    diff = slider.ho->curvePointAt(slider.ho->repeats % 2 ? 1.0 : 0.0) - cursor_pos;
                 } else {
                     f64 progress = (std::clamp<f32>(slider.ho->scoringTimes[i].time - (f32)slider.ho->time, 0.0f,
                                                     slider.ho->getDuration())) /
@@ -283,7 +274,7 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
                     else
                         progress = std::fmod(progress, 1.0);
 
-                    diff = slider.ho->curve->pointAt(progress) - cursor_pos;
+                    diff = slider.ho->curvePointAt(progress) - cursor_pos;
                 }
 
                 f64 diff_len = scaling_factor * vec::length(diff);
@@ -377,8 +368,6 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
                         prev1.ho->curve = std::make_unique<SliderCurve>(
                             prev1.ho->osuSliderCurveType, prev1.ho->scheduledCurveAllocControlPoints,
                             prev1.ho->pixelLength, starsSliderCurvePointsSeparation);
-                        prev1.ho->updateCurveStackPosition(
-                            prev1.ho->scheduledCurveAllocStackOffset);  // NOTE: respect stacking
                     }
                 }
 
@@ -408,9 +397,9 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
                     // NOTE: "curve shouldn't be null here, but Yin [test7] causes that to happen"
                     // NOTE: the curve can be null if controlPoints.size() < 1 because the OsuDifficultyHitObject() constructor will then not set scheduledCurveAlloc to true (which is perfectly fine and correct)
                     f32 tail_jump_dist =
-                        vec::distance(prev1.ho->curve ? prev1.ho->curve->pointAt(prev1.ho->repeats % 2 ? 1.0 : 0.0)
-                                                      : prev1.ho->pos,
-                                      cur.ho->pos) *
+                        vec::distance(
+                            prev1.ho->curve ? prev1.ho->curvePointAt(prev1.ho->repeats % 2 ? 1.0 : 0.0) : prev1.ho->pos,
+                            cur.ho->pos) *
                         radius_scaling_factor;
                     cur.minJumpDistance = std::max(
                         0.0f, std::min((f32)cur.minJumpDistance - (maximum_slider_radius - assumed_slider_radius),

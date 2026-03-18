@@ -69,7 +69,9 @@ class DifficultyHitObject {
     DifficultyHitObject &operator=(DifficultyHitObject &&dobj) noexcept;
 
     void updateStackPosition(f32 stackOffset);
-    void updateCurveStackPosition(f32 stackOffset);
+
+    // returns stacked curve position (applies stack offset derived from pos vs originalPos)
+    [[nodiscard]] vec2 curvePointAt(f32 t) const;
 
     // for stacking calculations, always returns the unstacked original position at that point in time
     [[nodiscard]] vec2 getOriginalRawPosAt(i32 pos) const;
@@ -101,7 +103,6 @@ class DifficultyHitObject {
     i32 repeats;
 
     // custom
-    f32 scheduledCurveAllocStackOffset;
     i32 stack;
     vec2 originalPos;
 

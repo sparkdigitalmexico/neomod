@@ -343,10 +343,6 @@ void SCEDMBuilder::build(SliderCurve &curve, u32 nCurve, f32 pixelLength) {
             curve.m_endAngle = std::atan2(c2.y - c1.y, c2.x - c1.x) * 180.f / PI_F;
         }
     }
-
-    // backup (for dynamic updateStackPosition() recalculation)
-    curve.m_originalCurvePoints = curve.m_curvePoints;
-    curve.m_originalCurvePointSegments = curve.m_curvePointSegments;
 }
 
 // used as a calculation buffer to avoid reallocations on each curve creation (for catmull/bezier curves)
@@ -472,8 +468,6 @@ void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 cur
     // initialize
     m_vCircleCenterX = 0.f;
     m_vCircleCenterY = 0.f;
-    m_vOriginalCircleCenterX = 0.f;
-    m_vOriginalCircleCenterY = 0.f;
     m_radius = 0.f;
     m_calcStartAngleDeg = 0.f;
     m_calcEndAngleDeg = 0.f;
@@ -517,8 +511,8 @@ void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 cur
     norb.y = temp;
 
     const vec2 intersection = intersect(mida, nora, midb, norb);
-    m_vCircleCenterX = m_vOriginalCircleCenterX = intersection.x;
-    m_vCircleCenterY = m_vOriginalCircleCenterY = intersection.y;
+    m_vCircleCenterX = intersection.x;
+    m_vCircleCenterY = intersection.y;
 
     // find the angles relative to the circle center
     const vec2 startAngPoint = start - intersection;
@@ -590,10 +584,6 @@ void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 cur
 
     // add the segment (no special logic here for SliderCurveCircumscribedCircle, just add the entire vector)
     m_curvePointSegments.emplace_back(m_curvePoints);  // copy
-
-    // backup (for dynamic updateStackPosition() recalculation)
-    m_originalCurvePoints = m_curvePoints;                // copy
-    m_originalCurvePointSegments = m_curvePointSegments;  // copy
 }
 
 //******************************//
@@ -612,7 +602,6 @@ SliderCurve::SliderCurve(SLIDERCURVETYPE ctorType, std::span<const vec2> control
                 0.0f,                             // maxX
                 0.0f                              // maxY
                 ),
-      m_vOriginalBounds(m_vBounds),
       m_startAngle(0.f),
       m_endAngle(0.f),
       m_pixelLength(std::abs(ctorPixelLength)) {
@@ -649,13 +638,11 @@ SliderCurve::SliderCurve(SLIDERCURVETYPE ctorType, std::span<const vec2> control
 
     // calculate bounds
     for(vec2 point : m_curvePoints) {
-        if(point.x < m_vOriginalBounds.x) m_vOriginalBounds.x = point.x;
-        if(point.x > m_vOriginalBounds.z) m_vOriginalBounds.z = point.x;
-        if(point.y < m_vOriginalBounds.y) m_vOriginalBounds.y = point.y;
-        if(point.y > m_vOriginalBounds.w) m_vOriginalBounds.w = point.y;
+        if(point.x < m_vBounds.x) m_vBounds.x = point.x;
+        if(point.x > m_vBounds.z) m_vBounds.z = point.x;
+        if(point.y < m_vBounds.y) m_vBounds.y = point.y;
+        if(point.y > m_vBounds.w) m_vBounds.w = point.y;
     }
-
-    m_vBounds = m_vOriginalBounds;
 }
 
 vec2 SliderCurve::pointAt(f32 t) const {
@@ -695,64 +682,4 @@ vec2 SliderCurve::pointAt(f32 t) const {
     }
 }
 
-vec2 SliderCurve::originalPointAt(f32 t) const {
-    using enum SLIDERCURVETYPE;
-    if(m_type != CIRCULAR /* BEZIER || CATMULL */) {
-        if(m_originalCurvePoints.size() < 1) return {0.f, 0.f};
-
-        const f64 indexD = (f64)t * m_NCurve;
-        const u32 index = (u32)indexD;
-        if(index >= m_NCurve) {
-            if(m_NCurve < m_originalCurvePoints.size())
-                return m_originalCurvePoints[m_NCurve];
-            else {
-                debugLog("(SliderCurve) ERROR: Illegal index {:d}!!!", m_NCurve);
-                return {0.f, 0.f};
-            }
-        } else {
-            if(index + 1 >= m_originalCurvePoints.size()) {
-                debugLog("(SliderCurve) ERROR: Illegal index {:d}!!!", index);
-                return {0.f, 0.f};
-            }
-
-            const vec2 poi = m_originalCurvePoints[index];
-            const vec2 poi2 = m_originalCurvePoints[index + 1];
-
-            const f32 t2 = (f32)(indexD - (f64)index);
-
-            return {std::lerp(poi.x, poi2.x, t2), std::lerp(poi.y, poi2.y, t2)};
-        }
-    } else {  // CIRCULAR
-        const f32 sanityRange =
-            SLIDER_CURVE_MAX_LENGTH;  // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
-        const f32 ang = std::lerp(m_calcStartAngleDeg, m_calcEndAngleDeg, t);
-
-        return {std::clamp<f32>(std::cos(ang) * m_radius + m_vOriginalCircleCenterX, -sanityRange, sanityRange),
-                std::clamp<f32>(std::sin(ang) * m_radius + m_vOriginalCircleCenterY, -sanityRange, sanityRange)};
-    }
-}
-
-void SliderCurve::updateStackPosition(f32 stackMulStackOffset, bool HR) {
-    const vec2 offsetxy{stackMulStackOffset, stackMulStackOffset * (HR ? -1.0f : 1.0f)};
-
-    for(u32 i = 0; i < m_originalCurvePoints.size() && i < m_curvePoints.size(); i++) {
-        m_curvePoints[i] = m_originalCurvePoints[i] - offsetxy;
-    }
-
-    for(u32 s = 0; s < m_originalCurvePointSegments.size() && s < m_curvePointSegments.size(); s++) {
-        for(u32 p = 0; p < m_originalCurvePointSegments[s].size() && p < m_curvePointSegments[s].size(); p++) {
-            m_curvePointSegments[s][p] = m_originalCurvePointSegments[s][p] - offsetxy;
-        }
-    }
-
-    m_vBounds.x = m_vOriginalBounds.x - offsetxy.x;
-    m_vBounds.y = m_vOriginalBounds.y - offsetxy.y;
-    m_vBounds.z = m_vOriginalBounds.z - offsetxy.x;
-    m_vBounds.w = m_vOriginalBounds.w - offsetxy.y;
-
-    if(m_type == CIRCULAR) {
-        m_vCircleCenterX = m_vOriginalCircleCenterX - offsetxy.x;
-        m_vCircleCenterY = m_vOriginalCircleCenterY - offsetxy.y;
-    }
-}
 }  // namespace neomod

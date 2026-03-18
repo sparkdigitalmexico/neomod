@@ -317,6 +317,7 @@ class Slider final : public HitObject {
     void onTickHit(const SLIDERCLICK &click);
     void onSliderBreak();
 
+    [[nodiscard]] vec2 curvePointAt(f32 t) const { return m_curve.pointAt(t) - m_stackOffset; }
     [[nodiscard]] f32 getT(i32 posMS, bool raw) const;
 
     [[nodiscard]] bool isClickHeldSlider() const;  // special logic to disallow hold tapping
@@ -349,6 +350,7 @@ class Slider final : public HitObject {
 
     SliderCurve m_curve;
 
+    vec2 m_stackOffset{0.f};
     vec2 m_curPoint{0.f};
     vec2 m_curPointRaw{0.f};
 
