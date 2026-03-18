@@ -78,7 +78,8 @@ void set_activity_with_image(struct DiscordActivity* to_set) {
     }
 
     if(bg_visible && (listening || playing)) {
-        auto url = fmt::format("b.{}/thumb/{}l.jpg", endpoint, map->getSetID());
+        auto scheme = cv::use_https.getBool() ? "https://" : "http://";
+        auto url = fmt::format("{}b.{}/thumb/{}l.jpg", scheme, endpoint, map->getSetID());
         strncpy(&to_set->assets.large_image[0], url.c_str(), 127);
 
         if(server_icon_url.length() > 0 && cv::main_menu_use_server_logo.getBool()) {
