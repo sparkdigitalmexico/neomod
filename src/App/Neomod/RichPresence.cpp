@@ -163,7 +163,7 @@ void onMainMenu() {
     setBanchoStatus("Main Menu", force_not_afk ? Action::IDLE : Action::AFK);
 
     // NOTE: As much as I would like to show "Listening to", the Discord SDK ignores the activity 'type'
-    struct DiscordActivity activity{};
+    auto activity = DiscRPC::create_base_activity();
 
     activity.type = DiscordActivityType_Listening;
 
@@ -179,7 +179,7 @@ void onMainMenu() {
 }
 
 void onSongBrowser() {
-    struct DiscordActivity activity{};
+    auto activity = DiscRPC::create_base_activity();
 
     activity.type = DiscordActivityType_Playing;
     strcpy(activity.details, "Picking a map");
@@ -213,7 +213,7 @@ void onPlayStart() {
                   .count();
     }
 
-    struct DiscordActivity activity{};
+    auto activity = DiscRPC::create_base_activity();
 
     activity.type = DiscordActivityType_Playing;
     activity.timestamps.start = tms;
@@ -281,7 +281,7 @@ void onPlayEnd(bool quit) {
 }
 
 void onMultiplayerLobby() {
-    struct DiscordActivity activity{};
+    auto activity = DiscRPC::create_base_activity();
 
     activity.type = DiscordActivityType_Playing;
 

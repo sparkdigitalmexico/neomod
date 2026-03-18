@@ -9,6 +9,7 @@ void tick() {}
 void destroy() {}
 void clear_activity() {}
 void set_activity(struct DiscordActivity* /*activity*/) {}
+struct DiscordActivity create_base_activity() { return DiscordActivity{}; }
 }  // namespace DiscRPC
 
 #else
@@ -22,6 +23,10 @@ void set_activity(struct DiscordActivity* /*activity*/) {}
 #include "dynutils.h"
 
 #define DISCORD_CLIENT_ID 1474141308183380181
+
+namespace cv {
+static ConVar debug_discord_rpc("debug_discord_rpc", false, CLIENT, "print verbose discord rpc activity details");
+}
 
 namespace DiscRPC {
 namespace  // static
@@ -216,11 +221,8 @@ void clear_activity() {
     DISCCALL(dapp.activities->clear_activity(dapp.activities, nullptr, nullptr));
 }
 
-void set_activity(struct DiscordActivity *activity) {
-    if(!initialized) return;
-
-    if(!cv::rich_presence.getBool()) return;
-
+struct DiscordActivity create_base_activity() {
+    struct DiscordActivity activity{};
     // activity->type: int
     //     DiscordActivityType_Playing,
     //     DiscordActivityType_Streaming,
@@ -239,12 +241,41 @@ void set_activity(struct DiscordActivity *activity) {
     // activity->secrets: DiscordActivitySecrets
     // currently unused. should be lobby id, etc
 
-    activity->application_id = DISCORD_CLIENT_ID;
-    strcpy(&activity->name[0], PACKAGE_NAME);
-    strcpy(&activity->assets.large_image[0], PACKAGE_NAME "_icon");
-    activity->assets.large_text[0] = '\0';
-    strcpy(&activity->assets.small_image[0], "None");
-    activity->assets.small_text[0] = '\0';
+    activity.application_id = DISCORD_CLIENT_ID;
+    strcpy(&activity.name[0], PACKAGE_NAME);
+    strcpy(&activity.assets.large_image[0], PACKAGE_NAME "_icon");
+    activity.assets.large_text[0] = '\0';
+    strcpy(&activity.assets.small_image[0], "None");
+    activity.assets.small_text[0] = '\0';
+    return activity;
+}
+
+void set_activity(struct DiscordActivity *activity) {
+    if(!initialized) return;
+
+    if(!cv::rich_presence.getBool()) return;
+
+    if(cv::debug_discord_rpc.getBool()) {
+        std::string dbgstr{fmt::format("DISCORD PRESENCE [{:d}]\n", Timing::getTicksMS())};
+
+        dbgstr.append(fmt::format("type: {:d}\n", (u8)activity->type));
+        dbgstr.append(fmt::format("application_id: {:d}\n", activity->application_id));
+        dbgstr.append(fmt::format("name: {:s}\n", std::string_view{&activity->name[0]}));
+        dbgstr.append(fmt::format("state: {:s}\n", std::string_view{&activity->state[0]}));
+        dbgstr.append(fmt::format("details: {:s}\n", std::string_view{&activity->details[0]}));
+        dbgstr.append(fmt::format("timestamps: {{ start: {:d}, end: {:d} }}\n", activity->timestamps.start,
+                                  activity->timestamps.end));
+        dbgstr.append(fmt::format(
+            "assets: {{ large_image: {:s}, large_text: {:s}, small_image: {:s}, small_text: {:s} }}\n",
+            std::string_view{&activity->assets.large_image[0]}, std::string_view{&activity->assets.large_text[0]},
+            std::string_view{&activity->assets.small_image[0]}, std::string_view{&activity->assets.small_text[0]}));
+        dbgstr.append(fmt::format("party: {{ id: {:s}, size: {{ current_size: {:d}, max_size: {:d} }} }}\n",
+                                  std::string_view{&activity->party.id[0]}, activity->party.size.current_size,
+                                  activity->party.size.max_size));
+        // dbgstr.append(fmt::format("secrets: {}\n", activity->secrets));
+        dbgstr.append(fmt::format("instance: {}", activity->instance));
+        logRaw(dbgstr);
+    }
 
     DISCCALL(dapp.activities->update_activity(dapp.activities, activity, nullptr, nullptr));
 }

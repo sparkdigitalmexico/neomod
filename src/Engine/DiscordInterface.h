@@ -33,4 +33,5 @@ void tick();
 void destroy();
 void clear_activity();
 void set_activity(struct DiscordActivity *activity);
+struct DiscordActivity create_base_activity(); // base init
 }  // namespace DiscRPC
