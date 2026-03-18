@@ -56,8 +56,19 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
         }
     }
 
-    const u8 buttonMask = (u8)((this->bHandleLeftMouse && mouse->isLeftDown()) << 1) |
-                          (u8)(this->bHandleRightMouse && mouse->isRightDown());
+    const u8 rawButtonMask = (u8)((this->bHandleLeftMouse && mouse->isLeftDown()) << 1) |
+                             (u8)(this->bHandleRightMouse && mouse->isRightDown());
+
+    // if update() wasn't called last frame (e.g. element or a parent container was invisible),
+    // treat any already-held buttons as stale and ignore them until released
+    // TODO: this is a stop-gap until mouse handling is separated from update()
+    const u32 currentFrame = (u32)engine->getFrameCount();
+    if(currentFrame - this->lastUpdateFrame > 1) {
+        this->staleButtons = rawButtonMask;
+    }
+    this->lastUpdateFrame = currentFrame;
+    this->staleButtons &= rawButtonMask;
+    const u8 buttonMask = rawButtonMask & ~this->staleButtons;
 
     if(buttonMask && c.propagate_clicks) {
         this->mouseUpCheck |= buttonMask;
@@ -101,7 +112,7 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
 
 void CBaseUIElement::dumpElem() const {
     using namespace CBaseUIDebug;
-    size_t currentFrame = engine->getFrameCount();
+    u64 currentFrame = engine->getFrameCount();
     logRaw(R"(==== UI ELEMENT {:p} DEBUG ====
 frame:              {}
 sName:              {}

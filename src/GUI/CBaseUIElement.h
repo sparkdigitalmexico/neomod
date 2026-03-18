@@ -21,7 +21,7 @@ void onDumpElemsChangeCallback(float newvalue);
 // - When an element is standalone, use getPos/setPos
 // - In a container or in a scrollview, use getRelPos/setRelPos and call update_pos() on the container
 
-enum class TEXT_JUSTIFICATION : uint8_t { LEFT, CENTERED, RIGHT };
+enum class TEXT_JUSTIFICATION : u8 { LEFT, CENTERED, RIGHT };
 
 class CBaseUIContainer;
 
@@ -214,8 +214,10 @@ class CBaseUIElement : public KeyboardListener {
     // attributes
 
    private:
-    uint8_t mouseInsideCheck : 2 {0};
-    uint8_t mouseUpCheck : 2 {0};
+    u32 lastUpdateFrame{0};
+    u8 mouseInsideCheck : 2 {0};
+    u8 mouseUpCheck : 2 {0};
+    u8 staleButtons : 2 {0};
 
    protected:
     bool grabs_clicks : 1 {false};  // TODO: remove this (confusing behavior)

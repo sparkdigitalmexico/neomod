@@ -1158,13 +1158,7 @@ CBaseUIContainer *SongBrowser::setVisible(bool visible) {
         osu->getMapInterface()->selectBeatmap();
 
         // update user name/stats
-        osu->onUserCardChange(BanchoState::get_username().c_str());
-
-        // HACKHACK: workaround for BaseUI framework deficiency (missing mouse events. if a mouse button is being held,
-        // and then suddenly a BaseUIElement gets put under it and set visible, and then the mouse button is released,
-        // that "incorrectly" fires onMouseUpInside/onClicked/etc.)
-        mouse->onButtonChange({Timing::getTicksNS(), MouseButtonFlags::MF_LEFT, false});
-        mouse->onButtonChange({Timing::getTicksNS(), MouseButtonFlags::MF_RIGHT, false});
+        osu->onUserCardChange(BanchoState::get_username());
 
         // For multiplayer: if the host exits song selection without selecting a song, we want to be able to revert
         // to that previous song.

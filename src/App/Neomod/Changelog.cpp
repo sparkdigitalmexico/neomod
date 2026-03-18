@@ -37,7 +37,7 @@ Changelog::Changelog() : ScreenBackable() {
     CHANGELOG v43_08;
     v43_08.title = "43.08 (" CHANGELOG_TIMESTAMP ")";
     v43_08.changes = {
-        R"()",
+        R"(- Fixed mod selector being instantly closeable after pressing the mod select button)",
     };
     changelogs.push_back(v43_08);
 
