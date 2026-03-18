@@ -23,9 +23,7 @@
 #endif
 
 namespace neomod {
-
-namespace {  // anonymous
-class SCEqualDistanceMulti;
+static constexpr const SLIDERCURVETYPE CIRCULAR{-(char)SLIDERCURVETYPE::PASSTHROUGH};
 
 //*******************//
 //	 Curve Builder	 //
@@ -33,7 +31,7 @@ class SCEqualDistanceMulti;
 
 // combines bezier approximation and equal-distance resampling with persistent buffers
 // placed up here for friend access to SliderCurve
-class SCEDMBuilder {
+class SCEDMBuilder final {
    private:
     // For bezier approximator:
     // https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Objects/BezierApproximator.cs
@@ -186,212 +184,13 @@ class SCEDMBuilder {
 
     [[nodiscard]] bool hasSegments() const { return !m_segmentStarts.empty(); }
 
-    void build(SCEqualDistanceMulti &curve, u32 nCurve, f32 pixelLength);
+    void build(SliderCurve &curve, u32 nCurve, f32 pixelLength);
 };
-
-// used as a calculation buffer to avoid reallocations on each curve creation
-thread_local SCEDMBuilder g_curveBuilder;
-
-//***********************//
-//	 Curve Subclasses	 //
-//***********************//
-
-class SCEqualDistanceMulti : public SliderCurve {
-    friend SCEDMBuilder;
-
-   public:
-    SCEqualDistanceMulti(std::vector<vec2> controlPoints, f32 pixelLength, f32 curvePointsSeparation,
-                         bool line);  // beziers
-    SCEqualDistanceMulti(std::vector<vec2> controlPoints, f32 pixelLength,
-                         f32 curvePointsSeparation);  // catmulls
-
-    SCEqualDistanceMulti(const SCEqualDistanceMulti &) = default;
-    SCEqualDistanceMulti &operator=(const SCEqualDistanceMulti &) = default;
-    SCEqualDistanceMulti(SCEqualDistanceMulti &&) = default;
-    SCEqualDistanceMulti &operator=(SCEqualDistanceMulti &&) = default;
-    ~SCEqualDistanceMulti() override = default;
-
-    [[nodiscard]] vec2 pointAt(f32 t) const override;
-    [[nodiscard]] vec2 originalPointAt(f32 t) const override;
-
-   private:
-    u32 m_NCurve;
-};
-
-// the only difference is that bezier's constructor takes a "line" parameter as an argument, catmull's doesn't
-using SCBezier = SCEqualDistanceMulti;
-using SCCatmull = SCEqualDistanceMulti;
-
-vec2 SCEqualDistanceMulti::pointAt(f32 t) const {
-    if(m_curvePoints.size() < 1) return {0.f, 0.f};
-
-    const f64 indexD = (f64)t * m_NCurve;
-    const u32 index = (u32)indexD;
-    if(index >= m_NCurve) {
-        if(m_NCurve < m_curvePoints.size())
-            return m_curvePoints[m_NCurve];
-        else {
-            debugLog("SliderCurveEqualDistanceMulti::pointAt() Error: Illegal index {:d}!!!", m_NCurve);
-            return {0.f, 0.f};
-        }
-    } else {
-        if(index + 1 >= m_curvePoints.size()) {
-            debugLog("SliderCurveEqualDistanceMulti::pointAt() Error: Illegal index {:d}!!!", index);
-            return {0.f, 0.f};
-        }
-
-        const vec2 poi = m_curvePoints[index];
-        const vec2 poi2 = m_curvePoints[index + 1];
-
-        const f32 t2 = (f32)(indexD - (f64)index);
-
-        return {std::lerp(poi.x, poi2.x, t2), std::lerp(poi.y, poi2.y, t2)};
-    }
-}
-
-vec2 SCEqualDistanceMulti::originalPointAt(f32 t) const {
-    if(m_originalCurvePoints.size() < 1) return {0.f, 0.f};
-
-    const f64 indexD = (f64)t * m_NCurve;
-    const u32 index = (u32)indexD;
-    if(index >= m_NCurve) {
-        if(m_NCurve < m_originalCurvePoints.size())
-            return m_originalCurvePoints[m_NCurve];
-        else {
-            debugLog("SliderCurveEqualDistanceMulti::originalPointAt() Error: Illegal index {:d}!!!", m_NCurve);
-            return {0.f, 0.f};
-        }
-    } else {
-        if(index + 1 >= m_originalCurvePoints.size()) {
-            debugLog("SliderCurveEqualDistanceMulti::originalPointAt() Error: Illegal index {:d}!!!", index);
-            return {0.f, 0.f};
-        }
-
-        const vec2 poi = m_originalCurvePoints[index];
-        const vec2 poi2 = m_originalCurvePoints[index + 1];
-
-        const f32 t2 = (f32)(indexD - (f64)index);
-
-        return {std::lerp(poi.x, poi2.x, t2), std::lerp(poi.y, poi2.y, t2)};
-    }
-}
-
-//*******************//
-//	 Bezier Curves	 //
-//*******************//
-
-SCEqualDistanceMulti::SCEqualDistanceMulti(std::vector<vec2> controlPoints_, f32 pixelLength, f32 curvePointsSeparation,
-                                           bool line)
-    : SliderCurve(std::move(controlPoints_), pixelLength) {
-    const u32 max_points = SLIDER_CURVE_MAX_POINTS;
-    m_NCurve = std::min((u32)(m_pixelLength / std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), max_points);
-
-    const u32 numControlPoints = m_controlPoints.size();
-
-    g_curveBuilder.reset();
-
-    // Beziers: splits points into different Beziers if has the same points (red anchor points)
-    // a b c - c d - d e f g
-    // Lines: generate a new curve for each sequential pair
-    // ab  bc  cd  de  ef  fg
-    u32 segmentStart = 0;
-    for(u32 i = 1; i < numControlPoints; i++) {
-        if(line) {
-            g_curveBuilder.addBezierSegment(&m_controlPoints[i - 1], 2);
-        } else if(m_controlPoints[i] == m_controlPoints[i - 1]) {
-            // red anchor point - end current segment
-            if(i - segmentStart >= 2) {
-                g_curveBuilder.addBezierSegment(&m_controlPoints[segmentStart], i - segmentStart);
-            }
-            segmentStart = i;
-        }
-    }
-
-    // handle final segment (non-line mode only)
-    if(!line && numControlPoints - segmentStart >= 2) {
-        g_curveBuilder.addBezierSegment(&m_controlPoints[segmentStart], numControlPoints - segmentStart);
-    }
-
-    if(g_curveBuilder.hasSegments()) {
-        g_curveBuilder.build(*this, m_NCurve, m_pixelLength);
-    } else {
-        debugLog(
-            "SliderCurveEqualDistanceMulti ERROR: no segments (line: {} numControlPoints: {} pixelLength: {} "
-            "curvePointsSeparation: {})",
-            line, numControlPoints, pixelLength, curvePointsSeparation);
-    }
-}
-
-//********************//
-//   Catmull Curves   //
-//********************//
-
-SCEqualDistanceMulti::SCEqualDistanceMulti(std::vector<vec2> controlPoints_, f32 pixelLength, f32 curvePointsSeparation)
-    : SliderCurve(std::move(controlPoints_), pixelLength) {
-    const u32 max_points = SLIDER_CURVE_MAX_POINTS;
-    m_NCurve = std::min((u32)(m_pixelLength / std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), max_points);
-
-    const u32 numControlPoints = m_controlPoints.size();
-
-    g_curveBuilder.reset();
-
-    // build temporary 4-point windows for catmull-rom
-    // repeat the first and last points as control points if they differ from neighbors
-
-    // handle first point duplication
-    const bool duplicateFirst =
-        (m_controlPoints[0].x != m_controlPoints[1].x || m_controlPoints[0].y != m_controlPoints[1].y);
-
-    // handle last point duplication
-    const bool duplicateLast = (m_controlPoints[numControlPoints - 1].x != m_controlPoints[numControlPoints - 2].x ||
-                                m_controlPoints[numControlPoints - 1].y != m_controlPoints[numControlPoints - 2].y);
-
-    // calculate effective point count
-    u32 effectiveCount = numControlPoints + (duplicateFirst ? 1 : 0) + (duplicateLast ? 1 : 0);
-
-    auto getPoint = [&](u32 idx) -> vec2 {
-        if(duplicateFirst) {
-            if(idx == 0) return m_controlPoints[0];
-            idx--;
-        }
-        if(idx < numControlPoints) return m_controlPoints[idx];
-        return m_controlPoints[numControlPoints - 1];
-    };
-
-    std::array<vec2, 4> catmullPoints;  // NOLINT
-    for(u32 i = 0; i + 3 < effectiveCount; i++) {
-        catmullPoints[0] = getPoint(i);
-        catmullPoints[1] = getPoint(i + 1);
-        catmullPoints[2] = getPoint(i + 2);
-        catmullPoints[3] = getPoint(i + 3);
-        g_curveBuilder.addCatmullSegment(catmullPoints);
-    }
-
-    // handle final window if we have exactly 4 effective points remaining
-    if(effectiveCount >= 4) {
-        catmullPoints[0] = getPoint(effectiveCount - 4);
-        catmullPoints[1] = getPoint(effectiveCount - 3);
-        catmullPoints[2] = getPoint(effectiveCount - 2);
-        catmullPoints[3] = getPoint(effectiveCount - 1);
-
-        // only add if not already added in the loop
-        if(effectiveCount == 4) {
-            g_curveBuilder.addCatmullSegment(catmullPoints);
-        }
-    }
-
-    if(g_curveBuilder.hasSegments()) {
-        g_curveBuilder.build(*this, m_NCurve, m_pixelLength);
-    } else {
-        debugLog("ERROR: catmulls.size() == 0 (numControlPoints: {} pixelLength: {} curvePointsSeparation: {})",
-                 numControlPoints, pixelLength, curvePointsSeparation);
-    }
-}
 
 // the final step for building bezier/catmull curves
-void SCEDMBuilder::build(SCEqualDistanceMulti &curve, u32 nCurve, f32 pixelLength) {
+void SCEDMBuilder::build(SliderCurve &curve, u32 nCurve, f32 pixelLength) {
     if(m_allPoints.empty()) {
-        debugLog("SliderCurveBuilder::build: Error: allPoints.size() == 0!!!");
+        debugLog("(SliderCurveBuilder) ERROR: allPoints.size() == 0!!!");
         return;
     }
 
@@ -460,8 +259,8 @@ void SCEDMBuilder::build(SCEqualDistanceMulti &curve, u32 nCurve, f32 pixelLengt
         const vec2 thisCurve = (curPoint < m_allPoints.size()) ? m_allPoints[curPoint] : vec2{0.f, 0.f};
 
         // interpolate the point between the two closest distances
-        curve.m_curvePoints.emplace_back(0, 0);
-        curCurvePoints.emplace_back(0, 0);
+        curve.m_curvePoints.emplace_back();
+        curCurvePoints.emplace_back();
         if(distanceAt - lastDistanceAt > 1) {
             const f32 t = (prefDistance - lastDistanceAt) / (distanceAt - lastDistanceAt);
             curve.m_curvePoints[i] =
@@ -482,7 +281,7 @@ void SCEDMBuilder::build(SCEqualDistanceMulti &curve, u32 nCurve, f32 pixelLengt
     // sanity check
     // spec: FIXME: at least one of my maps triggers this (in upstream mcosu too), try to fix
     if(curve.m_curvePoints.size() == 0) {
-        debugLog("SliderCurveBuilder::build: Error: curvePoints.size() == 0!!!");
+        debugLog("(SliderCurveBuilder) ERROR: curvePoints.size() == 0!!!");
         return;
     }
 
@@ -550,50 +349,159 @@ void SCEDMBuilder::build(SCEqualDistanceMulti &curve, u32 nCurve, f32 pixelLengt
     curve.m_originalCurvePointSegments = curve.m_curvePointSegments;
 }
 
+// used as a calculation buffer to avoid reallocations on each curve creation (for catmull/bezier curves)
+static thread_local SCEDMBuilder g_curveBuilder;
+
+//***********************//
+//	 Curve Subclasses	 //
+//***********************//
+
+//*******************//
+//	 Bezier Curves	 //
+//*******************//
+
+void SliderCurve::constructBezier(std::span<const vec2> controlPoints, f32 curvePointsSeparation, bool line) {
+    const u32 max_points = SLIDER_CURVE_MAX_POINTS;
+    m_NCurve = std::min((u32)(m_pixelLength / std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), max_points);
+
+    const u32 numControlPoints = controlPoints.size();
+
+    g_curveBuilder.reset();
+
+    // Beziers: splits points into different Beziers if has the same points (red anchor points)
+    // a b c - c d - d e f g
+    // Lines: generate a new curve for each sequential pair
+    // ab  bc  cd  de  ef  fg
+    u32 segmentStart = 0;
+    for(u32 i = 1; i < numControlPoints; i++) {
+        if(line) {
+            g_curveBuilder.addBezierSegment(&controlPoints[i - 1], 2);
+        } else if(controlPoints[i] == controlPoints[i - 1]) {
+            // red anchor point - end current segment
+            if(i - segmentStart >= 2) {
+                g_curveBuilder.addBezierSegment(&controlPoints[segmentStart], i - segmentStart);
+            }
+            segmentStart = i;
+        }
+    }
+
+    // handle final segment (non-line mode only)
+    if(!line && numControlPoints - segmentStart >= 2) {
+        g_curveBuilder.addBezierSegment(&controlPoints[segmentStart], numControlPoints - segmentStart);
+    }
+
+    if(g_curveBuilder.hasSegments()) {
+        g_curveBuilder.build(*this, m_NCurve, m_pixelLength);
+    } else {
+        debugLog(
+            "ERROR: no segments (line: {} numControlPoints: {} pixelLength: {} "
+            "curvePointsSeparation: {})",
+            line, numControlPoints, m_pixelLength, curvePointsSeparation);
+    }
+}
+
+//********************//
+//   Catmull Curves   //
+//********************//
+
+void SliderCurve::constructCatmull(std::span<const vec2> controlPoints, f32 curvePointsSeparation) {
+    const u32 max_points = SLIDER_CURVE_MAX_POINTS;
+    m_NCurve = std::min((u32)(m_pixelLength / std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), max_points);
+
+    const u32 numControlPoints = controlPoints.size();
+
+    g_curveBuilder.reset();
+
+    // build temporary 4-point windows for catmull-rom
+    // repeat the first and last points as control points if they differ from neighbors
+
+    // handle first point duplication
+    const bool duplicateFirst = (controlPoints[0].x != controlPoints[1].x || controlPoints[0].y != controlPoints[1].y);
+
+    // handle last point duplication
+    const bool duplicateLast = (controlPoints[numControlPoints - 1].x != controlPoints[numControlPoints - 2].x ||
+                                controlPoints[numControlPoints - 1].y != controlPoints[numControlPoints - 2].y);
+
+    // calculate effective point count
+    u32 effectiveCount = numControlPoints + (duplicateFirst ? 1 : 0) + (duplicateLast ? 1 : 0);
+
+    auto getPoint = [&](u32 idx) -> vec2 {
+        if(duplicateFirst) {
+            if(idx == 0) return controlPoints[0];
+            idx--;
+        }
+        if(idx < numControlPoints) return controlPoints[idx];
+        return controlPoints[numControlPoints - 1];
+    };
+
+    std::array<vec2, 4> catmullPoints;  // NOLINT
+    for(u32 i = 0; i + 3 < effectiveCount; i++) {
+        catmullPoints[0] = getPoint(i);
+        catmullPoints[1] = getPoint(i + 1);
+        catmullPoints[2] = getPoint(i + 2);
+        catmullPoints[3] = getPoint(i + 3);
+        g_curveBuilder.addCatmullSegment(catmullPoints);
+    }
+
+    // handle final window if we have exactly 4 effective points remaining
+    if(effectiveCount >= 4) {
+        catmullPoints[0] = getPoint(effectiveCount - 4);
+        catmullPoints[1] = getPoint(effectiveCount - 3);
+        catmullPoints[2] = getPoint(effectiveCount - 2);
+        catmullPoints[3] = getPoint(effectiveCount - 1);
+
+        // only add if not already added in the loop
+        if(effectiveCount == 4) {
+            g_curveBuilder.addCatmullSegment(catmullPoints);
+        }
+    }
+
+    if(g_curveBuilder.hasSegments()) {
+        g_curveBuilder.build(*this, m_NCurve, m_pixelLength);
+    } else {
+        debugLog("ERROR: catmulls.size() == 0 (numControlPoints: {} pixelLength: {} curvePointsSeparation: {})",
+                 numControlPoints, m_pixelLength, curvePointsSeparation);
+    }
+}
+
 //**********************//
 //	 Circular Curves	//
 //**********************//
 
-class SCCircumscribedCircle final : public SliderCurve {
-   public:
-    SCCircumscribedCircle(std::vector<vec2> controlPoints, f32 pixelLength, f32 curvePointsSeparation);
+void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 curvePointsSeparation) {
+    // initialize
+    m_vCircleCenterX = 0.f;
+    m_vCircleCenterY = 0.f;
+    m_vOriginalCircleCenterX = 0.f;
+    m_vOriginalCircleCenterY = 0.f;
+    m_radius = 0.f;
+    m_calcStartAngleDeg = 0.f;
+    m_calcEndAngleDeg = 0.f;
 
-    SCCircumscribedCircle(const SCCircumscribedCircle &) = default;
-    SCCircumscribedCircle &operator=(const SCCircumscribedCircle &) = default;
-    SCCircumscribedCircle(SCCircumscribedCircle &&) = default;
-    SCCircumscribedCircle &operator=(SCCircumscribedCircle &&) = default;
-    ~SCCircumscribedCircle() override = default;
-
-    [[nodiscard]] vec2 pointAt(f32 t) const override;
-    [[nodiscard]] vec2 originalPointAt(f32 t) const override;
-
-    void updateStackPosition(f32 stackMulStackOffset,
-                             bool HR) override;  // must also override this, due to the custom pointAt() function!
-
-   private:
-    [[nodiscard]] static vec2 intersect(vec2 a, vec2 ta, vec2 b, vec2 tb);
-
-    [[nodiscard]] static forceinline bool isIn(f32 a, f32 b, f32 c) { return ((b > a && b < c) || (b < a && b > c)); }
-
-    vec2 m_vCircleCenter{0.f};
-    vec2 m_vOriginalCircleCenter{0.f};
-    f32 m_radius;
-    f32 m_calcStartAngleDeg;
-    f32 m_calcEndAngleDeg;
-};
-
-SCCircumscribedCircle::SCCircumscribedCircle(std::vector<vec2> controlPoints, f32 pixelLength,
-                                             f32 curvePointsSeparation)
-    : SliderCurve(std::move(controlPoints), pixelLength) {
-    if(m_controlPoints.size() != 3) {
-        debugLog("SliderCurveCircumscribedCircle() Error: controlPoints.size() != 3");
+    if(controlPoints.size() != 3) {
+        debugLog("ERROR: controlPoints.size() != 3");
         return;
     }
 
+    // helpers
+    static constexpr auto intersect = [] [[gnu::always_inline]] (vec2 a, vec2 ta, vec2 b, vec2 tb) -> vec2 {
+        const f32 des = (tb.x * ta.y - tb.y * ta.x);
+        if(std::abs(des) < 0.0001f) {
+            debugLog("constructCircular::intersect() ERROR: Vectors are parallel!!!");
+            return {0.f, 0.f};
+        }
+
+        const f32 u = ((b.y - a.y) * ta.x + (a.x - b.x) * ta.y) / des;
+        return (b + vec2(tb.x * u, tb.y * u));
+    };
+    static constexpr auto isIn = [] [[gnu::always_inline]] (f32 a, f32 b, f32 c) -> bool {
+        return ((b > a && b < c) || (b < a && b > c));
+    };
+
     // construct the three points
-    const vec2 start = m_controlPoints[0];
-    const vec2 mid = m_controlPoints[1];
-    const vec2 end = m_controlPoints[2];
+    const vec2 start = controlPoints[0];
+    const vec2 mid = controlPoints[1];
+    const vec2 end = controlPoints[2];
 
     // find the circle center
     const vec2 mida = start + (mid - start) * 0.5f;
@@ -608,19 +516,21 @@ SCCircumscribedCircle::SCCircumscribedCircle(std::vector<vec2> controlPoints, f3
     norb.x = -norb.y;
     norb.y = temp;
 
-    m_vOriginalCircleCenter = intersect(mida, nora, midb, norb);
-    m_vCircleCenter = m_vOriginalCircleCenter;
+    const vec2 intersection = intersect(mida, nora, midb, norb);
+    m_vCircleCenterX = m_vOriginalCircleCenterX = intersection.x;
+    m_vCircleCenterY = m_vOriginalCircleCenterY = intersection.y;
 
     // find the angles relative to the circle center
-    const vec2 startAngPoint = start - m_vCircleCenter;
-    const vec2 midAngPoint = mid - m_vCircleCenter;
-    const vec2 endAngPoint = end - m_vCircleCenter;
+    const vec2 startAngPoint = start - intersection;
+    const vec2 midAngPoint = mid - intersection;
+    const vec2 endAngPoint = end - intersection;
 
     m_calcStartAngleDeg = (f32)std::atan2(startAngPoint.y, startAngPoint.x);
     const f32 midAng = (f32)std::atan2(midAngPoint.y, midAngPoint.x);
     m_calcEndAngleDeg = (f32)std::atan2(endAngPoint.y, endAngPoint.x);
 
     // find the angles that pass through midAng
+
     // clang-format off
     if(!isIn(m_calcStartAngleDeg, midAng, m_calcEndAngleDeg)) {
         if(
@@ -644,7 +554,7 @@ SCCircumscribedCircle::SCCircumscribedCircle(std::vector<vec2> controlPoints, f3
             ) {
             m_calcEndAngleDeg -= 2.f * PI_F;
         } else {
-            debugLog("SliderCurveCircumscribedCircle() Error: Cannot find angles between midAng ({} {} {})",
+            debugLog("ERROR: Cannot find angles between midAng ({} {} {})",
                      m_calcStartAngleDeg, midAng, m_calcEndAngleDeg);
             return;
         }
@@ -686,58 +596,28 @@ SCCircumscribedCircle::SCCircumscribedCircle(std::vector<vec2> controlPoints, f3
     m_originalCurvePointSegments = m_curvePointSegments;  // copy
 }
 
-void SCCircumscribedCircle::updateStackPosition(f32 stackMulStackOffset, bool HR) {
-    SliderCurve::updateStackPosition(stackMulStackOffset, HR);
-
-    m_vCircleCenter = m_vOriginalCircleCenter - vec2(stackMulStackOffset, stackMulStackOffset * (HR ? -1.0f : 1.0f));
-}
-
-vec2 SCCircumscribedCircle::pointAt(f32 t) const {
-    const f32 sanityRange =
-        SLIDER_CURVE_MAX_LENGTH;  // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
-    const f32 ang = std::lerp(m_calcStartAngleDeg, m_calcEndAngleDeg, t);
-
-    return {std::clamp<f32>(std::cos(ang) * m_radius + m_vCircleCenter.x, -sanityRange, sanityRange),
-            std::clamp<f32>(std::sin(ang) * m_radius + m_vCircleCenter.y, -sanityRange, sanityRange)};
-}
-
-vec2 SCCircumscribedCircle::originalPointAt(f32 t) const {
-    const f32 sanityRange =
-        SLIDER_CURVE_MAX_LENGTH;  // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
-    const f32 ang = std::lerp(m_calcStartAngleDeg, m_calcEndAngleDeg, t);
-
-    return {std::clamp<f32>(std::cos(ang) * m_radius + m_vOriginalCircleCenter.x, -sanityRange, sanityRange),
-            std::clamp<f32>(std::sin(ang) * m_radius + m_vOriginalCircleCenter.y, -sanityRange, sanityRange)};
-}
-
-vec2 SCCircumscribedCircle::intersect(vec2 a, vec2 ta, vec2 b, vec2 tb) {
-    const f32 des = (tb.x * ta.y - tb.y * ta.x);
-    if(std::abs(des) < 0.0001f) {
-        debugLog("SliderCurveCircumscribedCircle::intersect() Error: Vectors are parallel!!!");
-        return {0.f, 0.f};
-    }
-
-    const f32 u = ((b.y - a.y) * ta.x + (a.x - b.x) * ta.y) / des;
-    return (b + vec2(tb.x * u, tb.y * u));
-}
-
-}  // namespace
-
 //******************************//
 //	 Curve Base Class Factory	//
 //******************************//
 
-std::unique_ptr<SliderCurve> SliderCurve::createCurve(SLIDERCURVETYPE type, std::vector<vec2> controlPoints,
-                                                      f32 pixelLength) {
-    const f32 points_separation = SLIDER_CURVE_POINTS_SEPARATION;
-    return createCurve(type, std::move(controlPoints), pixelLength, points_separation);
-}
+SliderCurve::SliderCurve(SLIDERCURVETYPE ctorType, std::span<const vec2> controlPoints, f32 ctorPixelLength)
+    : SliderCurve(ctorType, controlPoints, ctorPixelLength, SLIDER_CURVE_POINTS_SEPARATION) {}
 
-std::unique_ptr<SliderCurve> SliderCurve::createCurve(SLIDERCURVETYPE type, std::vector<vec2> controlPoints,
-                                                      f32 pixelLength, f32 curvePointsSeparation) {
-    std::unique_ptr<SliderCurve> ret;
+// they are initialized in the construct<type> functions
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+SliderCurve::SliderCurve(SLIDERCURVETYPE ctorType, std::span<const vec2> controlPoints, f32 ctorPixelLength,
+                         f32 curvePointsSeparation)
+    : m_vBounds(std::numeric_limits<f32>::max(),  // minX
+                std::numeric_limits<f32>::max(),  // minY
+                0.0f,                             // maxX
+                0.0f                              // maxY
+                ),
+      m_vOriginalBounds(m_vBounds),
+      m_startAngle(0.f),
+      m_endAngle(0.f),
+      m_pixelLength(std::abs(ctorPixelLength)) {
     using enum SLIDERCURVETYPE;
-    if(type == PASSTHROUGH && controlPoints.size() == 3) {
+    if(ctorType == PASSTHROUGH && controlPoints.size() == 3) {
         vec2 nora = controlPoints[1] - controlPoints[0];
         vec2 norb = controlPoints[1] - controlPoints[2];
 
@@ -752,59 +632,127 @@ std::unique_ptr<SliderCurve> SliderCurve::createCurve(SLIDERCURVETYPE type, std:
         // segments if they are too big
 
         if(std::abs(norb.x * nora.y - norb.y * nora.x) < 0.00001f) {
-            ret = std::make_unique<SCBezier>(std::move(controlPoints), pixelLength, curvePointsSeparation,
-                                             false);  // vectors parallel, use linear bezier instead
+            m_type = BEZIER;
+            constructBezier(controlPoints, curvePointsSeparation,
+                            false);  // vectors parallel, use linear bezier instead
         } else {
-            ret = std::make_unique<SCCircumscribedCircle>(std::move(controlPoints), pixelLength, curvePointsSeparation);
+            m_type = CIRCULAR;
+            constructCircular(controlPoints, curvePointsSeparation);
         }
-    } else if(type == CATMULL) {
-        ret = std::make_unique<SCCatmull>(std::move(controlPoints), pixelLength, curvePointsSeparation);
+    } else if(ctorType == CATMULL) {
+        m_type = CATMULL;
+        constructCatmull(controlPoints, curvePointsSeparation);
     } else {
-        ret =
-            std::make_unique<SCBezier>(std::move(controlPoints), pixelLength, curvePointsSeparation, (type == LINEAR));
+        m_type = BEZIER;
+        constructBezier(controlPoints, curvePointsSeparation, (ctorType == LINEAR));
     }
 
     // calculate bounds
-    for(vec2 point : ret->getPoints()) {
-        if(point.x < ret->m_vOriginalBounds.x) ret->m_vOriginalBounds.x = point.x;
-        if(point.x > ret->m_vOriginalBounds.z) ret->m_vOriginalBounds.z = point.x;
-        if(point.y < ret->m_vOriginalBounds.y) ret->m_vOriginalBounds.y = point.y;
-        if(point.y > ret->m_vOriginalBounds.w) ret->m_vOriginalBounds.w = point.y;
+    for(vec2 point : m_curvePoints) {
+        if(point.x < m_vOriginalBounds.x) m_vOriginalBounds.x = point.x;
+        if(point.x > m_vOriginalBounds.z) m_vOriginalBounds.z = point.x;
+        if(point.y < m_vOriginalBounds.y) m_vOriginalBounds.y = point.y;
+        if(point.y > m_vOriginalBounds.w) m_vOriginalBounds.w = point.y;
     }
 
-    ret->m_vBounds = ret->m_vOriginalBounds;
-    return ret;
+    m_vBounds = m_vOriginalBounds;
 }
 
-SliderCurve::SliderCurve(std::vector<vec2> controlPoints, f32 pixelLength)
-    : m_vBounds(std::numeric_limits<f32>::max(),  // minX
-                std::numeric_limits<f32>::max(),  // minY
-                0.0f,                             // maxX
-                0.0f                              // maxY
-                ),
-      m_vOriginalBounds(m_vBounds) {
-    m_controlPoints = std::move(controlPoints);
-    m_pixelLength = std::abs(pixelLength);
+vec2 SliderCurve::pointAt(f32 t) const {
+    using enum SLIDERCURVETYPE;
+    if(m_type != CIRCULAR /* BEZIER || CATMULL */) {
+        if(m_curvePoints.size() < 1) return {0.f, 0.f};
 
-    m_startAngle = 0.0f;
-    m_endAngle = 0.0f;
+        const f64 indexD = (f64)t * m_NCurve;
+        const u32 index = (u32)indexD;
+        if(index >= m_NCurve) {
+            if(m_NCurve < m_curvePoints.size())
+                return m_curvePoints[m_NCurve];
+            else {
+                debugLog("(SliderCurve) ERROR: Illegal index {:d}!!!", m_NCurve);
+                return {0.f, 0.f};
+            }
+        } else {
+            if(index + 1 >= m_curvePoints.size()) {
+                debugLog("(SliderCurve) ERROR: Illegal index {:d}!!!", index);
+                return {0.f, 0.f};
+            }
+
+            const vec2 poi = m_curvePoints[index];
+            const vec2 poi2 = m_curvePoints[index + 1];
+
+            const f32 t2 = (f32)(indexD - (f64)index);
+
+            return {std::lerp(poi.x, poi2.x, t2), std::lerp(poi.y, poi2.y, t2)};
+        }
+    } else {  // CIRCULAR
+        const f32 sanityRange =
+            SLIDER_CURVE_MAX_LENGTH;  // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
+        const f32 ang = std::lerp(m_calcStartAngleDeg, m_calcEndAngleDeg, t);
+
+        return {std::clamp<f32>(std::cos(ang) * m_radius + m_vCircleCenterX, -sanityRange, sanityRange),
+                std::clamp<f32>(std::sin(ang) * m_radius + m_vCircleCenterY, -sanityRange, sanityRange)};
+    }
+}
+
+vec2 SliderCurve::originalPointAt(f32 t) const {
+    using enum SLIDERCURVETYPE;
+    if(m_type != CIRCULAR /* BEZIER || CATMULL */) {
+        if(m_originalCurvePoints.size() < 1) return {0.f, 0.f};
+
+        const f64 indexD = (f64)t * m_NCurve;
+        const u32 index = (u32)indexD;
+        if(index >= m_NCurve) {
+            if(m_NCurve < m_originalCurvePoints.size())
+                return m_originalCurvePoints[m_NCurve];
+            else {
+                debugLog("(SliderCurve) ERROR: Illegal index {:d}!!!", m_NCurve);
+                return {0.f, 0.f};
+            }
+        } else {
+            if(index + 1 >= m_originalCurvePoints.size()) {
+                debugLog("(SliderCurve) ERROR: Illegal index {:d}!!!", index);
+                return {0.f, 0.f};
+            }
+
+            const vec2 poi = m_originalCurvePoints[index];
+            const vec2 poi2 = m_originalCurvePoints[index + 1];
+
+            const f32 t2 = (f32)(indexD - (f64)index);
+
+            return {std::lerp(poi.x, poi2.x, t2), std::lerp(poi.y, poi2.y, t2)};
+        }
+    } else {  // CIRCULAR
+        const f32 sanityRange =
+            SLIDER_CURVE_MAX_LENGTH;  // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
+        const f32 ang = std::lerp(m_calcStartAngleDeg, m_calcEndAngleDeg, t);
+
+        return {std::clamp<f32>(std::cos(ang) * m_radius + m_vOriginalCircleCenterX, -sanityRange, sanityRange),
+                std::clamp<f32>(std::sin(ang) * m_radius + m_vOriginalCircleCenterY, -sanityRange, sanityRange)};
+    }
 }
 
 void SliderCurve::updateStackPosition(f32 stackMulStackOffset, bool HR) {
+    const vec2 offsetxy{stackMulStackOffset, stackMulStackOffset * (HR ? -1.0f : 1.0f)};
+
     for(u32 i = 0; i < m_originalCurvePoints.size() && i < m_curvePoints.size(); i++) {
-        m_curvePoints[i] =
-            m_originalCurvePoints[i] - vec2(stackMulStackOffset, stackMulStackOffset * (HR ? -1.0f : 1.0f));
+        m_curvePoints[i] = m_originalCurvePoints[i] - offsetxy;
     }
 
     for(u32 s = 0; s < m_originalCurvePointSegments.size() && s < m_curvePointSegments.size(); s++) {
         for(u32 p = 0; p < m_originalCurvePointSegments[s].size() && p < m_curvePointSegments[s].size(); p++) {
-            m_curvePointSegments[s][p] = m_originalCurvePointSegments[s][p] -
-                                         vec2(stackMulStackOffset, stackMulStackOffset * (HR ? -1.0f : 1.0f));
+            m_curvePointSegments[s][p] = m_originalCurvePointSegments[s][p] - offsetxy;
         }
     }
-    m_vBounds.x = m_vOriginalBounds.x - stackMulStackOffset;
-    m_vBounds.y = m_vOriginalBounds.y - (stackMulStackOffset * (HR ? -1.0f : 1.0f));
-    m_vBounds.z = m_vOriginalBounds.z - stackMulStackOffset;
-    m_vBounds.w = m_vOriginalBounds.w - (stackMulStackOffset * (HR ? -1.0f : 1.0f));
+
+    m_vBounds.x = m_vOriginalBounds.x - offsetxy.x;
+    m_vBounds.y = m_vOriginalBounds.y - offsetxy.y;
+    m_vBounds.z = m_vOriginalBounds.z - offsetxy.x;
+    m_vBounds.w = m_vOriginalBounds.w - offsetxy.y;
+
+    if(m_type == CIRCULAR) {
+        m_vCircleCenterX = m_vOriginalCircleCenterX - offsetxy.x;
+        m_vCircleCenterY = m_vOriginalCircleCenterY - offsetxy.y;
+    }
 }
 }  // namespace neomod

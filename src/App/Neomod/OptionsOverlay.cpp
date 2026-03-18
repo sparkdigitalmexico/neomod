@@ -613,7 +613,7 @@ class SliderPreviewElement final : public CBaseUIElement {
 
                             debugLog("Regenerating options menu slider preview vao ...");
 
-                            this->vao = SliderRenderer::generateVAO(points, hitcircleDiameter, vec3(0, 0, 0), false);
+                            this->vao = SliderRenderer::generateVAO(points, hitcircleDiameter, vec3{}, false);
                         }
                         vec4 emptyBounds{};
                         SliderRenderer::draw(this->vao.get(), emptyBounds, emptyVector, this->getPos(), 1,

@@ -11,9 +11,11 @@
 
 #include <vector>
 
+namespace neomod {
+
 enum class SLIDERCURVETYPE : char;  // see SliderCurves.h
 
-namespace neomod::DatabaseBeatmapTypes {
+namespace DatabaseBeatmapTypes {
 
 // raw structs (not editable, we're following db format directly)
 struct TIMINGPOINT final {
@@ -146,4 +148,5 @@ struct SPINNER final {
     i32 endTime;
     HITSAMPLE_BITS samples;
 };
-}  // namespace neomod::DatabaseBeatmapTypes
+}  // namespace DatabaseBeatmapTypes
+}  // namespace neomod

@@ -64,13 +64,13 @@ void updateColorUniforms(Color borderColor, Color bodyColor);
 void updateConfigUniforms();
 
 // forward decls
-void drawDebugLegacy(const std::vector<vec2> &points, f32 hitcircleDiameter, Color undimmedColor,
-                     f32 colorRGBMultiplier, f32 alpha, uSz drawFromIndex, uSz drawUpToIndex);
+void drawDebugLegacy(std::span<const vec2> points, f32 hitcircleDiameter, Color undimmedColor, f32 colorRGBMultiplier,
+                     f32 alpha, uSz drawFromIndex, uSz drawUpToIndex);
 void drawDebugVAO(VertexArrayObject *vao, vec2 translation, f32 scale, f32 from, f32 to, Color undimmedColor,
                   f32 colorRGBMultiplier, f32 alpha);
 
-void drawFillSliderBodyPeppy(const std::vector<vec2> &points, VertexArrayObject *circleMesh, f32 radius,
-                             uSz drawFromIndex, uSz drawUpToIndex);
+void drawFillSliderBodyPeppy(std::span<const vec2> points, VertexArrayObject *circleMesh, f32 radius, uSz drawFromIndex,
+                             uSz drawUpToIndex);
 void checkUpdateVars(f32 hitcircleDiameter);
 
 Color getRainbowColor(i32 rainbowTime, f32 initOffset) {
@@ -129,7 +129,7 @@ forceinline void preDrawColorSetup(bool gradient, i32 sliderTime, f32 colorRGBMu
 // invalidate config uniforms (convar callbacks)
 void onUniformConfigChanged() { s_uniformCache.needsConfigUpdate = true; }
 
-std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, f32 hitcircleDiameter, vec3 translation,
+std::unique_ptr<VertexArrayObject> generateVAO(std::span<const vec2> points, f32 hitcircleDiameter, vec3 translation,
                                                bool skipOOBPoints) {
     resourceManager->requestNextLoadUnmanaged();
     std::unique_ptr<VertexArrayObject> vao{resourceManager->createVertexArrayObject()};
@@ -151,8 +151,8 @@ std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, 
     const f32 screenMinY = -hitcircleDiameter - GameRules::OSU_COORD_HEIGHT * 2;
     const f32 screenMaxY = osu->getVirtScreenHeight() + hitcircleDiameter + GameRules::OSU_COORD_HEIGHT * 2;
 
-    size_t tempMeshVertOffset = 0;
-    size_t tempMeshTCOffset = 0;
+    uSz tempMeshVertOffset = 0;
+    uSz tempMeshTCOffset = 0;
     for(const auto &point : points) {
         // fuck oob sliders
         if(skipOOBPoints) {
@@ -215,8 +215,8 @@ std::unique_ptr<VertexArrayObject> generateVAO(const std::vector<vec2> &points, 
     return vao;
 }
 
-void draw(const std::vector<vec2> &points, const std::vector<vec2> &alwaysPoints, f32 hitcircleDiameter, f32 from,
-          f32 to, Color undimmedColor, f32 colorRGBMultiplier, f32 alpha, i32 sliderTimeForRainbow) {
+void draw(std::span<const vec2> points, std::span<const vec2> alwaysPoints, f32 hitcircleDiameter, f32 from, f32 to,
+          Color undimmedColor, f32 colorRGBMultiplier, f32 alpha, i32 sliderTimeForRainbow) {
     if(cv::slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f) return;
 
     checkUpdateVars(hitcircleDiameter);
@@ -279,7 +279,7 @@ void draw(const std::vector<vec2> &points, const std::vector<vec2> &alwaysPoints
                                           (i32)(s_fBoundingBoxMaxY - s_fBoundingBoxMinY));
 }
 
-void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPoints, vec2 translation, f32 scale,
+void draw(VertexArrayObject *vao, vec4 bounds, std::span<const vec2> alwaysPoints, vec2 translation, f32 scale,
           f32 hitcircleDiameter, f32 from, f32 to, Color undimmedColor, f32 colorRGBMultiplier, f32 alpha,
           i32 sliderTimeForRainbow, bool doEnableRenderTarget, bool doDisableRenderTarget,
           bool doDrawSliderFrameBufferToScreen) {
@@ -365,8 +365,8 @@ void draw(VertexArrayObject *vao, vec4 bounds, const std::vector<vec2> &alwaysPo
 
 namespace {  // static
 
-void drawFillSliderBodyPeppy(const std::vector<vec2> &points, VertexArrayObject *circleMesh, f32 radius,
-                             uSz drawFromIndex, uSz drawUpToIndex) {
+void drawFillSliderBodyPeppy(std::span<const vec2> points, VertexArrayObject *circleMesh, f32 radius, uSz drawFromIndex,
+                             uSz drawUpToIndex) {
     g->pushTransform();
     {
         // now, translate and draw the master vao for every curve point
@@ -557,8 +557,8 @@ void updateConfigUniforms() {
     s_uniformCache.needsConfigUpdate = false;
 }
 
-void drawDebugLegacy(const std::vector<vec2> &points, f32 hitcircleDiameter, Color undimmedColor,
-                     f32 colorRGBMultiplier, f32 alpha, uSz drawFromIndex, uSz drawUpToIndex) {
+void drawDebugLegacy(std::span<const vec2> points, f32 hitcircleDiameter, Color undimmedColor, f32 colorRGBMultiplier,
+                     f32 alpha, uSz drawFromIndex, uSz drawUpToIndex) {
     const f32 circleImageScale = hitcircleDiameter / (f32)osu->getSkin()->i_hitcircle.getWidth();
     const f32 circleImageScaleInv = (1.0f / circleImageScale);
 

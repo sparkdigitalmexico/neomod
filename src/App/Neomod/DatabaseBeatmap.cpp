@@ -66,6 +66,7 @@ enum class HitObjectType : uint8_t {
 
 #endif  // BUILD_TOOLS_ONLY
 
+using namespace neomod;
 using namespace DBType;
 
 // defined here to avoid including diffcalc things in DatabaseBeatmap.h

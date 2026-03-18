@@ -84,7 +84,7 @@ struct VolNormalization::LoudnessCalcThread {
                 }
             }
             [[nodiscard]] bool operator==(const std::string &other) const { return narrow == other; }
-            [[nodiscard]] bool operator==(const UString &other) const { return narrow == other; }
+            [[nodiscard]] bool operator==(const UString &other) const { return narrow == other.narrow; }
             std::string narrow;
             std::wstring wide;
         };
@@ -195,9 +195,7 @@ struct VolNormalization::LoudnessCalcThread {
 
             FILE *fp = File::fopen_c(song.c_str(), "rb");
             if(!fp) {
-                if(cv::debug_snd.getBool()) {
-                    debugLog("Failed to open '{:s}' for loudness calc", song.c_str());
-                }
+                logIfCV(debug_snd, "Failed to open '{:s}' for loudness calc", song.c_str());
                 this->nb_computed++;
                 map->loudness.store(fallback_loudness, std::memory_order_release);
                 continue;
@@ -205,9 +203,7 @@ struct VolNormalization::LoudnessCalcThread {
 
             SoLoud::DiskFile df(fp);
             if(ws.loadFile(&df) != SoLoud::SO_NO_ERROR) {
-                if(cv::debug_snd.getBool()) {
-                    debugLog("Failed to decode '{:s}' for loudness calc", song.c_str());
-                }
+                logIfCV(debug_snd, "Failed to decode '{:s}' for loudness calc", song.c_str());
                 this->nb_computed++;
                 map->loudness.store(fallback_loudness, std::memory_order_release);
                 continue;

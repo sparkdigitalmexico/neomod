@@ -44,6 +44,7 @@ namespace DiffCalc {
 const u32 PP_ALGORITHM_VERSION{20251008};
 }  // namespace DiffCalc
 
+using namespace neomod;
 using SLIDER_SCORING_TIME = DifficultyHitObject::SLIDER_SCORING_TIME;
 using SliderCurve = DifficultyHitObject::SliderCurve;
 
@@ -89,8 +90,8 @@ DifficultyHitObject::DifficultyHitObject(TYPE type, vec2 pos, i32 time, i32 endT
             // 14960 sliders @ pishifat - H E L L O  T H E R E (Kondou-Shinichi) [Sliders in the 69th centries].osu
             // 5208 sliders @ MillhioreF - haitai but every hai adds another haitai in the background (Chewy-san) [Weriko Rank the dream (nerf) but loli].osu
 
-            this->curve = SliderCurve::createCurve(this->osuSliderCurveType, controlPoints, this->pixelLength,
-                                                   STARS_SLIDER_CURVE_POINTS_SEPARATION);
+            this->curve = std::make_unique<SliderCurve>(this->osuSliderCurveType, controlPoints, this->pixelLength,
+                                                        STARS_SLIDER_CURVE_POINTS_SEPARATION);
         } else {
             // new: delay curve creation to when it's needed, and also immediately delete afterwards (at the cost of having to store a copy of the control points)
             this->scheduledCurveAlloc = true;
@@ -373,7 +374,7 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
                 {
                     // delay curve creation to when it's needed (1)
                     if(prev1.ho->scheduledCurveAlloc && prev1.ho->curve == nullptr) {
-                        prev1.ho->curve = SliderCurve::createCurve(
+                        prev1.ho->curve = std::make_unique<SliderCurve>(
                             prev1.ho->osuSliderCurveType, prev1.ho->scheduledCurveAllocControlPoints,
                             prev1.ho->pixelLength, starsSliderCurvePointsSeparation);
                         prev1.ho->updateCurveStackPosition(

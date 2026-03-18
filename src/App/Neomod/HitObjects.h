@@ -6,6 +6,7 @@
 #include "Vectors.h"
 #include "Color.h"
 #include "DatabaseBeatmapTypes.h"
+#include "SliderCurves.h"
 
 #include <vector>
 #include <memory>
@@ -13,10 +14,6 @@
 class ConVar;
 class ModFPoSu;
 class SkinImage;
-namespace neomod {
-class SliderCurve;
-}
-
 class VertexArrayObject;
 class Image;
 class AbstractBeatmapInterface;
@@ -256,7 +253,6 @@ class Circle final : public HitObject {
     f32 m_shakeAnimation{0.f};
 };
 
-enum class SLIDERCURVETYPE : char;
 class Slider final : public HitObject {
    public:
     struct SLIDERCLICK {
@@ -272,7 +268,7 @@ class Slider final : public HitObject {
     Slider() = delete;
     ~Slider() override;
 
-    Slider(SLIDERCURVETYPE stype, i32 repeat, f32 pixelLength, std::vector<vec2> points, const std::vector<f32> &ticks,
+    Slider(neomod::SLIDERCURVETYPE stype, i32 repeat, f32 pixelLength, std::vector<vec2> points, const std::vector<f32> &ticks,
            f32 sliderTimeMS, f32 sliderTimeMSWithoutRepeats, i32 timeMS, DBHitSample hoverSamples,
            std::vector<DBHitSample> edgeSamples, i32 comboNumber, bool isEndOfCombo, i32 colorCounter, i32 colorOffset,
            AbstractBeatmapInterface *beatmap);
@@ -349,8 +345,9 @@ class Slider final : public HitObject {
     // TEMP: auto cursordance
     std::vector<SLIDERCLICK> m_clicks;  // repeats (type 0) + ticks (type 1)
 
-    std::unique_ptr<SliderCurve> m_curve;
     std::unique_ptr<VertexArrayObject> m_vao{nullptr};
+
+    SliderCurve m_curve;
 
     vec2 m_curPoint{0.f};
     vec2 m_curPointRaw{0.f};
@@ -378,8 +375,6 @@ class Slider final : public HitObject {
     i32 m_reverseArrowPos{0};
     i32 m_curRepeat{0};
     i32 m_curRepeatCounterForHitSounds{0};
-
-    SLIDERCURVETYPE m_curveType;
 
     LiveHitResult m_startResult{0 /* LiveHitResult::HIT_NULL*/};
     LiveHitResult m_endResult{0 /* LiveHitResult::HIT_NULL*/};
