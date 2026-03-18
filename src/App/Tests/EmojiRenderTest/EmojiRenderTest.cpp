@@ -22,72 +22,116 @@ EmojiRenderTest::EmojiRenderTest() {
 EmojiRenderTest::~EmojiRenderTest() = default;
 
 void EmojiRenderTest::draw() {
-    const float x = 20.f;
-    float y = 40.f;
-    const float lineSpacing = 1.8f;
+    constexpr float lineSpacing = 1.6f;
+    constexpr float x = 20.f;
+    float y = 30.f;
 
-    // pure emoji at different sizes
+    constexpr Color BACKGROUND{rgb(30,30,30)};
+
+    g->setColor(BACKGROUND);
+    g->fillRect(engine->getScreenRect());
+
+    auto drawLine = [&](McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) {
+        g->pushTransform();
+        g->translate(x, y);
+        g->drawString(font, text, shadow);
+        g->popTransform();
+        y += font->getHeight() * lineSpacing;
+    };
+
+    // -- emoji basics --
     g->setColor(0xffffffff);
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font16, "😀🎉🌍🔥"sv);
-    g->popTransform();
-    y += m_font16->getHeight() * lineSpacing;
-
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font24, "😀🎉🌍🔥"sv);
-    g->popTransform();
-    y += m_font24->getHeight() * lineSpacing;
-
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font32, "😀🎉🌍🔥"sv);
-    g->popTransform();
-    y += m_font32->getHeight() * lineSpacing;
+    drawLine(m_font16, "😀🎉🌍🔥"sv);
+    drawLine(m_font24, "😀🎉🌍🔥"sv);
 
     // mixed text + emoji
-    y += 20.f;
-    g->setColor(0xffffffff);
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font24, "Hello 👋 World 🌍"sv);  // U+1F44B  U+1F30D
-    g->popTransform();
-    y += m_font24->getHeight() * lineSpacing;
+    drawLine(m_font24, "Hello 👋 World 🌍"sv);
 
-    // colored text + emoji (red text, emoji should stay unmodified)
+    // colored text (emoji should stay unmodified)
     g->setColor(0xffff4444);
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font24, "Red text 🔥"sv);  // U+1F525
-    g->popTransform();
-    y += m_font24->getHeight() * lineSpacing;
-
-    // green text + emoji
+    drawLine(m_font24, "Red text 🔥"sv);
     g->setColor(0xff44ff44);
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font24, "Green text 🎉"sv);  // U+1F389
-    g->popTransform();
-    y += m_font24->getHeight() * lineSpacing;
+    drawLine(m_font24, "Green text 🎉"sv);
 
-    // text shadow test
+    // -- shadow effects --
+    y += 10.f;
     g->setColor(0xffffffff);
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font24, "Shadow 😀 test"sv,
-                  TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(200, 100, 0), .offs_px = 1.5f});
-    g->popTransform();
-    y += m_font24->getHeight() * lineSpacing;
 
-    // misc symbols range
+    // hard shadow (text only)
+    drawLine(m_font24, "Hard shadow"sv,
+             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(200, 100, 0), .offs_px = 1.5f});
+
+    // hard shadow (mixed text + emoji)
+    drawLine(m_font24, "Shadow 😀 emoji 🔥"sv,
+             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(200, 100, 0), .offs_px = 1.5f});
+
+    // large shadow offset
+    drawLine(m_font24, "Large offset shadow"sv,
+             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(0, 0, 0), .offs_px = 2.5f});
+
+    // soft shadow
+    drawLine(m_font24, "Soft shadow"sv,
+             TextShadow{.col_text = rgb(255, 255, 255),
+                         .col_shadow = rgb(0, 0, 0),
+                         .offs_px = 1.5f,
+                         .shadow_softness_px = 1.5f});
+
+    // shadow with colored text
+    drawLine(m_font24, "Colored + shadow"sv,
+             TextShadow{.col_text = rgb(100, 200, 255), .col_shadow = rgb(0, 0, 80), .offs_px = 1.f});
+
+    // -- outline effects --
+    y += 10.f;
+
+    // outline only (no shadow)
+    drawLine(m_font24, "Outline only"sv,
+             TextShadow{.col_text = rgb(255, 255, 255),
+                         .col_shadow = argb(0, 0, 0, 0),
+                         .col_outline = rgb(255, 0, 0),
+                         .outline_px = 1.f});
+
+    // outline + emoji
+    drawLine(m_font24, "Outline 😀 emoji"sv,
+             TextShadow{.col_text = rgb(255, 255, 255),
+                         .col_shadow = argb(0, 0, 0, 0),
+                         .col_outline = rgb(0, 200, 100),
+                         .outline_px = 1.f});
+
+    // thick outline
+    drawLine(m_font24, "Thick outline"sv,
+             TextShadow{.col_text = rgb(255, 255, 0),
+                         .col_shadow = argb(0, 0, 0, 0),
+                         .col_outline = rgb(80, 0, 0),
+                         .outline_px = 2.f});
+
+    // -- combined effects --
+    y += 10.f;
+
+    // shadow + outline
+    drawLine(m_font24, "Shadow + outline"sv,
+             TextShadow{.col_text = rgb(255, 255, 255),
+                         .col_shadow = rgb(0, 0, 0),
+                         .offs_px = 1.5f,
+                         .col_outline = rgb(255, 100, 0),
+                         .outline_px = 1.f});
+
+    // shadow + outline + emoji
+    drawLine(m_font24, "All effects 🎉✨"sv,
+             TextShadow{.col_text = rgb(255, 255, 255),
+                         .col_shadow = rgb(0, 0, 0),
+                         .offs_px = 1.5f,
+                         .col_outline = rgb(0, 100, 255),
+                         .outline_px = 1.f,
+                         .shadow_softness_px = 1.f});
+
+    // semi-transparent shadow
+    drawLine(m_font24, "Alpha shadow"sv,
+             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = argb(128, 255, 0, 0), .offs_px = 2.f});
+
+    // -- misc --
+    y += 10.f;
     g->setColor(0xffffffff);
-    g->pushTransform();
-    g->translate(x, y);
-    g->drawString(m_font24,
-                  "Misc: ✅ ❌ ✨ ☀️"sv);  // U+2705 U+274C U+2728 U+2600
-    g->popTransform();
-    y += m_font24->getHeight() * lineSpacing;
+    drawLine(m_font24, "Misc: ✅ ❌ ✨ ☀️"sv);
 
     // atlas debug
     if(m_showAtlas) {

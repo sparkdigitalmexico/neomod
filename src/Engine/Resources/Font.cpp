@@ -139,9 +139,11 @@ struct McFontImpl final {
 
     struct VerTexMetCacheEntry final {
         std::string string;
+        float cachedExpand{0.f};
 
         void clear() {
             string.clear();
+            cachedExpand = 0.f;
             VAO.clear();
             emojiVAO.clear();
             metrics.clear();
@@ -282,12 +284,17 @@ struct McFontImpl final {
     // fallback font management
     FT_Face getFontFaceForGlyph(char32_t ch);
 
-    // puts a glyph quad/tri into given vertex/texcoord buffer at startIndex
+    // puts a glyph quad/tri into given vertex/texcoord buffer at startIndex.
+    // expandRight/expandDown extend the quad into atlas padding for shadow/outline visibility.
     void buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
-                            float advanceX, size_t startIndex);
+                            float advanceX, size_t startIndex,
+                            float expandLeft = 0.f, float expandRight = 0.f,
+                            float expandUp = 0.f, float expandDown = 0.f);
 
     // builds full string geometry into buffer, including emoji overlay arrays.
-    void buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs);
+    void buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs,
+                             float expandLeft = 0.f, float expandRight = 0.f,
+                             float expandUp = 0.f, float expandDown = 0.f);
 
     static std::unique_ptr<Channel[]> unpackMonoBitmap(const FT_Bitmap &bitmap);
 
@@ -497,11 +504,28 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
     const auto numCodepoints = UniString::num_codepoints(text);
     if(numCodepoints == 0 || numCodepoints > cv::r_drawstring_max_string_length.getInt()) return;
 
+    // compute directional expansion for shadow/outline effects (needed before cache check).
+    // shadow extends to the bottom-right only; outline extends in all directions.
+    const bool hasEffects = shadow.has_value() && (shadow->col_shadow.a > 0 || shadow->col_outline.a > 0);
+    const float outlinePx = (hasEffects && shadow->col_outline.a > 0) ? shadow->outline_px : 0.f;
+    const float shadowPx = (hasEffects && shadow->col_shadow.a > 0) ? shadow->offs_px : 0.f;
+    // cap outline expansion so that expansion + outline sampling reach stays within atlas padding.
+    // without this, the shader's 8-tap outline samples at the expanded quad edge overshoot the
+    // padding and read neighboring glyph data, producing colored fringe artifacts.
+    const float maxOutlineExpand = std::max(0.f, static_cast<float>(TextureAtlas::ATLAS_PADDING) - outlinePx);
+    const float clampedOutlineExpand = std::min(outlinePx, maxOutlineExpand);
+    const float expLeft = clampedOutlineExpand;
+    const float expRight = std::max(shadowPx, clampedOutlineExpand);
+    const float expUp = clampedOutlineExpand;
+    const float expDown = std::max(shadowPx, clampedOutlineExpand);
+    // single value for cache comparison (sum of directional values)
+    const float expand = expLeft + expRight + expUp + expDown;
+
     // cache entire strings' vertex/texcoord representations,
     // and only do the minimal work necessary if needing to re-upload them to the texture atlas
     const bool useCache = numCodepoints >= 8 && numCodepoints <= 384;  // arbitrary limits
     VerTexMetCacheEntry &buffer = useCache ? m_vStringCache[stringToCacheIndex(text)] : m_tempStringBuffer;
-    if(useCache && buffer.string == text) {
+    if(useCache && buffer.string == text && buffer.cachedExpand == expand) {
         const auto &metrics = buffer.getMetrics();
 
         for(int i = 0; char32_t ch : UniString::codepoints(text)) {
@@ -524,10 +548,11 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
             for(const GLYPH_METRICS *gm : metrics) {
                 if(gm->isColor) {
                     buildGlyphGeometry(buffer.getEmojiVerts(), buffer.getEmojiTexcoords(), *gm, advanceX,
-                                       emojiStartIndex);
+                                       emojiStartIndex, expLeft, expRight, expUp, expDown);
                     emojiStartIndex += VERTS_PER_VAO;
                 } else {
-                    buildGlyphGeometry(buffer.getVerts(), buffer.getTexcoords(), *gm, advanceX, regularStartIndex);
+                    buildGlyphGeometry(buffer.getVerts(), buffer.getTexcoords(), *gm, advanceX, regularStartIndex,
+                                       expLeft, expRight, expUp, expDown);
                     regularStartIndex += VERTS_PER_VAO;
                 }
                 advanceX += gm->advance_x;
@@ -541,6 +566,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
         }
     } else {
         buffer.string = text;
+        buffer.cachedExpand = expand;
 
         const size_t totalVerts = numCodepoints * VERTS_PER_VAO;
         const size_t maxGlyphs = std::min(numCodepoints, (size_t)((double)totalVerts / (double)VERTS_PER_VAO));
@@ -549,12 +575,11 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
         buffer.getVAO()->clear();
         buffer.getEmojiVAO()->clear();
 
-        buildStringGeometry(buffer, maxGlyphs);
+        buildStringGeometry(buffer, maxGlyphs, expLeft, expRight, expUp, expDown);
     }
 
     m_textureAtlas->getAtlasImage()->bind();
 
-    const bool hasEffects = shadow.has_value() && (shadow->col_shadow.a > 0 || shadow->col_outline.a > 0);
     bool usedShader = false;
 
     if(Env::cfg(REND::SDLGPU) && env->usingSDLGPU()) {
@@ -1054,6 +1079,17 @@ void McFontImpl::renderBitmapToAtlas(char32_t ch, int x, int y, const FT_Bitmap 
         renderHeight = std::min(renderHeight, maxSlotContent);
     }
 
+    // clear the full padding area around the glyph to prevent stale data
+    // from appearing when glyph quads are expanded for shadow/outline effects
+    if(isDynamicSlot) {
+        const int pad = TextureAtlas::ATLAS_PADDING;
+        const int clearX = std::max(0, x - pad);
+        const int clearY = std::max(0, y - pad);
+        const int clearW = std::min(renderWidth + 2 * pad, atlasWidth - clearX);
+        const int clearH = std::min(renderHeight + 2 * pad, atlasHeight - clearY);
+        m_textureAtlas->clearRegion(clearX, clearY, clearW, clearH);
+    }
+
     // if clipping is needed, create clipped data
     if(renderWidth < outW || renderHeight < outH) {
         auto clippedData = std::make_unique_for_overwrite<u8[]>(static_cast<size_t>(renderWidth) * renderHeight * 4);
@@ -1065,20 +1101,6 @@ void McFontImpl::renderBitmapToAtlas(char32_t ch, int x, int y, const FT_Bitmap 
         m_textureAtlas->putAt(x, y, renderWidth, renderHeight, clippedData.get());
     } else {
         m_textureAtlas->putAt(x, y, static_cast<int>(outW), static_cast<int>(outH), expandedData.get());
-    }
-
-    // clear 1-pixel border on right and bottom edges for texture filtering.
-    // without this, linear filtering bleeds into adjacent/old glyph data.
-    if(isDynamicSlot) {
-        const int rightEdgeX = x + renderWidth;
-        const int bottomEdgeY = y + renderHeight;
-
-        if(rightEdgeX < atlasWidth) {
-            m_textureAtlas->clearRegion(rightEdgeX, y, 1, renderHeight);
-        }
-        if(bottomEdgeY < atlasHeight) {
-            m_textureAtlas->clearRegion(x, bottomEdgeY, renderWidth + 1, 1);
-        }
     }
 
     // update metrics with atlas coordinates
@@ -1292,7 +1314,9 @@ FT_BitmapGlyph McFontImpl::loadBitmapGlyph(char32_t ch, FT_Face face, bool store
 }
 
 void McFontImpl::buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
-                                    float advanceX, size_t startIndex) {
+                                    float advanceX, size_t startIndex,
+                                    float expandLeft, float expandRight,
+                                    float expandUp, float expandDown) {
     const float atlasWidth{static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth())};
     const float atlasHeight{static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight())};
 
@@ -1306,17 +1330,22 @@ void McFontImpl::buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &
     const float texSizeX{static_cast<float>(gm.sizePixelsX) / atlasWidth};
     const float texSizeY{static_cast<float>(gm.sizePixelsY) / atlasHeight};
 
-    // corners of the "quad"
-    vec3 bottomLeft{x, y + sy, 0};
-    vec3 topLeft{x, y, 0};
-    vec3 topRight{x + sx, y, 0};
-    vec3 bottomRight{x + sx, y + sy, 0};
+    // texcoord-per-engine-pixel ratio (handles color/emoji fonts where sizePixels != width)
+    const float texPerPxX = (sx > 0.f) ? (texSizeX / sx) : 0.f;
+    const float texPerPxY = (gm.rows > 0) ? (texSizeY / static_cast<float>(gm.rows)) : 0.f;
 
-    // texcoords
-    vec2 texBottomLeft{texX, texY};
-    vec2 texTopLeft{texX, texY + texSizeY};
-    vec2 texTopRight{texX + texSizeX, texY + texSizeY};
-    vec2 texBottomRight{texX + texSizeX, texY};
+    // corners of the "quad" (note: sy is negative, so bottomLeft is visual top-left)
+    // expand edges directionally into atlas padding for shadow/outline visibility
+    vec3 bottomLeft{x - expandLeft, y + sy - expandUp, 0};
+    vec3 topLeft{x - expandLeft, y + expandDown, 0};
+    vec3 topRight{x + sx + expandRight, y + expandDown, 0};
+    vec3 bottomRight{x + sx + expandRight, y + sy - expandUp, 0};
+
+    // texcoords (texY = visual top, texY+texSizeY = visual bottom)
+    vec2 texBottomLeft{texX - expandLeft * texPerPxX, texY - expandUp * texPerPxY};
+    vec2 texTopLeft{texX - expandLeft * texPerPxX, texY + texSizeY + expandDown * texPerPxY};
+    vec2 texTopRight{texX + texSizeX + expandRight * texPerPxX, texY + texSizeY + expandDown * texPerPxY};
+    vec2 texBottomRight{texX + texSizeX + expandRight * texPerPxX, texY - expandUp * texPerPxY};
 
     if constexpr(VERTS_PER_VAO > 4) {
         // triangles (quads are slower for GL ES because they need to be converted to triangles at submit time)
@@ -1353,7 +1382,9 @@ void McFontImpl::buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &
     return;
 }
 
-void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs) {
+void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs,
+                                     float expandLeft, float expandRight,
+                                     float expandUp, float expandDown) {
     auto &verts = buffer.getVerts();
     auto &TCs = buffer.getTexcoords();
     auto &emojiVerts = buffer.getEmojiVerts();
@@ -1370,12 +1401,14 @@ void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyp
         if(gm.isColor) {
             emojiVerts.resize(emojiVerts.size() + VERTS_PER_VAO);
             emojiTCs.resize(emojiTCs.size() + VERTS_PER_VAO);
-            buildGlyphGeometry(emojiVerts, emojiTCs, gm, advanceX, emojiStartIndex);
+            buildGlyphGeometry(emojiVerts, emojiTCs, gm, advanceX, emojiStartIndex,
+                               expandLeft, expandRight, expandUp, expandDown);
             emojiStartIndex += VERTS_PER_VAO;
         } else {
             verts.resize(verts.size() + VERTS_PER_VAO);
             TCs.resize(TCs.size() + VERTS_PER_VAO);
-            buildGlyphGeometry(verts, TCs, gm, advanceX, regularStartIndex);
+            buildGlyphGeometry(verts, TCs, gm, advanceX, regularStartIndex,
+                               expandLeft, expandRight, expandUp, expandDown);
             regularStartIndex += VERTS_PER_VAO;
         }
         advanceX += gm.advance_x;
