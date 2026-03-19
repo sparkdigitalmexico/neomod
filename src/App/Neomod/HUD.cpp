@@ -460,6 +460,17 @@ void HUD::drawDummy() {
 void HUD::drawCursor(vec2 pos, f32 alphaMultiplier, bool secondTrail, bool updateAndDrawTrail) {
     const Skin *skin = osu->getSkin();
 
+    // fade out cursor if it hasn't been moved for over 15 seconds
+    static vec2 lastMove = pos;
+    static f64 lastMoveTime = 0.0;
+    if(pos != lastMove) {
+        lastMove = pos;
+        lastMoveTime = engine->getTime();
+    }
+    const f32 fadeDuration = 1.f;
+    const f32 idleTime = engine->getTime() - lastMoveTime;
+    alphaMultiplier *= std::clamp<f32>(cv::cursor_idle_time_before_fade.getFloat() - idleTime + fadeDuration, 0.f, 1.f);
+
     if(cv::draw_cursor_ripples.getBool() && (!cv::mod_fposu.getBool() || !osu->isInPlayMode())) {
         this->drawCursorRipples();
     }
@@ -2689,8 +2700,7 @@ void HUD::drawRuntimeInfo() {
     g->pushTransform();
     {
         g->translate(osu->getVirtScreenWidth() - infoStringWidth, osu->getVirtScreenHeight() - fontHeight + 6);
-        g->drawString(font, infoString,
-                      TextFX{.col_text = argb(100, 255, 255, 255), .col_shadow = argb(100, 0, 0, 0)});
+        g->drawString(font, infoString, TextFX{.col_text = argb(100, 255, 255, 255), .col_shadow = argb(100, 0, 0, 0)});
     }
     g->popTransform();
 }
