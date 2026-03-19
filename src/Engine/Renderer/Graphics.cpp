@@ -178,7 +178,7 @@ Matrix4 Graphics::getWorldMatrix() const { return m_data->worldTransformStack.ba
 Matrix4 Graphics::getProjectionMatrix() const { return m_data->projectionTransformStack.back(); }
 Matrix4 Graphics::getMVP() const { return m_data->MP; }
 
-void Graphics::push3DScene(McRect region) {
+void Graphics::push3DScene(const McRect &region) {
     if(cv::r_debug_disable_3dscene.getBool()) return;
 
     // you can't yet stack 3d scenes!
@@ -251,9 +251,10 @@ void Graphics::rotate3DScene(float rotx, float roty, float rotz) {
 
     // first translate to the center of the 3d region, then rotate, then translate back
     Matrix4 rot;
-    vec3 centerVec = vec3(m_data->scene3d_region.getX() + m_data->scene3d_region.getWidth() / 2 + m_data->v3dSceneOffset.x,
-                          m_data->scene3d_region.getY() + m_data->scene3d_region.getHeight() / 2 + m_data->v3dSceneOffset.y,
-                          m_data->v3dSceneOffset.z);
+    vec3 centerVec =
+        vec3(m_data->scene3d_region.getX() + m_data->scene3d_region.getWidth() / 2 + m_data->v3dSceneOffset.x,
+             m_data->scene3d_region.getY() + m_data->scene3d_region.getHeight() / 2 + m_data->v3dSceneOffset.y,
+             m_data->v3dSceneOffset.z);
     rot.translate(-centerVec);
 
     // rotate

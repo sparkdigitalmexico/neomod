@@ -61,6 +61,7 @@ Shader::SHADER_PARSE_RESULT Shader::parseShaderFromString(const std::string &gra
 
 void Shader::setMVP(const Matrix4 &mvp) {
     if(std::memcmp((void *)m_lastMVP.data(), (void *)mvp.get(), sizeof(float) * 16) == 0) return;
+    std::memcpy((void *)m_lastMVP.data(), (void *)mvp.get(), sizeof(float) * 16);
     using std::string_view_literals::operator""sv;
     setUniformMatrix4fv("mvp"sv, mvp);
 }

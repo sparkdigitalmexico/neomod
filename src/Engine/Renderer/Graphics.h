@@ -315,7 +315,7 @@ class Graphics {
     [[nodiscard]] Matrix4 getMVP() const;
 
     // 3d gui scenes
-    void push3DScene(McRect region);
+    void push3DScene(const McRect &region);
     void pop3DScene();
     void translate3DScene(float x, float y, float z = 0);
     void rotate3DScene(float rotx, float roty, float rotz);
