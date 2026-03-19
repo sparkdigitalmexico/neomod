@@ -227,8 +227,8 @@ class HUD final : public UIScreen {
     McFont *tempFont;
 
     // shit code
-    const f64 fScoreboardCacheRefreshTime{0.250f};  // only update every 250ms instead of every frame
-    f64 fScoreboardLastUpdateTime{0.f};
+    const f64 fScoreboardCacheRefreshTime{0.250};  // only update every 250ms instead of every frame
+    f64 fScoreboardLastUpdateTime{0.};
 
     f32 fAccuracyXOffset;
     f32 fAccuracyYOffset;

@@ -159,4 +159,7 @@ struct UI final {
 
     // interfaces (debugging)
     // std::unique_ptr<CWindowManager> windowManager{nullptr};
+
+    // for idle cursor fade alpha
+    f64 lastCursorMoveTime{0.};
 };

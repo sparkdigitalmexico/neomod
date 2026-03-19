@@ -224,7 +224,16 @@ void UI::draw() {
         this->extra_overlays[i]->draw();
     }
 
-    f32 fadingCursorAlpha = 1.f;
+    f32 cursorAlpha = 1.f;
+    // fade out cursor if it hasn't been moved for over 15 seconds
+    if(vec::length(mouse->getRawDelta()) > 0.) {
+        this->lastCursorMoveTime = engine->getTime();
+    } else {
+        const f32 fadeDuration = 1.f;
+        const f32 idleTime = (f32)(engine->getTime() - this->lastCursorMoveTime);
+        cursorAlpha *= std::clamp<f32>(cv::cursor_idle_time_before_fade.getFloat() - idleTime + fadeDuration, 0.f, 1.f);
+    }
+
     const bool isFPoSu = (cv::mod_fposu.getBool());
 
     // draw everything in the correct order
@@ -259,14 +268,18 @@ void UI::draw() {
 
         if(isFPoSu && cv::draw_cursor_ripples.getBool()) this->hud->drawCursorRipples();
 
+        // apply fading cursor alpha multiplier
+        if(!(this->pauseOverlay->isVisible() || osu->map_iface->isContinueScheduled() ||
+             !cv::mod_fadingcursor.getBool())) {
+            cursorAlpha *=
+                1.0f -
+                std::clamp<float>((float)osu->score->getCombo() / cv::mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
+        }
+
         // draw FPoSu cursor trail
-        fadingCursorAlpha =
-            1.0f - std::clamp<float>((float)osu->score->getCombo() / cv::mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
-        if(this->pauseOverlay->isVisible() || osu->map_iface->isContinueScheduled() || !cv::mod_fadingcursor.getBool())
-            fadingCursorAlpha = 1.0f;
         if(isFPoSu && cv::fposu_draw_cursor_trail.getBool()) {
             const vec2 trailpos = osu->map_iface->isPaused() ? mouse->getPos() : osu->map_iface->getCursorPos();
-            this->hud->drawCursorTrail(trailpos, fadingCursorAlpha);
+            this->hud->drawCursorTrail(trailpos, cursorAlpha);
         }
 
         if(isFPoSu) {
@@ -308,10 +321,10 @@ void UI::draw() {
         const bool drawSecondTrail = !paused && (cv::mod_autoplay.getBool() || cv::mod_autopilot.getBool() ||
                                                  osu->map_iface->is_watching || BanchoState::spectating);
         const bool updateAndDrawTrail = !isFPoSu;
-        this->hud->drawCursor(cursorPos, fadingCursorAlpha, drawSecondTrail, updateAndDrawTrail);
+        this->hud->drawCursor(cursorPos, cursorAlpha, drawSecondTrail, updateAndDrawTrail);
     } else {
         // draw cursor (menus)
-        this->hud->drawCursor(mouse->getPos());
+        this->hud->drawCursor(mouse->getPos(), cursorAlpha);
     }
 
     // draw build info on top of everything else
