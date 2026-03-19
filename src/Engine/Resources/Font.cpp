@@ -511,7 +511,8 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
     // cap outline expansion so that expansion + outline sampling reach stays within atlas padding.
     // without this, the shader's 8-tap outline samples at the expanded quad edge overshoot the
     // padding and read neighboring glyph data, producing colored fringe artifacts.
-    const float maxOutlineExpand = std::max(0.f, static_cast<float>(TextureAtlas::ATLAS_PADDING) - outlinePx);
+    // the extra 1px margin accounts for bilinear filtering interpolating across the padding boundary
+    const float maxOutlineExpand = std::max(0.f, static_cast<float>(TextureAtlas::ATLAS_PADDING) - outlinePx - 1.f);
     const float clampedOutlineExpand = std::min(outlinePx, maxOutlineExpand);
     const float expLeft = clampedOutlineExpand;
     const float expRight = std::max(shadowPx, clampedOutlineExpand);
@@ -598,7 +599,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
             s_textShader->setUniform4f("params", sc.offs_px / atlasW, sc.offs_px / atlasH, sc.outline_px / atlasW,
                                        sc.outline_px / atlasH);
             s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH, 0.f,
-                                       1.f / atlasW);
+                                       0.f);
 
             if(!buffer.getVerts().empty()) {
                 g->drawVAO(buffer.getVAO());
@@ -608,7 +609,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
                 // emoji: use texture RGB directly (color glyphs), keep shadow/outline
                 s_textShader->setUniform4f("col", 1.f, 1.f, 1.f, sc.col_text.Af());
                 s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH,
-                                           1.f, 1.f / atlasW);
+                                           1.f, 0.f);
                 g->drawVAO(buffer.getEmojiVAO());
             }
 
