@@ -313,6 +313,11 @@ void DirectX11Shader::enable() {
     context->VSSetConstantBuffers(0, (UINT)this->constantBuffers.size(), &this->constantBuffers[0]);
 
     dx11->setActiveShader(this);
+
+    // the newly activated shader may not have the current MVP if no transform
+    // change occurred since it was last active. setMVP's internal cache makes
+    // this essentially free (memcmp skip) when the matrix hasn't changed.
+    this->setMVP(g->getMVP());
 }
 
 void DirectX11Shader::disable() {

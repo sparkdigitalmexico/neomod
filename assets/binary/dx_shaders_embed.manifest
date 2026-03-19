@@ -16,3 +16,5 @@ DX11_actual_flashlight_vsh  : assets/shaders/DX11_actual_flashlight_v.hlsl
 DX11_actual_flashlight_fsh  : assets/shaders/DX11_actual_flashlight_f.hlsl
 DX11_smoothclip_vsh         : assets/shaders/DX11_smoothclip_v.hlsl
 DX11_smoothclip_fsh         : assets/shaders/DX11_smoothclip_f.hlsl
+DX11_text_vsh               : assets/shaders/DX11_text_v.hlsl
+DX11_text_fsh               : assets/shaders/DX11_text_f.hlsl

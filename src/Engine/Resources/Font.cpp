@@ -98,7 +98,8 @@ struct LastSizedFTFace {
 } s_lastSizedFace{};
 
 // text effect shader (shadow/outline in a single pass)
-[[maybe_unused]] Shader *s_textShader{nullptr};
+Shader *s_textShader{nullptr};
+bool s_textShaderBroken{false};
 
 class TextVAO : public VertexArrayObject {
     MOVECONSTRUCTONLY(TextVAO)
@@ -287,14 +288,12 @@ struct McFontImpl final {
     // puts a glyph quad/tri into given vertex/texcoord buffer at startIndex.
     // expandRight/expandDown extend the quad into atlas padding for shadow/outline visibility.
     void buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
-                            float advanceX, size_t startIndex,
-                            float expandLeft = 0.f, float expandRight = 0.f,
+                            float advanceX, size_t startIndex, float expandLeft = 0.f, float expandRight = 0.f,
                             float expandUp = 0.f, float expandDown = 0.f);
 
     // builds full string geometry into buffer, including emoji overlay arrays.
-    void buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs,
-                             float expandLeft = 0.f, float expandRight = 0.f,
-                             float expandUp = 0.f, float expandDown = 0.f);
+    void buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs, float expandLeft = 0.f,
+                             float expandRight = 0.f, float expandUp = 0.f, float expandDown = 0.f);
 
     static std::unique_ptr<Channel[]> unpackMonoBitmap(const FT_Bitmap &bitmap);
 
@@ -580,80 +579,54 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
 
     m_textureAtlas->getAtlasImage()->bind();
 
-    bool usedShader = false;
+    if(hasEffects && !s_textShaderBroken) {
+        if(!s_textShader) {
+            s_textShader = resourceManager->createShaderAuto("text");
+        }
 
-    if(Env::cfg(REND::SDLGPU) && env->usingSDLGPU()) {
-        if(hasEffects) {
-            if(!s_textShader) s_textShader = resourceManager->createShaderAuto("text");
+        if(s_textShader != nullptr && s_textShader->isReady()) {
+            const auto &sc = *shadow;
+            const float atlasW = static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth());
+            const float atlasH = static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight());
 
-            if(s_textShader != nullptr && s_textShader->isReady()) {
-                const auto &sc = *shadow;
-                const float atlasW = static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth());
-                const float atlasH = static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight());
+            s_textShader->enable();
+            s_textShader->setUniform4f("col", sc.col_text.Rf(), sc.col_text.Gf(), sc.col_text.Bf(), sc.col_text.Af());
+            s_textShader->setUniform4f("col_shadow", sc.col_shadow.Rf(), sc.col_shadow.Gf(), sc.col_shadow.Bf(),
+                                       sc.col_shadow.Af());
+            s_textShader->setUniform4f("col_outline", sc.col_outline.Rf(), sc.col_outline.Gf(), sc.col_outline.Bf(),
+                                       sc.col_outline.Af());
+            s_textShader->setUniform4f("params", sc.offs_px / atlasW, sc.offs_px / atlasH, sc.outline_px / atlasW,
+                                       sc.outline_px / atlasH);
+            s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH, 0.f,
+                                       0.f);
 
-                s_textShader->enable();
-                s_textShader->setUniform4f("col", sc.col_text.Rf(), sc.col_text.Gf(), sc.col_text.Bf(),
-                                           sc.col_text.Af());
-                s_textShader->setUniform4f("col_shadow", sc.col_shadow.Rf(), sc.col_shadow.Gf(), sc.col_shadow.Bf(),
-                                           sc.col_shadow.Af());
-                s_textShader->setUniform4f("col_outline", sc.col_outline.Rf(), sc.col_outline.Gf(), sc.col_outline.Bf(),
-                                           sc.col_outline.Af());
-                s_textShader->setUniform4f("params", sc.offs_px / atlasW, sc.offs_px / atlasH, sc.outline_px / atlasW,
-                                           sc.outline_px / atlasH);
-                s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH,
-                                           0.f, 0.f);
-
-                if(!buffer.getVerts().empty()) {
-                    g->drawVAO(buffer.getVAO());
-                }
-
-                if(!buffer.getEmojiVerts().empty()) {
-                    // emoji: use texture RGB directly (color glyphs), keep shadow/outline
-                    s_textShader->setUniform4f("col", 1.f, 1.f, 1.f, sc.col_text.Af());
-                    s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW,
-                                               sc.shadow_softness_px / atlasH, 1.f, 0.f);
-                    g->drawVAO(buffer.getEmojiVAO());
-                }
-
-                s_textShader->disable();
-                usedShader = true;
+            if(!buffer.getVerts().empty()) {
+                g->drawVAO(buffer.getVAO());
             }
+
+            if(!buffer.getEmojiVerts().empty()) {
+                // emoji: use texture RGB directly (color glyphs), keep shadow/outline
+                s_textShader->setUniform4f("col", 1.f, 1.f, 1.f, sc.col_text.Af());
+                s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH,
+                                           1.f, 0.f);
+                g->drawVAO(buffer.getEmojiVAO());
+            }
+
+            s_textShader->disable();
+        } else {
+            s_textShaderBroken = true;
+            engine->showMessageError("Font Error", "Text effects shader failed to load, fancy text won't work!");
         }
     }
-
-    if(!usedShader) {
-        // fallback: original double-draw for non-SDLGPU or shader not ready
+    if(!hasEffects || s_textShaderBroken) {
+        // no effects: plain draw, no shader overhead
         if(!buffer.getVerts().empty()) {
-            if(hasEffects) {
-                const auto &shadowConf = *shadow;
-                const float px = shadowConf.offs_px;
-
-                g->translate(px, px);
-                g->setColor(shadowConf.col_shadow);
-                g->drawVAO(buffer.getVAO());
-                g->translate(-px, -px);
-                g->setColor(shadowConf.col_text);
-            }
-
             g->drawVAO(buffer.getVAO());
         }
 
-        // emoji
         if(!buffer.getEmojiVerts().empty()) {
             const Color savedColor = g->getColor();
-            if(hasEffects) {
-                const auto &shadowConf = *shadow;
-                const float px = shadowConf.offs_px;
-
-                g->translate(px, px);
-                g->setColor(shadowConf.col_shadow);
-                g->drawVAO(buffer.getEmojiVAO());
-                g->translate(-px, -px);
-                g->setColor(argb(shadowConf.col_text.a, 255, 255, 255));
-            } else {
-                g->setColor(argb(savedColor.a, 255, 255, 255));
-            }
-
+            g->setColor(argb(savedColor.a, 255, 255, 255));
             g->drawVAO(buffer.getEmojiVAO());
             g->setColor(savedColor);
         }
@@ -1314,8 +1287,7 @@ FT_BitmapGlyph McFontImpl::loadBitmapGlyph(char32_t ch, FT_Face face, bool store
 }
 
 void McFontImpl::buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
-                                    float advanceX, size_t startIndex,
-                                    float expandLeft, float expandRight,
+                                    float advanceX, size_t startIndex, float expandLeft, float expandRight,
                                     float expandUp, float expandDown) {
     const float atlasWidth{static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth())};
     const float atlasHeight{static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight())};
@@ -1382,8 +1354,7 @@ void McFontImpl::buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &
     return;
 }
 
-void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs,
-                                     float expandLeft, float expandRight,
+void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyphs, float expandLeft, float expandRight,
                                      float expandUp, float expandDown) {
     auto &verts = buffer.getVerts();
     auto &TCs = buffer.getTexcoords();
@@ -1401,14 +1372,14 @@ void McFontImpl::buildStringGeometry(VerTexMetCacheEntry &buffer, size_t maxGlyp
         if(gm.isColor) {
             emojiVerts.resize(emojiVerts.size() + VERTS_PER_VAO);
             emojiTCs.resize(emojiTCs.size() + VERTS_PER_VAO);
-            buildGlyphGeometry(emojiVerts, emojiTCs, gm, advanceX, emojiStartIndex,
-                               expandLeft, expandRight, expandUp, expandDown);
+            buildGlyphGeometry(emojiVerts, emojiTCs, gm, advanceX, emojiStartIndex, expandLeft, expandRight, expandUp,
+                               expandDown);
             emojiStartIndex += VERTS_PER_VAO;
         } else {
             verts.resize(verts.size() + VERTS_PER_VAO);
             TCs.resize(TCs.size() + VERTS_PER_VAO);
-            buildGlyphGeometry(verts, TCs, gm, advanceX, regularStartIndex,
-                               expandLeft, expandRight, expandUp, expandDown);
+            buildGlyphGeometry(verts, TCs, gm, advanceX, regularStartIndex, expandLeft, expandRight, expandUp,
+                               expandDown);
             regularStartIndex += VERTS_PER_VAO;
         }
         advanceX += gm.advance_x;

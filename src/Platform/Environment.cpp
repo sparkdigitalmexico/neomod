@@ -138,28 +138,31 @@ Environment::Environment(const Mc::AppDescriptor &appDesc,
     // the hints might already be set from the startup environment, so respect that here (1)
     m_bWinKeyDisabled = m_bRawKB ? SDL_GetHintBoolean(SDL_HINT_WINDOWS_RAW_KEYBOARD_EXCLUDE_HOTKEYS, false) : false;
 
-    // use directx if:
-    // we we built with support for it, and
-    // (either OpenGL(ES) + SDLGPU is missing, or
-    // (-directx or -dx11 are specified on the command line))
-    // use SDLGPU if:
-    // we we built with support for it, and
-    // (either OpenGL(ES) + DX11 is missing, or
-    // (-sdlgpu or -gpu are specified on the command line))
-    // otherwise, use whichever of GLES32/GL are available
-    {
+    // this is the only platform/configuration where NullGraphics is used currently
+    if(Env::cfg(OS::WASM) && m_bHeadless) {
+        m_renderer = RuntimeRenderer::NULLGRAPHICS;
+    } else {
+        // use directx if:
+        // we we built with support for it, and
+        // (either OpenGL(ES) + SDLGPU is missing, or
+        // (-directx or -dx11 are specified on the command line))
+        // use SDLGPU if:
+        // we we built with support for it, and
+        // (either OpenGL(ES) + DX11 is missing, or
+        // (-sdlgpu or -gpu are specified on the command line))
+        // otherwise, use whichever of GLES32/GL are available
         using enum RuntimeRenderer;
         // clang-format off
-        m_renderer = 
+        m_renderer =
             (Env::cfg(REND::DX11) &&
                 (!(Env::cfg(REND::GL | REND::GLES32 | REND::SDLGPU)) ||
                   (m_mArgMap.contains("-directx") || m_mArgMap.contains("-dx11"))))
             ? DX11
-        : (Env::cfg(REND::SDLGPU) && 
+        : (Env::cfg(REND::SDLGPU) &&
                 (!(Env::cfg(REND::GL | REND::GLES32 | REND::DX11)) ||
                   (m_mArgMap.contains("-sdlgpu") || m_mArgMap.contains("-gpu"))))
             ? SDLGPU
-        : Env::cfg(REND::GLES32) 
+        : Env::cfg(REND::GLES32)
             ? GLES
         : GL;
         // clang-format on

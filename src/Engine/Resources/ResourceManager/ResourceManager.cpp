@@ -588,11 +588,17 @@ Shader *ResourceManager::createShaderAuto(std::string_view shaderBasename) {
     if(shader != nullptr) return shader;
 
     // create instance and load it
-    const std::string_view pfx = env->usingDX11() ? "DX11" : env->usingSDLGPU() ? "SDLGPU" : "GL";
-    assert(ALL_BINMAP.contains(fmt::format("{}_{}_vsh", pfx, shaderBasename)) &&
-           ALL_BINMAP.contains(fmt::format("{}_{}_fsh", pfx, shaderBasename)));
-    shader = g->createShaderFromSource(std::string{ALL_BINMAP.at(fmt::format("{}_{}_vsh", pfx, shaderBasename))},
-                                       std::string{ALL_BINMAP.at(fmt::format("{}_{}_fsh", pfx, shaderBasename))});
+    if(!env->usingNullGraphics()) {
+        const std::string_view pfx = env->usingDX11() ? "DX11" : env->usingSDLGPU() ? "SDLGPU" : "GL";
+        assert(ALL_BINMAP.contains(fmt::format("{}_{}_vsh", pfx, shaderBasename)) &&
+               ALL_BINMAP.contains(fmt::format("{}_{}_fsh", pfx, shaderBasename)));
+        shader = g->createShaderFromSource(std::string{ALL_BINMAP.at(fmt::format("{}_{}_vsh", pfx, shaderBasename))},
+                                           std::string{ALL_BINMAP.at(fmt::format("{}_{}_fsh", pfx, shaderBasename))});
+    } else {
+        // nullgraphics has no shaders, but just create a dummy shader
+        const std::string dummy = fmt::format("nullgfx_{}", shaderBasename);
+        shader = g->createShaderFromSource(dummy, dummy);
+    }
 
     pImpl->setResourceName(shader, shaderBasename);
     loadResource(shader, true);

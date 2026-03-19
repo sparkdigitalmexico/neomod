@@ -78,6 +78,11 @@ void OpenGLES32Shader::enable() {
 
     // update cache
     GLStateCache::setCurrentProgram(m_iProgram);
+
+    // the newly activated shader may not have the current MVP if no transform
+    // change occurred since it was last active. setMVP's internal cache makes
+    // this essentially free (memcmp skip) when the matrix hasn't changed.
+    this->setMVP(g->getMVP());
 }
 
 void OpenGLES32Shader::disable() {
@@ -228,6 +233,13 @@ bool OpenGLES32Shader::compile(const std::string &vertexShader, const std::strin
     // attach
     glAttachShader(m_iProgram, m_iVertexShader);
     glAttachShader(m_iProgram, m_iFragmentShader);
+
+    // force consistent attribute locations so custom shaders share
+    // the same layout as the default shader (drawVAO binds vertex
+    // data to these fixed locations regardless of which shader is active)
+    glBindAttribLocation(m_iProgram, 0, "position");
+    glBindAttribLocation(m_iProgram, 1, "uv");
+    glBindAttribLocation(m_iProgram, 2, "vcolor");
 
     // link
     glLinkProgram(m_iProgram);

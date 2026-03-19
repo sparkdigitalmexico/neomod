@@ -101,6 +101,8 @@ class Environment {
 
     // engine/factory
     Graphics *createRenderer();
+
+    [[nodiscard]] constexpr forceinline bool usingNullGraphics() const { return m_renderer == RuntimeRenderer::NULLGRAPHICS; }
 #ifdef MCENGINE_FEATURE_DIRECTX11
     [[nodiscard]] inline bool usingDX11() const { return m_renderer == RuntimeRenderer::DX11; }
 #else
@@ -312,7 +314,7 @@ class Environment {
     SDL_Window *m_window;
     SDL_WindowID m_windowID;
     std::string m_sdldriver;
-    enum class RuntimeRenderer : uint8_t { GL, GLES, DX11, SDLGPU };
+    enum class RuntimeRenderer : uint8_t { GL, GLES, DX11, SDLGPU, NULLGRAPHICS };
     RuntimeRenderer m_renderer;
 
     bool m_bRunning;

@@ -14,3 +14,5 @@ GL_actual_flashlight_vsh : assets/shaders/GL_actual_flashlight_v.glsl
 GL_actual_flashlight_fsh : assets/shaders/GL_actual_flashlight_f.glsl
 GL_smoothclip_vsh   : assets/shaders/GL_smoothclip_v.glsl
 GL_smoothclip_fsh   : assets/shaders/GL_smoothclip_f.glsl
+GL_text_vsh         : assets/shaders/GL_text_v.glsl
+GL_text_fsh         : assets/shaders/GL_text_f.glsl
