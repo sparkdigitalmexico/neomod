@@ -225,13 +225,16 @@ void UI::draw() {
     }
 
     f32 cursorAlpha = 1.f;
-    // fade out cursor if it hasn't been moved for over 15 seconds
-    if(vec::length(mouse->getRawDelta()) > 0.) {
-        this->lastCursorMoveTime = engine->getTime();
-    } else {
-        const f32 fadeDuration = 1.f;
-        const f32 idleTime = (f32)(engine->getTime() - this->lastCursorMoveTime);
-        cursorAlpha *= std::clamp<f32>(cv::cursor_idle_time_before_fade.getFloat() - idleTime + fadeDuration, 0.f, 1.f);
+    if(f32 cursorIdleFadeTime = cv::cursor_idle_time_before_fade.getFloat(); cursorIdleFadeTime > 0.f) {
+        // fade out cursor if it hasn't been moved for over 15 seconds
+        if(vec::length(mouse->getRawDelta()) > 0.) {
+            this->lastCursorMoveTime = engine->getTime();
+        } else {
+            const f32 fadeDuration = 1.f;
+            const f32 idleTime = (f32)(engine->getTime() - this->lastCursorMoveTime);
+            cursorAlpha *=
+                std::clamp<f32>(cv::cursor_idle_time_before_fade.getFloat() - idleTime + fadeDuration, 0.f, 1.f);
+        }
     }
 
     const bool isFPoSu = (cv::mod_fposu.getBool());
@@ -266,7 +269,9 @@ void UI::draw() {
 
         // this->windowManager->draw();
 
-        if(isFPoSu && cv::draw_cursor_ripples.getBool()) this->hud->drawCursorRipples();
+        if(isFPoSu && cv::draw_cursor_ripples.getBool()) {
+            this->hud->drawCursorRipples();
+        }
 
         // apply fading cursor alpha multiplier
         if(!(this->pauseOverlay->isVisible() || osu->map_iface->isContinueScheduled() ||
