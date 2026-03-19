@@ -399,7 +399,7 @@ void SDLGPUInterface::createPipeline() {
     multisampleState.sample_count = (SDL_GPUSampleCount)key.sampleCount;
 
     SDL_GPUDepthStencilState depthStencilState{};
-    depthStencilState.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+    depthStencilState.compare_op = SDL_GPU_COMPAREOP_LESS;
     depthStencilState.enable_depth_test = m_depthTestEnabled;
     depthStencilState.enable_depth_write = m_depthWriteEnabled;
 
