@@ -583,126 +583,37 @@ void SongBrowser::draw() {
 
     // draw score browser
     this->scoreBrowser->draw();
-    this->localBestContainer->draw();
+
+    {
+        // draw strain graph of currently selected beatmap
+        // FIXME: ugly, where do we even put this? "No records set!" label or local best button is in the same spot
+        const bool doDrawStrainGraph = cv::draw_songbrowser_strain_graph.getBool();
+        auto *noRecordsSetElem = static_cast<CBaseUILabel *>(this->scoreBrowserNoRecordsSetElement);
+        const Color oldNoRecordsSetBG = noRecordsSetElem->getBackgroundColor();
+        const Color oldNoRecordsSetFrame = noRecordsSetElem->getFrameColor();
+
+        bool noRecordsSetOpacityHack = false;
+        if(doDrawStrainGraph) {
+            this->drawStrainGraphOverlay();
+            if(this->localBestContainer->isVisible() &&
+               std::ranges::contains(this->localBestContainer->getElements(), noRecordsSetElem)) {
+                noRecordsSetOpacityHack = true;
+                noRecordsSetElem->setBackgroundColor(Color{oldNoRecordsSetBG}.setA(0.5f));
+                noRecordsSetElem->setFrameColor(Color{oldNoRecordsSetFrame}.setA(0.5f));
+            }
+        }
+
+        this->localBestContainer->draw();
+
+        if(noRecordsSetOpacityHack) {
+            noRecordsSetElem->setBackgroundColor(oldNoRecordsSetBG);
+            noRecordsSetElem->setFrameColor(oldNoRecordsSetFrame);
+        }
+    }
 
     if(cv::debug_osu.getBool()) {
         this->scoreBrowser->container.draw_debug();
         this->localBestContainer->draw_debug();
-    }
-
-    // draw strain graph of currently selected beatmap
-    if(cv::draw_songbrowser_strain_graph.getBool()) {
-        const std::vector<f64> &aimStrains = osu->getMapInterface()->getWholeMapPPInfo().aimStrains;
-        const std::vector<f64> &speedStrains = osu->getMapInterface()->getWholeMapPPInfo().speedStrains;
-        const float speedMultiplier = osu->getMapInterface()->getSpeedMultiplier();
-
-        if(aimStrains.size() > 0 && aimStrains.size() == speedStrains.size()) {
-            const float strainStepMS = 400.0f * speedMultiplier;
-
-            const u64 lengthMS = strainStepMS * aimStrains.size();
-
-            // get highest strain values for normalization
-            f64 highestAimStrain = 0.0;
-            f64 highestSpeedStrain = 0.0;
-            f64 highestStrain = 0.0;
-            int highestStrainIndex = -1;
-            for(int i = 0; i < aimStrains.size(); i++) {
-                const f64 aimStrain = aimStrains[i];
-                const f64 speedStrain = speedStrains[i];
-                const f64 strain = aimStrain + speedStrain;
-
-                if(strain > highestStrain) {
-                    highestStrain = strain;
-                    highestStrainIndex = i;
-                }
-                if(aimStrain > highestAimStrain) highestAimStrain = aimStrain;
-                if(speedStrain > highestSpeedStrain) highestSpeedStrain = speedStrain;
-            }
-
-            // draw strain bar graph
-            if(highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0) {
-                const f32 dpiScale = Osu::getUIScale();
-
-                const f32 graphWidth = this->scoreBrowser->getSize().x;
-
-                const f32 msPerPixel = (f32)lengthMS / graphWidth;
-                const f32 strainWidth = strainStepMS / msPerPixel;
-                const f32 strainHeightMultiplier = cv::hud_scrubbing_timeline_strains_height.getFloat() * dpiScale;
-
-                McRect graphRect(0, (osu->getVirtScreenHeight() - BottomBar::get_height()) - strainHeightMultiplier,
-                                 graphWidth, strainHeightMultiplier);
-
-                const f32 alpha =
-                    (graphRect.contains(mouse->getPos()) ? 1.0f : cv::hud_scrubbing_timeline_strains_alpha.getFloat());
-
-                const Color aimStrainColor =
-                    argb(alpha, cv::hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f,
-                         cv::hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f,
-                         cv::hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
-                const Color speedStrainColor =
-                    argb(alpha, cv::hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f,
-                         cv::hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f,
-                         cv::hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
-
-                g->setDepthBuffer(true);
-                for(int i = 0; i < aimStrains.size(); i++) {
-                    const f64 aimStrain = (aimStrains[i]) / highestStrain;
-                    const f64 speedStrain = (speedStrains[i]) / highestStrain;
-                    //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
-
-                    const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
-                    const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
-                    //const f64 strainHeight = strain * strainHeightMultiplier;
-
-                    if(!keyboard->isShiftDown()) {
-                        g->setColor(aimStrainColor);
-                        g->fillRect(i * strainWidth,
-                                    (osu->getVirtScreenHeight() - BottomBar::get_height()) - aimStrainHeight,
-                                    std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
-                    }
-
-                    if(!keyboard->isControlDown()) {
-                        g->setColor(speedStrainColor);
-                        g->fillRect(i * strainWidth,
-                                    (osu->getVirtScreenHeight() - BottomBar::get_height()) -
-                                        (keyboard->isShiftDown() ? 0 : aimStrainHeight) - speedStrainHeight,
-                                    std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
-                    }
-                }
-                g->setDepthBuffer(false);
-
-                // highlight highest total strain value (+- section block)
-                if(highestStrainIndex > -1) {
-                    const f64 aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
-                    const f64 speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
-                    //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
-
-                    const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
-                    const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
-                    //const f64 strainHeight = strain * strainHeightMultiplier;
-
-                    vec2 topLeftCenter = vec2(
-                        highestStrainIndex * strainWidth + strainWidth / 2.0f,
-                        (osu->getVirtScreenHeight() - BottomBar::get_height()) - aimStrainHeight - speedStrainHeight);
-
-                    const f32 margin = 5.0f * dpiScale;
-
-                    g->setColor(0xffffffff);
-                    g->setAlpha(alpha);
-                    g->drawRect(topLeftCenter.x - margin * strainWidth, topLeftCenter.y - margin * strainWidth,
-                                strainWidth * 2 * margin,
-                                aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth);
-                    g->setAlpha(alpha * 0.5f);
-                    g->drawRect(topLeftCenter.x - margin * strainWidth - 2, topLeftCenter.y - margin * strainWidth - 2,
-                                strainWidth * 2 * margin + 4,
-                                aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth + 4);
-                    g->setAlpha(alpha * 0.25f);
-                    g->drawRect(topLeftCenter.x - margin * strainWidth - 4, topLeftCenter.y - margin * strainWidth - 4,
-                                strainWidth * 2 * margin + 8,
-                                aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth + 8);
-                }
-            }
-        }
     }
 
     // draw beatmap carousel
@@ -786,6 +697,118 @@ void SongBrowser::draw() {
 
         g->fillGradient(0, 0, osu->getVirtScreenWidth(), osu->getVirtScreenHeight(), topColor, topColor, bottomColor,
                         bottomColor);
+    }
+}
+
+void SongBrowser::drawStrainGraphOverlay() {
+    const std::vector<f64> &aimStrains = osu->getMapInterface()->getWholeMapPPInfo().aimStrains;
+    const std::vector<f64> &speedStrains = osu->getMapInterface()->getWholeMapPPInfo().speedStrains;
+    const f32 speedMultiplier = osu->getMapInterface()->getSpeedMultiplier();
+
+    if(aimStrains.size() > 0 && aimStrains.size() == speedStrains.size()) {
+        const f32 strainStepMS = 400.0f * speedMultiplier;
+
+        const u64 lengthMS = strainStepMS * aimStrains.size();
+
+        // get highest strain values for normalization
+        f64 highestAimStrain = 0.0;
+        f64 highestSpeedStrain = 0.0;
+        f64 highestStrain = 0.0;
+        int highestStrainIndex = -1;
+        for(int i = 0; i < aimStrains.size(); i++) {
+            const f64 aimStrain = aimStrains[i];
+            const f64 speedStrain = speedStrains[i];
+            const f64 strain = aimStrain + speedStrain;
+
+            if(strain > highestStrain) {
+                highestStrain = strain;
+                highestStrainIndex = i;
+            }
+            if(aimStrain > highestAimStrain) highestAimStrain = aimStrain;
+            if(speedStrain > highestSpeedStrain) highestSpeedStrain = speedStrain;
+        }
+
+        // draw strain bar graph
+        if(highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0) {
+            const f32 dpiScale = Osu::getUIScale();
+            const f32 graphWidth = this->scoreBrowser->getSize().x;
+
+            const f32
+                bottombarTopY =  // (osu->getVirtScreenHeight() - BottomBar::get_height()) doesn't work quite right? just copying from mcosu for now
+                osu->getVirtScreenHeight() -
+                (osu->getVirtScreenHeight() * 0.115f /*cv::songbrowser_bottombar_percent.getFloat() * dpiScale */);
+
+            const f32 msPerPixel = (f32)lengthMS / graphWidth;
+            const f32 strainWidth = strainStepMS / msPerPixel;
+            const f32 strainHeightMultiplier = cv::hud_scrubbing_timeline_strains_height.getFloat() * dpiScale;
+
+            McRect graphRect(0, bottombarTopY - strainHeightMultiplier, graphWidth, strainHeightMultiplier);
+
+            const f32 alpha =
+                (graphRect.contains(mouse->getPos()) ? 1.0f : cv::hud_scrubbing_timeline_strains_alpha.getFloat());
+
+            const Color aimStrainColor = argb(alpha, cv::hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f,
+                                              cv::hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f,
+                                              cv::hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
+            const Color speedStrainColor =
+                argb(alpha, cv::hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f,
+                     cv::hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f,
+                     cv::hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
+
+            g->setDepthBuffer(true);
+            for(int i = 0; i < aimStrains.size(); i++) {
+                const f64 aimStrain = (aimStrains[i]) / highestStrain;
+                const f64 speedStrain = (speedStrains[i]) / highestStrain;
+                //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+                const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
+                const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
+                //const f64 strainHeight = strain * strainHeightMultiplier;
+
+                if(!keyboard->isShiftDown()) {
+                    g->setColor(aimStrainColor);
+                    g->fillRect(i * strainWidth, bottombarTopY - aimStrainHeight,
+                                std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
+                }
+
+                if(!keyboard->isControlDown()) {
+                    g->setColor(speedStrainColor);
+                    g->fillRect(i * strainWidth,
+                                bottombarTopY - (keyboard->isShiftDown() ? 0 : aimStrainHeight) - speedStrainHeight,
+                                std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+                }
+            }
+            g->setDepthBuffer(false);
+
+            // highlight highest total strain value (+- section block)
+            if(highestStrainIndex > -1) {
+                const f64 aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
+                const f64 speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
+                //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+                const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
+                const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
+                //const f64 strainHeight = strain * strainHeightMultiplier;
+
+                vec2 topLeftCenter = vec2(highestStrainIndex * strainWidth + strainWidth / 2.0f,
+                                          bottombarTopY - aimStrainHeight - speedStrainHeight);
+
+                const f32 margin = 5.0f * dpiScale;
+
+                g->setColor(0xffffffff);
+                g->setAlpha(alpha);
+                g->drawRect(topLeftCenter.x - margin * strainWidth, topLeftCenter.y - margin * strainWidth,
+                            strainWidth * 2 * margin, aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth);
+                g->setAlpha(alpha * 0.5f);
+                g->drawRect(topLeftCenter.x - margin * strainWidth - 2, topLeftCenter.y - margin * strainWidth - 2,
+                            strainWidth * 2 * margin + 4,
+                            aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth + 4);
+                g->setAlpha(alpha * 0.25f);
+                g->drawRect(topLeftCenter.x - margin * strainWidth - 4, topLeftCenter.y - margin * strainWidth - 4,
+                            strainWidth * 2 * margin + 8,
+                            aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth + 8);
+            }
+        }
     }
 }
 

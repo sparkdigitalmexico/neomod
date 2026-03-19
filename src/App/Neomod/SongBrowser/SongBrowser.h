@@ -277,6 +277,8 @@ class SongBrowser final : public ScreenBackable {
     void rebuildScoreButtons();
     CollBtnContainer *getCollectionButtonsForGroup(GroupType group);
 
+    void drawStrainGraphOverlay();
+
     GroupType curGroup{GroupType::NO_GROUPING};
     SortType curSortMethod{SortType::ARTIST};
     u8 lastDiffSortModIndex;
