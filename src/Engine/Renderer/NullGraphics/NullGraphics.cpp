@@ -40,10 +40,10 @@ void NullGraphics::drawQuad(vec2 /*topLeft*/, vec2 /*topRight*/, vec2 /*bottomRi
 // 2d resource drawing
 void NullGraphics::drawImage(const Image * /*image*/, AnchorPoint /*anchor*/, float /*edgeSoftness*/,
                              McRect /*clipRect*/) {}
-void NullGraphics::drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow) {
+void NullGraphics::drawString(McFont *font, std::string_view text, std::optional<TextFX> effects) {
     updateTransform();
 
-    font->drawString(text, shadow);
+    font->drawString(text, effects);
 }
 
 // 3d type drawing

@@ -60,7 +60,7 @@ void CBaseUILabel::drawText() {
 
                 g->drawString(
                     this->font, this->sText,
-                    TextShadow{.col_text = this->textColor, .col_shadow = this->shadowColor, .offs_px = shadowOffset});
+                    TextFX{.col_text = this->textColor, .col_shadow = this->shadowColor, .offs_px = shadowOffset});
             } else {
                 g->setColor(this->textColor);
                 g->drawString(this->font, this->sText);

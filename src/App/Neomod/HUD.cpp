@@ -748,7 +748,7 @@ void HUD::drawFps() {
 
         g->translate(screenSize.x - font->getStringWidth(fpsString) - margin,
                      screenSize.y - margin - font->getHeight() - margin - belowPadding);
-        g->drawString(font, fpsString, TextShadow{.col_text = fpsColor, .offs_px = shadowOffset});
+        g->drawString(font, fpsString, TextFX{.col_text = fpsColor, .offs_px = shadowOffset});
     }
     g->popTransform();
 
@@ -766,7 +766,7 @@ void HUD::drawFps() {
         }
 
         g->translate(screenSize.x - font->getStringWidth(msString) - margin, screenSize.y - margin - belowPadding);
-        g->drawString(font, msString, TextShadow{.col_text = msColor, .offs_px = shadowOffset});
+        g->drawString(font, msString, TextFX{.col_text = msColor, .offs_px = shadowOffset});
     }
     g->popTransform();
 }
@@ -1849,7 +1849,7 @@ void HUD::drawStatistics(const HUDStats &s) {
 
             g->translate(xOffset, yOffset);
 
-            g->drawString(font, text, TextShadow{.col_text = textColor, .col_shadow = shadowColor, .offs_px = 1.f});
+            g->drawString(font, text, TextFX{.col_text = textColor, .col_shadow = shadowColor, .offs_px = 1.f});
 
             g->translate((-xOffset), (-yOffset) + yDelta);
         };
@@ -2690,7 +2690,7 @@ void HUD::drawRuntimeInfo() {
     {
         g->translate(osu->getVirtScreenWidth() - infoStringWidth, osu->getVirtScreenHeight() - fontHeight + 6);
         g->drawString(font, infoString,
-                      TextShadow{.col_text = argb(100, 255, 255, 255), .col_shadow = argb(100, 0, 0, 0)});
+                      TextFX{.col_text = argb(100, 255, 255, 255), .col_shadow = argb(100, 0, 0, 0)});
     }
     g->popTransform();
 }

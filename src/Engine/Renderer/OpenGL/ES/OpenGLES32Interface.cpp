@@ -370,12 +370,12 @@ void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, floa
     }
 }
 
-void OpenGLES32Interface::drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow) {
+void OpenGLES32Interface::drawString(McFont *font, std::string_view text, std::optional<TextFX> effects) {
     if(font == nullptr || text.length() < 1 || !font->isReady()) return;
 
     updateTransform();
 
-    font->drawString(text, shadow);
+    font->drawString(text, effects);
 }
 
 void OpenGLES32Interface::drawVAO(VertexArrayObject *vao) {

@@ -23,7 +23,7 @@ class OpenGLES32Interface;
 class DirectX11Interface;
 class NullGraphics;
 class SDLGPUInterface;
-struct TextShadow;
+struct TextFX;
 
 struct McFontImpl;
 class McFont final : public Resource {
@@ -35,7 +35,7 @@ class McFont final : public Resource {
     friend DirectX11Interface;
     friend NullGraphics;
     friend SDLGPUInterface;
-    void drawString(std::string_view text, std::optional<TextShadow> shadow);
+    void drawString(std::string_view text, std::optional<TextFX> effects);
 
    public:
     McFont(std::string filepath, int fontSize = 16, bool antialiasing = true, int fontDPI = 96);

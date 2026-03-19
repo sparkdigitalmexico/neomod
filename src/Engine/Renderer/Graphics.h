@@ -26,7 +26,7 @@ class RenderTarget;
 class VertexArrayObject;
 
 // text effects: shadow, outline. offset pixels to the bottom right
-struct TextShadow {
+struct TextFX {
     Color col_text{rgb(255, 255, 255)};
     Color col_shadow{rgb(0, 0, 0)};
     float offs_px{1.f};                   // not scaled to display DPI
@@ -213,7 +213,7 @@ class Graphics {
     // 2d resource drawing
     virtual void drawImage(const Image *image, AnchorPoint anchor = AnchorPoint::CENTER, float edgeSoftness = 0.0f,
                            McRect clipRect = {}) = 0;
-    virtual void drawString(McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) = 0;
+    virtual void drawString(McFont *font, std::string_view text, std::optional<TextFX> effects = std::nullopt) = 0;
 
     // 3d type drawing
     virtual void drawVAO(VertexArrayObject *vao) = 0;

@@ -100,12 +100,12 @@ void InfoLabel::draw() {
         g->scale(scale, scale);
         g->translate((i32)(this->getPos().x), yCounter);
         g->drawString(this->titleFont, titleText,
-                      TextShadow{.col_text = 0xffffffff, .col_shadow = 0xff000000, .offs_px = titleShadowOffset});
+                      TextFX{.col_text = 0xffffffff, .col_shadow = 0xff000000, .offs_px = titleShadowOffset});
     }
     g->popTransform();
 
     const f32 shadowOffset = std::round((f32)this->font->getDPI() / 96.0f);  // NOTE: abusing font dpi
-    TextShadow shadow{.col_text = 0xffffffff, .col_shadow = 0xff000000, .offs_px = shadowOffset};
+    TextFX shadow{.col_text = 0xffffffff, .col_shadow = 0xff000000, .offs_px = shadowOffset};
 
     // draw subtitle (mapped by)
     g->pushTransform();

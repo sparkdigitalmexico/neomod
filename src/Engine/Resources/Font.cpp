@@ -225,7 +225,7 @@ struct McFontImpl final {
     void destroy();
 
     // Main string drawing functions
-    void drawString(std::string_view text, std::optional<TextShadow> shadow = std::nullopt);
+    void drawString(std::string_view text, std::optional<TextFX> effects = std::nullopt);
 
     // Setters
     inline void setSize(int fontSize) { m_iFontSize = fontSize; }
@@ -334,8 +334,8 @@ int McFont::getSize() const { return pImpl->getSize(); }
 int McFont::getDPI() const { return pImpl->getDPI(); }
 float McFont::getHeight() const { return pImpl->getHeight(); }
 
-void McFont::drawString(std::string_view text, std::optional<TextShadow> shadow) {
-    return pImpl->drawString(text, shadow);
+void McFont::drawString(std::string_view text, std::optional<TextFX> effects) {
+    return pImpl->drawString(text, effects);
 }
 
 float McFont::getGlyphWidth(char32_t character) const { return pImpl->getGlyphWidth(character); }
@@ -497,7 +497,7 @@ void McFontImpl::destroy() {
     m_bAtlasNeedsReload = false;
 }
 
-void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> shadow) {
+void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects) {
     if(!m_parent->isReady()) return;
 
     const auto numCodepoints = UniString::num_codepoints(text);
@@ -505,9 +505,9 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
 
     // compute directional expansion for shadow/outline effects (needed before cache check).
     // shadow extends to the bottom-right only; outline extends in all directions.
-    const bool hasEffects = shadow.has_value() && (shadow->col_shadow.a > 0 || shadow->col_outline.a > 0);
-    const float outlinePx = (hasEffects && shadow->col_outline.a > 0) ? shadow->outline_px : 0.f;
-    const float shadowPx = (hasEffects && shadow->col_shadow.a > 0) ? shadow->offs_px : 0.f;
+    const bool hasEffects = effects.has_value() && (effects->col_shadow.a > 0 || effects->col_outline.a > 0);
+    const float outlinePx = (hasEffects && effects->col_outline.a > 0) ? effects->outline_px : 0.f;
+    const float shadowPx = (hasEffects && effects->col_shadow.a > 0) ? effects->offs_px : 0.f;
     // cap outline expansion so that expansion + outline sampling reach stays within atlas padding.
     // without this, the shader's 8-tap outline samples at the expanded quad edge overshoot the
     // padding and read neighboring glyph data, producing colored fringe artifacts.
@@ -585,7 +585,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextShadow> sha
         }
 
         if(s_textShader != nullptr && s_textShader->isReady()) {
-            const auto &sc = *shadow;
+            const auto &sc = *effects;
             const float atlasW = static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth());
             const float atlasH = static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight());
 

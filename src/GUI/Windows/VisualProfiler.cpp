@@ -24,9 +24,9 @@ using fmt::literals::operator""_cf;
 
 namespace cv {
 static ConVar vprof_sysinfo_refresh_interval("vprof_sysinfo_refresh_interval", 0.5f, CLIENT);
-static ConVar vprof_details_textshadow(
-    "vprof_details_textshadow", true, CLIENT,
-    "whether the vprof details text (shown by vprof_spike 2) should have shadows (increases overhead)");
+static ConVar vprof_details_textoutline(
+    "vprof_details_textoutline", true, CLIENT,
+    "whether the vprof details text (shown by vprof_spike 2) should have outlines (increases overhead)");
 }  // namespace cv
 
 struct VProfGatherer final {
@@ -293,14 +293,13 @@ void VisualProfiler::draw() {
                         if(!this->textLines[i].textLeftAligned.empty())
                             g->drawString(
                                 textFont, this->textLines[i].textLeftAligned,
-                                TextShadow{.col_text = textColor, .offs_px = std::round(1.f * env->getDPIScale())});
+                                TextFX{.col_text = textColor, .offs_px = std::round(1.f * env->getDPIScale())});
 
                         const int rightTrans =
                             (engine->getScreenWidth() - (this->textLines[i].widthRight * textScale)) - leftTrans;
                         g->translate(rightTrans, 0);
-                        g->drawString(
-                            textFont, this->textLines[i].textRightAligned,
-                            TextShadow{.col_text = textColor, .offs_px = std::round(1.f * env->getDPIScale())});
+                        g->drawString(textFont, this->textLines[i].textRightAligned,
+                                      TextFX{.col_text = textColor, .offs_px = std::round(1.f * env->getDPIScale())});
                     }
                     g->popTransform();
                 }
@@ -364,11 +363,13 @@ void VisualProfiler::draw() {
         if(this->spike.node.node != nullptr) {
             if(cv::vprof_spike.getInt() == 2) {
                 VPROF_BUDGET("DebugText", VPROF_BUDGETGROUP_DRAW);
-                std::optional<TextShadow> shadow = std::nullopt;
-                if(cv::vprof_details_textshadow.getBool()) {
-                    shadow = TextShadow{.col_text = 0xffcccccc,
-                                        .col_shadow = Colors::invert(0xffcccccc),
-                                        .offs_px = 1.5f * env->getDPIScale()};
+                std::optional<TextFX> outline = std::nullopt;
+                if(cv::vprof_details_textoutline.getBool()) {
+                    outline = TextFX{
+                        .col_text = 0xffcccccc,
+                        .col_outline = Colors::invert(0xffcccccc),
+                        .outline_px = 1.f * env->getDPIScale(),
+                    };
                 }
 
                 g->setColor(0xffcccccc);
@@ -385,7 +386,7 @@ void VisualProfiler::draw() {
                                             this->spikeNodes[i].timeLastFrame * 1000.0);
 
                             g->translate(this->font->getHeight() * 3 * (this->spikeNodes[i].node.depth - 1), 0);
-                            g->drawString(this->font, text, shadow);
+                            g->drawString(this->font, text, outline);
                         }
                         g->popTransform();
 
@@ -441,11 +442,10 @@ void VisualProfiler::draw() {
             g->pushTransform();
             {
                 g->translate((int)(xPos + margin), (int)(yPos + this->font->getHeight() + margin));
-                g->drawString(this->font, fmt::format("{:g} ms"_cf, cv::vprof_graph_range_max.getFloat()),
-                              TextShadow{});
+                g->drawString(this->font, fmt::format("{:g} ms"_cf, cv::vprof_graph_range_max.getFloat()), TextFX{});
 
                 g->translate(0, (int)(height - this->font->getHeight() - 2 * margin));
-                g->drawString(this->font, "0 ms", TextShadow{});
+                g->drawString(this->font, "0 ms", TextFX{});
             }
             g->popTransform();
 
@@ -461,7 +461,7 @@ void VisualProfiler::draw() {
                     g->translate(-stringWidth, 0);
                     g->drawString(
                         this->font, this->groups[i].name,
-                        TextShadow{.col_text = this->groups[i].color, .offs_px = std::round(1.f * env->getDPIScale())});
+                        TextFX{.col_text = this->groups[i].color, .offs_px = std::round(1.f * env->getDPIScale())});
                     g->translate(stringWidth, (int)(-this->font->getHeight() - padding));
                 }
             }

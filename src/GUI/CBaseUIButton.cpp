@@ -94,7 +94,7 @@ void CBaseUIButton::drawText() {
                 const Color shadowColor{this->textDarkColor ? this->textDarkColor : Colors::invert(this->textColor)};
                 g->drawString(
                     this->font, this->getText(),
-                    TextShadow{.col_text = actualTextColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
+                    TextFX{.col_text = actualTextColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
             } else {
                 g->setColor(actualTextColor);
                 g->drawString(this->font, this->getText());

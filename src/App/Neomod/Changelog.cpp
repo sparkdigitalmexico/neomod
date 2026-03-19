@@ -37,7 +37,9 @@ Changelog::Changelog() : ScreenBackable() {
     CHANGELOG v43_08;
     v43_08.title = "43.08 (" CHANGELOG_TIMESTAMP ")";
     v43_08.changes = {
+        R"(- Added nicer text rendering effects)",
         R"(- Fixed mod selector being instantly closeable after pressing the mod select button)",
+        R"(- Fixed Discord rich presence integration)",
     };
     changelogs.push_back(v43_08);
 

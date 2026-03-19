@@ -40,7 +40,7 @@ void LoadingScreen::drawProgress() {
         g->translate((int)(osu->getVirtScreenWidth() / 2 - font->getStringWidth(loadingMessage) / 2),
                      osu->getVirtScreenHeight() - 15);
         g->drawString(font, loadingMessage,
-                      TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(0, 0, 0), .offs_px = shadowOffset});
+                      TextFX{.col_text = rgb(255, 255, 255), .col_shadow = rgb(0, 0, 0), .offs_px = shadowOffset});
     }
     g->popTransform();
 }

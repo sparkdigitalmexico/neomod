@@ -31,10 +31,10 @@ void EmojiRenderTest::draw() {
     g->setColor(BACKGROUND);
     g->fillRect(engine->getScreenRect());
 
-    auto drawLine = [&](McFont *font, std::string_view text, std::optional<TextShadow> shadow = std::nullopt) {
+    auto drawLine = [&](McFont *font, std::string_view text, std::optional<TextFX> effects = std::nullopt) {
         g->pushTransform();
         g->translate(x, y);
-        g->drawString(font, text, shadow);
+        g->drawString(font, text, effects);
         g->popTransform();
         y += font->getHeight() * lineSpacing;
     };
@@ -59,47 +59,47 @@ void EmojiRenderTest::draw() {
 
     // hard shadow (text only)
     drawLine(m_font24, "Hard shadow"sv,
-             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(200, 100, 0), .offs_px = 1.5f});
+             TextFX{.col_text = rgb(255, 255, 255), .col_shadow = rgb(200, 100, 0), .offs_px = 1.5f});
 
     // hard shadow (mixed text + emoji)
     drawLine(m_font24, "Shadow 😀 emoji 🔥"sv,
-             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(200, 100, 0), .offs_px = 1.5f});
+             TextFX{.col_text = rgb(255, 255, 255), .col_shadow = rgb(200, 100, 0), .offs_px = 1.5f});
 
     // large shadow offset
     drawLine(m_font24, "Large offset shadow"sv,
-             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = rgb(0, 0, 0), .offs_px = 2.5f});
+             TextFX{.col_text = rgb(255, 255, 255), .col_shadow = rgb(0, 0, 0), .offs_px = 2.5f});
 
     // soft shadow
     drawLine(m_font24, "Soft shadow"sv,
-             TextShadow{.col_text = rgb(255, 255, 255),
+             TextFX{.col_text = rgb(255, 255, 255),
                          .col_shadow = rgb(0, 0, 0),
                          .offs_px = 1.5f,
                          .shadow_softness_px = 1.5f});
 
     // shadow with colored text
     drawLine(m_font24, "Colored + shadow"sv,
-             TextShadow{.col_text = rgb(100, 200, 255), .col_shadow = rgb(0, 0, 80), .offs_px = 1.f});
+             TextFX{.col_text = rgb(100, 200, 255), .col_shadow = rgb(0, 0, 80), .offs_px = 1.f});
 
     // -- outline effects --
     y += 10.f;
 
     // outline only (no shadow)
     drawLine(m_font24, "Outline only"sv,
-             TextShadow{.col_text = rgb(255, 255, 255),
+             TextFX{.col_text = rgb(255, 255, 255),
                          .col_shadow = argb(0, 0, 0, 0),
                          .col_outline = rgb(255, 0, 0),
                          .outline_px = 1.f});
 
     // outline + emoji
     drawLine(m_font24, "Outline 😀 emoji"sv,
-             TextShadow{.col_text = rgb(255, 255, 255),
+             TextFX{.col_text = rgb(255, 255, 255),
                          .col_shadow = argb(0, 0, 0, 0),
                          .col_outline = rgb(0, 200, 100),
                          .outline_px = 1.f});
 
     // thick outline
     drawLine(m_font24, "Thick outline"sv,
-             TextShadow{.col_text = rgb(255, 255, 0),
+             TextFX{.col_text = rgb(255, 255, 0),
                          .col_shadow = argb(0, 0, 0, 0),
                          .col_outline = rgb(80, 0, 0),
                          .outline_px = 2.f});
@@ -109,7 +109,7 @@ void EmojiRenderTest::draw() {
 
     // shadow + outline
     drawLine(m_font24, "Shadow + outline"sv,
-             TextShadow{.col_text = rgb(255, 255, 255),
+             TextFX{.col_text = rgb(255, 255, 255),
                          .col_shadow = rgb(0, 0, 0),
                          .offs_px = 1.5f,
                          .col_outline = rgb(255, 100, 0),
@@ -117,7 +117,7 @@ void EmojiRenderTest::draw() {
 
     // shadow + outline + emoji
     drawLine(m_font24, "All effects 🎉✨"sv,
-             TextShadow{.col_text = rgb(255, 255, 255),
+             TextFX{.col_text = rgb(255, 255, 255),
                          .col_shadow = rgb(0, 0, 0),
                          .offs_px = 1.5f,
                          .col_outline = rgb(0, 100, 255),
@@ -126,7 +126,7 @@ void EmojiRenderTest::draw() {
 
     // semi-transparent shadow
     drawLine(m_font24, "Alpha shadow"sv,
-             TextShadow{.col_text = rgb(255, 255, 255), .col_shadow = argb(128, 255, 0, 0), .offs_px = 2.f});
+             TextFX{.col_text = rgb(255, 255, 255), .col_shadow = argb(128, 255, 0, 0), .offs_px = 2.f});
 
     // -- misc --
     y += 10.f;

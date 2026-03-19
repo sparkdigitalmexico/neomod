@@ -7,7 +7,7 @@ class RenderTarget;
 class VertexArrayObject;
 class Graphics;
 
-struct TextShadow;
+struct TextFX;
 
 enum class AnchorPoint : unsigned char;
 enum class DrawPrimitive : unsigned char;

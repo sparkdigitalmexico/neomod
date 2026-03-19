@@ -188,7 +188,7 @@ void ScoreButton::draw() {
         constexpr Color songBrowserColor = 0xffffffff;
         constexpr Color textShadowColor = argb(0.75f, 0.f, 0.f, 0.f);
 
-        TextShadow shadow{.col_text = (this->style == STYLE::TOP_RANKS ? topRanksColor : songBrowserColor),
+        TextFX shadow{.col_text = (this->style == STYLE::TOP_RANKS ? topRanksColor : songBrowserColor),
                           .col_shadow = textShadowColor,
                           .offs_px = 0.75f};
 
