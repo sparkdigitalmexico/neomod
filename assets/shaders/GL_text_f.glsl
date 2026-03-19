@@ -9,15 +9,25 @@ uniform vec4 col;
 uniform vec4 col_shadow;
 uniform vec4 col_outline;
 uniform vec4 params;   // xy = shadow UV offset, zw = outline UV radius
-uniform vec4 params2;  // xy = soft shadow spread UV, z = color glyph flag
+uniform vec4 params2;  // xy = soft shadow spread UV, z = color glyph flag, w = texel size (1/atlasSize)
 
 varying vec2 tex_coord;
 
 void main()
 {
 	vec4 texSample = texture2D(tex, tex_coord);
-	float textA = texSample.a;
 	bool isColor = params2.z > 0.5;
+
+	// snap textA sample to nearest texel center to prevent bilinear filtering from bleeding
+	// glyph alpha into the padding region
+	float texelSize = params2.w;
+	float textA;
+	if (texelSize > 0.0) {
+		vec2 snappedTC = (floor(tex_coord / texelSize) + 0.5) * texelSize;
+		textA = texture2D(tex, snappedTC).a;
+	} else {
+		textA = texSample.a;
+	}
 
 	// shadow (always uses alpha only; shadow is a solid-color effect)
 	float shadowA = 0.0;

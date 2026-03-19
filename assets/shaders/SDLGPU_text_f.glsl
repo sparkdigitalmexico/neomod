@@ -12,13 +12,24 @@ layout(std140, set = 3, binding = 0) uniform TextParams {
     vec4 col_shadow;  // shadow color; a=0 disables
     vec4 col_outline; // outline color; a=0 disables
     vec4 params;      // xy = shadow UV offset, zw = outline UV radius
-    vec4 params2;     // xy = soft shadow spread UV, z = color glyph flag
+    vec4 params2;     // xy = soft shadow spread UV, z = color glyph flag, w = texel size (1/atlasSize)
 };
 
 void main() {
     vec4 texSample = texture(tex0, fragTexcoord);
-    float textA = texSample.a;
     bool isColor = params2.z > 0.5;
+
+    // snap textA sample to nearest texel center to prevent bilinear filtering from bleeding
+    // glyph alpha into the padding region, which would make narrow glyphs (like "1") appear
+    // wider and partially cover the outline with text color
+    float texelSize = params2.w;
+    float textA;
+    if (texelSize > 0.0) {
+        vec2 snappedTC = (floor(fragTexcoord / texelSize) + 0.5) * texelSize;
+        textA = texture(tex0, snappedTC).a;
+    } else {
+        textA = texSample.a;
+    }
 
     // shadow (always uses alpha only; shadow is a solid-color effect)
     float shadowA = 0.0;

@@ -598,7 +598,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
             s_textShader->setUniform4f("params", sc.offs_px / atlasW, sc.offs_px / atlasH, sc.outline_px / atlasW,
                                        sc.outline_px / atlasH);
             s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH, 0.f,
-                                       0.f);
+                                       1.f / atlasW);
 
             if(!buffer.getVerts().empty()) {
                 g->drawVAO(buffer.getVAO());
@@ -608,7 +608,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
                 // emoji: use texture RGB directly (color glyphs), keep shadow/outline
                 s_textShader->setUniform4f("col", 1.f, 1.f, 1.f, sc.col_text.Af());
                 s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH,
-                                           1.f, 0.f);
+                                           1.f, 1.f / atlasW);
                 g->drawVAO(buffer.getEmojiVAO());
             }
 

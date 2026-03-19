@@ -6,7 +6,7 @@ cbuffer TextParams : register(b0, space3) {
     float4 col_shadow;  // shadow color (a=0 disables)
     float4 col_outline; // outline color (a=0 disables)
     float4 params;      // xy = shadow UV offset, zw = outline UV radius
-    float4 params2;     // xy = soft shadow spread UV, z = color glyph flag
+    float4 params2;     // xy = soft shadow spread UV, z = color glyph flag, w = texel size (1/atlasSize)
 };
 
 struct PSInput {
@@ -17,8 +17,18 @@ struct PSInput {
 
 float4 main(PSInput input) : SV_Target0 {
     float4 texSample = tex0.Sample(samp0, input.fragTexcoord);
-    float textA = texSample.a;
     bool isColor = params2.z > 0.5;
+
+    // snap textA sample to nearest texel center to prevent bilinear filtering from bleeding
+    // glyph alpha into the padding region
+    float texelSize = params2.w;
+    float textA;
+    if (texelSize > 0.0) {
+        float2 snappedTC = (floor(input.fragTexcoord / texelSize) + 0.5) * texelSize;
+        textA = tex0.Sample(samp0, snappedTC).a;
+    } else {
+        textA = texSample.a;
+    }
 
     // shadow (always uses alpha only)
     float shadowA = 0.0;

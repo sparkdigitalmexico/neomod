@@ -24,8 +24,18 @@ PS_OUTPUT psmain(in PS_INPUT In)
 	PS_OUTPUT Out;
 
 	float4 texSample = txDiffuse.Sample(samLinear, In.tex);
-	float textA = texSample.a;
 	bool isColor = In.params2.z > 0.5f;
+
+	// snap textA sample to nearest texel center to prevent bilinear filtering from bleeding
+	// glyph alpha into the padding region
+	float texelSize = In.params2.w;
+	float textA;
+	if (texelSize > 0.0f) {
+		float2 snappedTC = (floor(In.tex / texelSize) + 0.5f) * texelSize;
+		textA = txDiffuse.Sample(samLinear, snappedTC).a;
+	} else {
+		textA = texSample.a;
+	}
 
 	// shadow (always uses alpha only; shadow is a solid-color effect)
 	float shadowA = 0.0f;

@@ -367,7 +367,8 @@ void VisualProfiler::draw() {
                 if(cv::vprof_details_textoutline.getBool()) {
                     outline = TextFX{
                         .col_text = 0xffcccccc,
-                        .col_outline = Colors::invert(0xffcccccc),
+                        .offs_px = 0.f,
+                        .col_outline = 0xdd111111,
                         .outline_px = 1.f * env->getDPIScale(),
                     };
                 }
