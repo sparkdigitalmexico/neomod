@@ -26,7 +26,7 @@ bool GLESLoaded{false};
 bool GLLoaded{false};
 #endif
 }  // namespace
-#endif // MCENGINE_PLATFORM_WASM
+#endif  // MCENGINE_PLATFORM_WASM
 
 // resolve GL functions (static, called before construction)
 void SDLGLInterface::load() {
@@ -60,11 +60,12 @@ void SDLGLInterface::load() {
 #endif
     debugLog("GL_VERSION string: {}", reinterpret_cast<const char *>(glGetString(GL_VERSION)));
 
-    const auto &argMap = env->getLaunchArgs();
-    if(Env::cfg(BUILD::DEBUG) || argMap.contains("-info") || argMap.contains("-print") ||
-       argMap.contains("-printinfo")) {
-        dumpGLContextInfo();
-    }
+    //const auto &argMap = env->getLaunchArgs();
+    // if(Env::cfg(BUILD::DEBUG) || argMap.contains("-info") || argMap.contains("-print") ||
+    //    argMap.contains("-printinfo")) {
+    // temporary: always dump gl info
+    dumpGLContextInfo();
+    //}
 }
 
 #ifdef MCENGINE_PLATFORM_WASM
