@@ -38,6 +38,7 @@ Changelog::Changelog() : ScreenBackable() {
     v43_08.title = "43.08 (" CHANGELOG_TIMESTAMP ")";
     v43_08.changes = {
         R"(- Added nicer text rendering effects)",
+        R"(- Fixed dying with no pausing mod changing song browser music pitch)",
         R"(- Fixed mod selector being instantly closeable after pressing the mod select button)",
         R"(- Fixed Discord rich presence integration)",
     };

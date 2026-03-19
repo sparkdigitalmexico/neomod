@@ -178,8 +178,7 @@ void BeatmapInterface::drawDebug() {
         const std::string curtpString = fmt::format("{},{},{},{},{},{},{}", (i32)t.offset, t.msPerBeat, t.sampleSet,
                                                     t.sampleIndex, t.volume, (i32)t.uninherited, (i32)t.kiai);
 
-        g->drawString(debugFont, curtpString,
-                      TextFX{.col_text = textColor, .col_shadow = shadowColor, .offs_px = 1.f});
+        g->drawString(debugFont, curtpString, TextFX{.col_text = textColor, .col_shadow = shadowColor, .offs_px = 1.f});
 
         // spacing for next
         g->translate(0, dbgfontheight);
@@ -937,6 +936,8 @@ void BeatmapInterface::stop(bool quit) {
     this->spectated_replay.clear();
     this->score_frames.clear();
     this->sim.reset();
+
+    if(this->bFailed && !!this->music) this->music->setFrequency(this->fMusicFrequencyBackup);
 
     this->unloadObjects();
 
