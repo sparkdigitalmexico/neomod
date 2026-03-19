@@ -18,6 +18,7 @@
 #include "CDynArray.h"
 
 #include <array>
+#include <atomic>
 #include <bit>
 #include <cassert>
 #include <memory>
@@ -136,10 +137,15 @@ class SDLGPUInterface final : public ModernGraphicsShared {
 
     // sdlgpu-specific accessors
     // texture binding state (set by SDLGPUImage::bind/unbind)
-    [[nodiscard]] inline SDL_GPUTexture *getBoundTexture() const { return m_boundTexture; }
-    [[nodiscard]] inline SDL_GPUSampler *getBoundSampler() const { return m_boundSampler; }
-    inline void setBoundTexture(SDL_GPUTexture *tex) { m_boundTexture = tex; }
-    inline void setBoundSampler(SDL_GPUSampler *sampler) { m_boundSampler = sampler; }
+    // atomic because releaseTexture/releaseSampler may be called from loader threads
+    [[nodiscard]] inline SDL_GPUTexture *getBoundTexture() const { return m_boundTexture.load(std::memory_order_relaxed); }
+    [[nodiscard]] inline SDL_GPUSampler *getBoundSampler() const { return m_boundSampler.load(std::memory_order_relaxed); }
+    inline void setBoundTexture(SDL_GPUTexture *tex) { m_boundTexture.store(tex, std::memory_order_relaxed); }
+    inline void setBoundSampler(SDL_GPUSampler *sampler) { m_boundSampler.store(sampler, std::memory_order_relaxed); }
+
+    // release a texture/sampler and clear the bound state if it matches
+    void releaseTexture(SDL_GPUTexture *&tex);
+    void releaseSampler(SDL_GPUSampler *&sampler);
 
     // render target support
     void pushRenderTarget(SDL_GPUTexture *colorTex, SDL_GPUTexture *depthTex, bool clearColor, Color clearCol,
@@ -152,6 +158,7 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     // shader switching
     void setActiveShader(SDLGPUShader *shader);
     [[nodiscard]] inline SDLGPUShader *getActiveShader() const { return m_activeShader; }
+    void clearActiveShader(SDLGPUShader *shader);
 
     // shared upload transfer buffer pool (loader threads acquire, main thread releases)
     // outAllocSize receives the actual allocation size of the returned buffer (for passing back to release)
@@ -350,8 +357,9 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     SDL_GPUSampler *m_dummySampler{nullptr};
 
     // currently bound texture+sampler (set by SDLGPUImage)
-    SDL_GPUTexture *m_boundTexture{nullptr};
-    SDL_GPUSampler *m_boundSampler{nullptr};
+    // atomic: releaseTexture/releaseSampler may CAS from loader threads
+    std::atomic<SDL_GPUTexture *> m_boundTexture{nullptr};
+    std::atomic<SDL_GPUSampler *> m_boundSampler{nullptr};
 
     // stacks
     std::vector<McRect> m_clipRectStack;

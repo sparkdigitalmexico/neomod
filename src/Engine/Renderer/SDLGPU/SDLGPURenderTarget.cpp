@@ -87,8 +87,7 @@ void SDLGPURenderTarget::init() {
         m_msaaTexture = SDL_CreateGPUTexture(m_device, &msaaInfo);
         if(!m_msaaTexture) {
             debugLog("SDLGPURenderTarget Error: Couldn't create MSAA texture: {}", SDL_GetError());
-            SDL_ReleaseGPUTexture(m_device, m_colorTexture);
-            m_colorTexture = nullptr;
+            m_gpu->releaseTexture(m_colorTexture);
             return;
         }
     }
@@ -110,12 +109,8 @@ void SDLGPURenderTarget::init() {
 
     if(!m_depthTexture) {
         debugLog("SDLGPURenderTarget Error: Couldn't create depth texture: {}", SDL_GetError());
-        if(m_msaaTexture) {
-            SDL_ReleaseGPUTexture(m_device, m_msaaTexture);
-            m_msaaTexture = nullptr;
-        }
-        SDL_ReleaseGPUTexture(m_device, m_colorTexture);
-        m_colorTexture = nullptr;
+        m_gpu->releaseTexture(m_msaaTexture);
+        m_gpu->releaseTexture(m_colorTexture);
         return;
     }
 
@@ -142,22 +137,10 @@ void SDLGPURenderTarget::initAsync() { this->setAsyncReady(true); }
 void SDLGPURenderTarget::destroy() {
     if(!m_gpu || !m_device) return;
 
-    if(m_sampler) {
-        SDL_ReleaseGPUSampler(m_device, m_sampler);
-        m_sampler = nullptr;
-    }
-    if(m_depthTexture) {
-        SDL_ReleaseGPUTexture(m_device, m_depthTexture);
-        m_depthTexture = nullptr;
-    }
-    if(m_msaaTexture) {
-        SDL_ReleaseGPUTexture(m_device, m_msaaTexture);
-        m_msaaTexture = nullptr;
-    }
-    if(m_colorTexture) {
-        SDL_ReleaseGPUTexture(m_device, m_colorTexture);
-        m_colorTexture = nullptr;
-    }
+    m_gpu->releaseSampler(m_sampler);
+    m_gpu->releaseTexture(m_depthTexture);
+    m_gpu->releaseTexture(m_msaaTexture);
+    m_gpu->releaseTexture(m_colorTexture);
 }
 
 void SDLGPURenderTarget::draw(int x, int y) {
@@ -244,11 +227,10 @@ void SDLGPURenderTarget::disable() {
 void SDLGPURenderTarget::bind(unsigned int /*textureUnit*/) {
     if(unlikely(!m_gpu || !m_device || !this->isReady())) return;
 
-    // backup current
+    // save current binding for nested bind/unbind support
     m_prevTexture = m_gpu->getBoundTexture();
     m_prevSampler = m_gpu->getBoundSampler();
 
-    // bind this RT's color texture for sampling
     m_gpu->setBoundTexture(m_colorTexture);
     m_gpu->setBoundSampler(m_sampler);
     m_gpu->setTexturing(true);

@@ -58,6 +58,7 @@ class SDLGPURenderTarget final : public RenderTarget {
     SDL_GPUSampler *m_sampler{nullptr};
     SDLGPUSampleCount m_sampleCount{0};  // SDL_GPU_SAMPLECOUNT_1 == 0
 
+    // saved bound state for nested bind/unbind (see SDLGPUImage.h comment)
     mutable SDL_GPUTexture *m_prevTexture{nullptr};
     mutable SDL_GPUSampler *m_prevSampler{nullptr};
 };

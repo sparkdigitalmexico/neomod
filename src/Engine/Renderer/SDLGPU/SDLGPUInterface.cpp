@@ -529,6 +529,13 @@ void SDLGPUInterface::beginScene() {
     m_pendingDraws.clear();
     m_stagingVertices.clear();
     m_renderPassBoundaries.clear();
+
+    // clear bound texture/sampler so stale pointers from the previous frame
+    // don't leak into this frame's draw commands (resources may have been
+    // reloaded/destroyed during onUpdate)
+    setBoundTexture(nullptr);
+    setBoundSampler(nullptr);
+    setActiveShader(m_defaultShader.get());
     addRenderPassBoundary();
     m_renderPass = nullptr;
 
@@ -878,10 +885,12 @@ void SDLGPUInterface::recordDraw(SDL_GPUBuffer *bakedBuffer, u32 vertexOffset, u
     cmd.bakedBuffer = bakedBuffer;
     cmd.pipeline = m_currentPipeline;
 
-    // snapshot texture binding
-    if(m_boundTexture && m_boundSampler) {
-        cmd.texture = m_boundTexture;
-        cmd.sampler = m_boundSampler;
+    // snapshot texture binding (single load per atomic to avoid TOCTOU)
+    auto *boundTex = getBoundTexture();
+    auto *boundSam = getBoundSampler();
+    if(boundTex && boundSam) {
+        cmd.texture = boundTex;
+        cmd.sampler = boundSam;
     } else {
         cmd.texture = m_dummyTexture;
         cmd.sampler = m_dummySampler;
@@ -1534,6 +1543,10 @@ void SDLGPUInterface::setTexturing(bool enabled, bool force) {
 
 // shader switching
 
+void SDLGPUInterface::clearActiveShader(SDLGPUShader *shader) {
+    if(m_activeShader == shader) setActiveShader(m_defaultShader.get());
+}
+
 void SDLGPUInterface::setActiveShader(SDLGPUShader *shader) {
     if(m_activeShader != shader) {
         m_activeShader = shader;
@@ -1582,6 +1595,24 @@ Shader *SDLGPUInterface::createShaderFromSource(std::string vertexShader, std::s
 VertexArrayObject *SDLGPUInterface::createVertexArrayObject(DrawPrimitive primitive, DrawUsageType usage,
                                                             bool keepInSystemMemory) {
     return new SDLGPUVertexArrayObject(this, m_device, primitive, usage, keepInSystemMemory);
+}
+
+// resource release helpers
+
+void SDLGPUInterface::releaseTexture(SDL_GPUTexture *&tex) {
+    if(!tex) return;
+    auto *expected = tex;
+    m_boundTexture.compare_exchange_strong(expected, nullptr, std::memory_order_relaxed);
+    SDL_ReleaseGPUTexture(m_device, tex);
+    tex = nullptr;
+}
+
+void SDLGPUInterface::releaseSampler(SDL_GPUSampler *&sampler) {
+    if(!sampler) return;
+    auto *expected = sampler;
+    m_boundSampler.compare_exchange_strong(expected, nullptr, std::memory_order_relaxed);
+    SDL_ReleaseGPUSampler(m_device, sampler);
+    sampler = nullptr;
 }
 
 // upload transfer buffer pool

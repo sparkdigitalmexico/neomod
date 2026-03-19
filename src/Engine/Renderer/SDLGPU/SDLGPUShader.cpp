@@ -145,6 +145,8 @@ void SDLGPUShader::initAsync() { this->setAsyncReady(true); }
 void SDLGPUShader::destroy() {
     if(!m_gpuVertexShader && !m_gpuFragmentShader) return;
 
+    if(m_gpu) m_gpu->clearActiveShader(this);
+
     if(m_device) {
         if(m_gpuVertexShader) SDL_ReleaseGPUShader(m_device, m_gpuVertexShader);
         if(m_gpuFragmentShader) SDL_ReleaseGPUShader(m_device, m_gpuFragmentShader);

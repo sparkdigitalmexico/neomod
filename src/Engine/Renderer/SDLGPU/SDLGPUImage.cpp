@@ -59,8 +59,8 @@ SDLGPUImage::~SDLGPUImage() {
     if(!m_gpu || !m_device) return;
     this->destroy();
 
-    if(m_sampler) SDL_ReleaseGPUSampler(m_device, m_sampler);
-    if(m_texture) SDL_ReleaseGPUTexture(m_device, m_texture);
+    m_gpu->releaseSampler(m_sampler);
+    m_gpu->releaseTexture(m_texture);
 
     this->rawImage.clear();
 }
@@ -112,8 +112,7 @@ void SDLGPUImage::initAsync() {
 
     if(!m_sampler) {
         debugLog("SDLGPUImage Error: Couldn't CreateGPUSampler() on {}!", this->getDebugIdentifier());
-        SDL_ReleaseGPUTexture(m_device, m_texture);
-        m_texture = nullptr;
+        m_gpu->releaseTexture(m_texture);
         this->setAsyncReady(false);
         return;
     }
@@ -156,11 +155,7 @@ void SDLGPUImage::initAsync() {
 void SDLGPUImage::destroy() {
     if(!m_device || !m_gpu) return;
     if(!this->bKeepInSystemMemory) {
-        if(m_texture) {
-            SDL_ReleaseGPUTexture(m_device, m_texture);
-            m_texture = nullptr;
-        }
-
+        m_gpu->releaseTexture(m_texture);
         this->rawImage.clear();
     }
 }
@@ -168,11 +163,10 @@ void SDLGPUImage::destroy() {
 void SDLGPUImage::bind(unsigned int /*textureUnit*/) const {
     if(!m_gpu || !m_device || !this->isGPUReady()) return;
 
-    // backup current
+    // save current binding for nested bind/unbind support
     m_prevTexture = m_gpu->getBoundTexture();
     m_prevSampler = m_gpu->getBoundSampler();
 
-    // bind
     m_gpu->setBoundTexture(m_texture);
     m_gpu->setBoundSampler(m_sampler);
     m_gpu->setTexturing(true);
@@ -338,8 +332,7 @@ void SDLGPUImage::createOrUpdateSampler() {
             if(*m_lastSamplerCreateInfo == samplerInfo) {
                 return;
             }
-            SDL_ReleaseGPUSampler(m_device, m_sampler);
-            m_sampler = nullptr;
+            m_gpu->releaseSampler(m_sampler);
         }
         *m_lastSamplerCreateInfo = samplerInfo;
     }

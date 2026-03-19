@@ -56,6 +56,8 @@ class SDLGPUImage final : public Image {
     SDL_GPUTexture *m_texture{nullptr};
     SDL_GPUSampler *m_sampler{nullptr};
 
+    // saved bound state for nested bind/unbind (only valid within a frame's draw phase;
+    // beginScene() clears the bound state so stale pointers never survive across frames)
     mutable SDL_GPUTexture *m_prevTexture{nullptr};
     mutable SDL_GPUSampler *m_prevSampler{nullptr};
 
