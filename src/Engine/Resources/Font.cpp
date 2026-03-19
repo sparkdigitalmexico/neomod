@@ -49,6 +49,11 @@
 #include <windows.h>
 #endif
 
+// temp (hopefully) debug convar
+namespace cv {
+static ConVar r_debug_drawstring_fallback("r_debug_drawstring_fallback", false, CLIENT);
+}
+
 namespace {  // static namespace
 using Mc::CDynArray;
 
@@ -166,6 +171,9 @@ struct McFontImpl final {
         [[nodiscard]] VertexArrayObject *getVAO() { return &VAO; }
         [[nodiscard]] VertexArrayObject *getEmojiVAO() { return &emojiVAO; }
 
+        [[nodiscard]] const VertexArrayObject *getVAO() const { return &VAO; }
+        [[nodiscard]] const VertexArrayObject *getEmojiVAO() const { return &emojiVAO; }
+
        private:
         TextVAO VAO{
             Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS,
@@ -254,6 +262,11 @@ struct McFontImpl final {
 
     // Internal helper methods below here
     bool initializeFreeType();
+
+    // drawString helpers
+    void drawStringShadered(VerTexMetCacheEntry &readyBuffer, const TextFX &effects) const;
+    void drawStringPlain(VerTexMetCacheEntry &readyBuffer, bool hasShadow,
+                         std::optional<TextFX> effects = std::nullopt) const;
 
     // atlas management methods
     int allocateDynamicSlot(char32_t ch);
@@ -497,6 +510,72 @@ void McFontImpl::destroy() {
     m_bAtlasNeedsReload = false;
 }
 
+void McFontImpl::drawStringShadered(VerTexMetCacheEntry &readyBuffer, const TextFX &sc) const {
+    const float atlasW = static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth());
+    const float atlasH = static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight());
+
+    s_textShader->enable();
+    s_textShader->setUniform4f("col", sc.col_text.Rf(), sc.col_text.Gf(), sc.col_text.Bf(), sc.col_text.Af());
+    s_textShader->setUniform4f("col_shadow", sc.col_shadow.Rf(), sc.col_shadow.Gf(), sc.col_shadow.Bf(),
+                               sc.col_shadow.Af());
+    s_textShader->setUniform4f("col_outline", sc.col_outline.Rf(), sc.col_outline.Gf(), sc.col_outline.Bf(),
+                               sc.col_outline.Af());
+    s_textShader->setUniform4f("params", sc.offs_px / atlasW, sc.offs_px / atlasH, sc.outline_px / atlasW,
+                               sc.outline_px / atlasH);
+    s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH, 0.f, 0.f);
+
+    if(!readyBuffer.getVerts().empty()) {
+        g->drawVAO(readyBuffer.getVAO());
+    }
+
+    if(!readyBuffer.getEmojiVerts().empty()) {
+        // emoji: use texture RGB directly (color glyphs), keep shadow/outline
+        s_textShader->setUniform4f("col", 1.f, 1.f, 1.f, sc.col_text.Af());
+        s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH, 1.f, 0.f);
+        g->drawVAO(readyBuffer.getEmojiVAO());
+    }
+
+    s_textShader->disable();
+}
+
+void McFontImpl::drawStringPlain(VerTexMetCacheEntry &readyBuffer, bool hasShadow,
+                                 std::optional<TextFX> effects) const {
+    if(!readyBuffer.getVerts().empty()) {
+        if(hasShadow) {
+            const auto &shadowConf = *effects;
+            const float px = shadowConf.offs_px;
+
+            g->translate(px, px);
+            g->setColor(shadowConf.col_shadow);
+            g->drawVAO(readyBuffer.getVAO());
+            g->translate(-px, -px);
+            g->setColor(shadowConf.col_text);
+        }
+
+        g->drawVAO(readyBuffer.getVAO());
+    }
+
+    // emoji
+    if(!readyBuffer.getEmojiVerts().empty()) {
+        const Color savedColor = g->getColor();
+        if(hasShadow) {
+            const auto &shadowConf = *effects;
+            const float px = shadowConf.offs_px;
+
+            g->translate(px, px);
+            g->setColor(shadowConf.col_shadow);
+            g->drawVAO(readyBuffer.getEmojiVAO());
+            g->translate(-px, -px);
+            g->setColor(argb(shadowConf.col_text.a, 255, 255, 255));
+        } else {
+            g->setColor(argb(savedColor.a, 255, 255, 255));
+        }
+
+        g->drawVAO(readyBuffer.getEmojiVAO());
+        g->setColor(savedColor);
+    }
+}
+
 void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects) {
     if(!m_parent->isReady()) return;
 
@@ -580,57 +659,27 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
 
     m_textureAtlas->getAtlasImage()->bind();
 
-    if(hasEffects && !s_textShaderBroken) {
+    bool forceFallbackPath = s_textShaderBroken || cv::r_debug_drawstring_fallback.getBool();
+    if(!forceFallbackPath && hasEffects) {
         if(!s_textShader) {
+            // lazy load shader
             s_textShader = resourceManager->createShaderAuto("text");
         }
 
         if(s_textShader != nullptr && s_textShader->isReady()) {
             const auto &sc = *effects;
-            const float atlasW = static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth());
-            const float atlasH = static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight());
-
-            s_textShader->enable();
-            s_textShader->setUniform4f("col", sc.col_text.Rf(), sc.col_text.Gf(), sc.col_text.Bf(), sc.col_text.Af());
-            s_textShader->setUniform4f("col_shadow", sc.col_shadow.Rf(), sc.col_shadow.Gf(), sc.col_shadow.Bf(),
-                                       sc.col_shadow.Af());
-            s_textShader->setUniform4f("col_outline", sc.col_outline.Rf(), sc.col_outline.Gf(), sc.col_outline.Bf(),
-                                       sc.col_outline.Af());
-            s_textShader->setUniform4f("params", sc.offs_px / atlasW, sc.offs_px / atlasH, sc.outline_px / atlasW,
-                                       sc.outline_px / atlasH);
-            s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH, 0.f,
-                                       0.f);
-
-            if(!buffer.getVerts().empty()) {
-                g->drawVAO(buffer.getVAO());
-            }
-
-            if(!buffer.getEmojiVerts().empty()) {
-                // emoji: use texture RGB directly (color glyphs), keep shadow/outline
-                s_textShader->setUniform4f("col", 1.f, 1.f, 1.f, sc.col_text.Af());
-                s_textShader->setUniform4f("params2", sc.shadow_softness_px / atlasW, sc.shadow_softness_px / atlasH,
-                                           1.f, 0.f);
-                g->drawVAO(buffer.getEmojiVAO());
-            }
-
-            s_textShader->disable();
+            drawStringShadered(buffer, sc);
         } else {
             s_textShaderBroken = true;
+            forceFallbackPath = true;
             engine->showMessageError("Font Error", "Text effects shader failed to load, fancy text won't work!");
         }
     }
-    if(!hasEffects || s_textShaderBroken) {
-        // no effects: plain draw, no shader overhead
-        if(!buffer.getVerts().empty()) {
-            g->drawVAO(buffer.getVAO());
-        }
 
-        if(!buffer.getEmojiVerts().empty()) {
-            const Color savedColor = g->getColor();
-            g->setColor(argb(savedColor.a, 255, 255, 255));
-            g->drawVAO(buffer.getEmojiVAO());
-            g->setColor(savedColor);
-        }
+    if(forceFallbackPath || !hasEffects) {
+        // no effects (or fallback shadow)
+        const bool hasShadow = hasEffects && (effects->col_shadow.a > 0);
+        drawStringPlain(buffer, hasShadow, effects);
     }
 
     if(cv::r_debug_drawstring_unbind.getBool()) {

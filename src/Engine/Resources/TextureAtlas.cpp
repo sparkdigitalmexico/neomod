@@ -74,8 +74,9 @@ bool TextureAtlas::packRects(std::vector<PackRect> &rects) {
     // sort rectangles by height (tallest first) for better packing efficiency
     srt::pdqsort(rects, [](const PackRect &a, const PackRect &b) { return a.height > b.height; });
 
-    // initialize skyline - start with single segment covering entire width
-    std::vector<Skyline> skylines = {{.x = 0, .y = ATLAS_PADDING, .width = this->iWidth}};
+    // initialize skyline - start with single segment covering width minus right edge padding
+    const int packableWidth = this->iWidth - ATLAS_PADDING;
+    std::vector<Skyline> skylines = {{.x = 0, .y = ATLAS_PADDING, .width = packableWidth}};
 
     for(auto &rect : rects) {
         const int rectWidth = rect.width + ATLAS_PADDING;
@@ -83,12 +84,12 @@ bool TextureAtlas::packRects(std::vector<PackRect> &rects) {
 
         int bestHeight = this->iHeight;
         int bestIndex = -1;
-        int bestX = this->iWidth;  // initialize to rightmost position for leftmost preference
+        int bestX = packableWidth;  // initialize to rightmost position for leftmost preference
 
         // find best position along skyline
         for(size_t i = 0; i < skylines.size(); ++i) {
             // check if rectangle fits horizontally at this skyline segment
-            if(skylines[i].x + rectWidth > this->iWidth) continue;
+            if(skylines[i].x + rectWidth > packableWidth) continue;
 
             // find maximum height across all skyline segments this rect would span
             int maxY = skylines[i].y;
