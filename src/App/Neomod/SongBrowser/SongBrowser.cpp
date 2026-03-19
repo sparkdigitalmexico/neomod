@@ -599,17 +599,17 @@ void SongBrowser::draw() {
         if(aimStrains.size() > 0 && aimStrains.size() == speedStrains.size()) {
             const float strainStepMS = 400.0f * speedMultiplier;
 
-            const u32 lengthMS = strainStepMS * aimStrains.size();
+            const u64 lengthMS = strainStepMS * aimStrains.size();
 
             // get highest strain values for normalization
-            double highestAimStrain = 0.0;
-            double highestSpeedStrain = 0.0;
-            double highestStrain = 0.0;
+            f64 highestAimStrain = 0.0;
+            f64 highestSpeedStrain = 0.0;
+            f64 highestStrain = 0.0;
             int highestStrainIndex = -1;
             for(int i = 0; i < aimStrains.size(); i++) {
-                const double aimStrain = aimStrains[i];
-                const double speedStrain = speedStrains[i];
-                const double strain = aimStrain + speedStrain;
+                const f64 aimStrain = aimStrains[i];
+                const f64 speedStrain = speedStrains[i];
+                const f64 strain = aimStrain + speedStrain;
 
                 if(strain > highestStrain) {
                     highestStrain = strain;
@@ -621,18 +621,18 @@ void SongBrowser::draw() {
 
             // draw strain bar graph
             if(highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0) {
-                const float dpiScale = Osu::getUIScale();
+                const f32 dpiScale = Osu::getUIScale();
 
-                const float graphWidth = this->scoreBrowser->getSize().x;
+                const f32 graphWidth = this->scoreBrowser->getSize().x;
 
-                const float msPerPixel = (float)lengthMS / graphWidth;
-                const float strainWidth = strainStepMS / msPerPixel;
-                const float strainHeightMultiplier = cv::hud_scrubbing_timeline_strains_height.getFloat() * dpiScale;
+                const f32 msPerPixel = (f32)lengthMS / graphWidth;
+                const f32 strainWidth = strainStepMS / msPerPixel;
+                const f32 strainHeightMultiplier = cv::hud_scrubbing_timeline_strains_height.getFloat() * dpiScale;
 
-                McRect graphRect(0, osu->getVirtScreenHeight() - (BottomBar::get_height() + strainHeightMultiplier),
+                McRect graphRect(0, (osu->getVirtScreenHeight() - BottomBar::get_height()) - strainHeightMultiplier,
                                  graphWidth, strainHeightMultiplier);
 
-                const float alpha =
+                const f32 alpha =
                     (graphRect.contains(mouse->getPos()) ? 1.0f : cv::hud_scrubbing_timeline_strains_alpha.getFloat());
 
                 const Color aimStrainColor =
@@ -646,27 +646,26 @@ void SongBrowser::draw() {
 
                 g->setDepthBuffer(true);
                 for(int i = 0; i < aimStrains.size(); i++) {
-                    const double aimStrain = (aimStrains[i]) / highestStrain;
-                    const double speedStrain = (speedStrains[i]) / highestStrain;
-                    // const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+                    const f64 aimStrain = (aimStrains[i]) / highestStrain;
+                    const f64 speedStrain = (speedStrains[i]) / highestStrain;
+                    //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
 
-                    const double aimStrainHeight = aimStrain * strainHeightMultiplier;
-                    const double speedStrainHeight = speedStrain * strainHeightMultiplier;
-                    // const double strainHeight = strain * strainHeightMultiplier;
+                    const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
+                    const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
+                    //const f64 strainHeight = strain * strainHeightMultiplier;
 
                     if(!keyboard->isShiftDown()) {
                         g->setColor(aimStrainColor);
                         g->fillRect(i * strainWidth,
-                                    osu->getVirtScreenHeight() - (BottomBar::get_height() + aimStrainHeight),
+                                    (osu->getVirtScreenHeight() - BottomBar::get_height()) - aimStrainHeight,
                                     std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
                     }
 
                     if(!keyboard->isControlDown()) {
                         g->setColor(speedStrainColor);
                         g->fillRect(i * strainWidth,
-                                    osu->getVirtScreenHeight() -
-                                        (BottomBar::get_height() +
-                                         ((keyboard->isShiftDown() ? 0 : aimStrainHeight) - speedStrainHeight)),
+                                    (osu->getVirtScreenHeight() - BottomBar::get_height()) -
+                                        (keyboard->isShiftDown() ? 0 : aimStrainHeight) - speedStrainHeight,
                                     std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
                     }
                 }
@@ -674,22 +673,22 @@ void SongBrowser::draw() {
 
                 // highlight highest total strain value (+- section block)
                 if(highestStrainIndex > -1) {
-                    const double aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
-                    const double speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
-                    // const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+                    const f64 aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
+                    const f64 speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
+                    //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
 
-                    const double aimStrainHeight = aimStrain * strainHeightMultiplier;
-                    const double speedStrainHeight = speedStrain * strainHeightMultiplier;
-                    // const double strainHeight = strain * strainHeightMultiplier;
+                    const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
+                    const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
+                    //const f64 strainHeight = strain * strainHeightMultiplier;
 
                     vec2 topLeftCenter = vec2(
                         highestStrainIndex * strainWidth + strainWidth / 2.0f,
-                        osu->getVirtScreenHeight() - (BottomBar::get_height() + aimStrainHeight + speedStrainHeight));
+                        (osu->getVirtScreenHeight() - BottomBar::get_height()) - aimStrainHeight - speedStrainHeight);
 
-                    const float margin = 5.0f * dpiScale;
+                    const f32 margin = 5.0f * dpiScale;
 
-                    g->setColor(Color(0xffffffff).setA(alpha));
-
+                    g->setColor(0xffffffff);
+                    g->setAlpha(alpha);
                     g->drawRect(topLeftCenter.x - margin * strainWidth, topLeftCenter.y - margin * strainWidth,
                                 strainWidth * 2 * margin,
                                 aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth);
