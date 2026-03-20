@@ -1117,11 +1117,9 @@ void SDLGPUInterface::flushDrawCommands() {
 
             // push uniforms
             curUBlock = {&cmd.uniformBlocks[0], cmd.numUniformBlocks};
-            bool needsPushUniforms = false;
-            if(!lastUBlock.empty() && curUBlock.size() == lastUBlock.size()) {
+            bool needsPushUniforms = !curUBlock.empty();
+            if(needsPushUniforms && curUBlock.size() == lastUBlock.size()) {
                 needsPushUniforms = !std::ranges::equal(lastUBlock, curUBlock);
-            } else {
-                needsPushUniforms = true;
             }
 
             if(needsPushUniforms) {

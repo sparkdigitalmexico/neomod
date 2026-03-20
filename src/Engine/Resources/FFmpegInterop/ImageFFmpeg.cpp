@@ -35,7 +35,9 @@ struct FFState {  // NOLINT
     AVPacket *pkt{};
     AVFrame *frame{};
     SwsContext *swsCtx{};
+    AVFrame *rgbaFrame{};
     ~FFState() {
+        if(rgbaFrame) av_frame_free(&rgbaFrame);
         if(swsCtx) sws_freeContext(swsCtx);
         if(pkt) av_packet_free(&pkt);
         if(frame) av_frame_free(&frame);
@@ -216,40 +218,37 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
         return FAIL;
     }
 
-    AVFrame *rgbaFrame = av_frame_alloc();
-    if(!rgbaFrame) {
+    ff.rgbaFrame = av_frame_alloc();
+    if(!ff.rgbaFrame) {
         debugLog("av_frame_alloc failed");
         return FAIL;
     }
-    rgbaFrame->format = AV_PIX_FMT_RGBA;
-    rgbaFrame->width = outWidth;
-    rgbaFrame->height = outHeight;
+    ff.rgbaFrame->format = AV_PIX_FMT_RGBA;
+    ff.rgbaFrame->width = outWidth;
+    ff.rgbaFrame->height = outHeight;
 
-    if(int averr = sws_scale_frame(ff.swsCtx, rgbaFrame, ff.frame); averr < 0) {
-        av_frame_free(&rgbaFrame);
+    if(int averr = sws_scale_frame(ff.swsCtx, ff.rgbaFrame, ff.frame); averr < 0) {
         logIfCV(debug_ffmpeg, "sws_scale_frame failed: {:s}", av_err2str(averr));
         return FAIL;
     }
 
     this_->rawImage = Image::SizedRGBABytes{outWidth, outHeight};
     if(!this_->rawImage.get()) {
-        av_frame_free(&rgbaFrame);
         return FAIL;
     }
 
     // copy RGBA data (accounting for potential stride padding from swscale)
-    const int srcStride = rgbaFrame->linesize[0];
+    const int srcStride = ff.rgbaFrame->linesize[0];
     const int dstStride = outWidth * Image::NUM_CHANNELS;
     if(srcStride == dstStride) {
-        memcpy(this_->rawImage.get(), rgbaFrame->data[0], static_cast<u64>(outHeight) * dstStride);
+        memcpy(this_->rawImage.get(), ff.rgbaFrame->data[0], static_cast<u64>(outHeight) * dstStride);
     } else {
         for(i32 y = 0; y < outHeight; y++) {
             memcpy(this_->rawImage.get() + static_cast<sSz>(y) * dstStride,
-                   rgbaFrame->data[0] + static_cast<sSz>(y) * srcStride, dstStride);
+                   ff.rgbaFrame->data[0] + static_cast<sSz>(y) * srcStride, dstStride);
         }
     }
 
-    av_frame_free(&rgbaFrame);
     return SUCCESS;
 }
 }  // namespace Mc::FFmpeg
