@@ -162,5 +162,4 @@ struct UI final {
 
     // for idle cursor fade alpha
     f64 lastCursorMoveTime{0.};
-    vec2 lastCursorPos{0.};
 };

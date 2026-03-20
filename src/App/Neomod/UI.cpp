@@ -225,11 +225,10 @@ void UI::draw() {
     }
 
     f32 cursorAlpha = 1.f;
-    if(f32 cursorIdleFadeTime = cv::cursor_idle_time_before_fade.getFloat(); cursorIdleFadeTime >= 0.f) {
+    if(f32 cursorIdleFadeTime = cv::cursor_idle_time_before_fade.getFloat(); cursorIdleFadeTime > 0.f) {
         // fade out cursor if it hasn't been moved for over 15 seconds
-        if(mouse->getPos() != this->lastCursorPos) {
+        if(vec::length(mouse->getRawDelta()) > 0.) {
             this->lastCursorMoveTime = engine->getTime();
-            this->lastCursorPos = mouse->getPos();
         } else {
             const f32 fadeDuration = 1.f;
             const f32 idleTime = (f32)(engine->getTime() - this->lastCursorMoveTime);
