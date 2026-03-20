@@ -754,7 +754,7 @@ void SDLGPUInterface::drawVAO(VertexArrayObject *vao) {
     // convert per-vertex colors from packed Color to vec4.
     // when textured with no per-vertex colors, use white (col uniform provides m_color).
     // when non-textured with no per-vertex colors, use m_color directly (col uniform unused).
-    static Mc::CDynArray<vec4> colors;
+    static std::vector<vec4> colors;
     if(vcolors.empty()) {
         const vec4 c = hasTexcoords0
                            ? vec4{1.f, 1.f, 1.f, 1.f}
@@ -819,19 +819,18 @@ void SDLGPUInterface::drawVAO(VertexArrayObject *vao) {
         const uSz batchSrcEnd = srcIdx + batchUnits * srcStep;
 
         const u32 offset = (u32)m_stagingVertices.size();
-        m_stagingVertices.resize(offset + batchOutVerts);
-        uSz si = offset;
-        SDLGPUSimpleVertex *sb = nullptr;
+        m_stagingVertices.reserve(offset + batchOutVerts);
 
         if(srcPrimitive == DrawPrimitive::QUADS) {
             static constexpr std::array<int, 6> viAdd{0, 1, 2, 0, 2, 3};
             for(; srcIdx < batchSrcEnd; srcIdx += 4) {
                 for(uSz j = 0; j < 6; ++j) {
                     const uSz vi = srcIdx + viAdd[j];
-                    sb = &m_stagingVertices[si++];
-                    sb->pos = vertices[vi];
-                    sb->col = colors[vi];
-                    sb->tex = texData[std::min(vi, maxTexIndex)];
+                    m_stagingVertices.emplace_back(         //
+                        vertices[vi],                       //
+                        colors[vi],                         //
+                        texData[std::min(vi, maxTexIndex)]  //
+                    );
                 }
             }
         } else if(srcPrimitive == DrawPrimitive::TRIANGLE_FAN) {
@@ -839,20 +838,22 @@ void SDLGPUInterface::drawVAO(VertexArrayObject *vao) {
             for(; srcIdx < batchSrcEnd; srcIdx++) {
                 uSz vi = 0;
                 for(uSz j = 0; j < 3; ++j) {
-                    sb = &m_stagingVertices[si++];
-                    sb->pos = vertices[vi];
-                    sb->col = colors[vi];
-                    sb->tex = texData[std::min(vi, maxTexIndex)];
+                    m_stagingVertices.emplace_back(         //
+                        vertices[vi],                       //
+                        colors[vi],                         //
+                        texData[std::min(vi, maxTexIndex)]  //
+                    );
                     // 0, i, i - 1
                     vi = srcIdx + viAdd[j];
                 }
             }
         } else {
             for(; srcIdx < batchSrcEnd; srcIdx++) {
-                sb = &m_stagingVertices[si++];
-                sb->pos = vertices[srcIdx];
-                sb->col = colors[srcIdx];
-                sb->tex = texData[std::min(srcIdx, maxTexIndex)];
+                m_stagingVertices.emplace_back(             //
+                    vertices[srcIdx],                       //
+                    colors[srcIdx],                         //
+                    texData[std::min(srcIdx, maxTexIndex)]  //
+                );
             }
         }
 

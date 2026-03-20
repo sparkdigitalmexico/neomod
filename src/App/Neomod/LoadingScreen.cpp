@@ -30,6 +30,8 @@ void LoadingScreen::drawBackground() {
 }
 
 void LoadingScreen::drawProgress() {
+    g->setColor(0xffffffff);
+
     auto* font = osu->getSubTitleFont();
     const f32 shadowOffset = std::round(1.0f * Osu::getUIScale());
 
@@ -46,6 +48,8 @@ void LoadingScreen::drawProgress() {
 }
 
 void LoadingScreen::drawLoadingSpinner() {
+    g->setColor(0xffffffff);
+
     // spinner
     const float scale = Osu::getImageScale(osu->getSkin()->i_beatmap_import_spinner, 100);
     g->pushTransform();

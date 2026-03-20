@@ -45,12 +45,10 @@ class SDLGPUVertexArrayObject final : public VertexArrayObject {
     SDLGPUInterface *m_gpu;
     SDL_GPUDevice *m_device;
 
-    Mc::CDynArray<SDLGPUSimpleVertex> m_convertedVertices;
+    std::vector<SDLGPUSimpleVertex> m_convertedVertices;
     SDL_GPUBuffer *m_vertexBuffer{nullptr};
     DrawPrimitive m_convertedPrimitive;
 };
-
-extern template struct Mc::CDynArray<SDLGPUSimpleVertex>;
 
 #endif
 

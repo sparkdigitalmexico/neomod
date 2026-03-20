@@ -143,8 +143,8 @@ std::unique_ptr<VertexArrayObject> generateVAO(std::span<const vec2> points, f32
 
     const auto &triangleMeshVerts = s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices();
     const auto &triangleMeshTCs = s_UNIT_CIRCLE_VAO_TRIANGLES.getTexcoords();
-    Mc::CDynArray<vec2> tempTexCoords{triangleMeshTCs.size() * points.size()};
-    Mc::CDynArray<vec3> tempMeshVerts{triangleMeshVerts.size() * points.size()};
+    std::vector<vec2> tempTexCoords{triangleMeshTCs.size() * points.size()};
+    std::vector<vec3> tempMeshVerts{triangleMeshVerts.size() * points.size()};
 
     const f32 screenMinX = -hitcircleDiameter - GameRules::OSU_COORD_WIDTH * 2;
     const f32 screenMaxX = osu->getVirtScreenWidth() + hitcircleDiameter + GameRules::OSU_COORD_WIDTH * 2;

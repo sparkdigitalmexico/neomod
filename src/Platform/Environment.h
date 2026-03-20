@@ -26,9 +26,6 @@ typedef struct SDL_Rect SDL_Rect;
 class Graphics;
 class Engine;
 namespace Mc {
-template <typename T>
-struct CDynArray;
-
 struct AppDescriptor;
 void initEnvBlock();
 }  // namespace Mc

@@ -599,13 +599,13 @@ void DirectX11Interface::drawVAO(VertexArrayObject *vao) {
     // no support for triangle fans, because fuck youuu
     // rewrite all quads into triangles
     // rewrite all triangle fans into triangles
-    static Mc::CDynArray<vec3> finalVertices;
+    static std::vector<vec3> finalVertices;
     finalVertices.assign(vertices.begin(), vertices.end());
-    static Mc::CDynArray<vec2> finalTexcoords;
+    static std::vector<vec2> finalTexcoords;
     finalTexcoords.assign(texcoords.begin(), texcoords.end());
-    static Mc::CDynArray<vec4> colors;
+    static std::vector<vec4> colors;
     colors.clear();
-    static Mc::CDynArray<vec4> finalColors;
+    static std::vector<vec4> finalColors;
     finalColors.clear();
 
     for(auto vcolor : vcolors) {

@@ -937,7 +937,7 @@ void BeatmapInterface::stop(bool quit) {
     this->score_frames.clear();
     this->sim.reset();
 
-    if(this->bFailed && !!this->music) this->music->setFrequency(this->fMusicFrequencyBackup);
+    if(this->bFailed && !!this->music) this->music->setFrequency(0.f);
 
     this->unloadObjects();
 
@@ -1632,7 +1632,7 @@ void BeatmapInterface::checkHandleAsyncMusicLoadFinish() {
     } else {
         // ready and enqueued
         this->music->setBaseVolume(this->getIdealVolume());
-        this->fMusicFrequencyBackup = music->getFrequency();
+        this->fMusicFrequencyBackup = this->music->getFrequency();
         this->setMusicSpeed(this->getSpeedMultiplier());
         if(this->bIsWaitingForPreview) {
             this->bIsWaitingForPreview = false;

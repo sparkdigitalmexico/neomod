@@ -15,8 +15,8 @@
 #include "ModernGraphicsShared.h"
 #include "Hashing.h"
 #include "SyncMutex.h"
-#include "CDynArray.h"
 
+#include <vector>
 #include <array>
 #include <atomic>
 #include <bit>
@@ -138,8 +138,12 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     // sdlgpu-specific accessors
     // texture binding state (set by SDLGPUImage::bind/unbind)
     // atomic because releaseTexture/releaseSampler may be called from loader threads
-    [[nodiscard]] inline SDL_GPUTexture *getBoundTexture() const { return m_boundTexture.load(std::memory_order_relaxed); }
-    [[nodiscard]] inline SDL_GPUSampler *getBoundSampler() const { return m_boundSampler.load(std::memory_order_relaxed); }
+    [[nodiscard]] inline SDL_GPUTexture *getBoundTexture() const {
+        return m_boundTexture.load(std::memory_order_relaxed);
+    }
+    [[nodiscard]] inline SDL_GPUSampler *getBoundSampler() const {
+        return m_boundSampler.load(std::memory_order_relaxed);
+    }
     inline void setBoundTexture(SDL_GPUTexture *tex) { m_boundTexture.store(tex, std::memory_order_relaxed); }
     inline void setBoundSampler(SDL_GPUSampler *sampler) { m_boundSampler.store(sampler, std::memory_order_relaxed); }
 
@@ -267,7 +271,7 @@ class SDLGPUInterface final : public ModernGraphicsShared {
 
     // vertex staging buffer for deferred batching (how much to do in 1 go)
     static constexpr uSz MAX_STAGING_VERTS{(8ULL * 1024 * 1024) / sizeof(SDLGPUSimpleVertex)};
-    Mc::CDynArray<SDLGPUSimpleVertex> m_stagingVertices;
+    std::vector<SDLGPUSimpleVertex> m_stagingVertices;
 
     SDL_GPUBuffer *m_vertexBuffer{nullptr};
     SDL_GPUTransferBuffer *m_transferBuffer{nullptr};
@@ -325,7 +329,7 @@ class SDLGPUInterface final : public ModernGraphicsShared {
         // scissor state
         bool scissorEnabled;
     };
-    Mc::CDynArray<DrawCommand> m_pendingDraws;
+    std::vector<DrawCommand> m_pendingDraws;
 
     // pipeline state that requires rebuild
     int m_stencilState{0};  // 0=off, 1=writing mask, 2=testing
@@ -414,9 +418,6 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     int m_statsNumUniformUploads{0};
     int m_statsNumVertexUploads{0};
 };
-
-extern template struct Mc::CDynArray<SDLGPUInterface::DrawCommand>;
-extern template struct Mc::CDynArray<SDLGPUSimpleVertex>;
 
 #endif
 

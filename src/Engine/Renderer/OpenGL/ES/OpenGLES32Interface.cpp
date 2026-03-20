@@ -433,10 +433,10 @@ void OpenGLES32Interface::drawVAO(VertexArrayObject *vao) {
 
     // no support for quads, because fuck you
     // rewrite all quads into triangles
-    Mc::CDynArray<vec3> finalVertices{vertices.begin(), vertices.end()};
-    Mc::CDynArray<vec2> finalTexcoords{texcoords.begin(), texcoords.end()};
-    Mc::CDynArray<Color> colors;
-    Mc::CDynArray<Color> finalColors;
+    std::vector<vec3> finalVertices{vertices.begin(), vertices.end()};
+    std::vector<vec2> finalTexcoords{texcoords.begin(), texcoords.end()};
+    std::vector<Color> colors;
+    std::vector<Color> finalColors;
 
     if(!vcolors.empty()) {
         // check if any color needs conversion (only R and B are swapped)

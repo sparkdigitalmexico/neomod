@@ -21,7 +21,6 @@
 #include "Environment.h"
 #include "Image.h"
 #include "Hashing.h"
-#include "CDynArray.h"
 #include "Graphics.h"
 #include "Shader.h"
 #include "UniString.h"
@@ -34,6 +33,7 @@
 #include <cassert>
 #include <map>
 #include <memory>
+#include <vector>
 
 #include <freetype/freetype.h>
 #include <freetype/ftbitmap.h>
@@ -55,7 +55,6 @@ static ConVar r_debug_drawstring_fallback("r_debug_drawstring_fallback", false, 
 }
 
 namespace {  // static namespace
-using Mc::CDynArray;
 
 // constants for atlas generation and rendering
 constexpr const float ATLAS_OCCUPANCY_TARGET{0.75f};  // target atlas occupancy before resize
@@ -155,18 +154,18 @@ struct McFontImpl final {
             metrics.clear();
         }
 
-        CDynArray<vec3> &getVerts() { return VAO.vertices; }
-        CDynArray<vec2> &getTexcoords() { return VAO.texcoords; }
-        CDynArray<const GLYPH_METRICS *> &getMetrics() { return metrics; }
+        std::vector<vec3> &getVerts() { return VAO.vertices; }
+        std::vector<vec2> &getTexcoords() { return VAO.texcoords; }
+        std::vector<const GLYPH_METRICS *> &getMetrics() { return metrics; }
 
-        [[nodiscard]] const CDynArray<vec3> &getVerts() const { return VAO.vertices; }
-        [[nodiscard]] const CDynArray<vec2> &getTexcoords() const { return VAO.texcoords; }
-        [[nodiscard]] const CDynArray<const GLYPH_METRICS *> &getMetrics() const { return metrics; }
+        [[nodiscard]] const std::vector<vec3> &getVerts() const { return VAO.vertices; }
+        [[nodiscard]] const std::vector<vec2> &getTexcoords() const { return VAO.texcoords; }
+        [[nodiscard]] const std::vector<const GLYPH_METRICS *> &getMetrics() const { return metrics; }
 
-        CDynArray<vec3> &getEmojiVerts() { return emojiVAO.vertices; }
-        CDynArray<vec2> &getEmojiTexcoords() { return emojiVAO.texcoords; }
-        [[nodiscard]] const CDynArray<vec3> &getEmojiVerts() const { return emojiVAO.vertices; }
-        [[nodiscard]] const CDynArray<vec2> &getEmojiTexcoords() const { return emojiVAO.texcoords; }
+        std::vector<vec3> &getEmojiVerts() { return emojiVAO.vertices; }
+        std::vector<vec2> &getEmojiTexcoords() { return emojiVAO.texcoords; }
+        [[nodiscard]] const std::vector<vec3> &getEmojiVerts() const { return emojiVAO.vertices; }
+        [[nodiscard]] const std::vector<vec2> &getEmojiTexcoords() const { return emojiVAO.texcoords; }
 
         [[nodiscard]] VertexArrayObject *getVAO() { return &VAO; }
         [[nodiscard]] VertexArrayObject *getEmojiVAO() { return &emojiVAO; }
@@ -181,7 +180,7 @@ struct McFontImpl final {
         TextVAO emojiVAO{
             Env::cfg(REND::GLES32 | REND::DX11 | REND::SDLGPU) ? DrawPrimitive::TRIANGLES : DrawPrimitive::QUADS,
             DrawUsageType::DYNAMIC};
-        CDynArray<const GLYPH_METRICS *> metrics{};
+        std::vector<const GLYPH_METRICS *> metrics{};
     };
 
     std::string m_sActualFilePath;
@@ -300,7 +299,7 @@ struct McFontImpl final {
 
     // puts a glyph quad/tri into given vertex/texcoord buffer at startIndex.
     // expandRight/expandDown extend the quad into atlas padding for shadow/outline visibility.
-    void buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
+    void buildGlyphGeometry(std::vector<vec3> &vertsOut, std::vector<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
                             float advanceX, size_t startIndex, float expandLeft = 0.f, float expandRight = 0.f,
                             float expandUp = 0.f, float expandDown = 0.f);
 
@@ -1336,9 +1335,9 @@ FT_BitmapGlyph McFontImpl::loadBitmapGlyph(char32_t ch, FT_Face face, bool store
     return bitmapGlyph;
 }
 
-void McFontImpl::buildGlyphGeometry(CDynArray<vec3> &vertsOut, CDynArray<vec2> &texcoordsOut, const GLYPH_METRICS &gm,
-                                    float advanceX, size_t startIndex, float expandLeft, float expandRight,
-                                    float expandUp, float expandDown) {
+void McFontImpl::buildGlyphGeometry(std::vector<vec3> &vertsOut, std::vector<vec2> &texcoordsOut,
+                                    const GLYPH_METRICS &gm, float advanceX, size_t startIndex, float expandLeft,
+                                    float expandRight, float expandUp, float expandDown) {
     const float atlasWidth{static_cast<float>(m_textureAtlas->getAtlasImage()->getWidth())};
     const float atlasHeight{static_cast<float>(m_textureAtlas->getAtlasImage()->getHeight())};
 

@@ -85,10 +85,10 @@ void SDLGPUVertexArrayObject::init() {
     m_convertedVertices.clear();
 
     // maybe TODO: handle normals (not currently used in app code)
-    Mc::CDynArray<vec3> finalVertices;
-    Mc::CDynArray<vec2> finalTexcoords;
-    Mc::CDynArray<vec4> colors;
-    Mc::CDynArray<vec4> finalColors;
+    std::vector<vec3> finalVertices;
+    std::vector<vec2> finalTexcoords;
+    std::vector<vec4> colors;
+    std::vector<vec4> finalColors;
 
     for(auto clr : this->colors) {
         const vec4 color = vec4(clr.Rf(), clr.Gf(), clr.Bf(), clr.Af());
@@ -208,8 +208,7 @@ void SDLGPUVertexArrayObject::init() {
     u32 pooledSize = 0;
     SDL_GPUTransferBuffer *transferBuffer = m_gpu->acquireUploadTransferBuffer(bufSize, pooledSize);
     if(!transferBuffer) {
-        engine->showMessageError("SDLGPUVertexArrayObject ERROR",
-                                 "Failed to acquire vertex upload transfer buffer!");
+        engine->showMessageError("SDLGPUVertexArrayObject ERROR", "Failed to acquire vertex upload transfer buffer!");
         return;
     }
 

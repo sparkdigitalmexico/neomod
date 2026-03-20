@@ -7,14 +7,8 @@
 #include "Color.h"
 #include "Vectors.h"
 
-#include "CDynArray.h"
-
 #include <span>
-
-extern template struct Mc::CDynArray<vec3>;
-extern template struct Mc::CDynArray<vec2>;
-extern template struct Mc::CDynArray<vec3>;
-extern template struct Mc::CDynArray<Color>;
+#include <vector>
 
 class VertexArrayObject : public Resource {
     MOVECONSTRUCTONLY(VertexArrayObject)
@@ -34,25 +28,21 @@ class VertexArrayObject : public Resource {
     inline void addVertex(vec2 v) noexcept { return addVertex(vec3{v.x, v.y, 0.f}); }
     inline void addVertex(float x, float y, float z = 0.f) noexcept { return addVertex(vec3{x, y, z}); }
     void addVertices(std::vector<vec3> vertices) noexcept;
-    void addVertices(Mc::CDynArray<vec3> vertices) noexcept;
     void addVertices(std::span<const vec3> vertices) noexcept;
 
     inline void addTexcoord(vec2 uv) noexcept { this->texcoords.push_back(uv); }
     inline void addTexcoord(float u, float v) noexcept { return addTexcoord(vec2{u, v}); }
 
     void addTexcoords(std::vector<vec2> texcoords) noexcept;
-    void addTexcoords(Mc::CDynArray<vec2> texcoords) noexcept;
     void addTexcoords(std::span<const vec2> texcoords) noexcept;
 
     inline void addNormal(vec3 normal) noexcept { this->normals.push_back(normal); }
     inline void addNormal(float x, float y, float z) noexcept { return addNormal(vec3{x, y, z}); }
     void addNormals(std::vector<vec3> normals) noexcept;
-    void addNormals(Mc::CDynArray<vec3> normals) noexcept;
     void addNormals(std::span<const vec3> normals) noexcept;
 
     inline void addColor(Color color) noexcept { this->colors.push_back(color); }
     void addColors(std::vector<Color> color) noexcept;
-    void addColors(Mc::CDynArray<Color> color) noexcept;
     void addColors(std::span<const Color> color) noexcept;
 
     void setVertex(int index, vec2 v) noexcept;
@@ -66,15 +56,15 @@ class VertexArrayObject : public Resource {
     void setNormals(std::span<const vec3> normals) noexcept;
     void setColors(std::span<const Color> colors) noexcept;
 
-    void setVertices(Mc::CDynArray<vec3> &&vertices) noexcept;
-    void setTexcoords(Mc::CDynArray<vec2> &&texcoords) noexcept;
-    void setNormals(Mc::CDynArray<vec3> &&normals) noexcept;
-    void setColors(Mc::CDynArray<Color> &&colors) noexcept;
+    void setVertices(std::vector<vec3> &&vertices) noexcept;
+    void setTexcoords(std::vector<vec2> &&texcoords) noexcept;
+    void setNormals(std::vector<vec3> &&normals) noexcept;
+    void setColors(std::vector<Color> &&colors) noexcept;
 
-    void setVertices(const Mc::CDynArray<vec3> &vertices) noexcept;
-    void setTexcoords(const Mc::CDynArray<vec2> &texcoords) noexcept;
-    void setNormals(const Mc::CDynArray<vec3> &normals) noexcept;
-    void setColors(const Mc::CDynArray<Color> &colors) noexcept;
+    void setVertices(const std::vector<vec3> &vertices) noexcept;
+    void setTexcoords(const std::vector<vec2> &texcoords) noexcept;
+    void setNormals(const std::vector<vec3> &normals) noexcept;
+    void setColors(const std::vector<Color> &colors) noexcept;
 
     void setColor(int index, Color color) noexcept;
 
@@ -110,10 +100,10 @@ class VertexArrayObject : public Resource {
     void initAsync() override;
     void destroy() override;
 
-    Mc::CDynArray<vec3> vertices;
-    Mc::CDynArray<vec2> texcoords;
-    Mc::CDynArray<vec3> normals;
-    Mc::CDynArray<Color> colors;
+    std::vector<vec3> vertices;
+    std::vector<vec2> texcoords;
+    std::vector<vec3> normals;
+    std::vector<Color> colors;
 
     std::vector<int> partialUpdateVertexIndices;
     std::vector<int> partialUpdateColorIndices;

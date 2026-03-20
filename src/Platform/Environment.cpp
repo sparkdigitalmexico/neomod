@@ -12,7 +12,6 @@
 #include "Logging.h"
 #include "ConVar.h"
 #include "Thread.h"
-#include "CDynArray.h"
 
 #include "UniString.h"
 

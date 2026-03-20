@@ -169,15 +169,24 @@ void emitArcVertices(float cx, float cy, float radius, float startAngle, float e
 }
 
 // emit outer/inner vertex pairs for a triangle strip outline
-void emitArcStripVertices(float cx, float cy, float rInner, float rOuter, float startAngle, float endAngle) {
+inline void emitArcStripVertices(float cx, float cy, float rInner, float rOuter, float startAngle, float endAngle) {
     const int numSteps = std::max(1, (int)((endAngle - startAngle) / 0.05f));
     const float step = (endAngle - startAngle) / (float)numSteps;
-    for(int i = 0; i <= numSteps; i++) {
-        const float a = (i < numSteps) ? startAngle + (float)i * step : endAngle;
-        const float c = std::cos(a), s = std::sin(a);
+
+    float a, c, s;  // NOLINT
+    for(int i = 0; i < numSteps; i++) {
+        a = startAngle + (float)i * step;
+        c = std::cos(a);
+        s = std::sin(a);
         glVertex2f(rOuter * c + cx, rOuter * s + cy);
         glVertex2f(rInner * c + cx, rInner * s + cy);
     }
+    // i == numSteps
+    a = endAngle;
+    c = std::cos(a);
+    s = std::sin(a);
+    glVertex2f(rOuter * c + cx, rOuter * s + cy);
+    glVertex2f(rInner * c + cx, rInner * s + cy);
 }
 }  // namespace
 
