@@ -9,13 +9,18 @@ Then re-compress all embedded PNGs with oxipng for better compression.
 
 from fontTools.ttLib import TTFont
 from fontTools.subset import Subsetter, Options
+from PIL import Image
+import io
 import os
 import subprocess
 import tempfile
 
-SKIN_TONE_MODIFIERS = set(range(0x1F3FB, 0x1F400))  # U+1F3FB..U+1F3FF
+SKIN_TONE_MODIFIERS = set(range(0x1F3FB, 0x1F400))
+HAIR_STYLE_MODIFIERS = set(range(0x1F9B0, 0x1F9B5))
+GENDER_MODIFIERS = {0x2695, 0x1F9DC, 0x1F9DD, 0x1F9DE, 0x1F9DF}
+REMOVE_MODIFIERS = SKIN_TONE_MODIFIERS | HAIR_STYLE_MODIFIERS | GENDER_MODIFIERS
 
-src = "blobmoji.ttf"
+src = "Blobmoji.ttf"
 dst = "blobmoji.woff2"
 
 print(f"Loading {src}...")
@@ -24,7 +29,7 @@ font = TTFont(src)
 # --- Step 1: Subset to remove skin tone variant bitmaps ---
 cmap = font.getBestCmap()
 all_codepoints = set(cmap.keys())
-keep_codepoints = all_codepoints - SKIN_TONE_MODIFIERS
+keep_codepoints = all_codepoints - REMOVE_MODIFIERS
 
 opts = Options()
 opts.layout_features = ["*"]
@@ -44,6 +49,7 @@ font["hmtx"].metrics[empty_glyph_name] = (0, 0)
 glyf_table = font.get("glyf")
 if glyf_table is not None:
     from fontTools.ttLib.tables._g_l_y_f import Glyph
+
     glyf_table.glyphs[empty_glyph_name] = Glyph()
 
 if "vmtx" in font:
@@ -51,7 +57,7 @@ if "vmtx" in font:
 
 for table in font["cmap"].tables:
     if hasattr(table, "cmap"):
-        for cp in SKIN_TONE_MODIFIERS:
+        for cp in REMOVE_MODIFIERS:
             table.cmap[cp] = empty_glyph_name
 
 # --- Step 3: Re-compress embedded PNGs with oxipng ---
@@ -75,38 +81,50 @@ if "CBDT" in font:
                     entries.append((glyph_name, bitmap, png_offset))
 
         if entries:
-            print(f"Optimizing {len(entries)} embedded PNGs with oxipng...")
+            print(
+                f"Optimizing {len(entries)} embedded PNGs with Pillow quantization + oxipng..."
+            )
 
-            # Write PNG portions to temp files
-            paths = []
             for glyph_name, bitmap, png_offset in entries:
-                path = os.path.join(tmpdir, f"{glyph_name}.png")
-                with open(path, "wb") as f:
-                    f.write(bitmap.data[png_offset:])
-                paths.append(path)
+                png_data = bitmap.data[png_offset:]
 
-            # Run oxipng on all files at once
+                img = Image.open(io.BytesIO(png_data))
+                if img.mode != "RGBA":
+                    img = img.convert("RGBA")
+                img = img.quantize(colors=128, method=Image.Quantize.FASTOCTREE)
+                img = img.convert("RGBA")
+
+                quantized = io.BytesIO()
+                img.save(quantized, format="PNG", optimize=False)
+                quantized_data = quantized.getvalue()
+
+                with open(os.path.join(tmpdir, f"{glyph_name}_raw.png"), "wb") as f:
+                    f.write(quantized_data)
+
+            paths = [
+                os.path.join(tmpdir, f"{n}_raw.png") for n in [e[0] for e in entries]
+            ]
+
             subprocess.run(
                 ["oxipng", "-o", "max", "-s", "--quiet"] + paths,
                 check=True,
             )
 
-            # Read back optimized PNGs, reconstruct with header
-            for (glyph_name, bitmap, png_offset), path in zip(entries, paths):
-                with open(path, "rb") as f:
+            for (glyph_name, bitmap, png_offset), entry_path in zip(entries, paths):
+                with open(entry_path, "rb") as f:
                     new_png = f.read()
                 old_size = len(bitmap.data) - png_offset
                 new_size = len(new_png)
                 if new_size < old_size:
                     saved_bytes += old_size - new_size
                     png_count += 1
-                    # Reconstruct: metrics header + optimized PNG
-                    # Update the data length in the header (bytes 5-8, big-endian uint32)
                     header = bytearray(bitmap.data[:png_offset])
                     header[5:9] = len(new_png).to_bytes(4, "big")
                     bitmap.data = bytes(header) + new_png
 
-    print(f"Optimized {png_count} PNGs, saved {saved_bytes / 1024:.1f} KB of bitmap data")
+    print(
+        f"Optimized {png_count} PNGs, saved {saved_bytes / 1024:.1f} KB of bitmap data"
+    )
 
 # --- Step 4: Save as WOFF2 ---
 font.flavor = "woff2"
@@ -117,4 +135,6 @@ orig_size = os.path.getsize(src)
 new_size = os.path.getsize(dst)
 print(f"Original: {orig_size / 1024 / 1024:.2f} MB ({src})")
 print(f"Subset:   {new_size / 1024 / 1024:.2f} MB ({dst})")
-print(f"Savings:  {(orig_size - new_size) / 1024 / 1024:.2f} MB ({100 * (1 - new_size / orig_size):.1f}%)")
+print(
+    f"Savings:  {(orig_size - new_size) / 1024 / 1024:.2f} MB ({100 * (1 - new_size / orig_size):.1f}%)"
+)
