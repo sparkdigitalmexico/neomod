@@ -463,7 +463,7 @@ void OsuDirectScreen::onResolutionChange(vec2 newResolution) {
 
         f32 y = LISTING_MARGIN;
         // We only put OnlineMapListings into the container of this->results
-        for(auto* listing : this->results->container.getElements<OnlineMapListing>()) {
+        for(auto* listing : this->results->container.getElementsAs<OnlineMapListing>()) {
             listing->setRelPos(LISTING_MARGIN, y);
             listing->setSize(results_width - 2 * LISTING_MARGIN, 75.f * scale);
             y += listing->getSize().y + LISTING_MARGIN;

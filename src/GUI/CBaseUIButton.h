@@ -7,6 +7,7 @@
 #include "MakeDelegateWrapper.h"
 
 #include <utility>
+#include <memory>
 
 class McFont;
 
@@ -17,11 +18,11 @@ class CBaseUIButton : public CBaseUIElement {
     CBaseUIButton(std::nullptr_t notext, float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0);
     CBaseUIButton(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {},
                   std::string text = {});
-    ~CBaseUIButton() override = default;
+    ~CBaseUIButton() override;
 
     void draw() override;
 
-    void click(bool left = true, bool right = false) { this->onClicked(left, right); }
+    void click(bool left = true, bool right = false);
 
     using CBaseUIButtonClickCB = std::function<void(CBaseUIButton *, bool, bool)>;
 
@@ -68,76 +69,34 @@ class CBaseUIButton : public CBaseUIElement {
     }
 
     // set
-    CBaseUIButton *setDrawFrame(bool drawFrame) {
-        this->bDrawFrame = drawFrame;
-        return this;
-    }
-    CBaseUIButton *setDrawBackground(bool drawBackground) {
-        this->bDrawBackground = drawBackground;
-        return this;
-    }
-    CBaseUIButton *setDrawShadow(bool enabled) {
-        this->bDrawShadow = enabled;
-        return this;
-    }
+    CBaseUIButton *setDrawFrame(bool drawFrame);
+    CBaseUIButton *setDrawBackground(bool drawBackground);
+    CBaseUIButton *setDrawShadow(bool enabled);
 
-    CBaseUIButton *setFrameColor(Color frameColor) {
-        this->frameColor = frameColor;
-        return this;
-    }
-    CBaseUIButton *setBackgroundColor(Color backgroundColor) {
-        this->backgroundColor = backgroundColor;
-        return this;
-    }
-    CBaseUIButton *setTextColor(Color textColor) {
-        this->textColor = textColor;
-        this->textBrightColor = this->textDarkColor = 0;
-        return this;
-    }
-    CBaseUIButton *setTextBrightColor(Color textBrightColor) {
-        this->textBrightColor = textBrightColor;
-        return this;
-    }
-    CBaseUIButton *setTextDarkColor(Color textDarkColor) {
-        this->textDarkColor = textDarkColor;
-        return this;
-    }
-    CBaseUIButton *setTextJustification(TEXT_JUSTIFICATION j) {
-        this->textJustification = j;
-        return this;
-    }
+    CBaseUIButton *setFrameColor(Color frameColor);
+    CBaseUIButton *setBackgroundColor(Color backgroundColor);
+    CBaseUIButton *setTextColor(Color textColor);
+    CBaseUIButton *setTextBrightColor(Color textBrightColor);
+    CBaseUIButton *setTextDarkColor(Color textDarkColor);
+    CBaseUIButton *setTextJustification(TEXT_JUSTIFICATION j);
 
-    CBaseUIButton *setText(std::string text) {
-        this->sText = std::move(text);
-        this->updateStringMetrics();
-        return this;
-    }
+    CBaseUIButton *setText(std::string text);
 
-    CBaseUIButton *setFont(McFont *font) {
-        this->font = font;
-        this->updateStringMetrics();
-        return this;
-    }
+    CBaseUIButton *setFont(McFont *font);
 
-    virtual CBaseUIButton *setSizeToContent(int horizontalBorderSize = 1, int verticalBorderSize = 1) {
-        this->setSize(this->fStringWidth + 2 * horizontalBorderSize, this->fStringHeight + 2 * verticalBorderSize);
-        return this;
-    }
-    CBaseUIButton *setWidthToContent(int horizontalBorderSize = 1) {
-        this->setSizeX(this->fStringWidth + 2 * horizontalBorderSize);
-        return this;
-    }
+    virtual CBaseUIButton *setSizeToContent(int horizontalBorderSize = 1, int verticalBorderSize = 1);
+    CBaseUIButton *setWidthToContent(int horizontalBorderSize = 1);
 
     // get
-    [[nodiscard]] inline Color getFrameColor() const { return this->frameColor; }
-    [[nodiscard]] inline Color getBackgroundColor() const { return this->backgroundColor; }
-    [[nodiscard]] inline Color getTextColor() const { return this->textColor; }
-    [[nodiscard]] inline std::string_view getText() const { return this->sText; }
-    [[nodiscard]] inline McFont *getFont() const { return this->font; }
+    [[nodiscard]] Color getFrameColor() const;
+    [[nodiscard]] Color getBackgroundColor() const;
+    [[nodiscard]] Color getTextColor() const;
+    [[nodiscard]] std::string_view getText() const;
+    [[nodiscard]] McFont *getFont() const;
 
     // events
     void onMouseUpInside(bool left = true, bool right = false) override;
-    void onResized() override { this->updateStringMetrics(); }
+    void onResized() override;
 
    protected:
     virtual void onClicked(bool left = true, bool right = false);

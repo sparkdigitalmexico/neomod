@@ -409,7 +409,7 @@ void Chat::update(CBaseUIEventCtx &c) {
     if(this->user_list->isVisible()) {
         // Request presence & stats for on-screen user cards
         const McRect userlist_rect = this->user_list->getRect();
-        for(auto *card : this->user_list->container.getElements<UserCard2>()) {
+        for(auto *card : this->user_list->container.getElementsAs<UserCard2>()) {
             if(userlist_rect.intersects(card->getRect())) {
                 BANCHO::User::enqueue_presence_request(card->info);
                 BANCHO::User::enqueue_stats_request(card->info);
@@ -1168,7 +1168,7 @@ void Chat::updateUserList() {
     }
 
     // Intentionally not calling this->user_list->invalidate(), because that would affect scroll position/animation
-    auto old_card_elems_copy = this->user_list->container.getElements<UserCard2>();
+    auto old_card_elems_copy = this->user_list->container.getElementsAs<UserCard2>();
     this->user_list->container.invalidate();  // clear scrollview container elements and rebuild
 
     // FIXME: dumb to sort this every time, can cause pop-in and jarring reshuffling in f9 menu buttons

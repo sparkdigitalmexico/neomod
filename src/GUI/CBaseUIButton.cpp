@@ -25,6 +25,81 @@ CBaseUIButton::CBaseUIButton(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::stri
     }
 }
 
+CBaseUIButton::~CBaseUIButton() = default;
+
+void CBaseUIButton::click(bool left, bool right) { this->onClicked(left, right); }
+
+// set
+CBaseUIButton *CBaseUIButton::setDrawFrame(bool drawFrame) {
+    this->bDrawFrame = drawFrame;
+    return this;
+}
+CBaseUIButton *CBaseUIButton::setDrawBackground(bool drawBackground) {
+    this->bDrawBackground = drawBackground;
+    return this;
+}
+CBaseUIButton *CBaseUIButton::setDrawShadow(bool enabled) {
+    this->bDrawShadow = enabled;
+    return this;
+}
+
+CBaseUIButton *CBaseUIButton::setFrameColor(Color frameColor) {
+    this->frameColor = frameColor;
+    return this;
+}
+CBaseUIButton *CBaseUIButton::setBackgroundColor(Color backgroundColor) {
+    this->backgroundColor = backgroundColor;
+    return this;
+}
+CBaseUIButton *CBaseUIButton::setTextColor(Color textColor) {
+    this->textColor = textColor;
+    this->textBrightColor = this->textDarkColor = 0;
+    return this;
+}
+CBaseUIButton *CBaseUIButton::setTextBrightColor(Color textBrightColor) {
+    this->textBrightColor = textBrightColor;
+    return this;
+}
+CBaseUIButton *CBaseUIButton::setTextDarkColor(Color textDarkColor) {
+    this->textDarkColor = textDarkColor;
+    return this;
+}
+CBaseUIButton *CBaseUIButton::setTextJustification(TEXT_JUSTIFICATION j) {
+    this->textJustification = j;
+    return this;
+}
+
+CBaseUIButton *CBaseUIButton::setText(std::string text) {
+    this->sText = std::move(text);
+    this->updateStringMetrics();
+    return this;
+}
+
+CBaseUIButton *CBaseUIButton::setFont(McFont *font) {
+    this->font = font;
+    this->updateStringMetrics();
+    return this;
+}
+
+CBaseUIButton *CBaseUIButton::setSizeToContent(int horizontalBorderSize, int verticalBorderSize) {
+    this->setSize(this->fStringWidth + 2 * horizontalBorderSize, this->fStringHeight + 2 * verticalBorderSize);
+    return this;
+}
+
+CBaseUIButton *CBaseUIButton::setWidthToContent(int horizontalBorderSize) {
+    this->setSizeX(this->fStringWidth + 2 * horizontalBorderSize);
+    return this;
+}
+
+// get
+Color CBaseUIButton::getFrameColor() const { return this->frameColor; }
+Color CBaseUIButton::getBackgroundColor() const { return this->backgroundColor; }
+Color CBaseUIButton::getTextColor() const { return this->textColor; }
+std::string_view CBaseUIButton::getText() const { return this->sText; }
+McFont *CBaseUIButton::getFont() const { return this->font; }
+
+void CBaseUIButton::onResized() { this->updateStringMetrics(); }
+
 void CBaseUIButton::draw() {
     if(!this->isVisible() || !this->isVisibleOnScreen()) return;
 
@@ -92,9 +167,8 @@ void CBaseUIButton::drawText() {
             if(this->bDrawShadow) {
                 const f32 shadowOffset = std::round((f32)this->font->getDPI() / 96.f);  // NOTE: abusing font dpi
                 const Color shadowColor{this->textDarkColor ? this->textDarkColor : Colors::invert(this->textColor)};
-                g->drawString(
-                    this->font, this->getText(),
-                    TextFX{.col_text = actualTextColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
+                g->drawString(this->font, this->getText(),
+                              TextFX{.col_text = actualTextColor, .col_shadow = shadowColor, .offs_px = shadowOffset});
             } else {
                 g->setColor(actualTextColor);
                 g->drawString(this->font, this->getText());

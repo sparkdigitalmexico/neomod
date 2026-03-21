@@ -2,6 +2,11 @@
 // miscellaneous utilities/macros which don't require transitive includes
 #pragma once
 
+#if defined(_CLANGD) || defined(Q_CREATOR_RUN) || defined(__INTELLISENSE__) || defined(__CDT_PARSER__) || \
+    defined(__clang_analyzer__)
+#define MC_IS_IDE
+#endif
+
 #define SAFE_DELETE(p)  \
     {                   \
         if(p) {         \

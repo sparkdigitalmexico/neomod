@@ -53,7 +53,7 @@ void BeatmapCarousel::update(CBaseUIEventCtx &c) {
 
                 bool isMouseInsideAnySongButton = false;
                 {
-                    const std::vector<CarouselButton *> &buttons = this->container.getElements<CarouselButton>();
+                    const std::vector<CarouselButton *> &buttons = this->container.getElementsAs<CarouselButton>();
                     for(auto *button : buttons) {
                         if(button->isMouseInside()) {
                             isMouseInsideAnySongButton = true;
@@ -128,7 +128,7 @@ void BeatmapCarousel::onKeyDown(KeyboardEvent &key) {
     /*this->container.onKeyDown(e);*/
 
     // all elements must be CarouselButtons, at least
-    const auto &elements{this->container.getElements<CarouselButton>()};
+    const auto &elements{this->container.getElementsAs<CarouselButton>()};
 
     // selection move
     if(!keyboard->isAltDown() && key == KEY_DOWN) {

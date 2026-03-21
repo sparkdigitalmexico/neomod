@@ -148,8 +148,8 @@ UI::~UI() {
     this->extra_overlays.clear();
 
     // destroy screens in reverse order
-    for(auto &screen : this->screens | std::views::reverse) {
-        SAFE_DELETE(screen);
+    for(sSz i = static_cast<sSz>(this->screens.size()) - 1; i >= 0; --i) {
+        SAFE_DELETE(this->screens[i]);
     }
     this->screens = {};
     // ui = nullptr in ~Osu

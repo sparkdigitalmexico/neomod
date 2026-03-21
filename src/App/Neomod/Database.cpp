@@ -429,13 +429,13 @@ void Database::update() {
                 Collections::load_all(this->database_files[DatabaseType::MCNEOMOD_COLLECTIONS],
                                       this->database_files[DatabaseType::STABLE_COLLECTIONS]);
 
-                // clang-format off
-                for(auto &diff : this->beatmapsets
-                                // for all diffs within the set with fStarsNomod <= 0.f (peppy difficulties needing recalc)
-                                | std::views::transform([](const auto &set) -> auto & { return *set->difficulties; })
-                                | std::views::join
-                                | std::views::filter([](const auto &diff) { return diff->fStarsNomod <= 0.f; })) {
-                    diff->fStarsNomod *= -1.f;
+                // for all diffs within the set with fStarsNomod <= 0.f (peppy difficulties needing recalc)
+                for (auto &set : this->beatmapsets) {
+                    for (auto &diff : set->getDifficulties()) {
+                        if (diff->fStarsNomod < 0.f) {
+                            diff->fStarsNomod *= -1.f;
+                        }
+                    }
                 }
                 // clang-format on
                 this->loading_progress = 1.0f;
@@ -1685,45 +1685,38 @@ void Database::loadMaps(std::string_view neomod_maps_path, std::string_view pepp
 
                     // now, search if the current setID container (to which this diff would belong) already exists and add it there, or
                     // if it doesn't exist then create the container
-                    if(beatmapset_id != -1) {
-                        if(const auto &existingit = sid_to_diffcont.find(beatmapset_id);
-                           existingit != sid_to_diffcont.end()) {
-                            const auto &[_, diffc] = *existingit;
-                            assert(diffc);
-                            // if a diff with a the same md5hash hasn't already been added here
-                            if(!std::ranges::contains(*diffc, md5hash, &DatabaseBeatmap::getMD5)) {
-                                diffp = map.get();
-                                diffc->push_back(std::move(map));
-                            }
+                    auto find_existing = [&]() -> DiffContainer * {
+                        DiffContainer *ret = nullptr;
+                        if(beatmapset_id != -1) {
+                            if(const auto &e = sid_to_diffcont.find(beatmapset_id); e != sid_to_diffcont.end())
+                                ret = e->second.get();
                         } else {
+                            // group maps with invalid set IDs by folder
+                            if(const auto &e = invalid_sid_folder_to_diffcont.find(beatmap_subfolder);
+                               e != invalid_sid_folder_to_diffcont.end())
+                                ret = e->second.get();
+                        }
+                        return ret;
+                    };
+
+                    if(DiffContainer *existing_container = find_existing()) {
+                        // if a diff with a the same md5hash hasn't already been added here
+                        if(!std::ranges::contains(*existing_container, md5hash, &DatabaseBeatmap::getMD5)) {
                             diffp = map.get();
-
-                            auto diffc = std::make_unique<DiffContainer>();
-                            diffc->push_back(std::move(map));
-                            sid_to_diffcont.emplace(beatmapset_id, std::move(diffc));
-
-                            ++nb_unique_peppy_sets;
+                            existing_container->push_back(std::move(map));
                         }
                     } else {
-                        // group maps with invalid set IDs by folder
-                        if(const auto &existingit = invalid_sid_folder_to_diffcont.find(beatmap_subfolder);
-                           existingit != invalid_sid_folder_to_diffcont.end()) {
-                            const auto &[_, diffc] = *existingit;
-                            assert(diffc);
-                            // if a diff with a the same md5hash hasn't already been added here
-                            if(!std::ranges::contains(*diffc, md5hash, &DatabaseBeatmap::getMD5)) {
-                                diffp = map.get();
-                                diffc->push_back(std::move(map));
-                            }
+                        diffp = map.get();
+
+                        auto diffc = std::make_unique<DiffContainer>();
+                        diffc->push_back(std::move(map));
+
+                        if(beatmapset_id != -1) {
+                            sid_to_diffcont.emplace(beatmapset_id, std::move(diffc));
                         } else {
-                            diffp = map.get();
-
-                            auto diffc = std::make_unique<DiffContainer>();
-                            diffc->push_back(std::move(map));
                             invalid_sid_folder_to_diffcont.emplace(beatmap_subfolder, std::move(diffc));
-
-                            ++nb_unique_peppy_sets;
                         }
+                        ++nb_unique_peppy_sets;
                     }
                 }
 

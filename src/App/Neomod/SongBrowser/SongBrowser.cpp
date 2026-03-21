@@ -2014,7 +2014,7 @@ void SongBrowser::updateSongButtonLayout() {
     // themselves
 
     // all elements must be CarouselButtons, at least
-    const auto &elements{this->carousel->container.getElements<CarouselButton>()};
+    const auto &elements{this->carousel->container.getElementsAs<CarouselButton>()};
 
     int yCounter = this->carousel->getSize().y / 4;
     if(elements.size() <= 1) yCounter = this->carousel->getSize().y / 2;
@@ -3363,7 +3363,7 @@ void SongBrowser::selectSongButton(CarouselButton *songButton) {
 
 void SongBrowser::selectRandomBeatmap() {
     // filter songbuttons or independent diffs
-    const auto &elements{this->carousel->container.getElements<CarouselButton>()};
+    const auto &elements{this->carousel->container.getElementsAs<CarouselButton>()};
 
     std::vector<SongButton *> songButtons;
     for(auto element : elements) {
@@ -3397,7 +3397,7 @@ void SongBrowser::selectPreviousRandomBeatmap() {
                                                       // we don't switch to ourself)
 
         // filter songbuttons
-        const auto &elements{this->carousel->container.getElements<CarouselButton>()};
+        const auto &elements{this->carousel->container.getElementsAs<CarouselButton>()};
 
         std::vector<SongButton *> songButtons;
         for(auto *element : elements) {
@@ -3438,7 +3438,7 @@ void SongBrowser::selectPreviousRandomBeatmap() {
 }
 
 void SongBrowser::playSelectedDifficulty() {
-    const auto &elements{this->carousel->container.getElements<CarouselButton>()};
+    const auto &elements{this->carousel->container.getElementsAs<CarouselButton>()};
 
     for(auto *element : elements) {
         if(auto *songDifficultyButton = element->as<SongDifficultyButton>();

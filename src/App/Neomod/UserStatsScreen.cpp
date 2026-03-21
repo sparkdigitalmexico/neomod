@@ -82,11 +82,13 @@ void UserStatsScreen::rebuildScoreButtons() {
     this->m_userCard->setID(BanchoState::get_uid());
     this->m_userCard->updateUserStats();
 
-    i32 i = 0;
+    i32 n = 0;
     const std::vector<FinishedScore *> &scores = db->getPlayerPPScores(BanchoState::get_username()).ppScores;
-    for(auto &score : scores | std::views::reverse) {
-        if(i >= cv::ui_top_ranks_max.getInt()) break;
-        const float weight = Database::getWeightForIndex(i);
+    for(sSz i = static_cast<sSz>(scores.size()) - 1; i >= 0; --i) {
+        if(n >= cv::ui_top_ranks_max.getInt()) break;
+        const float weight = Database::getWeightForIndex(n);
+        ++n;
+        auto *score = scores[i];
 
         DatabaseBeatmap *map = db->getBeatmapDifficulty(score->beatmap_hash);
         if(!map) continue;
@@ -95,7 +97,7 @@ void UserStatsScreen::rebuildScoreButtons() {
                               : "..."};
 
         auto *button = new ScoreButton(this->m_contextMenu.get(), 0, 0, 300, 100, ScoreButton::STYLE::TOP_RANKS);
-        button->setScore(*score, map, ++i, std::move(title), weight);
+        button->setScore(*score, map, n, std::move(title), weight);
         button->setClickCallback(SA::MakeDelegate([](ScoreButton *button) -> void {
             const FinishedScore &btnsc = button->getScore();
             SongDifficultyButton *diff_btn = ui->getSongBrowser()->getDiffButtonByHash(btnsc.beatmap_hash);

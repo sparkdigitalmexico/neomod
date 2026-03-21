@@ -160,14 +160,24 @@ This also allows RIDEV_NOLEGACY to be set on the devices, otherwise they
 swallow up the WM_MOUSE* events that would be going to the main thread
 when relative mode is disabled. That's out of scope for this change, though.
 ---
- src/video/windows/SDL_windowsrawinput.c | 314 +++++++++++++++---------
- 1 file changed, 203 insertions(+), 111 deletions(-)
+ src/video/windows/SDL_windowsrawinput.c | 319 +++++++++++++++---------
+ src/video/windows/SDL_windowsvideo.h    |   1 -
+ 2 files changed, 205 insertions(+), 115 deletions(-)
 
 diff --git a/src/video/windows/SDL_windowsrawinput.c b/src/video/windows/SDL_windowsrawinput.c
-index 9bbb07d86..f1e72a220 100644
+index 9bbb07d86..af9f90a20 100644
 --- a/src/video/windows/SDL_windowsrawinput.c
 +++ b/src/video/windows/SDL_windowsrawinput.c
-@@ -48,72 +48,150 @@ typedef struct
+@@ -40,7 +40,7 @@
+ typedef struct
+ {
+     bool done;
+-    Uint32 flags;
++    SDL_AtomicU32 flags; // Thread sets this to the actually-set flags if updating state failed
+     HANDLE ready_event;
+     HANDLE signal_event;
+     HANDLE thread;
+@@ -48,46 +48,110 @@ typedef struct
  
  static RawInputThreadData thread_data = { 0 };
  
@@ -211,22 +221,23 @@ index 9bbb07d86..f1e72a220 100644
 +    } else if (wait_status == WAIT_INPUT) {
 +        return RINP_CONTINUE;
 +    } else {
++        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "Raw input thread exiting, unexpected wait result: %lu", wait_status);
 +        return RINP_QUIT;
-+    }
+     }
 +}
-+
+ 
+-    SDL_zeroa(devices);
 +static bool UpdateRawInputDeviceFlags(HWND window, Uint32 last_flags, Uint32 new_flags)
 +{
 +    // We had nothing enabled, and we're trying to stop everything. Nothing to do.
 +    if (last_flags == new_flags) {
 +        return true;
-     }
- 
--    SDL_zeroa(devices);
-+    RAWINPUTDEVICE devices[2] = { 0 };
-+    UINT count = 0;
++    }
  
 -    if (data->flags & ENABLE_RAW_MOUSE_INPUT) {
++    RAWINPUTDEVICE devices[2] = { 0 };
++    UINT count = 0;
++
 +    if ((new_flags & ENABLE_RAW_MOUSE_INPUT) != (last_flags & ENABLE_RAW_MOUSE_INPUT)) {
          devices[count].usUsagePage = USB_USAGEPAGE_GENERIC_DESKTOP;
          devices[count].usUsage = USB_USAGE_GENERIC_MOUSE;
@@ -294,15 +305,13 @@ index 9bbb07d86..f1e72a220 100644
 +        return 0;
 +    }
 +
-+    if (!UpdateRawInputDeviceFlags(window, last_flags, thread_data.flags)) {
++    // This doesn't *really* need to be atomic, because the parent is waiting for us
++    last_flags = SDL_GetAtomicU32(&thread_data.flags);
++    if (!UpdateRawInputDeviceFlags(window, 0, last_flags)) {
          DestroyWindow(window);
          return 0;
      }
- 
-+    // Update last flags on success
-+    last_flags = thread_data.flags;
-+
-     // Make sure we get events as soon as possible
+@@ -96,24 +160,43 @@ static DWORD WINAPI WIN_RawInputThread(LPVOID param)
      SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
  
      // Tell the parent we're ready to go!
@@ -314,16 +323,16 @@ index 9bbb07d86..f1e72a220 100644
 -            // If there isn't, then we'll wait for new data to arrive with MsgWaitForMultipleObjects().
 -            ((HIWORD(GetQueueStatus(QS_RAWINPUT)) & QS_RAWINPUT) ||
 -            (MsgWaitForMultipleObjects(1, &data->signal_event, FALSE, INFINITE, QS_RAWINPUT) == WAIT_OBJECT_0 + 1))) {
-+    SetEvent(thread_data.ready_event);
- 
+-
 -        Uint64 idle_end = SDL_GetTicksNS();
 -        Uint64 idle_time = idle_end - idle_begin;
 -        Uint64 usb_8khz_interval = SDL_US_TO_NS(125);
 -        Uint64 poll_start = idle_time < usb_8khz_interval ? _this->internal->last_rawinput_poll : idle_end;
-+    RawInputIterateResult iter_result;
++    SetEvent(thread_data.ready_event);
  
 -        WIN_PollRawInput(_this, poll_start);
--
++    RawInputIterateResult iter_result;
+ 
 -        // Reset idle_begin for the next go-around
 -        idle_begin = SDL_GetTicksNS();
 +    Uint64 idle_begin = SDL_GetTicksNS();
@@ -332,15 +341,20 @@ index 9bbb07d86..f1e72a220 100644
 +        case RINP_QUIT: // Unreachable
 +            break;
 +        case RINP_UPDATE:
-+            if (!UpdateRawInputDeviceFlags(window, last_flags, thread_data.flags)) {
-+                // Update shared data flags to the previous state if we failed to update them.
-+                thread_data.flags = last_flags;
-+            } else {
-+                last_flags = thread_data.flags;
-+            }
-+            // Tell the parent we're done updating, it can read the shared data if it wants to
++        {
++            const Uint32 new_flags = SDL_GetAtomicU32(&thread_data.flags);
++            // Tell the parent that we received the message so it can continue.
++            // Ideally, we'd wait for RegisterRawInputDevices to finish and propagate the result somehow,
++            // but it can take an unreasonably long amount of time (upwards of 10ms).
 +            SetEvent(thread_data.ready_event);
-+            break;
++            if (!UpdateRawInputDeviceFlags(window, last_flags, new_flags)) {
++                // Update shared data flags to the previous state if we failed to update them.
++                SDL_SetAtomicU32(&thread_data.flags, last_flags);
++            } else {
++                // Update our local cache on success
++                last_flags = new_flags;
++            }
++        } break;
 +        case RINP_CONTINUE:
 +        {
 +            Uint64 idle_end = SDL_GetTicksNS();
@@ -357,7 +371,7 @@ index 9bbb07d86..f1e72a220 100644
      }
  
      if (_this->internal->raw_input_fake_pen_id) {
-@@ -121,116 +199,126 @@ static DWORD WINAPI WIN_RawInputThread(LPVOID param)
+@@ -121,116 +204,120 @@ static DWORD WINAPI WIN_RawInputThread(LPVOID param)
          _this->internal->raw_input_fake_pen_id = 0;
      }
  
@@ -366,6 +380,9 @@ index 9bbb07d86..f1e72a220 100644
 -    devices[1].dwFlags |= RIDEV_REMOVE;
 -    devices[1].hwndTarget = NULL;
 -    RegisterRawInputDevices(devices, count, sizeof(devices[0]));
++    // Reset this here, since if we're exiting due to failure, WIN_UpdateRawInputEnabled would see a stale value.
++    SDL_SetAtomicU32(&thread_data.flags, 0);
++
 +    UpdateRawInputDeviceFlags(NULL, last_flags, 0);
  
      DestroyWindow(window);
@@ -387,7 +404,6 @@ index 9bbb07d86..f1e72a220 100644
 +        SetEvent(thread_data.signal_event);
 +        WaitForSingleObject(thread_data.thread, 3000);
 +        CloseHandle(thread_data.thread);
-+        thread_data.thread = NULL;
      }
  
 -    if (data->ready_event) {
@@ -395,7 +411,6 @@ index 9bbb07d86..f1e72a220 100644
 -        data->ready_event = NULL;
 +    if (thread_data.ready_event) {
 +        CloseHandle(thread_data.ready_event);
-+        thread_data.ready_event = NULL;
      }
  
 -    if (data->signal_event) {
@@ -403,8 +418,9 @@ index 9bbb07d86..f1e72a220 100644
 -        data->signal_event = NULL;
 +    if (thread_data.signal_event) {
 +        CloseHandle(thread_data.signal_event);
-+        thread_data.signal_event = NULL;
      }
++
++    thread_data = (RawInputThreadData){ 0 };
  }
  
 -bool WIN_SetRawInputEnabled(SDL_VideoDevice *_this, Uint32 flags)
@@ -430,25 +446,24 @@ index 9bbb07d86..f1e72a220 100644
 +    if (data->raw_keyboard_flag_inputsink) {
 +        desired_flags |= RAW_KEYBOARD_FLAG_INPUTSINK;
 +    }
-+
-+    if (desired_flags == data->raw_input_enabled) {
-+        result = true;
-+        goto out;
-+    }
-+
-+    // The thread only reads from this field when we try to update it.
-+    // If it fails, it writes the actual flags back into it after signalling ready_event.
-+    thread_data.flags = desired_flags;
  
 -    if (flags) {
 -        HANDLE handles[2];
++    if (desired_flags == SDL_GetAtomicU32(&thread_data.flags)) {
++        result = true;
++        goto out;
++    }
+ 
+-        thread_data.flags = flags;
 +    // If the thread exited unexpectedly (e.g. MsgWaitForMultipleObjects failed),
 +    // the handle is stale. Clean it up so the creation path below can recover.
 +    if (thread_data.thread && WaitForSingleObject(thread_data.thread, 0) != WAIT_TIMEOUT) {
 +        CleanupRawInputThreadData();
 +    }
- 
--        thread_data.flags = flags;
++
++    // The thread will read from this to update its flags
++    SDL_SetAtomicU32(&thread_data.flags, desired_flags);
++
 +    if (thread_data.thread) {
 +        // Thread is already running, signal it to pick up the new flags
 +        SDL_assert(thread_data.ready_event && thread_data.signal_event);
@@ -475,7 +490,8 @@ index 9bbb07d86..f1e72a220 100644
          if (!thread_data.thread) {
              WIN_SetError("CreateThread");
 -            goto done;
--        }
++            goto out;
+         }
 -
 -        // Wait for the thread to signal ready or exit
 -        handles[0] = thread_data.ready_event;
@@ -483,12 +499,10 @@ index 9bbb07d86..f1e72a220 100644
 -        if (WaitForMultipleObjects(2, handles, FALSE, INFINITE) != WAIT_OBJECT_0) {
 -            SDL_SetError("Couldn't set up raw input handling");
 -            goto done;
-+            goto out;
-         }
+-        }
 -        result = true;
      } else {
-+        // Thread isn't running and flags are 0, just record it
-+        data->raw_input_enabled = 0;
++        // Thread isn't running and we tried to disable raw input, nothing to do
          result = true;
 +        goto out;
      }
@@ -523,14 +537,8 @@ index 9bbb07d86..f1e72a220 100644
 -    }
 -    if (data->raw_keyboard_flag_inputsink) {
 -        flags |= RAW_KEYBOARD_FLAG_INPUTSINK;
-+    // The thread may have failed to apply the flags (RegisterRawInputDevices failed) and reverted
-+    // thread_data.flags to its previous state.
-+    data->raw_input_enabled = thread_data.flags;
-+    if (thread_data.flags != desired_flags) {
-+        WIN_SetError("RegisterRawInputDevices");
-+        goto out;
-     }
- 
+-    }
+-
 -    // Leave the thread running, as it takes several ms to shut it down and spin it up.
 -    // We'll continue processing them so they don't back up in the thread event queue,
 -    // but we won't deliver raw events in the application.
@@ -542,6 +550,8 @@ index 9bbb07d86..f1e72a220 100644
 -        } else {
 -            return false;
 -        }
++    // At this point, we just assume that it worked, since actually registering/unregistering
++    // raw input devices can block for too long to wait for here.
 +    result = true;
 +out:
 +    if (!result) {
@@ -552,7 +562,7 @@ index 9bbb07d86..f1e72a220 100644
  }
  
  bool WIN_SetRawMouseEnabled(SDL_VideoDevice *_this, bool enabled)
-@@ -306,13 +394,13 @@ bool WIN_SetRawKeyboardFlag_Inputsink(SDL_VideoDevice *_this, bool enabled)
+@@ -306,13 +393,13 @@ bool WIN_SetRawKeyboardFlag_Inputsink(SDL_VideoDevice *_this, bool enabled)
      return WIN_SetRawKeyboardFlag(_this, INPUTSINK, enabled);
  }
  
@@ -570,7 +580,7 @@ index 9bbb07d86..f1e72a220 100644
  bool WIN_SetRawMouseEnabled(SDL_VideoDevice *_this, bool enabled)
  {
      return SDL_Unsupported();
-@@ -333,6 +421,10 @@ bool WIN_SetRawKeyboardFlag_Inputsink(SDL_VideoDevice *_this, bool enabled)
+@@ -333,6 +420,10 @@ bool WIN_SetRawKeyboardFlag_Inputsink(SDL_VideoDevice *_this, bool enabled)
      return SDL_Unsupported();
  }
  
@@ -581,6 +591,18 @@ index 9bbb07d86..f1e72a220 100644
  #endif // !SDL_PLATFORM_XBOXONE && !SDL_PLATFORM_XBOXSERIES
  
  #endif // SDL_VIDEO_DRIVER_WINDOWS
+diff --git a/src/video/windows/SDL_windowsvideo.h b/src/video/windows/SDL_windowsvideo.h
+index fb34acfb2..b3240d3cb 100644
+--- a/src/video/windows/SDL_windowsvideo.h
++++ b/src/video/windows/SDL_windowsvideo.h
+@@ -596,7 +596,6 @@ struct SDL_VideoData
+     bool raw_keyboard_flag_nohotkeys;
+     bool raw_keyboard_flag_inputsink;
+     bool pending_E1_key_sequence;
+-    Uint32 raw_input_enabled;
+     SDL_PenID raw_input_fake_pen_id;
+ 
+     WIN_GameInputData *gameinput_context;
 -- 
 2.53.0
 

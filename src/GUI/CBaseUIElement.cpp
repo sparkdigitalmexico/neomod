@@ -6,6 +6,9 @@
 #include "ConVar.h"
 #include "Mouse.h"
 
+#include <utility>
+#include <memory>
+
 namespace CBaseUIDebug {
 namespace {
 bool dumpElems{false};
@@ -13,7 +16,156 @@ bool dumpElems{false};
 void onDumpElemsChangeCallback(float newvalue) { dumpElems = !!static_cast<int>(newvalue); }
 }  // namespace CBaseUIDebug
 
+void CBaseUIEventCtx::consume_mouse() { this->propagate_clicks = this->propagate_hover = false; }
+
+bool CBaseUIEventCtx::mouse_consumed() const {
+    return this->propagate_clicks == this->propagate_hover && (this->propagate_hover == false);
+}
+
+CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::nullptr_t /**/)
+    : rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
+
+CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::string name)
+    : sName(std::move(name)), rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
+CBaseUIElement::~CBaseUIElement() = default;
+
+// keyboard input
+void CBaseUIElement::onKeyUp(KeyboardEvent &e) { (void)e; }
+void CBaseUIElement::onKeyDown(KeyboardEvent &e) { (void)e; }
+void CBaseUIElement::onChar(KeyboardEvent &e) { (void)e; }
+
+// getters
+std::string_view CBaseUIElement::getName() const { return this->sName; }
+
+const McRect &CBaseUIElement::getRect() const { return this->rect; }
+
+const vec2 &CBaseUIElement::getPos() const { return this->rect.getPos(); }
+const vec2 &CBaseUIElement::getSize() const { return this->rect.getSize(); }
+
+const McRect &CBaseUIElement::getRelRect() const { return this->relRect; }
+
+const vec2 &CBaseUIElement::getRelPos() const { return this->relRect.getPos(); }
+const vec2 &CBaseUIElement::getRelSize() const { return this->relRect.getSize(); }
+
+bool CBaseUIElement::isActive() { return this->bActive || this->isBusy(); }
+bool CBaseUIElement::isVisible() { return this->bVisible; }
+
+// engine rectangle contains rect
 bool CBaseUIElement::isVisibleOnScreen(const McRect &rect) { return engine->getScreenRect().intersects(rect); }
+bool CBaseUIElement::isVisibleOnScreen(CBaseUIElement *elem) {
+    return CBaseUIElement::isVisibleOnScreen(elem->getRect());
+}
+bool CBaseUIElement::isVisibleOnScreen() const { return CBaseUIElement::isVisibleOnScreen(this->getRect()); }
+
+bool CBaseUIElement::isEnabled() { return this->bEnabled; }
+bool CBaseUIElement::isBusy() { return this->bBusy && this->isVisible(); }
+bool CBaseUIElement::isMouseInside() { return this->bMouseInside && this->isVisible(); }
+
+CBaseUIElement *CBaseUIElement::setPos(vec2 newPos) {
+    if(newPos != this->rect.getPos()) {
+        this->rect.setPos(newPos);
+        this->onMoved();
+    }
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setPos(float xPos, float yPos) { return this->setPos({xPos, yPos}); }
+CBaseUIElement *CBaseUIElement::setPosX(float xPos) { return this->setPos({xPos, this->rect.getPos().y}); }
+CBaseUIElement *CBaseUIElement::setPosY(float yPos) { return this->setPos({this->rect.getPos().x, yPos}); }
+CBaseUIElement *CBaseUIElement::setRelPos(vec2 newRelPos) {
+    this->relRect.setPos(newRelPos);
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setRelPos(float xPos, float yPos) { return this->setRelPos({xPos, yPos}); }
+CBaseUIElement *CBaseUIElement::setRelPosX(float xPos) {
+    this->relRect.setPosX(xPos);
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setRelPosY(float yPos) {
+    this->relRect.setPosY(yPos);
+    return this;
+}
+
+CBaseUIElement *CBaseUIElement::setSize(vec2 newSize) {
+    if(newSize != this->rect.getSize()) {
+        this->rect.setSize(newSize);
+        this->onResized();
+        this->onMoved();
+    }
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setSize(float xSize, float ySize) { return this->setSize({xSize, ySize}); }
+CBaseUIElement *CBaseUIElement::setSizeX(float xSize) { return this->setSize({xSize, this->rect.getSize().y}); }
+CBaseUIElement *CBaseUIElement::setSizeY(float ySize) { return this->setSize({this->rect.getSize().x, ySize}); }
+
+CBaseUIElement *CBaseUIElement::setRect(McRect rect) {
+    this->rect = std::move(rect);
+    return this;
+}
+
+CBaseUIElement *CBaseUIElement::setRelRect(McRect rect) {
+    this->relRect = std::move(rect);
+    return this;
+}
+
+CBaseUIElement *CBaseUIElement::setVisible(bool visible) {
+    this->bVisible = visible;
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setActive(bool active) {
+    this->bActive = active;
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setKeepActive(bool keepActive) {
+    this->bKeepActive = keepActive;
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setEnabled(bool enabled) {
+    if(enabled != this->bEnabled) {
+        this->bEnabled = enabled;
+        if(this->bEnabled) {
+            this->onEnabled();
+        } else {
+            this->onDisabled();
+        }
+    }
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setBusy(bool busy) {
+    this->bBusy = busy;
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setName(std::string name) {
+    this->sName = std::move(name);
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setHandleLeftMouse(bool handle) {
+    this->bHandleLeftMouse = handle;
+    return this;
+}
+CBaseUIElement *CBaseUIElement::setHandleRightMouse(bool handle) {
+    this->bHandleRightMouse = handle;
+    return this;
+}
+
+// TODO: remove this, changes behavior in more ways than just mouse handling
+CBaseUIElement *CBaseUIElement::setGrabClicks(bool grabClicks) {
+    this->grabs_clicks = grabClicks;
+    return this;
+}
+
+void CBaseUIElement::onResized() { ; }
+void CBaseUIElement::onMoved() { ; }
+
+void CBaseUIElement::onFocusStolen() { ; }
+void CBaseUIElement::onEnabled() { ; }
+void CBaseUIElement::onDisabled() { ; }
+
+void CBaseUIElement::onMouseInside() { ; }
+void CBaseUIElement::onMouseOutside() { ; }
+void CBaseUIElement::onMouseDownInside(bool /*left*/, bool /*right*/) { ; }
+void CBaseUIElement::onMouseDownOutside(bool /*left*/, bool /*right*/) { ; }
+void CBaseUIElement::onMouseUpInside(bool /*left*/, bool /*right*/) { ; }
+void CBaseUIElement::onMouseUpOutside(bool /*left*/, bool /*right*/) { ; }
 
 void CBaseUIElement::stealFocus() {
     this->mouseInsideCheck = (u8)(this->bHandleLeftMouse << 1) | (u8)this->bHandleRightMouse;

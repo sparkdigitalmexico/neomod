@@ -8,9 +8,6 @@
 #include <string>
 #include <string_view>
 
-#include <utility>
-#include <memory>
-
 // convar callback to avoid hammering atomic convar reads
 namespace CBaseUIDebug {
 void onDumpElemsChangeCallback(float newvalue);
@@ -29,153 +26,82 @@ struct CBaseUIEventCtx {
     bool propagate_clicks{true};
     bool propagate_hover{true};  // TODO: does not work quite right yet
 
-    void consume_mouse() { this->propagate_clicks = this->propagate_hover = false; }
+    void consume_mouse();
 
-    [[nodiscard]] bool mouse_consumed() const {
-        return this->propagate_clicks == this->propagate_hover && (this->propagate_hover == false);
-    }
+    [[nodiscard]] bool mouse_consumed() const;
 };
 
 class CBaseUIElement : public KeyboardListener {
     NOCOPY_NOMOVE(CBaseUIElement)
    public:
-    CBaseUIElement(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::nullptr_t = {})
-        : rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
-
-    CBaseUIElement(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {})
-        : sName(std::move(name)), rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
-    ~CBaseUIElement() override = default;
+    CBaseUIElement(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::nullptr_t = {});
+    CBaseUIElement(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {});
+    ~CBaseUIElement() override;
 
     // main
     virtual void draw() = 0;
     virtual void update(CBaseUIEventCtx &c);
 
-    // keyboard input
-    void onKeyUp(KeyboardEvent &e) override { (void)e; }
-    void onKeyDown(KeyboardEvent &e) override { (void)e; }
-    void onChar(KeyboardEvent &e) override { (void)e; }
+    // keyboard input (nothing by default)
+    void onKeyUp(KeyboardEvent &e) override;
+    void onKeyDown(KeyboardEvent &e) override;
+    void onChar(KeyboardEvent &e) override;
 
     // getters
-    [[nodiscard]] constexpr std::string_view getName() const { return this->sName; }
+    [[nodiscard]] std::string_view getName() const;
 
-    [[nodiscard]] forceinline const McRect &getRect() const { return this->rect; }
+    [[nodiscard]] const McRect &getRect() const;
 
-    [[nodiscard]] forceinline const vec2 &getPos() const { return this->rect.getPos(); }
-    [[nodiscard]] forceinline const vec2 &getSize() const { return this->rect.getSize(); }
+    [[nodiscard]] const vec2 &getPos() const;
+    [[nodiscard]] const vec2 &getSize() const;
 
-    [[nodiscard]] forceinline const McRect &getRelRect() const { return this->relRect; }
+    [[nodiscard]] const McRect &getRelRect() const;
 
-    [[nodiscard]] forceinline const vec2 &getRelPos() const { return this->relRect.getPos(); }
-    [[nodiscard]] forceinline const vec2 &getRelSize() const { return this->relRect.getSize(); }
+    [[nodiscard]] const vec2 &getRelPos() const;
+    [[nodiscard]] const vec2 &getRelSize() const;
 
-    virtual bool isActive() { return this->bActive || this->isBusy(); }
-    virtual bool isVisible() { return this->bVisible; }
+    virtual bool isActive();
+    virtual bool isVisible();
 
     // engine rectangle contains rect
     static bool isVisibleOnScreen(const McRect &rect);
-    [[nodiscard]] static forceinline bool isVisibleOnScreen(CBaseUIElement *elem) {
-        return CBaseUIElement::isVisibleOnScreen(elem->getRect());
-    }
+    [[nodiscard]] static bool isVisibleOnScreen(CBaseUIElement *elem);
+    [[nodiscard]] bool isVisibleOnScreen() const;
 
-    [[nodiscard]] forceinline bool isVisibleOnScreen() const {
-        return CBaseUIElement::isVisibleOnScreen(this->getRect());
-    }
+    virtual bool isEnabled();
+    virtual bool isBusy();
+    virtual bool isMouseInside();
 
-    virtual bool isEnabled() { return this->bEnabled; }
-    virtual bool isBusy() { return this->bBusy && this->isVisible(); }
-    virtual bool isMouseInside() { return this->bMouseInside && this->isVisible(); }
+    CBaseUIElement *setPos(vec2 newPos);
 
-    inline CBaseUIElement *setPos(vec2 newPos) {
-        if(newPos != this->rect.getPos()) {
-            this->rect.setPos(newPos);
-            this->onMoved();
-        }
-        return this;
-    }
-    inline CBaseUIElement *setPos(float xPos, float yPos) { return this->setPos({xPos, yPos}); }
-    inline CBaseUIElement *setPosX(float xPos) { return this->setPos({xPos, this->rect.getPos().y}); }
-    inline CBaseUIElement *setPosY(float yPos) { return this->setPos({this->rect.getPos().x, yPos}); }
-    inline CBaseUIElement *setRelPos(vec2 newRelPos) {
-        this->relRect.setPos(newRelPos);
-        return this;
-    }
-    inline CBaseUIElement *setRelPos(float xPos, float yPos) { return this->setRelPos({xPos, yPos}); }
-    inline CBaseUIElement *setRelPosX(float xPos) {
-        this->relRect.setPosX(xPos);
-        return this;
-    }
-    inline CBaseUIElement *setRelPosY(float yPos) {
-        this->relRect.setPosY(yPos);
-        return this;
-    }
+    CBaseUIElement *setPos(float xPos, float yPos);
+    CBaseUIElement *setPosX(float xPos);
+    CBaseUIElement *setPosY(float yPos);
+    CBaseUIElement *setRelPos(vec2 newRelPos);
+    CBaseUIElement *setRelPos(float xPos, float yPos);
+    CBaseUIElement *setRelPosX(float xPos);
+    CBaseUIElement *setRelPosY(float yPos);
 
-    inline CBaseUIElement *setSize(vec2 newSize) {
-        if(newSize != this->rect.getSize()) {
-            this->rect.setSize(newSize);
-            this->onResized();
-            this->onMoved();
-        }
-        return this;
-    }
-    inline CBaseUIElement *setSize(float xSize, float ySize) { return this->setSize({xSize, ySize}); }
-    inline CBaseUIElement *setSizeX(float xSize) { return this->setSize({xSize, this->rect.getSize().y}); }
-    inline CBaseUIElement *setSizeY(float ySize) { return this->setSize({this->rect.getSize().x, ySize}); }
+    CBaseUIElement *setSize(vec2 newSize);
+    CBaseUIElement *setSize(float xSize, float ySize);
+    CBaseUIElement *setSizeX(float xSize);
+    CBaseUIElement *setSizeY(float ySize);
 
-    inline CBaseUIElement *setRect(McRect rect) {
-        this->rect = std::move(rect);
-        return this;
-    }
+    CBaseUIElement *setRect(McRect rect);
 
-    inline CBaseUIElement *setRelRect(McRect rect) {
-        this->relRect = std::move(rect);
-        return this;
-    }
+    CBaseUIElement *setRelRect(McRect rect);
 
-    virtual CBaseUIElement *setVisible(bool visible) {
-        this->bVisible = visible;
-        return this;
-    }
-    virtual CBaseUIElement *setActive(bool active) {
-        this->bActive = active;
-        return this;
-    }
-    virtual CBaseUIElement *setKeepActive(bool keepActive) {
-        this->bKeepActive = keepActive;
-        return this;
-    }
-    virtual CBaseUIElement *setEnabled(bool enabled) {
-        if(enabled != this->bEnabled) {
-            this->bEnabled = enabled;
-            if(this->bEnabled) {
-                this->onEnabled();
-            } else {
-                this->onDisabled();
-            }
-        }
-        return this;
-    }
-    virtual CBaseUIElement *setBusy(bool busy) {
-        this->bBusy = busy;
-        return this;
-    }
-    virtual CBaseUIElement *setName(std::string name) {
-        this->sName = std::move(name);
-        return this;
-    }
-    virtual CBaseUIElement *setHandleLeftMouse(bool handle) {
-        this->bHandleLeftMouse = handle;
-        return this;
-    }
-    virtual CBaseUIElement *setHandleRightMouse(bool handle) {
-        this->bHandleRightMouse = handle;
-        return this;
-    }
+    virtual CBaseUIElement *setVisible(bool visible);
+    virtual CBaseUIElement *setActive(bool active);
+    virtual CBaseUIElement *setKeepActive(bool keepActive);
+    virtual CBaseUIElement *setEnabled(bool enabled);
+    virtual CBaseUIElement *setBusy(bool busy);
+    virtual CBaseUIElement *setName(std::string name);
+    virtual CBaseUIElement *setHandleLeftMouse(bool handle);
+    virtual CBaseUIElement *setHandleRightMouse(bool handle);
 
     // TODO: remove this, changes behavior in more ways than just mouse handling
-    virtual CBaseUIElement *setGrabClicks(bool grabClicks) {
-        this->grabs_clicks = grabClicks;
-        return this;
-    }
+    virtual CBaseUIElement *setGrabClicks(bool grabClicks);
 
     // actions
     virtual void stealFocus();
@@ -184,20 +110,20 @@ class CBaseUIElement : public KeyboardListener {
    protected:
     friend class CBaseUIContainer;
 
-    // events
-    virtual void onResized() { ; }
-    virtual void onMoved() { ; }
+    // events (default implementation does nothing for all of these)
+    virtual void onResized();
+    virtual void onMoved();
 
-    virtual void onFocusStolen() { ; }
-    virtual void onEnabled() { ; }
-    virtual void onDisabled() { ; }
+    virtual void onFocusStolen();
+    virtual void onEnabled();
+    virtual void onDisabled();
 
-    virtual void onMouseInside() { ; }
-    virtual void onMouseOutside() { ; }
-    virtual void onMouseDownInside(bool /*left*/ = true, bool /*right*/ = false) { ; }
-    virtual void onMouseDownOutside(bool /*left*/ = true, bool /*right*/ = false) { ; }
-    virtual void onMouseUpInside(bool /*left*/ = true, bool /*right*/ = false) { ; }
-    virtual void onMouseUpOutside(bool /*left*/ = true, bool /*right*/ = false) { ; }
+    virtual void onMouseInside();
+    virtual void onMouseOutside();
+    virtual void onMouseDownInside(bool /*left*/ = true, bool /*right*/ = false);
+    virtual void onMouseDownOutside(bool /*left*/ = true, bool /*right*/ = false);
+    virtual void onMouseUpInside(bool /*left*/ = true, bool /*right*/ = false);
+    virtual void onMouseUpOutside(bool /*left*/ = true, bool /*right*/ = false);
 
     // vars
     std::string sName;

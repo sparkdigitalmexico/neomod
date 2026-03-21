@@ -100,7 +100,8 @@ void SongButton::update(CBaseUIEventCtx &c) {
 
     SongDifficultyButton *bottomChild = nullptr;
     // use the bottom child (hardest diff, assuming default sorting, and respecting the current search matches)
-    for(auto *child : this->childDiffBtns() | std::views::reverse) {
+    for(sSz i = static_cast<sSz>(this->childDiffBtns().size()) - 1; i >= 0; --i) {
+        auto *child = this->childDiffBtns()[i];
         // NOTE: if no search is active, then all search matches return true by default
         if(!child->isSearchMatch()) continue;
         bottomChild = child;
@@ -299,7 +300,8 @@ void SongButton::onSelected(bool wasSelected, SelOpts opts) {
     // now, automatically select the bottom child (hardest diff, assuming default sorting, and respecting the current
     // search matches)
     if(!opts.noSelectBottomChild) {
-        for(auto *child : this->children | std::views::reverse) {
+        for(sSz i = static_cast<sSz>(this->children.size()) - 1; i >= 0; --i) {
+            auto *child = this->children[i];
             // NOTE: if no search is active, then all search matches return true by default
             if(!child->isSearchMatch()) continue;
             SelOpts childOpts{.noSelectBottomChild = true, .parentUnselected = !wasSelected};

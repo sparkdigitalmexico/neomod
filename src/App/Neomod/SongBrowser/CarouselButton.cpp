@@ -267,7 +267,7 @@ void CarouselButton::onMouseInside() {
     this->fHoverOffsetAnimation.set(1.0f, 1.0f * (1.0f - this->fHoverOffsetAnimation), anim::QuadOut);
 
     // all elements must be CarouselButtons, at least
-    const auto &elements{g_carousel->container.getElements<CarouselButton>()};
+    const auto &elements{g_carousel->container.getElementsAs<CarouselButton>()};
 
     // move the rest of the buttons away from hovered-over one
     bool foundCenter = false;
@@ -289,7 +289,7 @@ void CarouselButton::onMouseOutside() {
     // only reset all other elements' state if we still should do so (possible frame delay of onMouseOutside coming
     // together with the next element already getting onMouseInside!)
     if(this->moveAwayState == MOVE_AWAY_STATE::MOVE_CENTER) {
-        const auto &elements{g_carousel->container.getElements<CarouselButton>()};
+        const auto &elements{g_carousel->container.getElementsAs<CarouselButton>()};
         for(auto *element : elements) {
             element->setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER);
         }
