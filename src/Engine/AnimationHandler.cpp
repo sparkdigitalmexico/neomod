@@ -22,8 +22,8 @@ static constexpr uSz MAX_SLOTS_F32 = 2048;
 static constexpr uSz MAX_SLOTS_F64 = 1024;
 
 // per-animation entry
-template <typename T>
-struct Anim {
+template <AnimatableType T>
+struct Anim final {
     T target;
     T duration;
     T startValue;
@@ -108,27 +108,27 @@ struct Anim {
     }
 };
 
-template <typename T>
-struct SlotPool {
+template <AnimatableType T>
+struct SlotPool final {
     static constexpr u16 NULL_SLOT = AnimHandleT<T>::NULL_SLOT;
     static constexpr uSz MAX_SLOTS = std::is_same_v<T, f32> ? MAX_SLOTS_F32 : MAX_SLOTS_F64;
     static constexpr uSz MAX_PER_SLOT = 4;
 
     // per-slot data
-    T values[MAX_SLOTS]{};
-    u16 animCount[MAX_SLOTS]{};   // number of active anims for each slot
-    T *ownerValue[MAX_SLOTS]{};   // back-pointer to handle's m_value
-    u16 *ownerSlot[MAX_SLOTS]{};  // back-pointer to handle's m_slot
+    T values[MAX_SLOTS];
+    u16 animCount[MAX_SLOTS];   // number of active anims for each slot
+    T *ownerValue[MAX_SLOTS];   // back-pointer to handle's m_value
+    u16 *ownerSlot[MAX_SLOTS];  // back-pointer to handle's m_slot
 
     // slot freelist
-    u16 freelist[MAX_SLOTS]{};
-    u16 freeCount{0};
-    u16 highWaterMark{0};
+    u16 freelist[MAX_SLOTS];
+    u16 freeCount;
+    u16 highWaterMark;
 
     // per-slot animation storage
-    Anim<T> anims[MAX_SLOTS][MAX_PER_SLOT]{};
-    u16 animHigh{0};    // upper bound for update() iteration
-    u32 totalAnims{0};  // total active animations across all slots
+    Anim<T> anims[MAX_SLOTS][MAX_PER_SLOT];
+    u16 animHigh;    // upper bound for update() iteration
+    u32 totalAnims;  // total active animations across all slots
 
     // --- slot management ---
 
@@ -164,13 +164,13 @@ struct SlotPool {
         }
 
         anims[slot][animCount[slot]++] = Anim<T>{
-            .target{target},
-            .duration{duration},
-            .startValue{values[slot]},
-            .delay{delay},
-            .elapsedTime{T{0}},
-            .animType{type},
-            .started{(delay == T{0})},
+            .target = target,
+            .duration = duration,
+            .startValue = values[slot],
+            .delay = delay,
+            .elapsedTime = T{0},
+            .animType = type,
+            .started = (delay == T{0}),
         };
         totalAnims++;
         if(slot >= animHigh) animHigh = slot + 1;
@@ -219,34 +219,26 @@ struct SlotPool {
     }
 };
 
-template <typename T>
-SlotPool<T> &getPool() {
-    static SlotPool<T> pool;
-    return pool;
-}
+template <AnimatableType T>
+inline constinit SlotPool<T> pool{};
 
 }  // namespace
 
 // --- AnimHandleT implementation ---
 
 template <AnimatableType T>
-AnimHandleT<T>::AnimHandleT(T initial) : m_value(initial) {}
-
-template <AnimatableType T>
 AnimHandleT<T>::~AnimHandleT() {
     if(m_slot != NULL_SLOT) {
-        auto &pool = getPool<T>();
-        pool.deleteAnims(m_slot);
-        pool.freeSlot(m_slot);
+        pool<T>.deleteAnims(m_slot);
+        pool<T>.freeSlot(m_slot);
     }
 }
 
 template <AnimatableType T>
 AnimHandleT<T>::AnimHandleT(AnimHandleT &&o) noexcept : m_value(o.m_value), m_slot(o.m_slot) {
     if(m_slot != NULL_SLOT) {
-        auto &pool = getPool<T>();
-        pool.ownerValue[m_slot] = &m_value;
-        pool.ownerSlot[m_slot] = &m_slot;
+        pool<T>.ownerValue[m_slot] = &m_value;
+        pool<T>.ownerSlot[m_slot] = &m_slot;
     }
     o.m_slot = NULL_SLOT;
 }
@@ -255,16 +247,14 @@ template <AnimatableType T>
 AnimHandleT<T> &AnimHandleT<T>::operator=(AnimHandleT &&o) noexcept {
     if(this != &o) {
         if(m_slot != NULL_SLOT) {
-            auto &pool = getPool<T>();
-            pool.deleteAnims(m_slot);
-            pool.freeSlot(m_slot);
+            pool<T>.deleteAnims(m_slot);
+            pool<T>.freeSlot(m_slot);
         }
         m_value = o.m_value;
         m_slot = o.m_slot;
         if(m_slot != NULL_SLOT) {
-            auto &pool = getPool<T>();
-            pool.ownerValue[m_slot] = &m_value;
-            pool.ownerSlot[m_slot] = &m_slot;
+            pool<T>.ownerValue[m_slot] = &m_value;
+            pool<T>.ownerSlot[m_slot] = &m_slot;
         }
         o.m_slot = NULL_SLOT;
     }
@@ -274,7 +264,7 @@ AnimHandleT<T> &AnimHandleT<T>::operator=(AnimHandleT &&o) noexcept {
 template <AnimatableType T>
 AnimHandleT<T> &AnimHandleT<T>::operator=(T value) {
     if(m_slot != NULL_SLOT) {
-        getPool<T>().values[m_slot] = value;
+        pool<T>.values[m_slot] = value;
     }
     m_value = value;
     return *this;
@@ -287,14 +277,13 @@ void AnimHandleT<T>::set(T target, T duration, Ease ease) {
 
 template <AnimatableType T>
 void AnimHandleT<T>::set(T target, T duration, Ease ease, T delay) {
-    auto &pool = getPool<T>();
     if(m_slot == NULL_SLOT) {
-        m_slot = pool.allocSlot(m_value);
+        m_slot = pool<T>.allocSlot(m_value);
         if(m_slot == NULL_SLOT) return;
-        pool.ownerValue[m_slot] = &m_value;
-        pool.ownerSlot[m_slot] = &m_slot;
+        pool<T>.ownerValue[m_slot] = &m_value;
+        pool<T>.ownerSlot[m_slot] = &m_slot;
     }
-    pool.addAnim(m_slot, target, duration, delay, true, ease);
+    pool<T>.addAnim(m_slot, target, duration, delay, true, ease);
 }
 
 template <AnimatableType T>
@@ -304,27 +293,26 @@ void AnimHandleT<T>::append(T target, T duration, Ease ease) {
 
 template <AnimatableType T>
 void AnimHandleT<T>::append(T target, T duration, Ease ease, T delay) {
-    auto &pool = getPool<T>();
     if(m_slot == NULL_SLOT) {
-        m_slot = pool.allocSlot(m_value);
+        m_slot = pool<T>.allocSlot(m_value);
         if(m_slot == NULL_SLOT) return;
-        pool.ownerValue[m_slot] = &m_value;
-        pool.ownerSlot[m_slot] = &m_slot;
+        pool<T>.ownerValue[m_slot] = &m_value;
+        pool<T>.ownerSlot[m_slot] = &m_slot;
     }
-    pool.addAnim(m_slot, target, duration, delay, false, ease);
+    pool<T>.addAnim(m_slot, target, duration, delay, false, ease);
 }
 
 template <AnimatableType T>
 bool AnimHandleT<T>::animating() const {
-    return m_slot != NULL_SLOT && getPool<T>().animCount[m_slot] > 0;
+    return m_slot != NULL_SLOT && pool<T>.animCount[m_slot] > 0;
 }
 
 template <AnimatableType T>
 T AnimHandleT<T>::remaining() const {
     if(m_slot == NULL_SLOT) return T{0};
-    auto &pool = getPool<T>();
-    if(pool.animCount[m_slot] == 0) return T{0};
-    auto &a = pool.anims[m_slot][0];
+
+    if(pool<T>.animCount[m_slot] == 0) return T{0};
+    auto &a = pool<T>.anims[m_slot][0];
     if(!a.started) return (a.delay - a.elapsedTime) + a.duration;
     return std::max(T{0}, a.duration - a.elapsedTime);
 }
@@ -332,10 +320,10 @@ T AnimHandleT<T>::remaining() const {
 template <AnimatableType T>
 void AnimHandleT<T>::stop() {
     if(m_slot == NULL_SLOT) return;
-    auto &pool = getPool<T>();
-    m_value = pool.values[m_slot];
-    pool.deleteAnims(m_slot);
-    pool.freeSlot(m_slot);
+
+    m_value = pool<T>.values[m_slot];
+    pool<T>.deleteAnims(m_slot);
+    pool<T>.freeSlot(m_slot);
     m_slot = NULL_SLOT;
 }
 
@@ -344,7 +332,6 @@ template class AnimHandleT<f32>;
 template class AnimHandleT<f64>;
 
 AnimVec2::AnimVec2(vec2 initial) : x(initial.x), y(initial.y) {}
-
 AnimVec2::AnimVec2(dvec2 initial) : x(static_cast<f32>(initial.x)), y(static_cast<f32>(initial.y)) {}
 
 AnimVec2 &AnimVec2::operator=(vec2 value) {
@@ -355,9 +342,18 @@ AnimVec2 &AnimVec2::operator=(vec2 value) {
 
 AnimVec2::operator vec2() const { return vec2{static_cast<f32>(x), static_cast<f32>(y)}; }
 
-AnimVec2D::AnimVec2D(vec2 initial) : x(initial.x), y(initial.y) {}
+void AnimVec2::stop() {
+    x.stop();
+    y.stop();
+}
 
+AnimVec2D::AnimVec2D(vec2 initial) : x(initial.x), y(initial.y) {}
 AnimVec2D::AnimVec2D(dvec2 initial) : x(initial.x), y(initial.y) {}
+
+void AnimVec2D::stop() {
+    x.stop();
+    y.stop();
+}
 
 AnimVec2D &AnimVec2D::operator=(dvec2 value) {
     x = value.x;
@@ -370,22 +366,21 @@ AnimVec2D::operator dvec2() const { return dvec2{static_cast<f64>(x), static_cas
 // --- engine functions ---
 
 void clearAll() {
-    getPool<f32>().clearAnims();
-    getPool<f64>().clearAnims();
+    pool<f32>.clearAnims();
+    pool<f64>.clearAnims();
 }
 
 void update() {
     const f64 frameTime = engine->getFrameTime();
+    pool<f32>.update(static_cast<f32>(frameTime));
+    pool<f64>.update(frameTime);
 
-    getPool<f32>().update(static_cast<f32>(frameTime));
-    getPool<f64>().update(frameTime);
-
-    const uSz totalAnims = getPool<f32>().totalAnims + getPool<f64>().totalAnims;
+    const uSz totalAnims = pool<f32>.totalAnims + pool<f64>.totalAnims;
     if(totalAnims > 512) {
         debugLog("WARNING: AnimationHandler has {:d} animations!", totalAnims);
     }
 }
 
-uSz getNumActiveAnimations() { return getPool<f32>().totalAnims + getPool<f64>().totalAnims; }
+uSz getNumActiveAnimations() { return pool<f32>.totalAnims + pool<f64>.totalAnims; }
 
 }  // namespace AnimationHandler

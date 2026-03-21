@@ -15,6 +15,7 @@
 #include "Graphics.h"
 
 using fmt::literals::operator""_cf;
+using fmt::literals::operator""_a;
 
 ScoreboardSlot::ScoreboardSlot(const SCORE_ENTRY &score, int index, bool use_dummy_avatar, int override_is_friend) {
     if(!use_dummy_avatar) {

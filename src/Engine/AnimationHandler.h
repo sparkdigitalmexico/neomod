@@ -36,8 +36,8 @@ using enum Ease;
 template <AnimatableType T>
 class AnimHandleT {
    public:
-    AnimHandleT() = default;
-    explicit AnimHandleT(T initial);
+    constexpr AnimHandleT() = default;
+    explicit constexpr AnimHandleT(T initial) : m_value{initial} {}
     ~AnimHandleT();
 
     AnimHandleT(AnimHandleT &&o) noexcept;
@@ -81,17 +81,14 @@ extern template class AnimHandleT<f64>;
 struct AnimVec2 {
     AnimFloat x, y;
 
-    AnimVec2() = default;
-    explicit AnimVec2(f32 initial1, f32 initial2 = f32{0}) : x(initial1), y(initial2) {}
-    explicit AnimVec2(f64 initial1, f64 initial2 = f64{0})
+    constexpr AnimVec2() = default;
+    explicit constexpr AnimVec2(f32 initial1, f32 initial2) : x(initial1), y(initial2) {}
+    explicit constexpr AnimVec2(f64 initial1, f64 initial2)
         : x(static_cast<f32>(initial1)), y(static_cast<f32>(initial2)) {}
     explicit AnimVec2(vec2 initial);
     explicit AnimVec2(dvec2 initial);
 
-    inline void stop() {
-        x.stop();
-        y.stop();
-    }
+    void stop();
 
     AnimVec2 &operator=(vec2 value);
     [[nodiscard]] operator vec2() const;
@@ -100,16 +97,13 @@ struct AnimVec2 {
 struct AnimVec2D {
     AnimDouble x, y;
 
-    AnimVec2D() = default;
-    explicit AnimVec2D(f32 initial1, f32 initial2 = f32{0}) : x(initial1), y(initial2) {}
-    explicit AnimVec2D(f64 initial1, f64 initial2 = f64{0}) : x(initial1), y(initial2) {}
+    constexpr AnimVec2D() = default;
+    explicit constexpr AnimVec2D(f32 initial1, f32 initial2) : x(initial1), y(initial2) {}
+    explicit constexpr AnimVec2D(f64 initial1, f64 initial2) : x(initial1), y(initial2) {}
     explicit AnimVec2D(vec2 initial);
     explicit AnimVec2D(dvec2 initial);
 
-    inline void stop() {
-        x.stop();
-        y.stop();
-    }
+    void stop();
 
     AnimVec2D &operator=(dvec2 value);
     [[nodiscard]] operator dvec2() const;

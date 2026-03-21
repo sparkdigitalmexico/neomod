@@ -28,6 +28,7 @@
 #include "UI.h"
 
 using fmt::literals::operator""_cf;
+using fmt::literals::operator""_a;
 
 InfoLabel::InfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name)
     : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {

@@ -210,19 +210,9 @@ void CBaseUIContainer::update_pos() {
     if(!this->isVisible()) return;
     const vec2 thisPos = this->rect.getPos();
 
-    vec2 eRelPos{};
-    vec2 ePos{};
-    vec2 newPos{};
-    for(auto *e : this->vElements) {
-        // setPos already has this logic, but inline it manually here
-        // to avoid unnecessary indirection
-        eRelPos = e->relRect.getPos();
-        ePos = e->rect.getPos();
-        if(std::abs(ePos.y - (newPos.y = (thisPos.y + eRelPos.y))) > 0.1f) {
-            newPos.x = (thisPos.x + eRelPos.x);
-            e->rect.setPos(newPos);
-            e->onMoved();
-        } else if(std::abs(ePos.x - (newPos.x = (thisPos.x + eRelPos.x))) > 0.1f) {
+    MC_UNR_cnt(32) for(auto *e : this->vElements) {
+        const vec2 newPos{thisPos + e->getRelPos()};
+        if(std::abs(newPos.x - e->getPos().x) > 0.1f || std::abs(newPos.y - e->getPos().y) > 0.1f) {
             e->rect.setPos(newPos);
             e->onMoved();
         }

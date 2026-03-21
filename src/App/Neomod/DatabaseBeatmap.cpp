@@ -351,6 +351,7 @@ void parse_hitsamples(std::vector<std::string_view> &parts, std::string_view hit
     if(parts.size() >= 2) {
         samples.additionSet = parse_sampleset_value(parts[1]);
     }
+    // index of custom beatmap skin samples
     // TODO: unused atm
     // if(parts.size() >= 3) {
     //     samples.index = Parsing::strto<i32>(parts[2]);
@@ -360,6 +361,7 @@ void parse_hitsamples(std::vector<std::string_view> &parts, std::string_view hit
         volume = Parsing::strto<i32>(parts[3]);  // for some reason this can be negative
         samples.volume = std::clamp<u8>(volume, 0, 100);
     }
+    // beatmap custom skin filename (overrides everything else)
     // TODO: unused atm
     // if(parts.size() >= 5 && !parts[4].empty()) {
     // samples.filename = SString::strcpy_u(parts[4]);

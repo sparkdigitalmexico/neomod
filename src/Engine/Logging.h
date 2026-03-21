@@ -7,6 +7,7 @@
 #include "fmt/compile.h"
 
 using fmt::literals::operator""_cf;
+using fmt::literals::operator""_a;
 
 #include <string_view>
 #include <cassert>
@@ -36,6 +37,14 @@ using fmt::literals::operator""_cf;
                                 __VA_OPT__(_logFmtStart)(str__) __VA_OPT__(_logFmtEnd(__VA_ARGS__)))
 
 #define logRaw(str__, ...) logRawChannel(Logger::CHAN_DEFAULT, str__ __VA_OPT__(, ) __VA_ARGS__)
+
+#define logEveryMS(msecs__, str__, ...)                                              \
+    do {                                                                             \
+        static uint64_t lasttms__{0};                                                \
+        uint64_t nowtms__{Timing::getTicksMS()};                                     \
+        nowtms__ - lasttms__ >= (msecs__)              ? void(lasttms__ = nowtms__), \
+            debugLog(str__ __VA_OPT__(, ) __VA_ARGS__) : void(0);                    \
+    } while(false)
 
 // print the call stack immediately
 // TODO: some portable way to do this

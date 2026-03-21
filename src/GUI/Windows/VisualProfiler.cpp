@@ -21,6 +21,7 @@
 #include <cstring>
 
 using fmt::literals::operator""_cf;
+using fmt::literals::operator""_a;
 
 namespace cv {
 static ConVar vprof_sysinfo_refresh_interval("vprof_sysinfo_refresh_interval", 0.5f, CLIENT);

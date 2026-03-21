@@ -862,6 +862,7 @@ AS_IF([test -z "$WASM_CC"], [
 ])
 CXXFLAGS="$CXXFLAGS $COMMON_FLAGS -fno-exceptions" # -fno-unwind-tables -fno-rtti
 CFLAGS="$CFLAGS $COMMON_FLAGS"
+LDFLAGS="$LDFLAGS -Wl,--gc-sections" # remove unused sections
 
 AC_SUBST([CXXFLAGS])
 AC_SUBST([CFLAGS])
@@ -880,13 +881,15 @@ AX_CHECK_COMPILE_FLAG([-std=gnu++23], [
 _is_linux_libcpp=
 AS_IF([test "$host_os" = "linux-gnu"], [
     AC_COMPILE_IFELSE([
+        AC_LANG_SOURCE([
 #include <cstdlib>
 #ifndef _LIBCPP_VERSION
 #error
 #else
 int main(void) { return 0; }
 #endif
-], [_is_linux_libcpp=yes], [_is_linux_libcpp=])
+        ])
+    ], [_is_linux_libcpp=yes], [_is_linux_libcpp=])
 ])
 
 AS_IF([test -z "$WASM_CC" && test -z "$_is_linux_libcpp"], [
@@ -1069,24 +1072,30 @@ AS_IF([test "x$enable_omp" = "xyes"], [
 ])
 
 AS_IF([test "x$enable_lto" != "xno"], [
-    AX_CHECK_COMPILE_FLAG([-flto=thin], [
+    _clang_lto_flags=
+    AS_IF([test "x$enable_lto" = "xfull"], [
+        _clang_lto_flags="-flto=full -fvirtual-function-elimination"
+    ], [
+        _clang_lto_flags="-flto=thin"
+    ])
+    AX_CHECK_COMPILE_FLAG([$_clang_lto_flags], [
+        _clang_lto_flags="$_clang_lto_flags -fno-fat-lto-objects"
         # -fwhole-program-vtables causes LTO unit splitting issues with emscripten
-        AS_IF([test -n "$WASM_CC"], [
-            _lto_flags="-flto=thin -fno-fat-lto-objects"
-        ], [
-            _lto_flags="-flto=thin -fno-fat-lto-objects -fwhole-program-vtables"
+        AS_IF([test -z "$WASM_CC"], [
+            _clang_lto_flags="$_clang_lto_flags -fwhole-program-vtables"
         ])
-        AX_CHECK_LINK_FLAG([$_lto_flags], [
-            CXXFLAGS="$CXXFLAGS $_lto_flags"
-            CFLAGS="$CFLAGS $_lto_flags"
-            LDFLAGS="$LDFLAGS $_lto_flags"
-            AS_IF([test -z "$MSYS2_BUILD"], [
+        AX_CHECK_LINK_FLAG([$_clang_lto_flags], [
+            CXXFLAGS="$CXXFLAGS $_clang_lto_flags"
+            CFLAGS="$CFLAGS $_clang_lto_flags"
+            LDFLAGS="$LDFLAGS $_clang_lto_flags"
+            AS_IF([test -z "$MSYS2_BUILD" && test "x$enable_lto" != "xfull"], [
                 mkdir -p $PWD/.ltocache-clang
                 AX_CHECK_LINK_FLAG([-Wl,--thinlto-cache-dir=$PWD/.ltocache-clang], [
                     LDFLAGS="$LDFLAGS -Wl,--thinlto-cache-dir=$PWD/.ltocache-clang"
                 ])
             ])
-        ])], [
+        ])
+    ], [
         # gcc
         AX_CHECK_LINK_FLAG([-flto=auto -ffat-lto-objects -fuse-linker-plugin -fdevirtualize-at-ltrans], [
             CXXFLAGS="$CXXFLAGS -flto=auto -ffat-lto-objects -fuse-linker-plugin -fdevirtualize-at-ltrans"
@@ -1171,7 +1180,7 @@ AS_IF([test "x$enable_harden" != "xno"], [
 # common flags
 NEOMOD_CPPFLAGS="$NEOMOD_CPPFLAGS"
 NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -Wall -Wextra -Wno-sign-compare -Wunused-parameter -Wdeprecated-declarations -Wno-error=deprecated-declarations"
-NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,--gc-sections" # remove unused sections
+NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS"
 AC_SUBST([NEOMOD_CPPFLAGS])
 AC_SUBST([NEOMOD_CXXFLAGS])
 AC_SUBST([NEOMOD_LDFLAGS])
