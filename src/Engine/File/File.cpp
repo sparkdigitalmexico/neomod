@@ -164,6 +164,7 @@ class DirectoryCache final {
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
                                std::vector<std::string> &utf8NamesOut) noexcept {

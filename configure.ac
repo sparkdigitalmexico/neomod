@@ -856,7 +856,7 @@ AS_IF([test "$host_cpu" != "i686" && test -z "$WASM_CC"], [COMMON_FLAGS="$COMMON
 CPPFLAGS="$CPPFLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64"
 AS_IF([test -z "$WASM_CC"], [
     COMMON_FLAGS="$COMMON_FLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 -pipe -ffunction-sections -fdata-sections -fwrapv -fno-strict-aliasing -ftls-model=initial-exec -pthread"
-    LDFLAGS="$LDFLAGS -static-libstdc++ -static-libgcc -pthread"
+    LDFLAGS="$LDFLAGS -pthread"
 ], [
     COMMON_FLAGS="$COMMON_FLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 -pipe -ffunction-sections -fdata-sections -fwrapv -fno-strict-aliasing"
 ])
@@ -869,6 +869,32 @@ AC_SUBST([LDFLAGS])
 AC_SUBST([CXXFLAGS_EXTRA]) # appended to neomod build flags only
 
 AC_LANG_PUSH([C++])
+
+# use c/c++23 because we can
+AX_CHECK_COMPILE_FLAG([-std=gnu++23], [
+    CXXFLAGS="$CXXFLAGS -std=gnu++23"
+], [
+    AC_MSG_ERROR([Compiler does not support gnu++23])
+])
+
+_is_linux_libcpp=
+AS_IF([test "$host_os" = "linux-gnu"], [
+    AC_COMPILE_IFELSE([
+#include <cstdlib>
+#ifndef _LIBCPP_VERSION
+#error
+#else
+int main(void) { return 0; }
+#endif
+], [_is_linux_libcpp=yes], [_is_linux_libcpp=])
+])
+
+AS_IF([test -z "$WASM_CC" && test -z "$_is_linux_libcpp"], [
+    # the default static libc++ build does not work with -fno-exceptions
+    LDFLAGS="$LDFLAGS -static-libstdc++ -static-libgcc"
+])
+
+# set default arch flags
 AS_IF([test "x$enable_native" != "xno"], [
     CXXFLAGS="$CXXFLAGS -march=native -mtune=native"
     CFLAGS="$CFLAGS -march=native -mtune=native"
@@ -888,13 +914,6 @@ AS_IF([test "x$enable_native" != "xno"], [
         ])
     ])
 ])
-# use c/c++23 because we can
-AX_CHECK_COMPILE_FLAG([-std=gnu++23], [
-    CXXFLAGS="$CXXFLAGS -std=gnu++23"
-], [
-    AC_MSG_ERROR([Compiler does not support gnu++23])
-])
-
 AC_PATH_TOOL([LD], [ld], [AC_MSG_ERROR([ld not found])])
 AS_IF([test "x$enable_clang" = "xyes" && test "$host_os" = "linux-gnu"], [
     AC_PATH_PROG([AR], [llvm-ar], [llvm-ar], [AC_MSG_ERROR([llvm-ar not found])])
@@ -1399,13 +1418,18 @@ AS_IF([test -n "$ubercompat"], [
 ])
 
 AS_IF([test "$host_os" = "linux-gnu"], [
-    # somehow this is advertised as being available on mingw-gcc, and then when you go to use it it just prints a bunch of empty lines
     _have_stdstacktrace=
-    AC_SEARCH_LIBS([__glibcxx_backtrace_simple], [stdc++exp], [_have_stdstacktrace=yes], [_have_stdstacktrace=no])
-    AS_IF([test "$_have_stdstacktrace" = "yes"], [
-        # AC_SEARCH_LIBS also automatically adds -lstdc++exp to linker flags if found
-        AC_DEFINE([MCENGINE_HAVE_STDSTACKTRACE], [1], [Defined if <stacktrace> is available to print execution backtraces.])
-    ])
+    case "$CXXFLAGS" in
+        *libc++*) ;;
+        *)
+            # somehow this is advertised as being available on mingw-gcc, and then when you go to use it it just prints a bunch of empty lines
+            AC_SEARCH_LIBS([__glibcxx_backtrace_simple], [stdc++exp], [_have_stdstacktrace=yes], [_have_stdstacktrace=no])
+            AS_IF([test "$_have_stdstacktrace" = "yes"], [
+                # AC_SEARCH_LIBS also automatically adds -lstdc++exp to linker flags if found
+                AC_DEFINE([MCENGINE_HAVE_STDSTACKTRACE], [1], [Defined if <stacktrace> is available to print execution backtraces.])
+            ])
+            ;;
+    esac
 ])
 
 AS_IF([test "x$have_sdl3" != "xyes"], [have_sdl3="build from source"])
