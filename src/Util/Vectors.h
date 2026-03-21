@@ -8,6 +8,9 @@
 #include "glm/ext/vector_float3.hpp"
 #include "glm/ext/vector_float4.hpp"
 
+#include "glm/geometric.hpp"
+#include "glm/trigonometric.hpp"
+
 #ifndef BUILD_TOOLS_ONLY  // avoid an unnecessary dependency on fmt when building tools only
 #include "fmt/format.h"
 #include "fmt/compile.h"
@@ -16,31 +19,29 @@
 // typedefs
 #include "Vectors_fwd.h"
 
-// extern template struct glm::vec<1, bool, glm::qualifier::defaultp>;
-// extern template struct glm::vec<2, bool, glm::qualifier::defaultp>;
-// extern template struct glm::vec<3, bool, glm::qualifier::defaultp>;
-// extern template struct glm::vec<4, bool, glm::qualifier::defaultp>;
-extern template struct glm::vec<2, double, glm::qualifier::defaultp>;
-extern template struct glm::vec<3, double, glm::qualifier::defaultp>;
-extern template struct glm::vec<4, double, glm::qualifier::defaultp>;
-extern template struct glm::vec<2, float, glm::qualifier::defaultp>;
-extern template struct glm::vec<3, float, glm::qualifier::defaultp>;
-extern template struct glm::vec<4, float, glm::qualifier::defaultp>;
-extern template struct glm::vec<2, i32, glm::qualifier::defaultp>;
-extern template struct glm::vec<3, i32, glm::qualifier::defaultp>;
-extern template struct glm::vec<4, i32, glm::qualifier::defaultp>;
-extern template struct glm::vec<2, i64, glm::qualifier::defaultp>;
-extern template struct glm::vec<3, i64, glm::qualifier::defaultp>;
-extern template struct glm::vec<4, i64, glm::qualifier::defaultp>;
-extern template struct glm::vec<4, u8, glm::qualifier::defaultp>;
-extern template struct glm::vec<2, u32, glm::qualifier::defaultp>;
-extern template struct glm::vec<3, u32, glm::qualifier::defaultp>;
-extern template struct glm::vec<4, u32, glm::qualifier::defaultp>;
-extern template struct glm::vec<2, u64, glm::qualifier::defaultp>;
-extern template struct glm::vec<3, u64, glm::qualifier::defaultp>;
-extern template struct glm::vec<4, u64, glm::qualifier::defaultp>;
-
 namespace vec {
+
+using glm::abs;
+using glm::all;
+using glm::any;
+using glm::ceil;
+using glm::clamp;
+using glm::cross;
+using glm::degrees;
+using glm::distance;
+using glm::dot;
+using glm::equal;
+using glm::floor;
+using glm::greaterThan;
+using glm::greaterThanEqual;
+using glm::length;
+using glm::lessThan;
+using glm::lessThanEqual;
+using glm::max;
+using glm::min;
+using glm::normalize;
+using glm::radians;
+using glm::round;
 
 inline constexpr auto FLOAT_NORMALIZE_EPSILON = 0.000001f;
 inline constexpr auto DOUBLE_NORMALIZE_EPSILON = FLOAT_NORMALIZE_EPSILON / 10e6;
