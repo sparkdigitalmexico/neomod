@@ -12,6 +12,7 @@
 #include "PauseOverlay.h"
 #include "Logging.h"
 #include "UI.h"
+#include "SyncMutex.h"
 
 #include <ranges>
 #include <utility>
@@ -56,7 +57,9 @@ void NotificationOverlay::onNotificationCallback(std::string_view args) {
     cv::cmd::notify.setValue("", false);
 }
 
-NotificationOverlay::NotificationOverlay() : UIScreen() {
+struct NotificationOverlay::Mutex : public Sync::mutex {};
+
+NotificationOverlay::NotificationOverlay() : UIScreen(), notifMtx(new Mutex()) {
     cv::cmd::toast.setCallback(SA::MakeDelegate<&NotificationOverlay::onToastCallback>(this));
     cv::cmd::notify.setCallback(SA::MakeDelegate<&NotificationOverlay::onNotificationCallback>(this));
 }
@@ -136,6 +139,8 @@ void ToastElement::draw() {
 }
 
 void NotificationOverlay::update(CBaseUIEventCtx &c) {
+    Sync::scoped_lock lk(*this->notifMtx);
+    this->updateVisibility();
     if(!this->isVisible() && this->toasts.empty()) return;
     UIScreen::update(c);
     if(this->toasts.empty()) return;
@@ -178,6 +183,7 @@ void NotificationOverlay::update(CBaseUIEventCtx &c) {
 }
 
 void NotificationOverlay::draw() {
+    Sync::scoped_lock lk(*this->notifMtx);
     const bool chat_toasts_visible = should_chat_toasts_be_visible();
 
     for(const auto &t : this->toasts) {
@@ -201,6 +207,7 @@ void NotificationOverlay::draw() {
 }
 
 void NotificationOverlay::onResolutionChange(vec2 /*newResolution*/) {
+    Sync::scoped_lock lk(*this->notifMtx);
     const f32 scale = Osu::getUIScale();
 
     TOAST_WIDTH = DEF_TOAST_WIDTH * scale;
@@ -288,6 +295,7 @@ void NotificationOverlay::onChar(KeyboardEvent &e) {
 }
 
 void NotificationOverlay::addNotification(std::string text, Color textColor, bool waitForKey, float duration) {
+    Sync::scoped_lock lk(*this->notifMtx);
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         // also log it
         // TODO: debug channels/separate files
@@ -329,6 +337,8 @@ void NotificationOverlay::addNotification(std::string text, Color textColor, boo
     this->notification1.backgroundAnim = 0.5f;
     this->notification1.fallAnim = 0.0f;
 
+    this->updateVisibility();
+
     // animations
     if(this->isVisible())
         this->notification1.alpha = 1.0f;
@@ -338,9 +348,12 @@ void NotificationOverlay::addNotification(std::string text, Color textColor, boo
     if(!waitForKey) this->notification1.alpha.append(0.0f, fadeOutTime, anim::QuadOut, notificationDuration);
 
     this->notification1.backgroundAnim.set(1.0f, 0.15f, anim::QuadOut);
+
+    this->updateVisibility();
 }
 
 void NotificationOverlay::addToast(ToastOpts opts) {
+    Sync::scoped_lock lk(*this->notifMtx);
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         // also log it
         // TODO: debug channels/separate files
@@ -353,6 +366,8 @@ void NotificationOverlay::addToast(ToastOpts opts) {
         toast->setClickCallback(std::move(opts.callback));
     }
     this->toasts.push_back(std::move(toast));
+
+    this->updateVisibility();
 }
 
 void NotificationOverlay::stopWaitingForKey(bool stillConsumeNextChar) {
@@ -361,7 +376,7 @@ void NotificationOverlay::stopWaitingForKey(bool stillConsumeNextChar) {
     this->bConsumeNextChar = stillConsumeNextChar;
 }
 
-bool NotificationOverlay::isVisible() {
-    return engine->getTime() < this->notification1.time || engine->getTime() < this->notification2.time ||
-           this->bWaitForKey;
+void NotificationOverlay::updateVisibility() {
+    this->bVisible = engine->getTime() < this->notification1.time || engine->getTime() < this->notification2.time ||
+                     this->bWaitForKey;
 }

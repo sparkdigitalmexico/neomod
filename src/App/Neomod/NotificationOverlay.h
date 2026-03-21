@@ -90,11 +90,10 @@ class NotificationOverlay final : public UIScreen {
 
     void addKeyListener(NotificationOverlayKeyListener *keyListener) { this->keyListener = keyListener; }
 
-    bool isVisible() override;
-
     inline bool isWaitingForKey() { return this->bWaitForKey || this->bConsumeNextChar; }
 
    private:
+    void updateVisibility();
     // convar callbacks
     void onToastCallback(std::string_view args);
     void onNotificationCallback(std::string_view args);
@@ -112,6 +111,8 @@ class NotificationOverlay final : public UIScreen {
     void drawNotificationText(const NOTIFICATION &n);
     void drawNotificationBackground(const NOTIFICATION &n);
 
+    struct Mutex;
+    std::unique_ptr<Mutex> notifMtx;
     std::vector<std::unique_ptr<ToastElement>> toasts;
 
     NOTIFICATION notification1;
