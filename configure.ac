@@ -1417,19 +1417,14 @@ AS_IF([test -n "$ubercompat"], [
     ])
 ])
 
-AS_IF([test "$host_os" = "linux-gnu"], [
-    _have_stdstacktrace=
-    case "$CXXFLAGS" in
-        *libc++*) ;;
-        *)
-            # somehow this is advertised as being available on mingw-gcc, and then when you go to use it it just prints a bunch of empty lines
-            AC_SEARCH_LIBS([__glibcxx_backtrace_simple], [stdc++exp], [_have_stdstacktrace=yes], [_have_stdstacktrace=no])
-            AS_IF([test "$_have_stdstacktrace" = "yes"], [
-                # AC_SEARCH_LIBS also automatically adds -lstdc++exp to linker flags if found
-                AC_DEFINE([MCENGINE_HAVE_STDSTACKTRACE], [1], [Defined if <stacktrace> is available to print execution backtraces.])
-            ])
-            ;;
-    esac
+# not with libc++ because libstdc++ would be incompatible
+AS_IF([test "$host_os" = "linux-gnu" && test -z "$_is_linux_libcpp"], [
+    # somehow this is advertised as being available on mingw-gcc, and then when you go to use it it just prints a bunch of empty lines
+    AC_SEARCH_LIBS([__glibcxx_backtrace_simple], [stdc++exp], [_have_stdstacktrace=yes], [_have_stdstacktrace=no])
+    AS_IF([test "$_have_stdstacktrace" = "yes"], [
+        # AC_SEARCH_LIBS also automatically adds -lstdc++exp to linker flags if found
+        AC_DEFINE([MCENGINE_HAVE_STDSTACKTRACE], [1], [Defined if <stacktrace> is available to print execution backtraces.])
+    ])
 ])
 
 AS_IF([test "x$have_sdl3" != "xyes"], [have_sdl3="build from source"])

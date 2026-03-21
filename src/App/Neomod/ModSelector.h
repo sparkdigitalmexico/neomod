@@ -6,6 +6,7 @@
 #include "UIScreen.h"
 
 #include <array>
+#include <memory>
 
 class SongBrowser;
 
