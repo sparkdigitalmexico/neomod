@@ -30,8 +30,12 @@ extern ConVar debug_pp;
 extern ConVar diffcalc_threads;
 }  // namespace cv
 
+using namespace neomod;
+
 namespace BatchDiffCalc {
 namespace {
+using DiffCalc::DifficultyHitObject;
+
 struct ScoreResult {
     FinishedScore score;
     f64 pp;
@@ -123,7 +127,7 @@ struct MapResult {
 
 // per-thread mutable state for worker threads
 struct WorkerContext {
-    std::unique_ptr<std::vector<DifficultyCalculator::DiffObject>> diffobj_cache;
+    std::unique_ptr<std::vector<DiffCalc::DiffObject>> diffobj_cache;
     std::vector<BPMTuple> bpm_calc_buf;
     std::vector<f32> base_span_durations;
     std::vector<f32> base_scoring_times;
@@ -171,31 +175,31 @@ void process_score_group(const BeatmapDifficulty* map, const ModParams& params, 
         return;
     }
 
-    DifficultyCalculator::BeatmapDiffcalcData diffcalc_data{.sortedHitObjects = diffres.diffobjects,
-                                                            .CS = params.cs,
-                                                            .HP = params.hp,
-                                                            .AR = params.ar,
-                                                            .OD = params.od,
-                                                            .hidden = params.hd,
-                                                            .relax = params.rx,
-                                                            .autopilot = params.ap,
-                                                            .touchDevice = params.td,
-                                                            .speedMultiplier = params.speed,
-                                                            .breakDuration = diffres.totalBreakDuration,
-                                                            .playableLength = diffres.playableLength};
+    DiffCalc::BeatmapDiffcalcData diffcalc_data{.sortedHitObjects = diffres.diffobjects,
+                                                .CS = params.cs,
+                                                .HP = params.hp,
+                                                .AR = params.ar,
+                                                .OD = params.od,
+                                                .hidden = params.hd,
+                                                .relax = params.rx,
+                                                .autopilot = params.ap,
+                                                .touchDevice = params.td,
+                                                .speedMultiplier = params.speed,
+                                                .breakDuration = diffres.totalBreakDuration,
+                                                .playableLength = diffres.playableLength};
 
-    DifficultyCalculator::DifficultyAttributes attributes{};
+    DiffCalc::DifficultyAttributes attributes{};
 
-    DifficultyCalculator::StarCalcParams star_params{.cachedDiffObjects = std::move(ctx.diffobj_cache),
-                                                     .outAttributes = attributes,
-                                                     .beatmapData = diffcalc_data,
-                                                     .outAimStrains = nullptr,
-                                                     .outSpeedStrains = nullptr,
-                                                     .incremental = nullptr,
-                                                     .upToObjectIndex = -1,
-                                                     .cancelCheck = stoken};
+    DiffCalc::StarCalcParams star_params{.cachedDiffObjects = std::move(ctx.diffobj_cache),
+                                         .outAttributes = attributes,
+                                         .beatmapData = diffcalc_data,
+                                         .outAimStrains = nullptr,
+                                         .outSpeedStrains = nullptr,
+                                         .incremental = nullptr,
+                                         .upToObjectIndex = -1,
+                                         .cancelCheck = stoken};
 
-    f64 total_stars = DifficultyCalculator::calculateStarDiffForHitObjects(star_params);
+    f64 total_stars = DiffCalc::calculateStarDiffForHitObjects(star_params);
     ctx.diffobj_cache = std::move(star_params.cachedDiffObjects);
     ctx.diffobj_cache->clear();
 
@@ -206,26 +210,26 @@ void process_score_group(const BeatmapDifficulty* map, const ModParams& params, 
     group_results.reserve(scores.size());
 
     for(auto* sw : scores) {
-        DifficultyCalculator::PPv2CalcParams ppv2params{.attributes = attributes,
-                                                        .modFlags = sw->score.mods.flags,
-                                                        .timescale = sw->score.mods.speed,
-                                                        .ar = params.ar,
-                                                        .od = params.od,
-                                                        .numHitObjects = (i32)primitives.getNumObjects(),
-                                                        .numCircles = (i32)primitives.hitcircles.size(),
-                                                        .numSliders = (i32)primitives.sliders.size(),
-                                                        .numSpinners = (i32)primitives.spinners.size(),
-                                                        .maxPossibleCombo = (i32)diffres.getTotalMaxCombo(),
-                                                        .combo = sw->score.comboMax,
-                                                        .misses = sw->score.numMisses,
-                                                        .c300 = sw->score.num300s,
-                                                        .c100 = sw->score.num100s,
-                                                        .c50 = sw->score.num50s,
-                                                        .legacyTotalScore = (u32)sw->score.score,
-                                                        .isMcOsuImported = sw->score.is_mcosu_imported()};
+        DiffCalc::PPv2CalcParams ppv2params{.attributes = attributes,
+                                            .modFlags = sw->score.mods.flags,
+                                            .timescale = sw->score.mods.speed,
+                                            .ar = params.ar,
+                                            .od = params.od,
+                                            .numHitObjects = (i32)primitives.getNumObjects(),
+                                            .numCircles = (i32)primitives.hitcircles.size(),
+                                            .numSliders = (i32)primitives.sliders.size(),
+                                            .numSpinners = (i32)primitives.spinners.size(),
+                                            .maxPossibleCombo = (i32)diffres.getTotalMaxCombo(),
+                                            .combo = sw->score.comboMax,
+                                            .misses = sw->score.numMisses,
+                                            .c300 = sw->score.num300s,
+                                            .c100 = sw->score.num100s,
+                                            .c50 = sw->score.num50s,
+                                            .legacyTotalScore = (u32)sw->score.score,
+                                            .isMcOsuImported = sw->score.is_mcosu_imported()};
 
         // mcosu scores use a different scorev1 algorithm
-        const f64 pp = DifficultyCalculator::calculatePPv2(ppv2params);
+        const f64 pp = DiffCalc::calculatePPv2(ppv2params);
 
         if(pp <= 0.f) {
             errored_count.fetch_add(1, std::memory_order_relaxed);
@@ -432,35 +436,34 @@ void process_work_item(WorkItem& item, const Sync::stop_token& stoken, WorkerCon
                 {
                     const u8 flat_idx = speed_idx * StarPrecalc::NUM_MOD_COMBOS + var.combo_idx[0];
 
-                    DifficultyCalculator::BeatmapDiffcalcData diffcalc_data{
-                        .sortedHitObjects = diffres.diffobjects,
-                        .CS = cs,
-                        .HP = hp,
-                        .AR = ar,
-                        .OD = od,
-                        .hidden = false,
-                        .relax = false,
-                        .autopilot = false,
-                        .touchDevice = false,
-                        .speedMultiplier = speed,
-                        .breakDuration = primitives.totalBreakDuration,
-                        .playableLength = diffres.playableLength};
+                    DiffCalc::BeatmapDiffcalcData diffcalc_data{.sortedHitObjects = diffres.diffobjects,
+                                                                .CS = cs,
+                                                                .HP = hp,
+                                                                .AR = ar,
+                                                                .OD = od,
+                                                                .hidden = false,
+                                                                .relax = false,
+                                                                .autopilot = false,
+                                                                .touchDevice = false,
+                                                                .speedMultiplier = speed,
+                                                                .breakDuration = primitives.totalBreakDuration,
+                                                                .playableLength = diffres.playableLength};
 
-                    DifficultyCalculator::DifficultyAttributes attributes{};
-                    DifficultyCalculator::RawDifficultyValues raw_diff{};
+                    DiffCalc::DifficultyAttributes attributes{};
+                    DiffCalc::RawDifficultyValues raw_diff{};
 
-                    DifficultyCalculator::StarCalcParams star_params{.cachedDiffObjects = std::move(ctx.diffobj_cache),
-                                                                     .outAttributes = attributes,
-                                                                     .beatmapData = diffcalc_data,
-                                                                     .outAimStrains = nullptr,
-                                                                     .outSpeedStrains = nullptr,
-                                                                     .incremental = nullptr,
-                                                                     .upToObjectIndex = -1,
-                                                                     .cancelCheck = stoken,
-                                                                     .outRawDifficulty = &raw_diff};
+                    DiffCalc::StarCalcParams star_params{.cachedDiffObjects = std::move(ctx.diffobj_cache),
+                                                         .outAttributes = attributes,
+                                                         .beatmapData = diffcalc_data,
+                                                         .outAimStrains = nullptr,
+                                                         .outSpeedStrains = nullptr,
+                                                         .incremental = nullptr,
+                                                         .upToObjectIndex = -1,
+                                                         .cancelCheck = stoken,
+                                                         .outRawDifficulty = &raw_diff};
 
                     result.star_ratings[flat_idx] =
-                        static_cast<f32>(DifficultyCalculator::calculateStarDiffForHitObjects(star_params));
+                        static_cast<f32>(DiffCalc::calculateStarDiffForHitObjects(star_params));
 
                     ctx.diffobj_cache = std::move(star_params.cachedDiffObjects);
 
@@ -472,7 +475,7 @@ void process_work_item(WorkItem& item, const Sync::stop_token& stoken, WorkerCon
                     const u8 hd_flat_idx = speed_idx * StarPrecalc::NUM_MOD_COMBOS + var.combo_idx[1];
                     diffcalc_data.hidden = true;
                     result.star_ratings[hd_flat_idx] =
-                        static_cast<f32>(DifficultyCalculator::recomputeStarRating(raw_diff, diffcalc_data));
+                        static_cast<f32>(DiffCalc::recomputeStarRating(raw_diff, diffcalc_data));
                 }
 
                 ctx.diffobj_cache->clear();
@@ -530,7 +533,7 @@ void worker_fn(i32 thread_index, const Sync::stop_token& coord_stoken) {
     }
 
     WorkerContext ctx;
-    ctx.diffobj_cache = std::make_unique<std::vector<DifficultyCalculator::DiffObject>>();
+    ctx.diffobj_cache = std::make_unique<std::vector<DiffCalc::DiffObject>>();
 
     const u32 queue_size = work_queue.size();
     while(!coord_stoken.stop_requested()) {

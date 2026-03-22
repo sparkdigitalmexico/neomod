@@ -199,7 +199,7 @@ f32 Mods::get_naive_od(const DatabaseBeatmap *map) const {
 }
 
 f64 Mods::get_scorev1_multiplier() const {
-    return DifficultyCalculator::getScoreV1ScoreMultiplier(this->flags, this->speed);
+    return neomod::DiffCalc::getScoreV1ScoreMultiplier(this->flags, this->speed);
 }
 
 Mods Mods::from_cvars() {

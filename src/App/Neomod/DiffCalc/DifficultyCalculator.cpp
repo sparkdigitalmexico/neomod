@@ -39,14 +39,97 @@
 
 #endif
 
-namespace DiffCalc {
+namespace neomod::DiffCalc {
 // NOTE: bumped version from 20251007 because of a bug in the first implementation with mcosu-imported scores
 const u32 PP_ALGORITHM_VERSION{20251008};
-}  // namespace DiffCalc
 
-using namespace neomod;
-using SLIDER_SCORING_TIME = DifficultyHitObject::SLIDER_SCORING_TIME;
-using SliderCurve = DifficultyHitObject::SliderCurve;
+namespace {
+// internal helper utils (forward decls)
+struct ScoreData {
+    ModFlags modFlags;
+    f64 accuracy;
+    i32 countGreat;
+    i32 countOk;
+    i32 countMeh;
+    i32 countMiss;
+    i32 totalHits;
+    i32 totalSuccessfulHits;
+    i32 beatmapMaxCombo;
+    i32 scoreMaxCombo;
+    i32 amountHitObjectsWithAccuracy;
+    u32 legacyTotalScore;
+};
+
+static f64 calculateTotalStarsFromSkills(f64 aim, f64 speed);
+static void calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &beatmapData,
+                                       i32 upToObjectIndex);
+static f64 calculateScoreV1SpinnerScore(f64 spinnerDuration);
+
+// Skill values calculation
+static f64 computeAimValue(const ScoreData &score, const DifficultyAttributes &attributes, f64 effectiveMissCount);
+static f64 computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attributes, f64 effectiveMissCount,
+                             f64 speedDeviation);
+static f64 computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes);
+
+// High deviation nerf
+static f64 calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes, f64 timescale);
+static f64 calculateDeviation(const DifficultyAttributes &attributes, f64 timescale, f64 relevantCountGreat,
+                              f64 relevantCountOk, f64 relevantCountMeh);
+static f64 calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, f64 speedDeviation);
+
+static f64 calculateEstimatedSliderBreaks(const ScoreData &score, f64 topWeightedSliderFactor, f64 effectiveMissCount);
+
+// ScoreV1 misscount estimation
+static f64 calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score, f64 timescale,
+                                        bool isMcOsuImported);
+static f64 calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, f64 combo,
+                                 f64 relevantComboPerObject, f64 scoreV1Multiplier);
+static f64 calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score);
+static f64 calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes, const ScoreData &score);
+
+static f64 calculateDifficultyRating(f64 difficultyValue);
+static f64 calculateAimVisibilityFactor(f64 approachRate, f64 mechanicalDifficultyRating);
+static f64 calculateSpeedVisibilityFactor(f64 approachRate, f64 mechanicalDifficultyRating);
+static f64 calculateVisibilityBonus(f64 approachRate, f64 visibilityFactor = 1.0, f64 sliderFactor = 1.0);
+static f64 computeAimRating(f64 aimDifficultyValue, u32 totalHits, f64 approachRate, f64 overallDifficulty,
+                            f64 mechanicalDifficultyRating, f64 sliderFactor, const BeatmapDiffcalcData &beatmapData);
+static f64 computeSpeedRating(f64 speedDifficultyValue, u32 totalHits, f64 approachRate, f64 overallDifficulty,
+                              f64 mechanicalDifficultyRating, const BeatmapDiffcalcData &beatmapData);
+static f64 calculateStarRating(f64 basePerformance);
+static f64 calculateMechanicalDifficultyRating(f64 aimDifficultyValue, f64 speedDifficultyValue);
+
+// helper functions
+static f64 erf(f64 x);
+static f64 erfInv(f64 x);
+static forceinline INLINE_BODY f64 reverseLerp(f64 x, f64 start, f64 end) {
+    return std::clamp<f64>((x - start) / (end - start), 0.0, 1.0);
+};
+static forceinline INLINE_BODY f64 smoothstep(f64 x, f64 start, f64 end) {
+    x = reverseLerp(x, start, end);
+    return x * x * (3.0 - 2.0 * x);
+};
+static forceinline INLINE_BODY f64 smootherStep(f64 x, f64 start, f64 end) {
+    x = reverseLerp(x, start, end);
+    return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+};
+static forceinline INLINE_BODY f64 smoothstepBellCurve(f64 x, f64 mean = 0.5, f64 width = 0.5) {
+    x -= mean;
+    x = x > 0 ? (width - x) : (width + x);
+    return smoothstep(x, 0, width);
+};
+static forceinline INLINE_BODY f64 logistic(f64 x, f64 midpointOffset, f64 multiplier, f64 maxValue = 1.0) {
+    return maxValue / (1 + std::exp(multiplier * (midpointOffset - x)));
+}
+static forceinline INLINE_BODY f64 strainDifficultyToPerformance(f64 difficulty) {
+    return std::pow(5.0 * std::max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100000.0;
+}
+
+// Adjust hitwindow to match lazer
+static forceinline INLINE_BODY f64 adjustHitWindow(f64 hitwindow) { return std::floor(hitwindow) - 0.5; }
+
+// Lazer formula for adjusting OD by clock rate
+static f64 adjustOverallDifficultyByClockRate(f64 OD, f64 clockRate);
+}  // namespace
 
 DifficultyHitObject::DifficultyHitObject(TYPE type, vec2 pos, i32 time) : DifficultyHitObject(type, pos, time, time) {}
 
@@ -190,7 +273,7 @@ f32 DifficultyHitObject::getT(i32 pos, bool raw) const {
     }
 }
 
-f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params) {
+f64 calculateStarDiffForHitObjects(StarCalcParams &params) {
     // NOTE: upToObjectIndex is applied way below, during the construction of the 'dobjects'
 
     // NOTE: osu always returns 0 stars for beatmaps with only 1 object, except if that object is a slider
@@ -318,7 +401,7 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
 
     // initialize if not given
     if(!params.cachedDiffObjects) {
-        params.cachedDiffObjects = std::make_unique<std::vector<DifficultyCalculator::DiffObject>>();
+        params.cachedDiffObjects = std::make_unique<std::vector<DiffObject>>();
     }
 
     auto &cachedDiffObjsRef = *params.cachedDiffObjects;
@@ -503,7 +586,7 @@ f64 DifficultyCalculator::calculateStarDiffForHitObjects(StarCalcParams &params)
     return calculateTotalStarsFromSkills(aim, speed);
 }
 
-f64 DifficultyCalculator::recomputeStarRating(const RawDifficultyValues &raw, const BeatmapDiffcalcData &beatmapData) {
+f64 recomputeStarRating(const RawDifficultyValues &raw, const BeatmapDiffcalcData &beatmapData) {
     const u32 numDiffObjects = beatmapData.sortedHitObjects.size();
     const f64 sliderFactor =
         raw.aim > 0.0 ? calculateDifficultyRating(raw.aimNoSliders) / calculateDifficultyRating(raw.aim) : 1.0;
@@ -520,113 +603,7 @@ f64 DifficultyCalculator::recomputeStarRating(const RawDifficultyValues &raw, co
     return calculateTotalStarsFromSkills(aim, speed);
 }
 
-void DifficultyCalculator::calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &b,
-                                                      i32 upToObjectIndex) {
-    // Nested score per object
-    constexpr f64 bigTickScore = 30;
-    constexpr f64 smallTickScore = 10;
-
-    f64 sliderScore = 0;
-    f64 spinnerScore = 0;
-
-    if(upToObjectIndex < 1) upToObjectIndex = (i32)b.sortedHitObjects.size();
-
-    for(i32 i = 0; i < upToObjectIndex; i++) {
-        const auto &hitObject = b.sortedHitObjects[i];
-
-        if(hitObject.type == DifficultyHitObject::TYPE::SLIDER) {
-            // 1 for head, 1 for tail
-            i32 amountOfBigTicks = 2;
-
-            // Add slider repeats
-            amountOfBigTicks += hitObject.repeats - 1;
-
-            i32 amountOfSmallTicks = 0;
-
-            // Slider ticks
-            for(const auto &nestedHitObject : hitObject.scoringTimes) {
-                if(nestedHitObject.type == SLIDER_SCORING_TIME::TYPE::TICK) amountOfSmallTicks++;
-            }
-
-            sliderScore += amountOfBigTicks * bigTickScore + amountOfSmallTicks * smallTickScore;
-        } else if(hitObject.type == DifficultyHitObject::TYPE::SPINNER)
-            spinnerScore += calculateScoreV1SpinnerScore(hitObject.baseEndTime - hitObject.baseTime);
-    }
-
-    attributes.NestedScorePerObject = (sliderScore + spinnerScore) / (f64)std::max(upToObjectIndex, 1);
-
-    // Legacy score base multiplier
-    const u32 breakTimeMS = b.breakDuration;
-    const u32 drainLength = std::max(b.playableLength - std::min(breakTimeMS, b.playableLength), (u32)1000) / 1000;
-    attributes.LegacyScoreBaseMultiplier = (i32)std::round(
-        (b.CS + b.HP + b.OD + std::clamp<f32>((f32)b.sortedHitObjects.size() / (f32)drainLength * 8.0f, 0.0f, 16.0f)) /
-        38.0f * 5.0f);
-
-    // Maximum combo score
-    const f64 score_increase = 300.;
-    u32 combo = 0;
-    attributes.MaximumLegacyComboScore = 0;
-
-    for(i32 i = 0; i < upToObjectIndex; i++) {
-        const auto &hitObject = b.sortedHitObjects[i];
-
-        if(hitObject.type == DifficultyHitObject::TYPE::SLIDER) {
-            // Increase combo for each nested object
-            combo += hitObject.scoringTimes.size();
-
-            // For sliders we need to increase combo BEFORE giving score
-            combo++;
-        }
-
-        if(combo > 0) {
-            attributes.MaximumLegacyComboScore +=
-                (u32)(combo * (score_increase / 25. * attributes.LegacyScoreBaseMultiplier));
-        }
-
-        // We have already increased combo for slider
-        if(hitObject.type != DifficultyHitObject::TYPE::SLIDER) combo++;
-    }
-}
-
-f64 DifficultyCalculator::calculateScoreV1SpinnerScore(f64 spinnerDuration) {
-    const i32 spin_score = 100;
-    const i32 bonus_spin_score = 1000;
-
-    // The spinner object applies a lenience because gameplay mechanics differ from osu-stable.
-    // We'll redo the calculations to match osu-stable here...
-    const f64 maximum_rotations_per_second = 477.0 / 60;
-
-    // Normally, this value depends on the final overall difficulty. For simplicity, we'll only consider the worst case that maximises bonus score.
-    // As we're primarily concerned with computing the maximum theoretical final score,
-    // this will have the final effect of slightly underestimating bonus score achieved on stable when converting from score V1.
-    const f64 minimum_rotations_per_second = 3.0;
-
-    f64 secondsDuration = spinnerDuration / 1000.0;
-
-    // The total amount of half spins possible for the entire spinner.
-    i32 totalHalfSpinsPossible = (i32)(secondsDuration * maximum_rotations_per_second * 2);
-    // The amount of half spins that are required to successfully complete the spinner (i.e. get a 300).
-    i32 halfSpinsRequiredForCompletion = (i32)(secondsDuration * minimum_rotations_per_second);
-    // To be able to receive bonus poi32s, the spinner must be rotated another 1.5 times.
-    i32 halfSpinsRequiredBeforeBonus = halfSpinsRequiredForCompletion + 3;
-
-    i32 score = 0;
-
-    i32 fullSpins = (totalHalfSpinsPossible / 2);
-
-    // Normal spin score
-    score += spin_score * fullSpins;
-
-    i32 bonusSpins = (totalHalfSpinsPossible - halfSpinsRequiredBeforeBonus) / 2;
-
-    // Reduce amount of bonus spins because we want to represent the more average case, rather than the best one.
-    bonusSpins = std::max(0, bonusSpins - fullSpins / 2);
-    score += bonus_spin_score * bonusSpins;
-
-    return score;
-}
-
-f64 DifficultyCalculator::calculatePPv2(PPv2CalcParams &cpar) {
+f64 calculatePPv2(PPv2CalcParams &cpar) {
     const bool isMcOsuImported = cpar.isMcOsuImported;
 
     // NOTE: depends on active mods + OD + AR
@@ -719,349 +696,7 @@ f64 DifficultyCalculator::calculatePPv2(PPv2CalcParams &cpar) {
     return totalValue;
 }
 
-f64 DifficultyCalculator::calculateTotalStarsFromSkills(f64 aim, f64 speed) {
-    f64 baseAimPerformance = strainDifficultyToPerformance(aim);
-    f64 baseSpeedPerformance = strainDifficultyToPerformance(speed);
-    f64 basePerformance = std::pow(std::pow(baseAimPerformance, 1.1) + std::pow(baseSpeedPerformance, 1.1), 1.0 / 1.1);
-    return calculateStarRating(basePerformance);
-}
-
-// https://github.com/ppy/osu-performance/blob/master/src/performance/osu/OsuScore.cpp
-// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
-
-f64 DifficultyCalculator::computeAimValue(const ScoreData &score,
-                                          const DifficultyCalculator::DifficultyAttributes &attributes,
-                                          f64 effectiveMissCount) {
-    if(flags::has<ModFlags::Autopilot>(score.modFlags)) return 0.0;
-
-    f64 aimDifficulty = attributes.AimDifficulty;
-
-    // McOsu doesn't track dropped slider ends, so the ScoreV2/lazer case can't be handled here
-    if(attributes.SliderCount > 0 && attributes.AimDifficultSliderCount > 0) {
-        i32 maximumPossibleDroppedSliders = score.countOk + score.countMeh + score.countMiss;
-        f64 estimateImproperlyFollowedDifficultSliders =
-            std::clamp<f64>((f64)std::min(maximumPossibleDroppedSliders, score.beatmapMaxCombo - score.scoreMaxCombo),
-                            0.0, attributes.AimDifficultSliderCount);
-        f64 sliderNerfFactor =
-            (1.0 - attributes.SliderFactor) *
-                std::pow(1.0 - estimateImproperlyFollowedDifficultSliders / attributes.AimDifficultSliderCount, 3.0) +
-            attributes.SliderFactor;
-        aimDifficulty *= sliderNerfFactor;
-    }
-
-    f64 aimValue = strainDifficultyToPerformance(aimDifficulty);
-
-    // length bonus
-    f64 lengthBonus = 0.95 + 0.4 * std::min(1.0, ((f64)score.totalHits / 2000.0)) +
-                      (score.totalHits > 2000 ? std::log10(((f64)score.totalHits / 2000.0)) * 0.5 : 0.0);
-    aimValue *= lengthBonus;
-
-    // miss penalty
-    // see https://github.com/ppy/osu/pull/16280/
-    if(effectiveMissCount > 0 && score.totalHits > 0) {
-        f64 aimEstimatedSliderBreaks =
-            calculateEstimatedSliderBreaks(score, attributes.AimTopWeightedSliderFactor, effectiveMissCount);
-        f64 relevantMissCount = std::min(effectiveMissCount + aimEstimatedSliderBreaks,
-                                         (f64)(score.countOk + score.countMeh + score.countMiss));
-        aimValue *=
-            0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.AimDifficultStrainCount), 0.94))) + 1.0);
-    }
-
-    // scale aim with acc
-    aimValue *= score.accuracy;
-
-    return aimValue;
-}
-
-f64 DifficultyCalculator::computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attributes,
-                                            f64 effectiveMissCount, f64 speedDeviation) {
-    if((flags::has<ModFlags::Relax>(score.modFlags)) || std::isnan(speedDeviation)) return 0.0;
-
-    f64 speedValue = strainDifficultyToPerformance(attributes.SpeedDifficulty);
-
-    // length bonus
-    f64 lengthBonus = 0.95 + 0.4 * std::min(1.0, ((f64)score.totalHits / 2000.0)) +
-                      (score.totalHits > 2000 ? std::log10(((f64)score.totalHits / 2000.0)) * 0.5 : 0.0);
-    speedValue *= lengthBonus;
-
-    // miss penalty
-    // see https://github.com/ppy/osu/pull/16280/
-    if(effectiveMissCount > 0) {
-        f64 speedEstimatedSliderBreaks =
-            calculateEstimatedSliderBreaks(score, attributes.SpeedTopWeightedSliderFactor, effectiveMissCount);
-        f64 relevantMissCount = std::min(effectiveMissCount + speedEstimatedSliderBreaks,
-                                         (f64)(score.countOk + score.countMeh + score.countMiss));
-        speedValue *=
-            0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.SpeedDifficultStrainCount), 0.94))) + 1.0);
-    }
-
-    f64 speedHighDeviationMultiplier = calculateSpeedHighDeviationNerf(attributes, speedDeviation);
-    speedValue *= speedHighDeviationMultiplier;
-
-    // "Calculate accuracy assuming the worst case scenario"
-    f64 relevantTotalDiff = std::max(0.0, score.totalHits - attributes.SpeedNoteCount);
-    f64 relevantCountGreat = std::max(0.0, score.countGreat - relevantTotalDiff);
-    f64 relevantCountOk = std::max(0.0, score.countOk - std::max(0.0, relevantTotalDiff - score.countGreat));
-    f64 relevantCountMeh =
-        std::max(0.0, score.countMeh - std::max(0.0, relevantTotalDiff - score.countGreat - score.countOk));
-    f64 relevantAccuracy =
-        attributes.SpeedNoteCount == 0
-            ? 0
-            : (relevantCountGreat * 6.0 + relevantCountOk * 2.0 + relevantCountMeh) / (attributes.SpeedNoteCount * 6.0);
-
-    // see https://github.com/ppy/osu-performance/pull/128/
-    // Scale the speed value with accuracy and OD
-    speedValue *= std::pow((score.accuracy + relevantAccuracy) / 2.0, (14.5 - attributes.OverallDifficulty) / 2);
-
-    // singletap buff (XXX: might be too weak)
-    if(flags::has<ModFlags::Singletap>(score.modFlags)) {
-        speedValue *= 1.25;
-    }
-
-    // no keylock nerf (XXX: might be too harsh)
-    if(flags::has<ModFlags::NoKeylock>(score.modFlags)) {
-        speedValue *= 0.5;
-    }
-
-    return speedValue;
-}
-
-f64 DifficultyCalculator::computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes) {
-    if(flags::has<ModFlags::Relax>(score.modFlags)) return 0.0;
-
-    f64 betterAccuracyPercentage =
-        score.amountHitObjectsWithAccuracy > 0
-            ? ((f64)(score.countGreat - std::max(score.totalHits - score.amountHitObjectsWithAccuracy, 0)) * 6.0 +
-               (score.countOk * 2.0) + score.countMeh) /
-                  (f64)(score.amountHitObjectsWithAccuracy * 6.0)
-            : 0.0;
-
-    // it's possible to reach negative accuracy, cap at zero
-    if(betterAccuracyPercentage < 0.0) betterAccuracyPercentage = 0.0;
-
-    // arbitrary values tom crafted out of trial and error
-    f64 accuracyValue =
-        std::pow(1.52163, attributes.OverallDifficulty) * std::pow(betterAccuracyPercentage, 24.0) * 2.83;
-
-    // length bonus
-    accuracyValue *= std::min(1.15, std::pow(score.amountHitObjectsWithAccuracy / 1000.0, 0.3));
-
-    // hidden bonus
-    if(flags::has<ModFlags::Hidden>(score.modFlags)) {
-        // Decrease bonus for AR > 10
-        accuracyValue *= 1.0 + 0.08 * reverseLerp(attributes.ApproachRate, 11.5, 10.0);
-    }
-
-    // flashlight bonus
-    if(flags::has<ModFlags::Flashlight>(score.modFlags)) accuracyValue *= 1.02;
-
-    return accuracyValue;
-}
-
-f64 DifficultyCalculator::calculateEstimatedSliderBreaks(const ScoreData &score, f64 topWeightedSliderFactor,
-                                                         f64 effectiveMissCount) {
-    if(score.countOk == 0 || score.beatmapMaxCombo < 1) return 0.0;
-
-    f64 missedComboPercent = 1.0 - (f64)score.scoreMaxCombo / score.beatmapMaxCombo;
-    f64 estimatedSliderBreaks = std::min((f64)score.countOk, effectiveMissCount * topWeightedSliderFactor);
-
-    // Scores with more Oks are more likely to have slider breaks.
-    f64 okAdjustment = ((score.countOk - estimatedSliderBreaks) + 0.5) / (f64)score.countOk;
-
-    // There is a low probability of extra slider breaks on effective miss counts close to 1, as score based calculations are good at indicating if only a single break occurred.
-    estimatedSliderBreaks *= smoothstep(effectiveMissCount, 1.0, 2.0);
-
-    return estimatedSliderBreaks * okAdjustment * logistic(missedComboPercent, 0.33, 15.0);
-}
-
-f64 DifficultyCalculator::calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes,
-                                                  f64 timescale) {
-    if(score.countGreat + score.countOk + score.countMeh == 0) return std::numeric_limits<f64>::quiet_NaN();
-
-    f64 speedNoteCount = attributes.SpeedNoteCount;
-    speedNoteCount += (score.totalHits - attributes.SpeedNoteCount) * 0.1;
-
-    f64 relevantCountMiss = std::min((f64)score.countMiss, speedNoteCount);
-    f64 relevantCountMeh = std::min((f64)score.countMeh, speedNoteCount - relevantCountMiss);
-    f64 relevantCountOk = std::min((f64)score.countOk, speedNoteCount - relevantCountMiss - relevantCountMeh);
-    f64 relevantCountGreat = std::max(0.0, speedNoteCount - relevantCountMiss - relevantCountMeh - relevantCountOk);
-
-    return calculateDeviation(attributes, timescale, relevantCountGreat, relevantCountOk, relevantCountMeh);
-}
-
-f64 DifficultyCalculator::calculateDeviation(const DifficultyAttributes &attributes, f64 timescale,
-                                             f64 relevantCountGreat, f64 relevantCountOk, f64 relevantCountMeh) {
-    if(relevantCountGreat + relevantCountOk + relevantCountMeh <= 0.0) return std::numeric_limits<f64>::quiet_NaN();
-
-    const f64 greatHitWindow = adjustHitWindow(GameRules::odTo300HitWindowMS(attributes.OverallDifficulty)) / timescale;
-    const f64 okHitWindow = adjustHitWindow(GameRules::odTo100HitWindowMS(attributes.OverallDifficulty)) / timescale;
-    const f64 mehHitWindow = adjustHitWindow(GameRules::odTo50HitWindowMS(attributes.OverallDifficulty)) / timescale;
-
-    static constexpr const f64 z = 2.32634787404;
-    static constexpr const f64 sqrt2 = std::numbers::sqrt2;
-    static constexpr const f64 sqrt3 = std::numbers::sqrt3;
-    static constexpr const f64 sqrt2OverPi = 0.7978845608028654;
-
-    f64 n = std::max(1.0, relevantCountGreat + relevantCountOk);
-    f64 p = relevantCountGreat / n;
-    f64 pLowerBound =
-        std::min(p, (n * p + z * z / 2.0) / (n + z * z) - z / (n + z * z) * sqrt(n * p * (1.0 - p) + z * z / 4.0));
-
-    f64 deviation;
-
-    if(pLowerBound > 0.01) {
-        deviation = greatHitWindow / (sqrt2 * erfInv(pLowerBound));
-        f64 okHitWindowTailAmount = sqrt2OverPi * okHitWindow *
-                                    std::exp(-0.5 * std::pow(okHitWindow / deviation, 2.0)) /
-                                    (deviation * erf(okHitWindow / (sqrt2 * deviation)));
-        deviation *= std::sqrt(1.0 - okHitWindowTailAmount);
-    } else
-        deviation = okHitWindow / sqrt3;
-
-    f64 mehVariance = (mehHitWindow * mehHitWindow + okHitWindow * mehHitWindow + okHitWindow * okHitWindow) / 3.0;
-    return std::sqrt(
-        ((relevantCountGreat + relevantCountOk) * std::pow(deviation, 2.0) + relevantCountMeh * mehVariance) /
-        (relevantCountGreat + relevantCountOk + relevantCountMeh));
-}
-
-f64 DifficultyCalculator::calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, f64 speedDeviation) {
-    if(std::isnan(speedDeviation)) return 0.0;
-
-    f64 speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedDifficulty / 0.0675) - 4.0, 3.0) / 100000.0;
-    f64 excessSpeedDifficultyCutoff = 100.0 + 220.0 * std::pow(22.0 / speedDeviation, 6.5);
-    if(speedValue <= excessSpeedDifficultyCutoff) return 1.0;
-
-    const f64 scale = 50.0;
-    f64 adjustedSpeedValue = scale * (std::log((speedValue - excessSpeedDifficultyCutoff) / scale + 1.0) +
-                                      excessSpeedDifficultyCutoff / scale);
-    f64 lerpVal = 1.0 - std::clamp<f64>((speedDeviation - 22.0) / (27.0 - 22.0), 0.0, 1.0);
-    adjustedSpeedValue = std::lerp(adjustedSpeedValue, speedValue, lerpVal);
-
-    return adjustedSpeedValue / speedValue;
-}
-
-f64 DifficultyCalculator::calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score,
-                                                       f64 timescale, bool isMcOsuImported) {
-    if(score.beatmapMaxCombo == 0) return 0;
-
-    const bool scoreV2 = flags::has<ModFlags::ScoreV2>(score.modFlags);
-
-    f64 modMultiplier = getScoreV1ScoreMultiplier(score.modFlags, timescale, isMcOsuImported);
-    f64 scoreV1Multiplier = attributes.LegacyScoreBaseMultiplier * modMultiplier;
-    f64 relevantComboPerObject = calculateRelevantScoreComboPerObject(attributes, score);
-
-    f64 maximumMissCount = calculateMaximumComboBasedMissCount(attributes, score);
-
-    f64 scoreObtainedDuringMaxCombo =
-        calculateScoreAtCombo(attributes, score, score.scoreMaxCombo, relevantComboPerObject, scoreV1Multiplier);
-    if(scoreV2) scoreObtainedDuringMaxCombo *= 700000. / attributes.MaximumLegacyComboScore;
-
-    f64 scoreLegacyTotalScore =
-        score.legacyTotalScore - (scoreV2 ? 300000. * std::pow(score.accuracy, 10) * modMultiplier : 0);
-    f64 remainingScore = scoreLegacyTotalScore - scoreObtainedDuringMaxCombo;
-
-    if(remainingScore <= 0) return maximumMissCount;
-
-    f64 remainingCombo = score.beatmapMaxCombo - score.scoreMaxCombo;
-    f64 expectedRemainingScore =
-        calculateScoreAtCombo(attributes, score, remainingCombo, relevantComboPerObject, scoreV1Multiplier);
-    if(scoreV2) expectedRemainingScore *= 700000. / attributes.MaximumLegacyComboScore;
-
-    f64 scoreBasedMissCount = expectedRemainingScore / remainingScore;
-
-    // If there's less then one miss detected - let combo-based miss count decide if this is FC or not
-    scoreBasedMissCount = std::max(scoreBasedMissCount, 1.0);
-
-    // Cap result by very harsh version of combo-based miss count
-    return std::min(scoreBasedMissCount, maximumMissCount);
-}
-
-f64 DifficultyCalculator::calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score,
-                                                f64 combo, f64 relevantComboPerObject, f64 scoreV1Multiplier) {
-    i32 countGreat = score.countGreat;
-    i32 countOk = score.countOk;
-    i32 countMeh = score.countMeh;
-    i32 countMiss = score.countMiss;
-
-    i32 totalHits = countGreat + countOk + countMeh + countMiss;
-
-    f64 estimatedObjects = (combo / relevantComboPerObject) - 1.0;
-
-    // The combo portion of ScoreV1 follows arithmetic progression
-    // Therefore, we calculate the combo portion of score using the combo per object and our current combo.
-    f64 comboScore = relevantComboPerObject > 0.0
-                         ? (2.0 * (relevantComboPerObject - 1.0) + (estimatedObjects - 1.0) * relevantComboPerObject) *
-                               estimatedObjects / 2.0
-                         : 0.0;
-
-    // We then apply the accuracy and ScoreV1 multipliers to the resulting score.
-    comboScore *= 300.0 / 25.0 * scoreV1Multiplier;
-
-    // For scoreV2 we need only combo score not scaled by accuracy.
-    // This is technically incorrect because scoreV2 is using different formula,
-    // but we have to sacrifice estimation precision, since it's not as important here.
-    const bool scoreV2 = flags::has<ModFlags::ScoreV2>(score.modFlags);
-    if(scoreV2) return comboScore;
-
-    f64 objectsHit = (totalHits - countMiss) * combo / score.beatmapMaxCombo;
-
-    // Score also has a non-combo portion we need to create the final score value.
-    f64 nonComboScore = (300.0 + attributes.NestedScorePerObject) * objectsHit;
-
-    return (comboScore + nonComboScore) * score.accuracy;
-}
-
-f64 DifficultyCalculator::calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes,
-                                                               const ScoreData &score) {
-    f64 comboScore = attributes.MaximumLegacyComboScore;
-
-    // We then reverse apply the ScoreV1 multipliers to get the raw value.
-    comboScore /= 300.0 / 25.0 * attributes.LegacyScoreBaseMultiplier;
-
-    // Reverse the arithmetic progression to work out the amount of combo per object based on the score.
-    f64 result = (f64)((score.beatmapMaxCombo - 2) * score.beatmapMaxCombo);
-    result /= std::max((f64)score.beatmapMaxCombo + 2.0 * (comboScore - 1.0), 1.0);
-
-    return result;
-}
-
-f64 DifficultyCalculator::calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes,
-                                                              const ScoreData &score) {
-    i32 scoreMissCount = score.countMiss;
-
-    if(attributes.SliderCount <= 0) return scoreMissCount;
-
-    i32 countOk = score.countOk;
-    i32 countMeh = score.countMeh;
-
-    i32 totalImperfectHits = countOk + countMeh + scoreMissCount;
-
-    f64 missCount = 0;
-
-    // Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
-    // In classic scores we can't know the amount of dropped sliders so we estimate to 10% of all sliders on the map
-    f64 fullComboThreshold = score.beatmapMaxCombo - 0.1 * attributes.SliderCount;
-
-    if(score.scoreMaxCombo < fullComboThreshold)
-        missCount = std::pow(fullComboThreshold / std::max(1, score.scoreMaxCombo), 2.5);
-
-    // In classic scores there can't be more misses than a sum of all non-perfect judgements
-    missCount = std::min(missCount, (f64)totalImperfectHits);
-
-    // Every slider has *at least* 2 combo attributed in classic mechanics.
-    // If they broke on a slider with a tick, then this still works since they would have lost at least 2 combo (the tick and the end)
-    // Using this as a max means a score that loses 1 combo on a map can't possibly have been a slider break.
-    // It must have been a slider end.
-    i32 maxPossibleSliderBreaks = std::min(attributes.SliderCount, (score.beatmapMaxCombo - score.scoreMaxCombo) / 2);
-
-    f64 sliderBreaks = missCount - scoreMissCount;
-
-    if(sliderBreaks > maxPossibleSliderBreaks) missCount = scoreMissCount + maxPossibleSliderBreaks;
-
-    return missCount;
-}
-
-f64 DifficultyCalculator::getScoreV1ScoreMultiplier(ModFlags flags, f64 speedOverride, bool mcosu) {
+f64 getScoreV1ScoreMultiplier(ModFlags flags, f64 speedOverride, bool mcosu) {
     // this has to match how the score's scorev1 was actually calculated
     // neomod uses a custom curve for custom speeds, mcosu uses a flat 1.12/0.30 for "DT" (> 1.0) or "HT" (<1.0) speeds
     f64 multiplier = 1.0;
@@ -1106,204 +741,59 @@ f64 DifficultyCalculator::getScoreV1ScoreMultiplier(ModFlags flags, f64 speedOve
     return multiplier;
 }
 
-// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuRatingCalculator.cs
-
-f64 DifficultyCalculator::calculateDifficultyRating(f64 difficultyValue) {
-    const f64 difficulty_multiplier = 0.0675;
-    return std::sqrt(difficultyValue) * difficulty_multiplier;
+std::string PPv2CalcParamsToString(const PPv2CalcParams &pars) {
+    const auto &attrs = pars.attributes;
+    return FORMAT_STRING_(R"(pars.attrs.AimDifficulty: {}
+attrs.AimDifficultSliderCount: {}
+attrs.SpeedDifficulty: {}
+attrs.SpeedNoteCount: {}
+attrs.SliderFactor: {}
+attrs.AimTopWeightedSliderFactor: {}
+attrs.SpeedTopWeightedSliderFactor: {}
+attrs.AimDifficultStrainCount: {}
+attrs.SpeedDifficultStrainCount: {}
+attrs.NestedScorePerObject: {}
+attrs.LegacyScoreBaseMultiplier: {}
+attrs.SliderCount: {}
+attrs.MaximumLegacyComboScore: {}
+attrs.ApproachRate: {}
+attrs.OverallDifficulty: {}
+modFlags: {:016x}
+timescale: {}
+ar: {}
+od: {}
+numHitObjects: {}
+numCircles: {}
+numSliders: {}
+numSpinners: {}
+maxPossibleCombo: {}
+combo: {}
+misses: {}
+c300: {}
+c100: {}
+c50: {}
+legacyTotalScore: {})",
+                          attrs.AimDifficulty, attrs.AimDifficultSliderCount, attrs.SpeedDifficulty,
+                          attrs.SpeedNoteCount, attrs.SliderFactor, attrs.AimTopWeightedSliderFactor,
+                          attrs.SpeedTopWeightedSliderFactor, attrs.AimDifficultStrainCount,
+                          attrs.SpeedDifficultStrainCount, attrs.NestedScorePerObject, attrs.LegacyScoreBaseMultiplier,
+                          attrs.SliderCount, attrs.MaximumLegacyComboScore, attrs.ApproachRate, attrs.OverallDifficulty,
+                          (u64)pars.modFlags, pars.timescale, pars.ar, pars.od, pars.numHitObjects, pars.numCircles,
+                          pars.numSliders, pars.numSpinners, pars.maxPossibleCombo, pars.combo, pars.misses, pars.c300,
+                          pars.c100, pars.c50, pars.legacyTotalScore);
 }
 
-f64 DifficultyCalculator::calculateAimVisibilityFactor(f64 approachRate, f64 mechanicalDifficultyRating) {
-    const f64 ar_factor_end_point = 11.5;
+// Implementation details below
 
-    f64 mechanicalDifficultyFactor = reverseLerp(mechanicalDifficultyRating, 5.0, 10.0);
-    f64 arFactorStartingPoint = std::lerp(9., 10.33, mechanicalDifficultyFactor);
-
-    return reverseLerp(approachRate, ar_factor_end_point, arFactorStartingPoint);
-}
-
-f64 DifficultyCalculator::calculateSpeedVisibilityFactor(f64 approachRate, f64 mechanicalDifficultyRating) {
-    const f64 ar_factor_end_point = 11.5;
-
-    f64 mechanicalDifficultyFactor = reverseLerp(mechanicalDifficultyRating, 5.0, 10.0);
-    f64 arFactorStartingPoint = std::lerp(10., 10.33, mechanicalDifficultyFactor);
-
-    return reverseLerp(approachRate, ar_factor_end_point, arFactorStartingPoint);
-}
-
-f64 DifficultyCalculator::calculateVisibilityBonus(f64 approachRate, f64 visibilityFactor, f64 sliderFactor) {
-    // WARNING: this value is equal to true for Traceable (Lazer mod) and the lazer-specific HD setting.
-    // So in this case we're always setting it to false
-    bool isAlwaysPartiallyVisible = false;
-
-    f64 readingBonus =
-        (isAlwaysPartiallyVisible ? 0.025 : 0.04) *
-        (12.0 - std::max(std::min(12.0, approachRate), 7.0));  // NOTE: clamped because McOsu allows AR > 12
-
-    readingBonus *= visibilityFactor;
-
-    // We want to reward slideraim on low AR less
-    f64 sliderVisibilityFactor = std::pow(sliderFactor, 3.0);
-
-    // For AR up to 0 - reduce reward for very low ARs when object is visible
-    if(approachRate < 7.0)
-        readingBonus +=
-            (isAlwaysPartiallyVisible ? 0.02 : 0.045) * (7.0 - std::max(approachRate, 0.0)) * sliderVisibilityFactor;
-
-    // Starting from AR0 - cap values so they won't grow to infinity
-    if(approachRate < 0.0)
-        readingBonus +=
-            (isAlwaysPartiallyVisible ? 0.01 : 0.1) * (1.0 - std::max(1.5, approachRate)) * sliderVisibilityFactor;
-
-    return readingBonus;
-}
-
-f64 DifficultyCalculator::computeAimRating(f64 aimDifficultyValue, u32 totalHits, f64 approachRate,
-                                           f64 overallDifficulty, f64 mechanicalDifficultyRating, f64 sliderFactor,
-                                           const BeatmapDiffcalcData &beatmapData) {
-    if(beatmapData.autopilot) return 0;
-
-    f64 aimRating = calculateDifficultyRating(aimDifficultyValue);
-
-    if(beatmapData.touchDevice) aimRating = std::pow(aimRating, 0.8);
-
-    if(beatmapData.relax) aimRating *= 0.9;
-
-    f64 ratingMultiplier = 1.0;
-
-    f64 approachRateLengthBonus = 0.95 + 0.4 * std::min(1.0, totalHits / 2000.0) +
-                                  (totalHits > 2000 ? std::log10(totalHits / 2000.0) * 0.5 : 0.0);
-
-    f64 approachRateFactor = 0.0;
-    if(approachRate > 10.33)
-        approachRateFactor = 0.3 * (approachRate - 10.33);
-    else if(approachRate < 8.0)
-        approachRateFactor = 0.05 * (8.0 - approachRate);
-
-    if(beatmapData.relax) approachRateFactor = 0.0;
-
-    ratingMultiplier += approachRateFactor * approachRateLengthBonus;  // Buff for longer maps with high AR.
-
-    if(beatmapData.hidden) {
-        f64 visibilityFactor = calculateAimVisibilityFactor(approachRate, mechanicalDifficultyRating);
-        ratingMultiplier += calculateVisibilityBonus(approachRate, visibilityFactor, sliderFactor);
-    }
-
-    // It is important to consider accuracy difficulty when scaling with accuracy.
-    ratingMultiplier *= 0.98 + std::pow(std::max(0.0, overallDifficulty), 2.0) / 2500.0;
-
-    return aimRating * std::cbrt(ratingMultiplier);
-}
-
-f64 DifficultyCalculator::computeSpeedRating(f64 speedDifficultyValue, u32 totalHits, f64 approachRate,
-                                             f64 overallDifficulty, f64 mechanicalDifficultyRating,
-                                             const BeatmapDiffcalcData &beatmapData) {
-    if(beatmapData.relax) return 0.0;
-
-    f64 speedRating = calculateDifficultyRating(speedDifficultyValue);
-
-    if(beatmapData.autopilot) speedRating *= 0.5;
-
-    f64 ratingMultiplier = 1.0;
-
-    f64 approachRateLengthBonus = 0.95 + 0.4 * std::min(1.0, totalHits / 2000.0) +
-                                  (totalHits > 2000 ? std::log10(totalHits / 2000.0) * 0.5 : 0.0);
-
-    f64 approachRateFactor = 0.0;
-    if(approachRate > 10.33) approachRateFactor = 0.3 * (approachRate - 10.33);
-
-    if(beatmapData.autopilot) approachRateFactor = 0.0;
-
-    ratingMultiplier += approachRateFactor * approachRateLengthBonus;  // Buff for longer maps with high AR.
-
-    if(beatmapData.hidden) {
-        f64 visibilityFactor = calculateSpeedVisibilityFactor(approachRate, mechanicalDifficultyRating);
-        ratingMultiplier += calculateVisibilityBonus(approachRate, visibilityFactor);
-    }
-
-    ratingMultiplier *= 0.95 + std::pow(std::max(0.0, overallDifficulty), 2.0) / 750.0;
-
-    return speedRating * std::cbrt(ratingMultiplier);
-}
-
-// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuDifficultyCalculator.cs#L148-L164
-f64 DifficultyCalculator::calculateStarRating(f64 basePerformance) {
-    const f64 star_rating_multiplier = 0.0265;
-
-    if(basePerformance <= 0.00001) return 0.0;
-
-    return std::cbrt(performance_base_multiplier) * star_rating_multiplier *
-           (std::cbrt(100000.0 / std::pow(2.0, 1.0 / 1.1) * basePerformance) + 4.0);
-}
-
-f64 DifficultyCalculator::calculateMechanicalDifficultyRating(f64 aimDifficultyValue, f64 speedDifficultyValue) {
-    f64 aimValue = strainDifficultyToPerformance(calculateDifficultyRating(aimDifficultyValue));
-    f64 speedValue = strainDifficultyToPerformance(calculateDifficultyRating(speedDifficultyValue));
-
-    f64 totalValue = std::pow(std::pow(aimValue, 1.1) + std::pow(speedValue, 1.1), 1.0 / 1.1);
-
-    return calculateStarRating(totalValue);
-}
-
-f64 DifficultyCalculator::adjustOverallDifficultyByClockRate(f64 OD, f64 clockRate) {
-    return (79.5 - (adjustHitWindow(GameRules::odTo300HitWindowMS(OD)) / clockRate)) / 6.0;
-}
-
-f64 DifficultyCalculator::erf(f64 x) {
-    switch(std::fpclassify(x)) {
-        case FP_INFINITE:
-            return (x > 0) ? 1.0 : -1.0;
-        case FP_NAN:
-            return std::numeric_limits<f64>::quiet_NaN();
-        case FP_ZERO:
-            return 0.0;
-        default:
-            break;
-    }
-
-    // Constants for approximation (Abramowitz and Stegun formula 7.1.26)
-    f64 t = 1.0 / (1.0 + 0.3275911 * std::abs(x));
-    f64 tau = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
-
-    f64 erf = 1.0 - tau * std::exp(-x * x);
-
-    return x >= 0 ? erf : -erf;
-}
-
-f64 DifficultyCalculator::erfInv(f64 x) {
-    if(x == 0.0)
-        return 0.0;
-    else if(x >= 1.0)
-        return std::numeric_limits<f64>::infinity();
-    else if(x <= -1.0)
-        return -std::numeric_limits<f64>::infinity();
-
-    static constexpr const f64 a = 0.147;
-    f64 sgn = (x > 0.0) ? 1.0 : (x < 0.0 ? -1.0 : 0.0);
-    x = std::fabs(x);
-
-    f64 ln = std::log(1.0 - x * x);
-    f64 t1 = 2.0 / (PI * a) + ln / 2.0;
-    f64 t2 = ln / a;
-    f64 baseApprox = std::sqrt(t1 * t1 - t2) - t1;
-
-    // Correction reduces max error from -0.005 to -0.00045.
-    f64 c = (x >= 0.85) ? std::pow((x - 0.85) / 0.293, 8.0) : 0.0;
-
-    f64 erfInv = sgn * (std::sqrt(baseApprox) + c);
-    return erfInv;
-}
-
-void DifficultyCalculator::DiffObject::calculate_strains(const DiffObject &prev, const DiffObject *next,
-                                                         f64 hitWindow300, bool autopilotNerf) {
+void DiffObject::calculate_strains(const DiffObject &prev, const DiffObject *next, f64 hitWindow300,
+                                   bool autopilotNerf) {
     calculate_strain(prev, next, hitWindow300, autopilotNerf, Skills::SPEED);
     calculate_strain(prev, next, hitWindow300, autopilotNerf, Skills::AIM_SLIDERS);
     calculate_strain(prev, next, hitWindow300, autopilotNerf, Skills::AIM_NO_SLIDERS);
 }
 
-void DifficultyCalculator::DiffObject::calculate_strain(const DiffObject &prev, const DiffObject *next,
-                                                        f64 hitWindow300, bool autopilotNerf,
-                                                        const Skills::Skill dtype) {
+void DiffObject::calculate_strain(const DiffObject &prev, const DiffObject *next, f64 hitWindow300, bool autopilotNerf,
+                                  const Skills::Skill dtype) {
     const f64 AimMultiplier = 26;
     const f64 SpeedMultiplier = 1.47;
 
@@ -1338,10 +828,9 @@ void DifficultyCalculator::DiffObject::calculate_strain(const DiffObject &prev, 
     strains[dtype] = currentStrain;
 }
 
-f64 DifficultyCalculator::DiffObject::calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects,
-                                                           uSz dobjectCount, IncrementalState *incremental,
-                                                           std::vector<f64> *outStrains,
-                                                           DifficultyAttributes *outAttributes) {
+f64 DiffObject::calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, uSz dobjectCount,
+                                     IncrementalState *incremental, std::vector<f64> *outStrains,
+                                     DifficultyAttributes *outAttributes) {
     // (old) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
     // (new) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/StrainSkill.cs
 
@@ -1620,8 +1109,8 @@ constinit thread_local std::vector<std::pair<RhythmIsland, int>> g_islandCounts{
 }  // namespace
 
 // new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
-f64 DifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev,
-                                                      const DiffObject *next, f64 hitWindow300, bool autopilotNerf) {
+f64 DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next,
+                                f64 hitWindow300, bool autopilotNerf) {
     static constexpr f64 single_spacing_threshold = 125.0;
 
     static constexpr f64 min_speed_bonus = 75.0; /* ~200BPM 1/4 streams */
@@ -1932,8 +1421,7 @@ f64 DifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill diff_t
     return 0.0;
 }
 
-f64 DifficultyCalculator::DiffObject::get_doubletapness(const DifficultyCalculator::DiffObject *next,
-                                                        f64 hitWindow300) const {
+f64 DiffObject::get_doubletapness(const DiffObject *next, f64 hitWindow300) const {
     if(next != nullptr) {
         f64 cur_delta = std::max(1.0, delta_time);
         f64 next_delta = std::max(1, next->ho->time - ho->time);  // NOTE: next delta time isn't initialized yet
@@ -1946,44 +1434,633 @@ f64 DifficultyCalculator::DiffObject::get_doubletapness(const DifficultyCalculat
     return 0.0;
 }
 
-std::string DifficultyCalculator::PPv2CalcParamsToString(const PPv2CalcParams &pars) {
-    const auto &attrs = pars.attributes;
-    return FORMAT_STRING_(R"(pars.attrs.AimDifficulty: {}
-attrs.AimDifficultSliderCount: {}
-attrs.SpeedDifficulty: {}
-attrs.SpeedNoteCount: {}
-attrs.SliderFactor: {}
-attrs.AimTopWeightedSliderFactor: {}
-attrs.SpeedTopWeightedSliderFactor: {}
-attrs.AimDifficultStrainCount: {}
-attrs.SpeedDifficultStrainCount: {}
-attrs.NestedScorePerObject: {}
-attrs.LegacyScoreBaseMultiplier: {}
-attrs.SliderCount: {}
-attrs.MaximumLegacyComboScore: {}
-attrs.ApproachRate: {}
-attrs.OverallDifficulty: {}
-modFlags: {:016x}
-timescale: {}
-ar: {}
-od: {}
-numHitObjects: {}
-numCircles: {}
-numSliders: {}
-numSpinners: {}
-maxPossibleCombo: {}
-combo: {}
-misses: {}
-c300: {}
-c100: {}
-c50: {}
-legacyTotalScore: {})",
-                          attrs.AimDifficulty, attrs.AimDifficultSliderCount, attrs.SpeedDifficulty,
-                          attrs.SpeedNoteCount, attrs.SliderFactor, attrs.AimTopWeightedSliderFactor,
-                          attrs.SpeedTopWeightedSliderFactor, attrs.AimDifficultStrainCount,
-                          attrs.SpeedDifficultStrainCount, attrs.NestedScorePerObject, attrs.LegacyScoreBaseMultiplier,
-                          attrs.SliderCount, attrs.MaximumLegacyComboScore, attrs.ApproachRate, attrs.OverallDifficulty,
-                          (u64)pars.modFlags, pars.timescale, pars.ar, pars.od, pars.numHitObjects, pars.numCircles,
-                          pars.numSliders, pars.numSpinners, pars.maxPossibleCombo, pars.combo, pars.misses, pars.c300,
-                          pars.c100, pars.c50, pars.legacyTotalScore);
+namespace {
+
+void calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &b, i32 upToObjectIndex) {
+    // Nested score per object
+    constexpr f64 bigTickScore = 30;
+    constexpr f64 smallTickScore = 10;
+
+    f64 sliderScore = 0;
+    f64 spinnerScore = 0;
+
+    if(upToObjectIndex < 1) upToObjectIndex = (i32)b.sortedHitObjects.size();
+
+    for(i32 i = 0; i < upToObjectIndex; i++) {
+        const auto &hitObject = b.sortedHitObjects[i];
+
+        if(hitObject.type == DifficultyHitObject::TYPE::SLIDER) {
+            // 1 for head, 1 for tail
+            i32 amountOfBigTicks = 2;
+
+            // Add slider repeats
+            amountOfBigTicks += hitObject.repeats - 1;
+
+            i32 amountOfSmallTicks = 0;
+
+            // Slider ticks
+            for(const auto &nestedHitObject : hitObject.scoringTimes) {
+                if(nestedHitObject.type == SLIDER_SCORING_TIME::TYPE::TICK) amountOfSmallTicks++;
+            }
+
+            sliderScore += amountOfBigTicks * bigTickScore + amountOfSmallTicks * smallTickScore;
+        } else if(hitObject.type == DifficultyHitObject::TYPE::SPINNER)
+            spinnerScore += calculateScoreV1SpinnerScore(hitObject.baseEndTime - hitObject.baseTime);
+    }
+
+    attributes.NestedScorePerObject = (sliderScore + spinnerScore) / (f64)std::max(upToObjectIndex, 1);
+
+    // Legacy score base multiplier
+    const u32 breakTimeMS = b.breakDuration;
+    const u32 drainLength = std::max(b.playableLength - std::min(breakTimeMS, b.playableLength), (u32)1000) / 1000;
+    attributes.LegacyScoreBaseMultiplier = (i32)std::round(
+        (b.CS + b.HP + b.OD + std::clamp<f32>((f32)b.sortedHitObjects.size() / (f32)drainLength * 8.0f, 0.0f, 16.0f)) /
+        38.0f * 5.0f);
+
+    // Maximum combo score
+    const f64 score_increase = 300.;
+    u32 combo = 0;
+    attributes.MaximumLegacyComboScore = 0;
+
+    for(i32 i = 0; i < upToObjectIndex; i++) {
+        const auto &hitObject = b.sortedHitObjects[i];
+
+        if(hitObject.type == DifficultyHitObject::TYPE::SLIDER) {
+            // Increase combo for each nested object
+            combo += hitObject.scoringTimes.size();
+
+            // For sliders we need to increase combo BEFORE giving score
+            combo++;
+        }
+
+        if(combo > 0) {
+            attributes.MaximumLegacyComboScore +=
+                (u32)(combo * (score_increase / 25. * attributes.LegacyScoreBaseMultiplier));
+        }
+
+        // We have already increased combo for slider
+        if(hitObject.type != DifficultyHitObject::TYPE::SLIDER) combo++;
+    }
 }
+
+f64 calculateScoreV1SpinnerScore(f64 spinnerDuration) {
+    const i32 spin_score = 100;
+    const i32 bonus_spin_score = 1000;
+
+    // The spinner object applies a lenience because gameplay mechanics differ from osu-stable.
+    // We'll redo the calculations to match osu-stable here...
+    const f64 maximum_rotations_per_second = 477.0 / 60;
+
+    // Normally, this value depends on the final overall difficulty. For simplicity, we'll only consider the worst case that maximises bonus score.
+    // As we're primarily concerned with computing the maximum theoretical final score,
+    // this will have the final effect of slightly underestimating bonus score achieved on stable when converting from score V1.
+    const f64 minimum_rotations_per_second = 3.0;
+
+    f64 secondsDuration = spinnerDuration / 1000.0;
+
+    // The total amount of half spins possible for the entire spinner.
+    i32 totalHalfSpinsPossible = (i32)(secondsDuration * maximum_rotations_per_second * 2);
+    // The amount of half spins that are required to successfully complete the spinner (i.e. get a 300).
+    i32 halfSpinsRequiredForCompletion = (i32)(secondsDuration * minimum_rotations_per_second);
+    // To be able to receive bonus poi32s, the spinner must be rotated another 1.5 times.
+    i32 halfSpinsRequiredBeforeBonus = halfSpinsRequiredForCompletion + 3;
+
+    i32 score = 0;
+
+    i32 fullSpins = (totalHalfSpinsPossible / 2);
+
+    // Normal spin score
+    score += spin_score * fullSpins;
+
+    i32 bonusSpins = (totalHalfSpinsPossible - halfSpinsRequiredBeforeBonus) / 2;
+
+    // Reduce amount of bonus spins because we want to represent the more average case, rather than the best one.
+    bonusSpins = std::max(0, bonusSpins - fullSpins / 2);
+    score += bonus_spin_score * bonusSpins;
+
+    return score;
+}
+
+f64 calculateTotalStarsFromSkills(f64 aim, f64 speed) {
+    f64 baseAimPerformance = strainDifficultyToPerformance(aim);
+    f64 baseSpeedPerformance = strainDifficultyToPerformance(speed);
+    f64 basePerformance = std::pow(std::pow(baseAimPerformance, 1.1) + std::pow(baseSpeedPerformance, 1.1), 1.0 / 1.1);
+    return calculateStarRating(basePerformance);
+}
+
+// https://github.com/ppy/osu-performance/blob/master/src/performance/osu/OsuScore.cpp
+// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
+
+f64 computeAimValue(const ScoreData &score, const DifficultyAttributes &attributes, f64 effectiveMissCount) {
+    if(flags::has<ModFlags::Autopilot>(score.modFlags)) return 0.0;
+
+    f64 aimDifficulty = attributes.AimDifficulty;
+
+    // McOsu doesn't track dropped slider ends, so the ScoreV2/lazer case can't be handled here
+    if(attributes.SliderCount > 0 && attributes.AimDifficultSliderCount > 0) {
+        i32 maximumPossibleDroppedSliders = score.countOk + score.countMeh + score.countMiss;
+        f64 estimateImproperlyFollowedDifficultSliders =
+            std::clamp<f64>((f64)std::min(maximumPossibleDroppedSliders, score.beatmapMaxCombo - score.scoreMaxCombo),
+                            0.0, attributes.AimDifficultSliderCount);
+        f64 sliderNerfFactor =
+            (1.0 - attributes.SliderFactor) *
+                std::pow(1.0 - estimateImproperlyFollowedDifficultSliders / attributes.AimDifficultSliderCount, 3.0) +
+            attributes.SliderFactor;
+        aimDifficulty *= sliderNerfFactor;
+    }
+
+    f64 aimValue = strainDifficultyToPerformance(aimDifficulty);
+
+    // length bonus
+    f64 lengthBonus = 0.95 + 0.4 * std::min(1.0, ((f64)score.totalHits / 2000.0)) +
+                      (score.totalHits > 2000 ? std::log10(((f64)score.totalHits / 2000.0)) * 0.5 : 0.0);
+    aimValue *= lengthBonus;
+
+    // miss penalty
+    // see https://github.com/ppy/osu/pull/16280/
+    if(effectiveMissCount > 0 && score.totalHits > 0) {
+        f64 aimEstimatedSliderBreaks =
+            calculateEstimatedSliderBreaks(score, attributes.AimTopWeightedSliderFactor, effectiveMissCount);
+        f64 relevantMissCount = std::min(effectiveMissCount + aimEstimatedSliderBreaks,
+                                         (f64)(score.countOk + score.countMeh + score.countMiss));
+        aimValue *=
+            0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.AimDifficultStrainCount), 0.94))) + 1.0);
+    }
+
+    // scale aim with acc
+    aimValue *= score.accuracy;
+
+    return aimValue;
+}
+
+f64 computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attributes, f64 effectiveMissCount,
+                      f64 speedDeviation) {
+    if((flags::has<ModFlags::Relax>(score.modFlags)) || std::isnan(speedDeviation)) return 0.0;
+
+    f64 speedValue = strainDifficultyToPerformance(attributes.SpeedDifficulty);
+
+    // length bonus
+    f64 lengthBonus = 0.95 + 0.4 * std::min(1.0, ((f64)score.totalHits / 2000.0)) +
+                      (score.totalHits > 2000 ? std::log10(((f64)score.totalHits / 2000.0)) * 0.5 : 0.0);
+    speedValue *= lengthBonus;
+
+    // miss penalty
+    // see https://github.com/ppy/osu/pull/16280/
+    if(effectiveMissCount > 0) {
+        f64 speedEstimatedSliderBreaks =
+            calculateEstimatedSliderBreaks(score, attributes.SpeedTopWeightedSliderFactor, effectiveMissCount);
+        f64 relevantMissCount = std::min(effectiveMissCount + speedEstimatedSliderBreaks,
+                                         (f64)(score.countOk + score.countMeh + score.countMiss));
+        speedValue *=
+            0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.SpeedDifficultStrainCount), 0.94))) + 1.0);
+    }
+
+    f64 speedHighDeviationMultiplier = calculateSpeedHighDeviationNerf(attributes, speedDeviation);
+    speedValue *= speedHighDeviationMultiplier;
+
+    // "Calculate accuracy assuming the worst case scenario"
+    f64 relevantTotalDiff = std::max(0.0, score.totalHits - attributes.SpeedNoteCount);
+    f64 relevantCountGreat = std::max(0.0, score.countGreat - relevantTotalDiff);
+    f64 relevantCountOk = std::max(0.0, score.countOk - std::max(0.0, relevantTotalDiff - score.countGreat));
+    f64 relevantCountMeh =
+        std::max(0.0, score.countMeh - std::max(0.0, relevantTotalDiff - score.countGreat - score.countOk));
+    f64 relevantAccuracy =
+        attributes.SpeedNoteCount == 0
+            ? 0
+            : (relevantCountGreat * 6.0 + relevantCountOk * 2.0 + relevantCountMeh) / (attributes.SpeedNoteCount * 6.0);
+
+    // see https://github.com/ppy/osu-performance/pull/128/
+    // Scale the speed value with accuracy and OD
+    speedValue *= std::pow((score.accuracy + relevantAccuracy) / 2.0, (14.5 - attributes.OverallDifficulty) / 2);
+
+    // singletap buff (XXX: might be too weak)
+    if(flags::has<ModFlags::Singletap>(score.modFlags)) {
+        speedValue *= 1.25;
+    }
+
+    // no keylock nerf (XXX: might be too harsh)
+    if(flags::has<ModFlags::NoKeylock>(score.modFlags)) {
+        speedValue *= 0.5;
+    }
+
+    return speedValue;
+}
+
+f64 computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes) {
+    if(flags::has<ModFlags::Relax>(score.modFlags)) return 0.0;
+
+    f64 betterAccuracyPercentage =
+        score.amountHitObjectsWithAccuracy > 0
+            ? ((f64)(score.countGreat - std::max(score.totalHits - score.amountHitObjectsWithAccuracy, 0)) * 6.0 +
+               (score.countOk * 2.0) + score.countMeh) /
+                  (f64)(score.amountHitObjectsWithAccuracy * 6.0)
+            : 0.0;
+
+    // it's possible to reach negative accuracy, cap at zero
+    if(betterAccuracyPercentage < 0.0) betterAccuracyPercentage = 0.0;
+
+    // arbitrary values tom crafted out of trial and error
+    f64 accuracyValue =
+        std::pow(1.52163, attributes.OverallDifficulty) * std::pow(betterAccuracyPercentage, 24.0) * 2.83;
+
+    // length bonus
+    accuracyValue *= std::min(1.15, std::pow(score.amountHitObjectsWithAccuracy / 1000.0, 0.3));
+
+    // hidden bonus
+    if(flags::has<ModFlags::Hidden>(score.modFlags)) {
+        // Decrease bonus for AR > 10
+        accuracyValue *= 1.0 + 0.08 * reverseLerp(attributes.ApproachRate, 11.5, 10.0);
+    }
+
+    // flashlight bonus
+    if(flags::has<ModFlags::Flashlight>(score.modFlags)) accuracyValue *= 1.02;
+
+    return accuracyValue;
+}
+
+f64 calculateEstimatedSliderBreaks(const ScoreData &score, f64 topWeightedSliderFactor, f64 effectiveMissCount) {
+    if(score.countOk == 0 || score.beatmapMaxCombo < 1) return 0.0;
+
+    f64 missedComboPercent = 1.0 - (f64)score.scoreMaxCombo / score.beatmapMaxCombo;
+    f64 estimatedSliderBreaks = std::min((f64)score.countOk, effectiveMissCount * topWeightedSliderFactor);
+
+    // Scores with more Oks are more likely to have slider breaks.
+    f64 okAdjustment = ((score.countOk - estimatedSliderBreaks) + 0.5) / (f64)score.countOk;
+
+    // There is a low probability of extra slider breaks on effective miss counts close to 1, as score based calculations are good at indicating if only a single break occurred.
+    estimatedSliderBreaks *= smoothstep(effectiveMissCount, 1.0, 2.0);
+
+    return estimatedSliderBreaks * okAdjustment * logistic(missedComboPercent, 0.33, 15.0);
+}
+
+f64 calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes, f64 timescale) {
+    if(score.countGreat + score.countOk + score.countMeh == 0) return std::numeric_limits<f64>::quiet_NaN();
+
+    f64 speedNoteCount = attributes.SpeedNoteCount;
+    speedNoteCount += (score.totalHits - attributes.SpeedNoteCount) * 0.1;
+
+    f64 relevantCountMiss = std::min((f64)score.countMiss, speedNoteCount);
+    f64 relevantCountMeh = std::min((f64)score.countMeh, speedNoteCount - relevantCountMiss);
+    f64 relevantCountOk = std::min((f64)score.countOk, speedNoteCount - relevantCountMiss - relevantCountMeh);
+    f64 relevantCountGreat = std::max(0.0, speedNoteCount - relevantCountMiss - relevantCountMeh - relevantCountOk);
+
+    return calculateDeviation(attributes, timescale, relevantCountGreat, relevantCountOk, relevantCountMeh);
+}
+
+f64 calculateDeviation(const DifficultyAttributes &attributes, f64 timescale, f64 relevantCountGreat,
+                       f64 relevantCountOk, f64 relevantCountMeh) {
+    if(relevantCountGreat + relevantCountOk + relevantCountMeh <= 0.0) return std::numeric_limits<f64>::quiet_NaN();
+
+    const f64 greatHitWindow = adjustHitWindow(GameRules::odTo300HitWindowMS(attributes.OverallDifficulty)) / timescale;
+    const f64 okHitWindow = adjustHitWindow(GameRules::odTo100HitWindowMS(attributes.OverallDifficulty)) / timescale;
+    const f64 mehHitWindow = adjustHitWindow(GameRules::odTo50HitWindowMS(attributes.OverallDifficulty)) / timescale;
+
+    static constexpr const f64 z = 2.32634787404;
+    static constexpr const f64 sqrt2 = std::numbers::sqrt2;
+    static constexpr const f64 sqrt3 = std::numbers::sqrt3;
+    static constexpr const f64 sqrt2OverPi = 0.7978845608028654;
+
+    f64 n = std::max(1.0, relevantCountGreat + relevantCountOk);
+    f64 p = relevantCountGreat / n;
+    f64 pLowerBound =
+        std::min(p, (n * p + z * z / 2.0) / (n + z * z) - z / (n + z * z) * sqrt(n * p * (1.0 - p) + z * z / 4.0));
+
+    f64 deviation;
+
+    if(pLowerBound > 0.01) {
+        deviation = greatHitWindow / (sqrt2 * erfInv(pLowerBound));
+        f64 okHitWindowTailAmount = sqrt2OverPi * okHitWindow *
+                                    std::exp(-0.5 * std::pow(okHitWindow / deviation, 2.0)) /
+                                    (deviation * erf(okHitWindow / (sqrt2 * deviation)));
+        deviation *= std::sqrt(1.0 - okHitWindowTailAmount);
+    } else
+        deviation = okHitWindow / sqrt3;
+
+    f64 mehVariance = (mehHitWindow * mehHitWindow + okHitWindow * mehHitWindow + okHitWindow * okHitWindow) / 3.0;
+    return std::sqrt(
+        ((relevantCountGreat + relevantCountOk) * std::pow(deviation, 2.0) + relevantCountMeh * mehVariance) /
+        (relevantCountGreat + relevantCountOk + relevantCountMeh));
+}
+
+f64 calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, f64 speedDeviation) {
+    if(std::isnan(speedDeviation)) return 0.0;
+
+    f64 speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedDifficulty / 0.0675) - 4.0, 3.0) / 100000.0;
+    f64 excessSpeedDifficultyCutoff = 100.0 + 220.0 * std::pow(22.0 / speedDeviation, 6.5);
+    if(speedValue <= excessSpeedDifficultyCutoff) return 1.0;
+
+    const f64 scale = 50.0;
+    f64 adjustedSpeedValue = scale * (std::log((speedValue - excessSpeedDifficultyCutoff) / scale + 1.0) +
+                                      excessSpeedDifficultyCutoff / scale);
+    f64 lerpVal = 1.0 - std::clamp<f64>((speedDeviation - 22.0) / (27.0 - 22.0), 0.0, 1.0);
+    adjustedSpeedValue = std::lerp(adjustedSpeedValue, speedValue, lerpVal);
+
+    return adjustedSpeedValue / speedValue;
+}
+
+f64 calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score, f64 timescale,
+                                 bool isMcOsuImported) {
+    if(score.beatmapMaxCombo == 0) return 0;
+
+    const bool scoreV2 = flags::has<ModFlags::ScoreV2>(score.modFlags);
+
+    f64 modMultiplier = getScoreV1ScoreMultiplier(score.modFlags, timescale, isMcOsuImported);
+    f64 scoreV1Multiplier = attributes.LegacyScoreBaseMultiplier * modMultiplier;
+    f64 relevantComboPerObject = calculateRelevantScoreComboPerObject(attributes, score);
+
+    f64 maximumMissCount = calculateMaximumComboBasedMissCount(attributes, score);
+
+    f64 scoreObtainedDuringMaxCombo =
+        calculateScoreAtCombo(attributes, score, score.scoreMaxCombo, relevantComboPerObject, scoreV1Multiplier);
+    if(scoreV2) scoreObtainedDuringMaxCombo *= 700000. / attributes.MaximumLegacyComboScore;
+
+    f64 scoreLegacyTotalScore =
+        score.legacyTotalScore - (scoreV2 ? 300000. * std::pow(score.accuracy, 10) * modMultiplier : 0);
+    f64 remainingScore = scoreLegacyTotalScore - scoreObtainedDuringMaxCombo;
+
+    if(remainingScore <= 0) return maximumMissCount;
+
+    f64 remainingCombo = score.beatmapMaxCombo - score.scoreMaxCombo;
+    f64 expectedRemainingScore =
+        calculateScoreAtCombo(attributes, score, remainingCombo, relevantComboPerObject, scoreV1Multiplier);
+    if(scoreV2) expectedRemainingScore *= 700000. / attributes.MaximumLegacyComboScore;
+
+    f64 scoreBasedMissCount = expectedRemainingScore / remainingScore;
+
+    // If there's less then one miss detected - let combo-based miss count decide if this is FC or not
+    scoreBasedMissCount = std::max(scoreBasedMissCount, 1.0);
+
+    // Cap result by very harsh version of combo-based miss count
+    return std::min(scoreBasedMissCount, maximumMissCount);
+}
+
+f64 calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, f64 combo,
+                          f64 relevantComboPerObject, f64 scoreV1Multiplier) {
+    i32 countGreat = score.countGreat;
+    i32 countOk = score.countOk;
+    i32 countMeh = score.countMeh;
+    i32 countMiss = score.countMiss;
+
+    i32 totalHits = countGreat + countOk + countMeh + countMiss;
+
+    f64 estimatedObjects = (combo / relevantComboPerObject) - 1.0;
+
+    // The combo portion of ScoreV1 follows arithmetic progression
+    // Therefore, we calculate the combo portion of score using the combo per object and our current combo.
+    f64 comboScore = relevantComboPerObject > 0.0
+                         ? (2.0 * (relevantComboPerObject - 1.0) + (estimatedObjects - 1.0) * relevantComboPerObject) *
+                               estimatedObjects / 2.0
+                         : 0.0;
+
+    // We then apply the accuracy and ScoreV1 multipliers to the resulting score.
+    comboScore *= 300.0 / 25.0 * scoreV1Multiplier;
+
+    // For scoreV2 we need only combo score not scaled by accuracy.
+    // This is technically incorrect because scoreV2 is using different formula,
+    // but we have to sacrifice estimation precision, since it's not as important here.
+    const bool scoreV2 = flags::has<ModFlags::ScoreV2>(score.modFlags);
+    if(scoreV2) return comboScore;
+
+    f64 objectsHit = (totalHits - countMiss) * combo / score.beatmapMaxCombo;
+
+    // Score also has a non-combo portion we need to create the final score value.
+    f64 nonComboScore = (300.0 + attributes.NestedScorePerObject) * objectsHit;
+
+    return (comboScore + nonComboScore) * score.accuracy;
+}
+
+f64 calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score) {
+    f64 comboScore = attributes.MaximumLegacyComboScore;
+
+    // We then reverse apply the ScoreV1 multipliers to get the raw value.
+    comboScore /= 300.0 / 25.0 * attributes.LegacyScoreBaseMultiplier;
+
+    // Reverse the arithmetic progression to work out the amount of combo per object based on the score.
+    f64 result = (f64)((score.beatmapMaxCombo - 2) * score.beatmapMaxCombo);
+    result /= std::max((f64)score.beatmapMaxCombo + 2.0 * (comboScore - 1.0), 1.0);
+
+    return result;
+}
+
+f64 calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes, const ScoreData &score) {
+    i32 scoreMissCount = score.countMiss;
+
+    if(attributes.SliderCount <= 0) return scoreMissCount;
+
+    i32 countOk = score.countOk;
+    i32 countMeh = score.countMeh;
+
+    i32 totalImperfectHits = countOk + countMeh + scoreMissCount;
+
+    f64 missCount = 0;
+
+    // Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
+    // In classic scores we can't know the amount of dropped sliders so we estimate to 10% of all sliders on the map
+    f64 fullComboThreshold = score.beatmapMaxCombo - 0.1 * attributes.SliderCount;
+
+    if(score.scoreMaxCombo < fullComboThreshold)
+        missCount = std::pow(fullComboThreshold / std::max(1, score.scoreMaxCombo), 2.5);
+
+    // In classic scores there can't be more misses than a sum of all non-perfect judgements
+    missCount = std::min(missCount, (f64)totalImperfectHits);
+
+    // Every slider has *at least* 2 combo attributed in classic mechanics.
+    // If they broke on a slider with a tick, then this still works since they would have lost at least 2 combo (the tick and the end)
+    // Using this as a max means a score that loses 1 combo on a map can't possibly have been a slider break.
+    // It must have been a slider end.
+    i32 maxPossibleSliderBreaks = std::min(attributes.SliderCount, (score.beatmapMaxCombo - score.scoreMaxCombo) / 2);
+
+    f64 sliderBreaks = missCount - scoreMissCount;
+
+    if(sliderBreaks > maxPossibleSliderBreaks) missCount = scoreMissCount + maxPossibleSliderBreaks;
+
+    return missCount;
+}
+
+// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuRatingCalculator.cs
+
+f64 calculateDifficultyRating(f64 difficultyValue) {
+    const f64 difficulty_multiplier = 0.0675;
+    return std::sqrt(difficultyValue) * difficulty_multiplier;
+}
+
+f64 calculateAimVisibilityFactor(f64 approachRate, f64 mechanicalDifficultyRating) {
+    const f64 ar_factor_end_point = 11.5;
+
+    f64 mechanicalDifficultyFactor = reverseLerp(mechanicalDifficultyRating, 5.0, 10.0);
+    f64 arFactorStartingPoint = std::lerp(9., 10.33, mechanicalDifficultyFactor);
+
+    return reverseLerp(approachRate, ar_factor_end_point, arFactorStartingPoint);
+}
+
+f64 calculateSpeedVisibilityFactor(f64 approachRate, f64 mechanicalDifficultyRating) {
+    const f64 ar_factor_end_point = 11.5;
+
+    f64 mechanicalDifficultyFactor = reverseLerp(mechanicalDifficultyRating, 5.0, 10.0);
+    f64 arFactorStartingPoint = std::lerp(10., 10.33, mechanicalDifficultyFactor);
+
+    return reverseLerp(approachRate, ar_factor_end_point, arFactorStartingPoint);
+}
+
+f64 calculateVisibilityBonus(f64 approachRate, f64 visibilityFactor, f64 sliderFactor) {
+    // WARNING: this value is equal to true for Traceable (Lazer mod) and the lazer-specific HD setting.
+    // So in this case we're always setting it to false
+    bool isAlwaysPartiallyVisible = false;
+
+    f64 readingBonus =
+        (isAlwaysPartiallyVisible ? 0.025 : 0.04) *
+        (12.0 - std::max(std::min(12.0, approachRate), 7.0));  // NOTE: clamped because McOsu allows AR > 12
+
+    readingBonus *= visibilityFactor;
+
+    // We want to reward slideraim on low AR less
+    f64 sliderVisibilityFactor = std::pow(sliderFactor, 3.0);
+
+    // For AR up to 0 - reduce reward for very low ARs when object is visible
+    if(approachRate < 7.0)
+        readingBonus +=
+            (isAlwaysPartiallyVisible ? 0.02 : 0.045) * (7.0 - std::max(approachRate, 0.0)) * sliderVisibilityFactor;
+
+    // Starting from AR0 - cap values so they won't grow to infinity
+    if(approachRate < 0.0)
+        readingBonus +=
+            (isAlwaysPartiallyVisible ? 0.01 : 0.1) * (1.0 - std::max(1.5, approachRate)) * sliderVisibilityFactor;
+
+    return readingBonus;
+}
+
+f64 computeAimRating(f64 aimDifficultyValue, u32 totalHits, f64 approachRate, f64 overallDifficulty,
+                     f64 mechanicalDifficultyRating, f64 sliderFactor, const BeatmapDiffcalcData &beatmapData) {
+    if(beatmapData.autopilot) return 0;
+
+    f64 aimRating = calculateDifficultyRating(aimDifficultyValue);
+
+    if(beatmapData.touchDevice) aimRating = std::pow(aimRating, 0.8);
+
+    if(beatmapData.relax) aimRating *= 0.9;
+
+    f64 ratingMultiplier = 1.0;
+
+    f64 approachRateLengthBonus = 0.95 + 0.4 * std::min(1.0, totalHits / 2000.0) +
+                                  (totalHits > 2000 ? std::log10(totalHits / 2000.0) * 0.5 : 0.0);
+
+    f64 approachRateFactor = 0.0;
+    if(approachRate > 10.33)
+        approachRateFactor = 0.3 * (approachRate - 10.33);
+    else if(approachRate < 8.0)
+        approachRateFactor = 0.05 * (8.0 - approachRate);
+
+    if(beatmapData.relax) approachRateFactor = 0.0;
+
+    ratingMultiplier += approachRateFactor * approachRateLengthBonus;  // Buff for longer maps with high AR.
+
+    if(beatmapData.hidden) {
+        f64 visibilityFactor = calculateAimVisibilityFactor(approachRate, mechanicalDifficultyRating);
+        ratingMultiplier += calculateVisibilityBonus(approachRate, visibilityFactor, sliderFactor);
+    }
+
+    // It is important to consider accuracy difficulty when scaling with accuracy.
+    ratingMultiplier *= 0.98 + std::pow(std::max(0.0, overallDifficulty), 2.0) / 2500.0;
+
+    return aimRating * std::cbrt(ratingMultiplier);
+}
+
+f64 computeSpeedRating(f64 speedDifficultyValue, u32 totalHits, f64 approachRate, f64 overallDifficulty,
+                       f64 mechanicalDifficultyRating, const BeatmapDiffcalcData &beatmapData) {
+    if(beatmapData.relax) return 0.0;
+
+    f64 speedRating = calculateDifficultyRating(speedDifficultyValue);
+
+    if(beatmapData.autopilot) speedRating *= 0.5;
+
+    f64 ratingMultiplier = 1.0;
+
+    f64 approachRateLengthBonus = 0.95 + 0.4 * std::min(1.0, totalHits / 2000.0) +
+                                  (totalHits > 2000 ? std::log10(totalHits / 2000.0) * 0.5 : 0.0);
+
+    f64 approachRateFactor = 0.0;
+    if(approachRate > 10.33) approachRateFactor = 0.3 * (approachRate - 10.33);
+
+    if(beatmapData.autopilot) approachRateFactor = 0.0;
+
+    ratingMultiplier += approachRateFactor * approachRateLengthBonus;  // Buff for longer maps with high AR.
+
+    if(beatmapData.hidden) {
+        f64 visibilityFactor = calculateSpeedVisibilityFactor(approachRate, mechanicalDifficultyRating);
+        ratingMultiplier += calculateVisibilityBonus(approachRate, visibilityFactor);
+    }
+
+    ratingMultiplier *= 0.95 + std::pow(std::max(0.0, overallDifficulty), 2.0) / 750.0;
+
+    return speedRating * std::cbrt(ratingMultiplier);
+}
+
+// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuDifficultyCalculator.cs#L148-L164
+f64 calculateStarRating(f64 basePerformance) {
+    const f64 star_rating_multiplier = 0.0265;
+
+    if(basePerformance <= 0.00001) return 0.0;
+
+    return std::cbrt(performance_base_multiplier) * star_rating_multiplier *
+           (std::cbrt(100000.0 / std::pow(2.0, 1.0 / 1.1) * basePerformance) + 4.0);
+}
+
+f64 calculateMechanicalDifficultyRating(f64 aimDifficultyValue, f64 speedDifficultyValue) {
+    f64 aimValue = strainDifficultyToPerformance(calculateDifficultyRating(aimDifficultyValue));
+    f64 speedValue = strainDifficultyToPerformance(calculateDifficultyRating(speedDifficultyValue));
+
+    f64 totalValue = std::pow(std::pow(aimValue, 1.1) + std::pow(speedValue, 1.1), 1.0 / 1.1);
+
+    return calculateStarRating(totalValue);
+}
+
+f64 adjustOverallDifficultyByClockRate(f64 OD, f64 clockRate) {
+    return (79.5 - (adjustHitWindow(GameRules::odTo300HitWindowMS(OD)) / clockRate)) / 6.0;
+}
+
+f64 erf(f64 x) {
+    switch(std::fpclassify(x)) {
+        case FP_INFINITE:
+            return (x > 0) ? 1.0 : -1.0;
+        case FP_NAN:
+            return std::numeric_limits<f64>::quiet_NaN();
+        case FP_ZERO:
+            return 0.0;
+        default:
+            break;
+    }
+
+    // Constants for approximation (Abramowitz and Stegun formula 7.1.26)
+    f64 t = 1.0 / (1.0 + 0.3275911 * std::abs(x));
+    f64 tau = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+
+    f64 erf = 1.0 - tau * std::exp(-x * x);
+
+    return x >= 0 ? erf : -erf;
+}
+
+f64 erfInv(f64 x) {
+    if(x == 0.0)
+        return 0.0;
+    else if(x >= 1.0)
+        return std::numeric_limits<f64>::infinity();
+    else if(x <= -1.0)
+        return -std::numeric_limits<f64>::infinity();
+
+    static constexpr const f64 a = 0.147;
+    f64 sgn = (x > 0.0) ? 1.0 : (x < 0.0 ? -1.0 : 0.0);
+    x = std::fabs(x);
+
+    f64 ln = std::log(1.0 - x * x);
+    f64 t1 = 2.0 / (PI * a) + ln / 2.0;
+    f64 t2 = ln / a;
+    f64 baseApprox = std::sqrt(t1 * t1 - t2) - t1;
+
+    // Correction reduces max error from -0.005 to -0.00045.
+    f64 c = (x >= 0.85) ? std::pow((x - 0.85) / 0.293, 8.0) : 0.0;
+
+    f64 erfInv = sgn * (std::sqrt(baseApprox) + c);
+    return erfInv;
+}
+}  // namespace
+}  // namespace neomod::DiffCalc

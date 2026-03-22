@@ -17,6 +17,8 @@
 #include "Logging.h"
 #include "UI.h"
 
+using namespace neomod;
+
 LiveScore::LiveScore(bool simulating) {
     this->simulating = simulating;
     this->reset();
@@ -451,7 +453,7 @@ float LiveScore::calculateAccuracy(int num300s, int num100s, int num50s, int num
 }
 
 // fwd decl to avoid including DifficultyCalculator.h
-namespace DiffCalc {
+namespace neomod::DiffCalc {
 extern const u32 PP_ALGORITHM_VERSION;
 }
 

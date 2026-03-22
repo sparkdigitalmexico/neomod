@@ -69,6 +69,7 @@ enum class HitObjectType : uint8_t {
 using namespace neomod;
 using namespace DBType;
 
+
 // defined here to avoid including diffcalc things in DatabaseBeatmap.h
 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::LOAD_DIFFOBJ_RESULT() = default;
 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::~LOAD_DIFFOBJ_RESULT() = default;

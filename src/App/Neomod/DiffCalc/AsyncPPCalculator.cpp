@@ -11,6 +11,8 @@
 
 #include "SyncJthread.h"
 
+using namespace neomod;
+
 namespace AsyncPPC {
 
 namespace {  // static namespace
@@ -39,10 +41,10 @@ struct info_cache {
     bool ap{};
 
     // Results
-    std::unique_ptr<std::vector<DifficultyCalculator::DiffObject>> cachedDiffObjects{
-        std::make_unique<std::vector<DifficultyCalculator::DiffObject>>()};
+    std::unique_ptr<std::vector<DiffCalc::DiffObject>> cachedDiffObjects{
+        std::make_unique<std::vector<DiffCalc::DiffObject>>()};
     pp_res info{};
-    DifficultyCalculator::DifficultyAttributes diffattrs{};
+    DiffCalc::DifficultyAttributes diffattrs{};
 
     [[nodiscard]] bool matches(f32 spd, f32 ar, f32 hp, f32 cs, f32 od, ModFlags flags) const {
         return speed == spd && AR == ar && HP == hp && CS == cs && OD == od &&
@@ -180,30 +182,29 @@ void run_thread(const Sync::stop_token& stoken) {
                                     .hd = flags::has<ModFlags::Hidden>(rqt.modFlags),
                                     .ap = flags::has<ModFlags::Autopilot>(rqt.modFlags)};
 
-                DifficultyCalculator::BeatmapDiffcalcData diffcalcData{
-                    .sortedHitObjects = computed_ho->diffres.diffobjects,
-                    .CS = new_info.CS,
-                    .HP = new_info.HP,
-                    .AR = new_info.AR,
-                    .OD = new_info.OD,
-                    .hidden = new_info.hd,
-                    .relax = new_info.rx,
-                    .autopilot = new_info.ap,
-                    .touchDevice = new_info.td,
-                    .speedMultiplier = new_info.speed,
-                    .breakDuration = computed_ho->diffres.totalBreakDuration,
-                    .playableLength = computed_ho->diffres.playableLength};
+                DiffCalc::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = computed_ho->diffres.diffobjects,
+                                                           .CS = new_info.CS,
+                                                           .HP = new_info.HP,
+                                                           .AR = new_info.AR,
+                                                           .OD = new_info.OD,
+                                                           .hidden = new_info.hd,
+                                                           .relax = new_info.rx,
+                                                           .autopilot = new_info.ap,
+                                                           .touchDevice = new_info.td,
+                                                           .speedMultiplier = new_info.speed,
+                                                           .breakDuration = computed_ho->diffres.totalBreakDuration,
+                                                           .playableLength = computed_ho->diffres.playableLength};
 
-                DifficultyCalculator::StarCalcParams params{.cachedDiffObjects = std::move(new_info.cachedDiffObjects),
-                                                            .outAttributes = new_info.diffattrs,
-                                                            .beatmapData = diffcalcData,
-                                                            .outAimStrains = &new_info.info.aimStrains,
-                                                            .outSpeedStrains = &new_info.info.speedStrains,
-                                                            .incremental = nullptr,
-                                                            .upToObjectIndex = -1,
-                                                            .cancelCheck = stoken};
+                DiffCalc::StarCalcParams params{.cachedDiffObjects = std::move(new_info.cachedDiffObjects),
+                                                .outAttributes = new_info.diffattrs,
+                                                .beatmapData = diffcalcData,
+                                                .outAimStrains = &new_info.info.aimStrains,
+                                                .outSpeedStrains = &new_info.info.speedStrains,
+                                                .incremental = nullptr,
+                                                .upToObjectIndex = -1,
+                                                .cancelCheck = stoken};
 
-                new_info.info.total_stars = DifficultyCalculator::calculateStarDiffForHitObjects(params);
+                new_info.info.total_stars = DiffCalc::calculateStarDiffForHitObjects(params);
                 new_info.cachedDiffObjects = std::move(params.cachedDiffObjects);
 
                 // TODO: get rid of duplicated pp_res shit (use new DifficultyAttributes)
@@ -223,26 +224,25 @@ void run_thread(const Sync::stop_token& stoken) {
 
             if(stoken.stop_requested()) return;
 
-            DifficultyCalculator::PPv2CalcParams ppv2calcparams{
-                .attributes = computed_info->diffattrs,
-                .modFlags = rqt.modFlags,
-                .timescale = rqt.speedOverride,
-                .ar = rqt.AR,
-                .od = rqt.OD,
-                .numHitObjects = map_for_rqt->getNumObjects(),
-                .numCircles = map_for_rqt->iNumCircles,
-                .numSliders = map_for_rqt->iNumSliders,
-                .numSpinners = map_for_rqt->iNumSpinners,
-                .maxPossibleCombo = (i32)computed_ho->diffres.getTotalMaxCombo(),
-                .combo = rqt.comboMax,
-                .misses = rqt.numMisses,
-                .c300 = rqt.num300s,
-                .c100 = rqt.num100s,
-                .c50 = rqt.num50s,
-                .legacyTotalScore = rqt.legacyTotalScore,
-                .isMcOsuImported = rqt.scoreFromMcOsu};
+            DiffCalc::PPv2CalcParams ppv2calcparams{.attributes = computed_info->diffattrs,
+                                                    .modFlags = rqt.modFlags,
+                                                    .timescale = rqt.speedOverride,
+                                                    .ar = rqt.AR,
+                                                    .od = rqt.OD,
+                                                    .numHitObjects = map_for_rqt->getNumObjects(),
+                                                    .numCircles = map_for_rqt->iNumCircles,
+                                                    .numSliders = map_for_rqt->iNumSliders,
+                                                    .numSpinners = map_for_rqt->iNumSpinners,
+                                                    .maxPossibleCombo = (i32)computed_ho->diffres.getTotalMaxCombo(),
+                                                    .combo = rqt.comboMax,
+                                                    .misses = rqt.numMisses,
+                                                    .c300 = rqt.num300s,
+                                                    .c100 = rqt.num100s,
+                                                    .c50 = rqt.num50s,
+                                                    .legacyTotalScore = rqt.legacyTotalScore,
+                                                    .isMcOsuImported = rqt.scoreFromMcOsu};
 
-            computed_info->info.pp = DifficultyCalculator::calculatePPv2(ppv2calcparams);
+            computed_info->info.pp = DiffCalc::calculatePPv2(ppv2calcparams);
 
             {
                 Sync::unique_lock cache_lock(cache_mtx);

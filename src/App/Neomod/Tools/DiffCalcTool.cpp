@@ -19,6 +19,8 @@
 #include <string>
 #include <string_view>
 
+using namespace neomod;
+
 namespace {  // static
 
 struct LiteFile {
@@ -232,22 +234,22 @@ int entrypoint(int argc_, char *argv_[]) {
     }
 
     // calculate star rating
-    DifficultyCalculator::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = diffResult.diffobjects,
-                                                           .CS = settings.CS,
-                                                           .HP = settings.HP,
-                                                           .AR = settings.AR,
-                                                           .OD = settings.OD,
-                                                           .hidden = flags::has<ModFlags::Hidden>(modFlags),
-                                                           .relax = flags::has<ModFlags::Relax>(modFlags),
-                                                           .autopilot = flags::has<ModFlags::Autopilot>(modFlags),
-                                                           .touchDevice = flags::has<ModFlags::TouchDevice>(modFlags),
-                                                           .speedMultiplier = speedMultiplier,
-                                                           .breakDuration = diffResult.totalBreakDuration,
-                                                           .playableLength = diffResult.playableLength};
+    DiffCalc::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = diffResult.diffobjects,
+                                               .CS = settings.CS,
+                                               .HP = settings.HP,
+                                               .AR = settings.AR,
+                                               .OD = settings.OD,
+                                               .hidden = flags::has<ModFlags::Hidden>(modFlags),
+                                               .relax = flags::has<ModFlags::Relax>(modFlags),
+                                               .autopilot = flags::has<ModFlags::Autopilot>(modFlags),
+                                               .touchDevice = flags::has<ModFlags::TouchDevice>(modFlags),
+                                               .speedMultiplier = speedMultiplier,
+                                               .breakDuration = diffResult.totalBreakDuration,
+                                               .playableLength = diffResult.playableLength};
 
-    DifficultyCalculator::DifficultyAttributes outAttrs{};
+    DiffCalc::DifficultyAttributes outAttrs{};
 
-    DifficultyCalculator::StarCalcParams starParams{
+    DiffCalc::StarCalcParams starParams{
         .cachedDiffObjects = {},
         .outAttributes = outAttrs,
         .beatmapData = diffcalcData,
@@ -258,31 +260,31 @@ int entrypoint(int argc_, char *argv_[]) {
         .cancelCheck = {},
     };
 
-    const double totalStars = DifficultyCalculator::calculateStarDiffForHitObjects(starParams);
+    const double totalStars = DiffCalc::calculateStarDiffForHitObjects(starParams);
 
     const double aim = outAttrs.AimDifficulty;
     const double speed = outAttrs.SpeedDifficulty;
 
     // calculate PP for SS play
-    DifficultyCalculator::PPv2CalcParams ppParams{.attributes = outAttrs,
-                                                  .modFlags = modFlags,
-                                                  .timescale = speedMultiplier,
-                                                  .ar = settings.AR,
-                                                  .od = settings.OD,
-                                                  .numHitObjects = static_cast<int>(primitives.getNumObjects()),
-                                                  .numCircles = static_cast<int>(primitives.hitcircles.size()),
-                                                  .numSliders = static_cast<int>(primitives.sliders.size()),
-                                                  .numSpinners = static_cast<int>(primitives.spinners.size()),
-                                                  .maxPossibleCombo = static_cast<int>(diffResult.getTotalMaxCombo()),
-                                                  .combo = -1,
-                                                  .misses = 0,
-                                                  .c300 = -1,
-                                                  .c100 = 0,
-                                                  .c50 = 0,
-                                                  .legacyTotalScore = 0,
-                                                  .isMcOsuImported = false};
+    DiffCalc::PPv2CalcParams ppParams{.attributes = outAttrs,
+                                      .modFlags = modFlags,
+                                      .timescale = speedMultiplier,
+                                      .ar = settings.AR,
+                                      .od = settings.OD,
+                                      .numHitObjects = static_cast<int>(primitives.getNumObjects()),
+                                      .numCircles = static_cast<int>(primitives.hitcircles.size()),
+                                      .numSliders = static_cast<int>(primitives.sliders.size()),
+                                      .numSpinners = static_cast<int>(primitives.spinners.size()),
+                                      .maxPossibleCombo = static_cast<int>(diffResult.getTotalMaxCombo()),
+                                      .combo = -1,
+                                      .misses = 0,
+                                      .c300 = -1,
+                                      .c100 = 0,
+                                      .c50 = 0,
+                                      .legacyTotalScore = 0,
+                                      .isMcOsuImported = false};
 
-    const double pp = DifficultyCalculator::calculatePPv2(ppParams);
+    const double pp = DiffCalc::calculatePPv2(ppParams);
 
     // output results
     std::cout << "star rating: " << totalStars << '\n';

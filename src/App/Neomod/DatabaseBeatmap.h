@@ -46,7 +46,9 @@ using std::string_literals::operator""s;
 
 class AbstractBeatmapInterface;
 class HitObject;
+namespace neomod::DiffCalc {
 class DifficultyHitObject;
+}
 
 class Database;
 
@@ -62,6 +64,8 @@ namespace DBType = neomod::DatabaseBeatmapTypes;
 // DatabaseBeatmap &operator=(DatabaseBeatmap other) already implements these...
 // NOLINTNEXTLINE(hicpp-special-member-functions, cppcoreguidelines-special-member-functions)
 class DatabaseBeatmap final {
+    using DifficultyHitObject = neomod::DiffCalc::DifficultyHitObject;
+
    public:
     struct LoadError {
        public:

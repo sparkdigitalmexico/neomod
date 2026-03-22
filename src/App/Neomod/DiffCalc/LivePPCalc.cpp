@@ -10,6 +10,8 @@
 #include "uwu.h"
 #include "ConVar.h"
 
+using namespace neomod;
+
 namespace cv {
 extern ConVar debug_pp;
 }
@@ -60,8 +62,8 @@ struct LivePPCalc::LivePPCalcImpl {
         f32 AR{0.f}, CS{0.f};
         f32 speed_multiplier{0.f};
         DatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres{};
-        std::unique_ptr<std::vector<DifficultyCalculator::DiffObject>> diffobj_cache{
-            std::make_unique<std::vector<DifficultyCalculator::DiffObject>>()};
+        std::unique_ptr<std::vector<DiffCalc::DiffObject>> diffobj_cache{
+            std::make_unique<std::vector<DiffCalc::DiffObject>>()};
     } m_param_cache;
 
     struct LazyCalcParams {
@@ -155,35 +157,34 @@ struct LivePPCalc::LivePPCalcImpl {
             const bool modAuto = flags::has<ModFlags::Autoplay>(p.mods.flags);
 
             // this is assumed to always be valid
-            std::unique_ptr<std::vector<DifficultyCalculator::DiffObject>> &diffobjCache = cache.diffobj_cache;
+            std::unique_ptr<std::vector<DiffCalc::DiffObject>> &diffobjCache = cache.diffobj_cache;
 
-            DifficultyCalculator::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = diffres.diffobjects,
-                                                                   .CS = p.CS,
-                                                                   .HP = p.HP,
-                                                                   .AR = p.AR,
-                                                                   .OD = p.OD,
-                                                                   .hidden = hidden,
-                                                                   .relax = relax,
-                                                                   .autopilot = autopilot,
-                                                                   .touchDevice = td,
-                                                                   .speedMultiplier = p.speed_multiplier,
-                                                                   .breakDuration = diffres.totalBreakDuration,
-                                                                   .playableLength = diffres.playableLength};
+            DiffCalc::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = diffres.diffobjects,
+                                                       .CS = p.CS,
+                                                       .HP = p.HP,
+                                                       .AR = p.AR,
+                                                       .OD = p.OD,
+                                                       .hidden = hidden,
+                                                       .relax = relax,
+                                                       .autopilot = autopilot,
+                                                       .touchDevice = td,
+                                                       .speedMultiplier = p.speed_multiplier,
+                                                       .breakDuration = diffres.totalBreakDuration,
+                                                       .playableLength = diffres.playableLength};
 
-            DifficultyCalculator::DifficultyAttributes diffattrsOut{};
+            DiffCalc::DifficultyAttributes diffattrsOut{};
 
-            DifficultyCalculator::StarCalcParams params{
-                .cachedDiffObjects = std::move(diffobjCache),
-                .outAttributes = diffattrsOut,
-                .beatmapData = diffcalcData,
-                .outAimStrains = &retInfo.aimStrains,
-                .outSpeedStrains = &retInfo.speedStrains,
-                .incremental = nullptr,  // TODO: use incremental instead of this bs
-                .upToObjectIndex = p.current_hitobject,
-                .cancelCheck = {},
-                .forceFillDiffobjCache = true};
+            DiffCalc::StarCalcParams params{.cachedDiffObjects = std::move(diffobjCache),
+                                            .outAttributes = diffattrsOut,
+                                            .beatmapData = diffcalcData,
+                                            .outAimStrains = &retInfo.aimStrains,
+                                            .outSpeedStrains = &retInfo.speedStrains,
+                                            .incremental = nullptr,  // TODO: use incremental instead of this bs
+                                            .upToObjectIndex = p.current_hitobject,
+                                            .cancelCheck = {},
+                                            .forceFillDiffobjCache = true};
 
-            retInfo.total_stars = DifficultyCalculator::calculateStarDiffForHitObjects(params);
+            retInfo.total_stars = DiffCalc::calculateStarDiffForHitObjects(params);
 
             // move unique_ptr ownership back
             diffobjCache = std::move(params.cachedDiffObjects);
@@ -196,7 +197,7 @@ struct LivePPCalc::LivePPCalcImpl {
             retInfo.speed_notes = diffattrsOut.SpeedNoteCount;
             retInfo.difficult_speed_strains = diffattrsOut.SpeedDifficultStrainCount;
 
-            DifficultyCalculator::PPv2CalcParams ppv2pars{
+            DiffCalc::PPv2CalcParams ppv2pars{
                 .attributes = diffattrsOut,
                 .modFlags = p.mods.flags,
                 .timescale = p.mods.speed,
@@ -225,11 +226,11 @@ struct LivePPCalc::LivePPCalcImpl {
                 ppv2pars.legacyTotalScore = 0;  // no score-based misscount
             }
 
-            retInfo.pp = DifficultyCalculator::calculatePPv2(ppv2pars);
+            retInfo.pp = DiffCalc::calculatePPv2(ppv2pars);
 
             if(cv::debug_pp.getBool()) {
                 logRaw("[LivePPCalc] PP: {} params (post):\n{}", retInfo.pp,
-                       DifficultyCalculator::PPv2CalcParamsToString(ppv2pars));
+                       DiffCalc::PPv2CalcParamsToString(ppv2pars));
             }
 
             result.calc_index = p.current_hitobject;

@@ -56,6 +56,8 @@
 #include "Graphics.h"
 
 using namespace flags::operators;
+using namespace neomod;
+
 BeatmapInterface::BeatmapInterface() : AbstractBeatmapInterface(), ppv2_calc(this) {
     // vars
     this->bIsPlaying = false;
@@ -3823,31 +3825,31 @@ FinishedScore BeatmapInterface::saveAndSubmitScore(bool quit) {
 
     auto diffres = DatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, AR, CS, speedMultiplier);
 
-    DifficultyCalculator::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = diffres.diffobjects,
-                                                           .CS = CS,
-                                                           .HP = HP,
-                                                           .AR = AR,
-                                                           .OD = OD,
-                                                           .hidden = hidden,
-                                                           .relax = relax,
-                                                           .autopilot = autopilot,
-                                                           .touchDevice = touchDevice,
-                                                           .speedMultiplier = speedMultiplier,
-                                                           .breakDuration = breakDuration,
-                                                           .playableLength = playableLength};
+    DiffCalc::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = diffres.diffobjects,
+                                               .CS = CS,
+                                               .HP = HP,
+                                               .AR = AR,
+                                               .OD = OD,
+                                               .hidden = hidden,
+                                               .relax = relax,
+                                               .autopilot = autopilot,
+                                               .touchDevice = touchDevice,
+                                               .speedMultiplier = speedMultiplier,
+                                               .breakDuration = breakDuration,
+                                               .playableLength = playableLength};
 
-    DifficultyCalculator::DifficultyAttributes diffAttributesOut{};
+    DiffCalc::DifficultyAttributes diffAttributesOut{};
 
-    DifficultyCalculator::StarCalcParams params{.cachedDiffObjects = {},
-                                                .outAttributes = diffAttributesOut,
-                                                .beatmapData = diffcalcData,
-                                                .outAimStrains = nullptr,
-                                                .outSpeedStrains = nullptr,
-                                                .incremental = nullptr,
-                                                .upToObjectIndex = -1,
-                                                .cancelCheck = {}};
+    DiffCalc::StarCalcParams params{.cachedDiffObjects = {},
+                                    .outAttributes = diffAttributesOut,
+                                    .beatmapData = diffcalcData,
+                                    .outAimStrains = nullptr,
+                                    .outSpeedStrains = nullptr,
+                                    .incremental = nullptr,
+                                    .upToObjectIndex = -1,
+                                    .cancelCheck = {}};
 
-    const f64 totalStars = DifficultyCalculator::calculateStarDiffForHitObjects(params);
+    const f64 totalStars = DiffCalc::calculateStarDiffForHitObjects(params);
 
     this->fAimStars = (f32)diffAttributesOut.AimDifficulty;
     this->fSpeedStars = (f32)diffAttributesOut.SpeedDifficulty;
@@ -3866,25 +3868,25 @@ FinishedScore BeatmapInterface::saveAndSubmitScore(bool quit) {
     const int num50s = liveScore->getNum50s();
     const u32 legacyTotalScore = liveScore->getScore();
 
-    DifficultyCalculator::PPv2CalcParams ppv2calcparams{.attributes = diffAttributesOut,
-                                                        .modFlags = liveScore->mods.flags,
-                                                        .timescale = speedMultiplier,
-                                                        .ar = AR,
-                                                        .od = OD,
-                                                        .numHitObjects = numHitObjects,
-                                                        .numCircles = numCircles,
-                                                        .numSliders = numSliders,
-                                                        .numSpinners = numSpinners,
-                                                        .maxPossibleCombo = this->iMaxPossibleCombo,
-                                                        .combo = highestCombo,
-                                                        .misses = numMisses,
-                                                        .c300 = num300s,
-                                                        .c100 = num100s,
-                                                        .c50 = num50s,
-                                                        .legacyTotalScore = legacyTotalScore,
-                                                        .isMcOsuImported = false};
+    DiffCalc::PPv2CalcParams ppv2calcparams{.attributes = diffAttributesOut,
+                                            .modFlags = liveScore->mods.flags,
+                                            .timescale = speedMultiplier,
+                                            .ar = AR,
+                                            .od = OD,
+                                            .numHitObjects = numHitObjects,
+                                            .numCircles = numCircles,
+                                            .numSliders = numSliders,
+                                            .numSpinners = numSpinners,
+                                            .maxPossibleCombo = this->iMaxPossibleCombo,
+                                            .combo = highestCombo,
+                                            .misses = numMisses,
+                                            .c300 = num300s,
+                                            .c100 = num100s,
+                                            .c50 = num50s,
+                                            .legacyTotalScore = legacyTotalScore,
+                                            .isMcOsuImported = false};
 
-    const f32 pp = DifficultyCalculator::calculatePPv2(ppv2calcparams);
+    const f32 pp = DiffCalc::calculatePPv2(ppv2calcparams);
 
     liveScore->setStarsTomTotal(totalStars);
     liveScore->setStarsTomAim(this->fAimStars);
