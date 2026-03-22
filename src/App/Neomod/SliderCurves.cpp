@@ -23,6 +23,7 @@
 #endif
 
 namespace neomod {
+namespace {
 static constexpr const SLIDERCURVETYPE CIRCULAR{(char)-(int)SLIDERCURVETYPE::PASSTHROUGH};
 
 //*******************//
@@ -50,9 +51,8 @@ class SCEDMBuilder final {
     u32 m_poolNextFree{0};
     u32 m_bezierCount{0};
 
-    // accumulated curve data (flat buffer + segment boundaries)
+    // accumulated curve data (flat buffer)
     std::vector<vec2> m_allPoints;
-    std::vector<u32> m_segmentStarts;  // indices into allPoints where each segment begins
 
     [[nodiscard]] bool isFlatEnough(const vec2 *curve) const {
         for(u32 i = 1; i < m_bezierCount - 1; i++) {
@@ -147,19 +147,11 @@ class SCEDMBuilder final {
     }
 
    public:
-    void reset() {
-        m_allPoints.clear();
-        m_segmentStarts.clear();
-    }
+    void reset() { m_allPoints.clear(); }
 
-    void addBezierSegment(const vec2 *controlPoints, u32 count) {
-        m_segmentStarts.push_back(m_allPoints.size());
-        generateBezierPoints(controlPoints, count);
-    }
+    void addBezierSegment(const vec2 *controlPoints, u32 count) { generateBezierPoints(controlPoints, count); }
 
     void addCatmullSegment(const std::array<vec2, 4> &initPoints) {
-        m_segmentStarts.push_back(m_allPoints.size());
-
         f32 approxLength = 0;
         for(i32 i = 1; i < 4; i++) {
             approxLength += std::max(0.0001f, vec::length(initPoints[i] - initPoints[i - 1]));
@@ -182,34 +174,25 @@ class SCEDMBuilder final {
         }
     }
 
-    [[nodiscard]] bool hasSegments() const { return !m_segmentStarts.empty(); }
+    [[nodiscard]] bool hasPoints() const { return !m_allPoints.empty(); }
 
-    void build(SliderCurve &curve, u32 nCurve, f32 pixelLength);
+    void build(std::vector<vec2> &curvePointsOut, f32 &startAngleOut, f32 &endAngleOut, u32 nCurve, f32 pixelLength);
 };
 
-// the final step for building bezier/catmull curves
-void SCEDMBuilder::build(SliderCurve &curve, u32 nCurve, f32 pixelLength) {
+// the final step for building bezier/catmull curves: equal-distance resampling
+void SCEDMBuilder::build(std::vector<vec2> &curvePointsOut, f32 &startAngleOut, f32 &endAngleOut, u32 nCurve,
+                         f32 pixelLength) {
     if(m_allPoints.empty()) {
         debugLog("(SliderCurveBuilder) ERROR: allPoints.size() == 0!!!");
         return;
     }
 
-    // add sentinel for easier iteration
-    m_segmentStarts.push_back(m_allPoints.size());
-
-    u32 curSegment = 0;
     u32 curPoint = 0;
-    u32 segmentEnd = m_segmentStarts[1];
-
     f32 distanceAt = 0.0f;
     f32 lastDistanceAt = 0.0f;
-
     vec2 lastCurve = m_allPoints[0];
 
-    // length of the curve should be equal to the pixel length
-    // for each distance, try to get in between the two points that are between it
-    vec2 lastCurvePointForNextSegmentStart{0.f};
-    std::vector<vec2> curCurvePoints;
+    // resample: for each equal-distance step, find the two raw points that straddle it and interpolate
     for(i64 i = 0; i < (nCurve + 1LL); i++) {
         const f32 temp_dist = (f32)((f32)i * pixelLength) / (f32)nCurve;
         const f32 prefDistance =
@@ -225,29 +208,12 @@ void SCEDMBuilder::build(SliderCurve &curve, u32 nCurve, f32 pixelLength) {
             // jump to next point
             curPoint++;
 
-            if(curPoint >= segmentEnd) {
+            if(curPoint >= m_allPoints.size()) {
                 // jump to next segment
-                curSegment++;
-
-                if(curCurvePoints.size() > 0) {
-                    curve.m_curvePointSegments.push_back(std::move(curCurvePoints));
-                    curCurvePoints.clear();
-
-                    // prepare the next segment by setting/adding the starting point to the exact end point of the
-                    // previous segment
-                    // this also enables an optimization, namely that startcaps only have to be drawn
-                    // [for every segment] if the startpoint != endpoint in the loop
-                    if(curve.m_curvePoints.size() > 0) curCurvePoints.push_back(lastCurvePointForNextSegmentStart);
-                }
-
-                if(curSegment + 1 < m_segmentStarts.size()) {
-                    segmentEnd = m_segmentStarts[curSegment + 1];
-                } else {
-                    curPoint = m_allPoints.size() - 1;
-                    if(lastDistanceAt == distanceAt) {
-                        // out of points even though the preferred distance hasn't been reached
-                        break;
-                    }
+                curPoint = m_allPoints.size() - 1;
+                if(lastDistanceAt == distanceAt) {
+                    // out of points even though the preferred distance hasn't been reached
+                    break;
                 }
             }
 
@@ -259,94 +225,49 @@ void SCEDMBuilder::build(SliderCurve &curve, u32 nCurve, f32 pixelLength) {
         const vec2 thisCurve = (curPoint < m_allPoints.size()) ? m_allPoints[curPoint] : vec2{0.f, 0.f};
 
         // interpolate the point between the two closest distances
-        curve.m_curvePoints.emplace_back();
-        curCurvePoints.emplace_back();
         if(distanceAt - lastDistanceAt > 1) {
             const f32 t = (prefDistance - lastDistanceAt) / (distanceAt - lastDistanceAt);
-            curve.m_curvePoints[i] =
-                vec2(std::lerp(lastCurve.x, thisCurve.x, t), std::lerp(lastCurve.y, thisCurve.y, t));
+            curvePointsOut.emplace_back(std::lerp(lastCurve.x, thisCurve.x, t), std::lerp(lastCurve.y, thisCurve.y, t));
         } else
-            curve.m_curvePoints[i] = thisCurve;
-
-        // add the point to the current segment
-        // (this is not using the lerp'd point! would cause mm mesh artifacts if it did)
-        lastCurvePointForNextSegmentStart = thisCurve;
-        curCurvePoints.back() = thisCurve;
+            curvePointsOut.push_back(thisCurve);
     }
-
-    // if we only had one segment, no jump to any next curve has occurred (and therefore no insertion of the segment
-    // into the vector) manually add the lone segment here
-    if(curCurvePoints.size() > 0) curve.m_curvePointSegments.push_back(std::move(curCurvePoints));
 
     // sanity check
     // spec: FIXME: at least one of my maps triggers this (in upstream mcosu too), try to fix
-    if(curve.m_curvePoints.size() == 0) {
+    if(curvePointsOut.size() == 0) {
         debugLog("(SliderCurveBuilder) ERROR: curvePoints.size() == 0!!!");
         return;
     }
 
-    // make sure that the uninterpolated segment points are exactly as long as the pixelLength
-    // this is necessary because we can't use the lerp'd points for the segments
-    f32 segmentedLength = 0.0f;
-    for(const auto &curvePointSegment : curve.m_curvePointSegments) {
-        for(u32 p = 0; p < curvePointSegment.size(); p++) {
-            segmentedLength += ((p == 0) ? 0 : vec::length(curvePointSegment[p] - curvePointSegment[p - 1]));
-        }
-    }
-
-    // TODO: this is still incorrect. sliders are sometimes too long or start too late, even if only for a few
-    // pixels
-    if(segmentedLength > pixelLength && curve.m_curvePointSegments.size() > 1 &&
-       curve.m_curvePointSegments[0].size() > 1) {
-        f32 excess = segmentedLength - pixelLength;
-        while(excess > 0) {
-            for(i64 s = (i64)curve.m_curvePointSegments.size() - 1; s >= 0; s--) {
-                for(i64 p = (i64)curve.m_curvePointSegments[s].size() - 1; p >= 0; p--) {
-                    const f32 curLength =
-                        (p == 0) ? 0
-                                 : vec::length(curve.m_curvePointSegments[s][p] - curve.m_curvePointSegments[s][p - 1]);
-                    if(curLength >= excess && p != 0) {
-                        vec2 segmentVector =
-                            vec::normalize(curve.m_curvePointSegments[s][p] - curve.m_curvePointSegments[s][p - 1]);
-                        curve.m_curvePointSegments[s][p] = curve.m_curvePointSegments[s][p] - segmentVector * excess;
-                        excess = 0.0f;
-                        break;
-                    } else {
-                        curve.m_curvePointSegments[s].erase(curve.m_curvePointSegments[s].begin() + p);
-                        excess -= curLength;
-                    }
-                }
-            }
-        }
-    }
-
     // calculate start and end angles for possible repeats
     // (good enough and cheaper than calculating it live every frame)
-    if(curve.m_curvePoints.size() > 1) {
-        vec2 c1 = curve.m_curvePoints[0];
+    if(curvePointsOut.size() > 1) {
+        vec2 c1 = curvePointsOut[0];
         u32 cnt = 1;
-        vec2 c2 = curve.m_curvePoints[cnt++];
-        while(cnt <= nCurve && cnt < curve.m_curvePoints.size() && vec::length(c2 - c1) < 1) {
-            c2 = curve.m_curvePoints[cnt++];
+        vec2 c2 = curvePointsOut[cnt++];
+        while(cnt <= nCurve && cnt < curvePointsOut.size() && vec::length(c2 - c1) < 1) {
+            c2 = curvePointsOut[cnt++];
         }
-        curve.m_startAngle = std::atan2(c2.y - c1.y, c2.x - c1.x) * 180.f / PI_F;
+        startAngleOut = std::atan2(c2.y - c1.y, c2.x - c1.x) * 180.f / PI_F;
     }
 
-    if(curve.m_curvePoints.size() > 1) {
-        if(nCurve < curve.m_curvePoints.size()) {
-            vec2 c1 = curve.m_curvePoints[nCurve];
+    if(curvePointsOut.size() > 1) {
+        if(nCurve < curvePointsOut.size()) {
+            vec2 c1 = curvePointsOut[nCurve];
             i64 cnt = nCurve - 1;
-            vec2 c2 = curve.m_curvePoints[cnt--];
+            vec2 c2 = curvePointsOut[cnt--];
             while(cnt >= 0 && vec::length(c2 - c1) < 1) {
-                c2 = curve.m_curvePoints[cnt--];
+                c2 = curvePointsOut[cnt--];
             }
-            curve.m_endAngle = std::atan2(c2.y - c1.y, c2.x - c1.x) * 180.f / PI_F;
+            endAngleOut = std::atan2(c2.y - c1.y, c2.x - c1.x) * 180.f / PI_F;
         }
     }
 }
 
 // used as a calculation buffer to avoid reallocations on each curve creation (for catmull/bezier curves)
-static thread_local SCEDMBuilder g_curveBuilder;
+static constinit thread_local SCEDMBuilder g_curveBuilder{};
+
+}  // namespace
 
 //***********************//
 //	 Curve Subclasses	 //
@@ -386,8 +307,8 @@ void SliderCurve::constructBezier(std::span<const vec2> controlPoints, f32 curve
         g_curveBuilder.addBezierSegment(&controlPoints[segmentStart], numControlPoints - segmentStart);
     }
 
-    if(g_curveBuilder.hasSegments()) {
-        g_curveBuilder.build(*this, m_NCurve, m_pixelLength);
+    if(g_curveBuilder.hasPoints()) {
+        g_curveBuilder.build(m_curvePoints, m_startAngle, m_endAngle, m_NCurve, m_pixelLength);
     } else {
         debugLog(
             "ERROR: no segments (line: {} numControlPoints: {} pixelLength: {} "
@@ -452,8 +373,8 @@ void SliderCurve::constructCatmull(std::span<const vec2> controlPoints, f32 curv
         }
     }
 
-    if(g_curveBuilder.hasSegments()) {
-        g_curveBuilder.build(*this, m_NCurve, m_pixelLength);
+    if(g_curveBuilder.hasPoints()) {
+        g_curveBuilder.build(m_curvePoints, m_startAngle, m_endAngle, m_NCurve, m_pixelLength);
     } else {
         debugLog("ERROR: catmulls.size() == 0 (numControlPoints: {} pixelLength: {} curvePointsSeparation: {})",
                  numControlPoints, m_pixelLength, curvePointsSeparation);
@@ -581,9 +502,6 @@ void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 cur
         if(t >= 1.0f)  // early break if we've already reached the end
             break;
     }
-
-    // add the segment (no special logic here for SliderCurveCircumscribedCircle, just add the entire vector)
-    m_curvePointSegments.emplace_back(m_curvePoints);  // copy
 }
 
 //******************************//

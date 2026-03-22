@@ -384,17 +384,6 @@ class DifficultyCalculator {
         u32 legacyTotalScore;
     };
 
-    struct RhythmIsland {
-        // NOTE: lazer stores "deltaDifferenceEpsilon" (hitWindow300 * 0.3) in this struct, but OD is constant here
-        i32 delta;
-        i32 deltaCount;
-
-        inline bool equals(RhythmIsland &other, f64 deltaDifferenceEpsilon) const {
-            return std::abs(delta - other.delta) < deltaDifferenceEpsilon && deltaCount == other.deltaCount;
-        }
-    };
-    static thread_local std::vector<std::pair<RhythmIsland, int>> islandCounts;
-
    private:
     // Skill values calculation
     static f64 computeAimValue(const ScoreData &score, const DifficultyAttributes &attributes, f64 effectiveMissCount);

@@ -49,7 +49,6 @@ class SliderCurve final {
     [[nodiscard]] inline vec4 getBounds() const { return m_vBounds; }  // NOTE: not adjusted for stacking/HR
 
    private:
-    std::vector<std::vector<vec2>> m_curvePointSegments;
     std::vector<vec2> m_curvePoints;
 
     vec4 m_vBounds;
@@ -97,7 +96,5 @@ class SliderCurve final {
     void constructBezier(std::span<const vec2> controlPoints, f32 curvePointsSeparation, bool line);
     void constructCatmull(std::span<const vec2> controlPoints, f32 curvePointsSeparation);
     void constructCircular(std::span<const vec2> controlPoints, f32 curvePointsSeparation);
-
-    friend class SCEDMBuilder;
 };  // namespace neomod
 }  // namespace neomod
