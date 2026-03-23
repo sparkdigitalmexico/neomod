@@ -199,7 +199,7 @@ void DirectX11RenderTarget::drawRect(int x, int y, int width, int height) {
     {
         g->setColor(this->color);
 
-        static VertexArrayObject vao;
+        static constinit VertexArrayObject vao;
 
         vao.clear();
 

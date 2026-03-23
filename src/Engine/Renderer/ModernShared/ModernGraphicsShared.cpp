@@ -60,7 +60,7 @@ void ModernGraphicsShared::drawLinef(float x1, float y1, float x2, float y2) {
     this->updateTransform();
     this->setTexturing(false);
 
-    static VertexArrayObject vao(DrawPrimitive::LINES);
+    static constinit VertexArrayObject vao(DrawPrimitive::LINES);
     {
         vao.clear();
         vao.addVertex(x1, y1);
@@ -81,7 +81,7 @@ void ModernGraphicsShared::drawRectf(const RectOptions &opts) {
         const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
         const float hw = opts.lineThickness / 2.f;
         const float rInner = r - hw, rOuter = r + hw;
-        static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
+        static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
         {
             vao.clear();
             addArcStripVertices(vao, opts.x + r, opts.y + r, rInner, rOuter, PI_F, 1.5f * PI_F);
@@ -148,7 +148,7 @@ void ModernGraphicsShared::fillRectf(const FillRectOptions &opts) {
     if(opts.cornerRadius > 0.f) {
         const float r = opts.cornerRadius;
         const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
-        static VertexArrayObject vao(DrawPrimitive::TRIANGLE_FAN);
+        static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_FAN);
         {
             vao.clear();
             vao.addVertex(opts.x + opts.width * 0.5f, opts.y + opts.height * 0.5f);  // center (fan hub)
@@ -162,7 +162,7 @@ void ModernGraphicsShared::fillRectf(const FillRectOptions &opts) {
         }
         this->drawVAO(&vao);
     } else {
-        static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
+        static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
         {
             vao.clear();
             vao.addVertex(opts.x, opts.y);
@@ -178,7 +178,7 @@ void ModernGraphicsShared::drawArcf(float cx, float cy, float radius, float star
     this->updateTransform();
     this->setTexturing(false);
 
-    static VertexArrayObject vao(DrawPrimitive::LINE_STRIP);
+    static constinit VertexArrayObject vao(DrawPrimitive::LINE_STRIP);
     {
         vao.clear();
         addArcVertices(vao, cx, cy, radius, startAngle, endAngle);
@@ -191,7 +191,7 @@ void ModernGraphicsShared::fillGradient(int x, int y, int width, int height, Col
     this->updateTransform();
     this->setTexturing(false);  // disable texturing
 
-    static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
+    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     {
         vao.clear();
         vao.addVertex((float)x, (float)y);
@@ -210,7 +210,7 @@ void ModernGraphicsShared::drawQuad(int x, int y, int width, int height) {
     this->updateTransform();
     this->setTexturing(true);  // enable texturing
 
-    static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
+    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     {
         vao.clear();
         vao.addVertex((float)x, (float)y);
@@ -230,7 +230,7 @@ void ModernGraphicsShared::drawQuad(vec2 topLeft, vec2 topRight, vec2 bottomRigh
     this->updateTransform();
     this->setTexturing(false);  // disable texturing
 
-    static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
+    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     {
         vao.clear();
         vao.addVertex(topLeft.x, topLeft.y);

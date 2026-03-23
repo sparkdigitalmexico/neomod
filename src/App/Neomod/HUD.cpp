@@ -794,7 +794,7 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
 
         // top
         {
-            static VertexArrayObject vao(DrawPrimitive::QUADS);
+            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
             vao.clear();
 
             vao.addVertex(playfieldBorderTopLeft);
@@ -811,7 +811,7 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
 
         // left
         {
-            static VertexArrayObject vao(DrawPrimitive::QUADS);
+            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
             vao.clear();
 
             vao.addVertex(playfieldBorderTopLeft);
@@ -828,7 +828,7 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
 
         // right
         {
-            static VertexArrayObject vao(DrawPrimitive::QUADS);
+            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
             vao.clear();
 
             vao.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + 2 * borderSize, 0));
@@ -847,7 +847,7 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
 
         // bottom
         {
-            static VertexArrayObject vao(DrawPrimitive::QUADS);
+            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
             vao.clear();
 
             vao.addVertex(playfieldBorderTopLeft + vec2(borderSize, playfieldBorderSize.y + borderSize));
@@ -1756,7 +1756,7 @@ void HUD::drawProgressBar(f32 percent, bool waiting) {
         g->setColor(0xaaf2f2f2);
 
     {
-        static VertexArrayObject vao;
+        static constinit VertexArrayObject vao;
         vao.clear();
 
         vec2 prevVertex{0.f};

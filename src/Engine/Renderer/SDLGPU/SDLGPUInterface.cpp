@@ -683,7 +683,7 @@ void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float ed
         m_smoothClipShader->setMVP(m_data->MP);
     }
 
-    static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
+    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     vao.clear();
     {
         vao.addVertex(x, y);

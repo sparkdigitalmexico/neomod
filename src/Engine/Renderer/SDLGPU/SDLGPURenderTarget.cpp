@@ -177,7 +177,7 @@ void SDLGPURenderTarget::drawRect(int x, int y, int width, int height) {
     {
         m_gpu->setColor(this->color);
 
-        static VertexArrayObject vao;
+        static constinit VertexArrayObject vao;
         vao.clear();
 
         vao.addTexcoord(texCoordWidth0, texCoordHeight1);

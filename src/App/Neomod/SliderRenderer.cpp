@@ -32,8 +32,8 @@ std::vector<f32> s_UNIT_CIRCLE;
 VertexArrayObject *s_UNIT_CIRCLE_VAO_BAKED{nullptr};
 
 // unbaked, basic VAO containers
-VertexArrayObject s_UNIT_CIRCLE_VAO{DrawPrimitive::TRIANGLE_FAN};
-VertexArrayObject s_UNIT_CIRCLE_VAO_TRIANGLES{DrawPrimitive::TRIANGLES};
+static constinit VertexArrayObject s_UNIT_CIRCLE_VAO{DrawPrimitive::TRIANGLE_FAN};
+static constinit VertexArrayObject s_UNIT_CIRCLE_VAO_TRIANGLES{DrawPrimitive::TRIANGLES};
 
 // tiny rendering optimization for RenderTarget
 f32 s_fBoundingBoxMinX{(std::numeric_limits<f32>::max)()};
@@ -582,7 +582,7 @@ void drawDebugLegacy(std::span<const vec2> points, f32 hitcircleDiameter, Color 
             for(uSz i = drawFromIndex; i < drawUpToIndex; i++) {
                 const vec2 point = points[i] * circleImageScaleInv;
 
-                static VertexArrayObject vao(DrawPrimitive::QUADS);
+                static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
                 vao.clear();
                 {
                     vao.addTexcoord(0, 0);

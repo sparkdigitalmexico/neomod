@@ -260,7 +260,7 @@ void OpenGLES32Interface::drawRectf(const RectOptions &opts) {
         if(opts.cornerRadius > 0.f) {
             const float r = opts.cornerRadius;
             const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
-            static VertexArrayObject vao(DrawPrimitive::LINE_LOOP);
+            static constinit VertexArrayObject vao(DrawPrimitive::LINE_LOOP);
             {
                 vao.clear();
                 addArcVertices(vao, opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
@@ -340,7 +340,7 @@ void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, floa
         this->smoothClipShader->setMVP(m_data->MP);
     }
 
-    static VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
+    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     vao.clear();
     {
         vao.addVertex(x, y);

@@ -172,7 +172,7 @@ void ModFPoSu::draw() {
             {
                 // axis lines at (0, 0, 0)
                 if(cv::fposu_noclip.getBool()) {
-                    static VertexArrayObject vao(DrawPrimitive::LINES);
+                    static constinit VertexArrayObject vao(DrawPrimitive::LINES);
                     vao.clear();
                     {
                         vec3 pos = vec3(0, 0, 0);

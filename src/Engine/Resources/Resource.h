@@ -28,6 +28,7 @@ class Resource {
     Resource &operator=(const Resource &) = delete;
     Resource(Resource &&o) noexcept;
     Resource &operator=(Resource &&o) noexcept = delete;
+
    private:
     friend class ResourceManager;
     friend struct ResourceManagerImpl;
@@ -37,9 +38,13 @@ class Resource {
 
    protected:
     constexpr Resource(Type resType) : resType(resType) {
-        this->sDebugIdentifier.assign(fmt::format(
-            fmt::operator""_cf < "{:8p}:{:s}:name=<none>:postinit=false:filepath=<none>">(), fmt::ptr(this),
-            this->typeToString()));
+        if consteval {
+            this->sDebugIdentifier.assign(this->typeToString());
+        } else {
+            this->sDebugIdentifier.assign(fmt::format(
+                fmt::operator""_cf < "{:8p}:{:s}:name=<none>:postinit=false:filepath=<none>">(), fmt::ptr(this),
+                this->typeToString()));
+        }
     }
 
     Resource(Type resType, std::string filepath, bool doFilesystemExistenceCheck = true);
