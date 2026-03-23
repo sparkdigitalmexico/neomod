@@ -14,9 +14,15 @@ void ModernGraphicsShared::addArcVertices(VertexArrayObject &vao, float cx, floa
                                           float endAngle) {
     constexpr float step = 0.05f;
     const int numSteps = (int)((endAngle - startAngle) / step);
+
+    // rotate (c,s) by step each iteration
+    const float cs = std::cos(step), ss = std::sin(step);
+    float c = std::cos(startAngle), s = std::sin(startAngle);
     for(int i = 0; i <= numSteps; i++) {
-        const float a = startAngle + (float)i * step;
-        vao.addVertex(radius * std::cos(a) + cx, radius * std::sin(a) + cy);
+        vao.addVertex(radius * c + cx, radius * s + cy);
+        const float nc = c * cs - s * ss;
+        s = s * cs + c * ss;
+        c = nc;
     }
     vao.addVertex(radius * std::cos(endAngle) + cx, radius * std::sin(endAngle) + cy);
 }
@@ -28,18 +34,19 @@ inline void addArcStripVertices(VertexArrayObject &vao, float cx, float cy, floa
     const int numSteps = std::max(1, (int)((endAngle - startAngle) / 0.05f));
     const float step = (endAngle - startAngle) / (float)numSteps;
 
-    float a, c, s;  // NOLINT
+    // rotate (c,s) by step each iteration
+    const float cs = std::cos(step), ss = std::sin(step);
+    float c = std::cos(startAngle), s = std::sin(startAngle);
     for(int i = 0; i < numSteps; i++) {
-        a = startAngle + (float)i * step;
-        c = std::cos(a);
-        s = std::sin(a);
         vao.addVertex(rOuter * c + cx, rOuter * s + cy);
         vao.addVertex(rInner * c + cx, rInner * s + cy);
+        const float nc = c * cs - s * ss;
+        s = s * cs + c * ss;
+        c = nc;
     }
-    // i == numSteps
-    a = endAngle;
-    c = std::cos(a);
-    s = std::sin(a);
+    // final pair at exact endAngle
+    c = std::cos(endAngle);
+    s = std::sin(endAngle);
     vao.addVertex(rOuter * c + cx, rOuter * s + cy);
     vao.addVertex(rInner * c + cx, rInner * s + cy);
 }
