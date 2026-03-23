@@ -268,10 +268,10 @@ class Slider final : public HitObject {
     Slider() = delete;
     ~Slider() override;
 
-    Slider(neomod::SLIDERCURVETYPE stype, i32 repeat, f32 pixelLength, std::vector<vec2> points, const std::vector<f32> &ticks,
-           f32 sliderTimeMS, f32 sliderTimeMSWithoutRepeats, i32 timeMS, DBHitSample hoverSamples,
-           std::vector<DBHitSample> edgeSamples, i32 comboNumber, bool isEndOfCombo, i32 colorCounter, i32 colorOffset,
-           AbstractBeatmapInterface *beatmap);
+    Slider(neomod::SLIDERCURVETYPE stype, i32 repeat, f32 pixelLength, std::vector<vec2> points,
+           const std::vector<f32> &ticks, f32 sliderTimeMS, f32 sliderTimeMSWithoutRepeats, i32 timeMS,
+           DBHitSample hoverSamples, std::vector<DBHitSample> edgeSamples, i32 comboNumber, bool isEndOfCombo,
+           i32 colorCounter, i32 colorOffset, AbstractBeatmapInterface *beatmap);
 
     Slider(const Slider &) = delete;
     Slider &operator=(const Slider &) = delete;
@@ -300,8 +300,8 @@ class Slider final : public HitObject {
 
     [[nodiscard]] inline bool isStartCircleFinished() const { return m_startFinished; }
     [[nodiscard]] inline i32 getRepeat() const { return m_repeat; }
-    [[nodiscard]] inline std::vector<vec2> getRawPoints() const { return m_points; }
-    [[nodiscard]] inline f32 getPixelLength() const { return m_pixelLength; }
+    [[nodiscard]] inline const std::vector<vec2> &getRawPoints() const { return m_ctrlPoints; }
+    [[nodiscard]] inline f32 getPixelLength() const { return m_curve.getPixelLength(); }
     [[nodiscard]] inline const std::vector<SLIDERCLICK> &getClicks() const { return m_clicks; }
 
    private:
@@ -337,7 +337,7 @@ class Slider final : public HitObject {
     HitAnim &addHitAnim(u8 typeFlags, f32 duration);
 
     std::vector<HitAnim> m_clickAnimations;
-    std::vector<vec2> m_points;
+    std::vector<vec2> m_ctrlPoints;
     std::vector<DBHitSample> m_edgeSamples;
     std::vector<Set_Slider_Hit> m_lastSliderSampleSets;
 
@@ -355,8 +355,6 @@ class Slider final : public HitObject {
     vec2 m_curPointRaw{0.f};
 
     i32 m_strictTrackingModLastClickHeldTime{0};
-
-    f32 m_pixelLength;
 
     f32 m_sliderTimeMS;
     f32 m_sliderTimeMSWithoutRepeats;

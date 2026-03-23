@@ -1011,11 +1011,10 @@ Slider::Slider(SLIDERCURVETYPE stype, i32 repeat, f32 pixelLength, std::vector<v
                DBHitSample hoverSamples, std::vector<DBHitSample> edgeSamples, i32 comboNumber, bool isEndOfCombo,
                i32 colorCounter, i32 colorOffset, AbstractBeatmapInterface *pi)
     : HitObject(timeMS, hoverSamples, comboNumber, isEndOfCombo, colorCounter, colorOffset, pi),
-      m_points(std::move(points)),
+      m_ctrlPoints(std::move(points)),
       m_edgeSamples(std::move(edgeSamples)),
       // build curve
-      m_curve(stype, m_points, std::abs(pixelLength)),
-      m_pixelLength(std::abs(pixelLength)),
+      m_curve(stype, m_ctrlPoints, std::abs(pixelLength)),
       m_sliderTimeMS(sliderTimeMS),
       m_sliderTimeMSWithoutRepeats(sliderTimeMSWithoutRepeats),
       m_repeat(repeat) {
@@ -1071,7 +1070,7 @@ Slider::Slider(SLIDERCURVETYPE stype, i32 repeat, f32 pixelLength, std::vector<v
 }
 
 void Slider::draw() {
-    if(m_points.size() <= 0) return;
+    if(m_ctrlPoints.size() <= 0) return;
 
     const f32 foscale = cv::circle_fade_out_scale.getFloat();
     const Skin *skin = m_pf->getSkin();
@@ -1120,7 +1119,7 @@ void Slider::draw() {
         }
 
         // draw start & end circle (if not traceable)
-        const bool has_points = m_points.size() > 1;
+        const bool has_points = m_ctrlPoints.size() > 1;
         if(has_points && !tc) {
             // HACKHACK: very dirty code
             bool sliderRepeatStartCircleFinished = (m_repeat < 2);
@@ -1318,7 +1317,7 @@ void Slider::draw2(bool drawApproachCircle, bool drawOnlyApproachCircle) {
        drawApproachCircle)  // extra possibility to avoid flicker between HitObject::m_bVisible delay and the fadeout
                             // animation below this if block
     {
-        if(m_points.size() > 1) {
+        if(m_ctrlPoints.size() > 1) {
             // HACKHACK: very dirty code
             bool sliderRepeatStartCircleFinished = m_repeat < 2;
             for(auto &click : m_clicks) {
@@ -1957,7 +1956,7 @@ f32 Slider::getT(i32 posMS, bool raw) const {
 }
 
 void Slider::onClickEvent(std::vector<Click> &clicks) {
-    if(m_points.size() == 0 || m_blocked)
+    if(m_ctrlPoints.size() == 0 || m_blocked)
         return;  // also handle note blocking here (doesn't need fancy shake logic, since sliders don't shake in
                  // osu!stable)
 
@@ -1985,7 +1984,7 @@ void Slider::onClickEvent(std::vector<Click> &clicks) {
 
 void Slider::onHit(LiveHitResult result, i32 delta, bool isEndCircle, f32 targetDelta, f32 targetAngle,
                    bool isEndResultFromStrictTrackingMod) {
-    if(m_points.size() == 0) return;
+    if(m_ctrlPoints.size() == 0) return;
 
     // start + end of a slider add +30 points, if successful
 
@@ -2101,7 +2100,7 @@ void Slider::onHit(LiveHitResult result, i32 delta, bool isEndCircle, f32 target
 }
 
 void Slider::onRepeatHit(const SLIDERCLICK &click) {
-    if(m_points.size() == 0) return;
+    if(m_ctrlPoints.size() == 0) return;
 
     // repeat hit of a slider adds +30 points, if successful
 
@@ -2158,7 +2157,7 @@ void Slider::onRepeatHit(const SLIDERCLICK &click) {
 }
 
 void Slider::onTickHit(const SLIDERCLICK &click) {
-    if(m_points.size() == 0) return;
+    if(m_ctrlPoints.size() == 0) return;
 
     // tick hit of a slider adds +10 points, if successful
 
