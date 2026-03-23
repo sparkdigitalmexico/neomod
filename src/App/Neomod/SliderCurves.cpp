@@ -265,7 +265,7 @@ void SCEDMBuilder::build(std::vector<vec2> &curvePointsOut, f32 &startAngleOut, 
 }
 
 // used as a calculation buffer to avoid reallocations on each curve creation (for catmull/bezier curves)
-static constinit thread_local SCEDMBuilder g_curveBuilder{};
+static thread_local SCEDMBuilder g_curveBuilder{};
 
 }  // namespace
 
