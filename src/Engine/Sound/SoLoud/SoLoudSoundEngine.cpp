@@ -196,6 +196,11 @@ bool SoLoudSoundEngine::updateExistingSound(SoLoudSound *soloudSound, SOUNDHANDL
     if(!startPaused) {
         soloud->setPause(handle, false);
         soloudSound->setLastPlayTime(engine->getTime());
+
+        // invalidate caches
+        soloudSound->soloud_paused_handle_cache_time = 0.;
+        soloudSound->cached_pause_state = false;
+        soloudSound->force_sync_position_next = true;
     }
 
     logIfCV(debug_snd, "handle was already valid, for non-overlayable sound {}", soloudSound->getName());
@@ -284,6 +289,11 @@ bool SoLoudSoundEngine::playSound(SoLoudSound *soloudSound, f32 pan, f32 pitch, 
 
     soloudSound->setLastPlayTime(engine->getTime());
 
+    // invalidate caches
+    soloudSound->soloud_paused_handle_cache_time = 0.;
+    soloudSound->cached_pause_state = false;
+    soloudSound->force_sync_position_next = true;
+
     return true;
 }
 
@@ -295,6 +305,11 @@ void SoLoudSoundEngine::pause(Sound *snd) {
 
     soloud->setPause(soloudSound->handle, true);
     soloudSound->setLastPlayTime(0.0);
+
+    // invalidate caches
+    soloudSound->soloud_paused_handle_cache_time = 0.;
+    soloudSound->cached_pause_state = true;
+    soloudSound->force_sync_position_next = true;
 }
 
 void SoLoudSoundEngine::stop(Sound *snd) {

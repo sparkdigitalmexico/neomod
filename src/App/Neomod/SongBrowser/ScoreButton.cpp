@@ -186,11 +186,9 @@ void ScoreButton::draw() {
         constexpr Color topRanksColor = 0xffdeff87;
         constexpr Color topRanksScorePPWeightedWeightColor = 0xffbbbbbb;
         constexpr Color songBrowserColor = 0xffffffff;
-        constexpr Color textShadowColor = argb(0.75f, 0.f, 0.f, 0.f);
 
-        TextFX shadow{.col_text = (this->style == STYLE::TOP_RANKS ? topRanksColor : songBrowserColor),
-                          .col_shadow = textShadowColor,
-                          .offs_px = 0.75f};
+        // TODO: use outlines here, shadows look crunchy at lower resolutions
+        TextFX shadow{.col_text = (this->style == STYLE::TOP_RANKS ? topRanksColor : songBrowserColor), .offs_px = 1.f};
 
         const std::string &mainString = [&]() {
             // top ranks: draw pp + weight % and weighted pp
