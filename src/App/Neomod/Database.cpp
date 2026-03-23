@@ -2659,7 +2659,7 @@ std::unique_ptr<BeatmapSet> Database::loadRawBeatmap(const std::string &beatmapP
     return set;
 }
 
-void Database::update_overrides(BeatmapDifficulty *diff) {
+void Database::update_overrides(const BeatmapDifficulty *diff) {
     if(!diff || diff->do_not_store || diff->type != DatabaseBeatmap::BeatmapType::PEPPY_DIFFICULTY) return;
 
     Sync::unique_lock lock(this->peppy_overrides_mtx);

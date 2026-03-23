@@ -321,7 +321,8 @@ void BGImageHandlerImpl::update(bool allow_eviction) {
         auto &[osu_path, entry] = *it;
 
         // NOTE: avoid load/unload jitter if framerate is below eviction delay
-        const bool was_used_last_frame = !entry.isStale(this->eviction_delay_frames);
+        const bool was_used_last_frame =
+            !entry.isStale(this->eviction_delay_frames) || (entry.image && entry.image == this->last_drawn_image);
 
         // check and handle evictions
         if(evicted < max_to_evict && consider_evictions && !was_used_last_frame) {
@@ -362,7 +363,8 @@ void BGImageHandlerImpl::update(bool allow_eviction) {
                         entry.ready_but_image_not_found = true;
                     }
 
-                    logIf(doLogging, "loading image for entry (bg path loader finished): {:s}", entry.bg_image_filename);
+                    logIf(doLogging, "loading image for entry (bg path loader finished): {:s}",
+                          entry.bg_image_filename);
                 }
             }
         }
@@ -413,7 +415,7 @@ const Image *BGImageHandlerImpl::getLoadBackgroundImage(const DatabaseBeatmap *b
             entry.overwrite_db_entry = false;
 
             // update persistent overrides for this map too (so we keep them on db save)
-            db->update_overrides(const_cast<DatabaseBeatmap *>(beatmap));
+            db->update_overrides(beatmap);
         }
 
         ret = entry.image;
@@ -433,7 +435,8 @@ const Image *BGImageHandlerImpl::getLoadBackgroundImage(const DatabaseBeatmap *b
                 if(evicted > max_to_evict) break;
 
                 const auto &[osu_path, entry] = *it;
-                if(entry.load_scheduled && entry.isStale(this->eviction_delay_frames)) {
+                if(entry.load_scheduled && (entry.isStale(this->eviction_delay_frames) &&
+                                            !(entry.image && entry.image == this->last_drawn_image))) {
                     it = this->cache.erase(it);
                     evicted++;
                 } else {
