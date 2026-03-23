@@ -11,6 +11,7 @@
 #include "SString.h"
 
 using namespace emscripten;
+using namespace neomod;
 
 struct Beatmap {
     Beatmap(std::string osu_bytes) {
@@ -73,23 +74,23 @@ struct Beatmap {
             }
         }
 
-        DifficultyCalculator::PPv2CalcParams params{.attributes = this->difficulty_attributes,
-                                                    .modFlags = score.mods.flags,
-                                                    .timescale = score.mods.speed,
-                                                    .ar = score.mods.get_naive_ar(this->AR),
-                                                    .od = score.mods.get_naive_od(this->OD),
-                                                    .numHitObjects = static_cast<int>(this->primitives.getNumObjects()),
-                                                    .numCircles = static_cast<int>(this->primitives.hitcircles.size()),
-                                                    .numSliders = static_cast<int>(this->primitives.sliders.size()),
-                                                    .numSpinners = static_cast<int>(this->primitives.spinners.size()),
-                                                    .maxPossibleCombo = this->maxPossibleCombo,
-                                                    .combo = score.comboMax,
-                                                    .misses = score.numMisses,
-                                                    .c300 = score.num300s,
-                                                    .c100 = score.num100s,
-                                                    .c50 = score.num50s,
-                                                    .legacyTotalScore = (u32)score.score};
-        return DifficultyCalculator::calculatePPv2(params);
+        DiffCalc::PPv2CalcParams params{.attributes = this->difficulty_attributes,
+                                        .modFlags = score.mods.flags,
+                                        .timescale = score.mods.speed,
+                                        .ar = score.mods.get_naive_ar(this->AR),
+                                        .od = score.mods.get_naive_od(this->OD),
+                                        .numHitObjects = static_cast<int>(this->primitives.getNumObjects()),
+                                        .numCircles = static_cast<int>(this->primitives.hitcircles.size()),
+                                        .numSliders = static_cast<int>(this->primitives.sliders.size()),
+                                        .numSpinners = static_cast<int>(this->primitives.spinners.size()),
+                                        .maxPossibleCombo = this->maxPossibleCombo,
+                                        .combo = score.comboMax,
+                                        .misses = score.numMisses,
+                                        .c300 = score.num300s,
+                                        .c100 = score.num100s,
+                                        .c50 = score.num50s,
+                                        .legacyTotalScore = (u32)score.score};
+        return DiffCalc::calculatePPv2(params);
     }
 
    private:
@@ -146,22 +147,21 @@ struct Beatmap {
             return false;
         }
 
-        DifficultyCalculator::BeatmapDiffcalcData diffcalcData{
-            .sortedHitObjects = diffResult.diffobjects,
-            .CS = mods.get_naive_cs(this->CS),
-            .HP = mods.get_naive_hp(this->HP),
-            .AR = mods.get_naive_ar(this->AR),
-            .OD = mods.get_naive_od(this->OD),
-            .hidden = flags::has<ModFlags::Hidden>(mods.flags),
-            .relax = flags::has<ModFlags::Relax>(mods.flags),
-            .autopilot = flags::has<ModFlags::Autopilot>(mods.flags),
-            .touchDevice = flags::has<ModFlags::TouchDevice>(mods.flags),
-            .speedMultiplier = mods.speed,
-            .breakDuration = diffResult.totalBreakDuration,
-            .playableLength = diffResult.playableLength};
+        DiffCalc::BeatmapDiffcalcData diffcalcData{.sortedHitObjects = diffResult.diffobjects,
+                                                   .CS = mods.get_naive_cs(this->CS),
+                                                   .HP = mods.get_naive_hp(this->HP),
+                                                   .AR = mods.get_naive_ar(this->AR),
+                                                   .OD = mods.get_naive_od(this->OD),
+                                                   .hidden = flags::has<ModFlags::Hidden>(mods.flags),
+                                                   .relax = flags::has<ModFlags::Relax>(mods.flags),
+                                                   .autopilot = flags::has<ModFlags::Autopilot>(mods.flags),
+                                                   .touchDevice = flags::has<ModFlags::TouchDevice>(mods.flags),
+                                                   .speedMultiplier = mods.speed,
+                                                   .breakDuration = diffResult.totalBreakDuration,
+                                                   .playableLength = diffResult.playableLength};
 
-        this->difficulty_attributes = DifficultyCalculator::DifficultyAttributes{};
-        DifficultyCalculator::StarCalcParams starParams{
+        this->difficulty_attributes = DiffCalc::DifficultyAttributes{};
+        DiffCalc::StarCalcParams starParams{
             .cachedDiffObjects = {},
             .outAttributes = this->difficulty_attributes,
             .beatmapData = diffcalcData,
@@ -172,7 +172,7 @@ struct Beatmap {
             .cancelCheck = {},
         };
 
-        this->star_rating = DifficultyCalculator::calculateStarDiffForHitObjects(starParams);
+        this->star_rating = DiffCalc::calculateStarDiffForHitObjects(starParams);
         this->mods_of_current_difficulty_attributes = mods;
         this->maxPossibleCombo = static_cast<int>(diffResult.getTotalMaxCombo());
         return true;
@@ -184,7 +184,7 @@ struct Beatmap {
     float HP = 5.0f;
     int maxPossibleCombo = 0;
     DatabaseBeatmap::PRIMITIVE_CONTAINER primitives;
-    DifficultyCalculator::DifficultyAttributes difficulty_attributes;
+    DiffCalc::DifficultyAttributes difficulty_attributes;
     Replay::Mods mods_of_current_difficulty_attributes;
 
     // maybe expose these later
