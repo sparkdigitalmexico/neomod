@@ -220,34 +220,402 @@ bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
 }
 
 #elif defined(MCENGINE_PLATFORM_WINDOWS)  // the win32 api is just WAY faster for this than std::filesystem
+
+#include "dynutils.h"
+#include "RuntimePlatform.h"
+
 #include "WinDebloatDefs.h"
 #include <fileapi.h>
+#include <libloaderapi.h>
+#include <heapapi.h>
+#include <errhandlingapi.h>
+#include <handleapi.h>
+
+#include <string>
+namespace {
 
 #ifndef INVALID_HANDLE_VALUE
 #define INVALID_HANDLE_VALUE ((HANDLE)(LONG_PTR) - 1)
 #endif
 
-using std::string_literals::operator""s;
+Sync::once_flag long_path_check;
+bool std_filesystem_supports_long_paths{true};
 
-bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
-                               std::vector<std::string> &utf8NamesOut) noexcept {
-    if(pathToEnum.empty()) return false;
+using wine_get_dos_file_name_t = LPWSTR CDECL(LPCSTR);
+wine_get_dos_file_name_t *pwine_get_dos_file_name{nullptr};
+bool tried_load_wine_func{false};
+
+void normalizeWideSlashes(std::wstring &str, wchar_t oldSlash, wchar_t newSlash) noexcept {
+    std::ranges::replace(str, oldSlash, newSlash);
+
+    bool prev = false;
+    std::erase_if(str, [&](wint_t c) {
+        const bool remove = prev && c == newSlash;
+        prev = (c == newSlash);
+        return remove;
+    });
+}
+
+forceinline std::wstring adjustPath_(std::string_view filepathNarrow, bool forceLongPath) noexcept {
+    static constexpr const std::wstring_view extPrefix{LR"(\\?\)"sv};
+    static constexpr const std::wstring_view devicePrefix{LR"(\\.\)"sv};
+    static constexpr const std::wstring_view extUncPrefix{LR"(\\?\UNC\)"sv};
+    static constexpr const std::wstring_view uncStart{LR"(\\)"sv};
+
+    if(filepathNarrow.empty()) return {};
+
+    std::wstring filepath;
+
+    // Handle Unix absolute paths under Wine
+    if(filepathNarrow[0] == '/' && (filepathNarrow.size() < 2 || filepathNarrow[1] != '/')) {
+        if(pwine_get_dos_file_name ||
+           (!tried_load_wine_func && (RuntimePlatform::current() & RuntimePlatform::WIN_WINE) &&
+            (pwine_get_dos_file_name = dynutils::load_func<wine_get_dos_file_name_t>(
+                 reinterpret_cast<dynutils::lib_obj *>(GetModuleHandleA("kernel32.dll")), "wine_get_dos_file_name")))) {
+            std::string path{filepathNarrow};
+            File::normalizeSlashes(path, '\\', '/');  // normalize any mixed slashes in the path portion
+
+            LPWSTR dosPath = pwine_get_dos_file_name(path.c_str());  // use original with forward slashes
+            if(dosPath) {
+                filepath = std::wstring{dosPath, std::wcslen(dosPath)};
+                HeapFree(GetProcessHeap(), 0, dosPath);
+
+                if(!forceLongPath) {
+                    // not sure if this is necessary or works as intended...
+                    // but don't return an extended path unless it's too long
+                    // some wine APIs don't work 100% properly with it (like SDL_OpenURL with a file:/// URI)
+                    if(filepath.length() > MAX_PATH && !filepath.starts_with(L'\\')) {
+                        return std::wstring{extPrefix} + filepath;
+                    }
+                    return filepath;
+                }
+                // forceLongPath: use resolved DOS path as input to the main path logic below
+            }
+        } else {
+            tried_load_wine_func = true;
+        }
+        if(filepath.empty()) {
+            // Fallback: return as-is and let Wine handle it at file I/O layer
+            return UniString::to_wide(filepathNarrow);
+        }
+    }
+
+    // Detect existing prefix type and determine output prefix
+    if(filepath.empty()) filepath = UniString::to_wide(filepathNarrow);
+    std::wstring outputPrefix;
+    size_t stripLen = 0;
+    bool resolveAbsolute = false;
+
+    if(filepath.starts_with(extUncPrefix)) {
+        outputPrefix = extUncPrefix;
+        stripLen = extUncPrefix.size();
+    } else if(filepath.starts_with(extPrefix)) {
+        outputPrefix = extPrefix;
+        stripLen = extPrefix.size();
+    } else if(filepath.starts_with(devicePrefix)) {
+        outputPrefix = devicePrefix;
+        stripLen = devicePrefix.size();
+    } else if(filepath.starts_with(uncStart) && filepath.size() > 2 && filepath[2] != L'?' && filepath[2] != L'.') {
+        // Standard UNC path -> extended UNC
+        outputPrefix = extUncPrefix;
+        stripLen = uncStart.size();
+    } else {
+        // Regular DOS path needs absolute resolution
+        resolveAbsolute = true;
+
+        // Don't prepend anything if we're running under Wine, see the reasoning above (broken interactions with some APIs)
+        // Should work fine for not-long-paths anyways. forceLongPath overrides this for APIs that need the prefix.
+        if(forceLongPath ||
+           !(filepath.length() < MAX_PATH && (RuntimePlatform::current() & RuntimePlatform::WIN_WINE))) {
+            outputPrefix = extPrefix;
+        }
+    }
+
+    std::wstring path{filepath.substr(stripLen)};
+    normalizeWideSlashes(path, L'/', L'\\');
+
+    if(resolveAbsolute) {
+        DWORD len = GetFullPathNameW(path.c_str(), 0, nullptr, nullptr);
+        if(len == 0) {
+            logIfCV(debug_file, "GetFullPathNameW({}, 0, NULL, NULL): {:d}", UniString::to_utf8(path), GetLastError());
+            return filepath;
+        }
+
+        std::wstring buf(len, L'\0');
+        len = GetFullPathNameW(path.c_str(), len, buf.data(), nullptr);
+        if(len == 0) {
+            logIfCV(debug_file, "GetFullPathNameW({}, {}, {}, NULL): {:d}", UniString::to_utf8(path), len,
+                    UniString::to_utf8(buf), GetLastError());
+            return filepath;
+        }
+        buf.resize(len);
+
+        // GetFullPathNameW may return an already-prefixed path if CWD has an extended prefix
+        std::wstring_view resolved{buf};
+        if(resolved.starts_with(LR"(\\?\)") || resolved.starts_with(LR"(\\.\)")) {
+            return std::wstring{buf.data(), len};
+        }
+
+        // Standard UNC path from GetFullPathNameW -> extended UNC
+        if(resolved.starts_with(LR"(\\)") && resolved.size() > 2) {
+            return std::wstring{extUncPrefix} + std::wstring{buf.data() + 2, len - 2};
+        }
+
+        return outputPrefix + std::wstring{buf.data(), static_cast<size_t>(len)};
+    }
+
+    return outputPrefix + path;
+}
+
+std::wstring adjustPath(std::string_view filepath) noexcept {
+    if(!std_filesystem_supports_long_paths) return UniString::to_wide(filepath);
+
+    Sync::call_once(long_path_check, []() {
+        std::array<wchar_t, MAX_PATH + 1> buf{};
+        const size_t length = static_cast<size_t>(GetModuleFileNameW(nullptr, buf.data(), MAX_PATH));
+        if(length == 0) {
+            std_filesystem_supports_long_paths = false;
+            return;
+        }
+
+        std::string narrowPath{UniString::to_utf8(std::wstring_view{buf.data(), length})};
+        std::wstring wPath = adjustPath_(narrowPath, false);
+
+        if(wPath.length() == 0) {
+            std_filesystem_supports_long_paths = false;
+            return;
+        }
+
+        fs::path tempfs{wPath.c_str()};
+        std::error_code ec;
+
+        auto status = fs::status(tempfs, ec);
+        if(ec || status.type() == fs::file_type::not_found) {
+            std_filesystem_supports_long_paths = false;
+        }
+    });
+
+    if(!std_filesystem_supports_long_paths) {
+        debugLog("NOTE: current std::filesystem implementation does not support long paths, disabling.");
+        return UniString::to_wide(filepath);
+    }
+
+    return adjustPath_(filepath, false);
+}
+
+#ifndef FILE_FLAG_BACKUP_SEMANTICS
+#define FILE_FLAG_BACKUP_SEMANTICS 0x02000000
+#endif
+
+#ifndef FILE_LIST_DIRECTORY
+#define FILE_LIST_DIRECTORY 0x0001
+#endif
+
+// reference:
+// https://github.com/xfeeefeee/node-windows-readdir-fast/blob/main/readdirFast.cc
+
+using NTSTATUS = int32_t;
+
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_io_status_block?redirectedfrom=MSDN
+typedef struct _IO_STATUS_BLOCK {
+    union {
+        NTSTATUS Status;
+        void *Pointer;
+    };
+    ULONG_PTR Information;
+} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
+// https://learn.microsoft.com/en-us/windows/win32/api/ntdef/ns-ntdef-_unicode_string
+typedef struct _UNICODE_STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+    wchar_t *Buffer;
+} UNICODE_STRING, *PUNICODE_STRING;
+
+// See the handy table linked on the page below to learn where these values comes from.
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/using-ntstatus-values
+inline constexpr NTSTATUS STATUS_NO_MORE_FILES{(NTSTATUS)0x80000006};
+inline constexpr NTSTATUS STATUS_NO_SUCH_FILE{(NTSTATUS)0xC000000F};
+[[maybe_unused]] inline constexpr NTSTATUS STATUS_NOT_IMPLEMENTED{(NTSTATUS)0xC0000002};
+
+inline constexpr DWORD FileDirectoryInformation{0x1};
+
+typedef struct _FILE_DIRECTORY_INFORMATION {
+    ULONG NextEntryOffset;
+    ULONG FileIndex;
+    LARGE_INTEGER CreationTime;
+    LARGE_INTEGER LastAccessTime;
+    LARGE_INTEGER LastWriteTime;
+    LARGE_INTEGER ChangeTime;
+    LARGE_INTEGER EndOfFile;
+    LARGE_INTEGER AllocationSize;
+    ULONG FileAttributes;
+    ULONG FileNameLength;
+    wchar_t FileName[1];
+} FILE_DIRECTORY_INFORMATION;
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#endif
+
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntquerydirectoryfile
+using NtQueryDirectoryFile_t = NTSTATUS NTAPI(
+    HANDLE FileHandle, HANDLE Event,
+    // This here is PIO_APC_ROUTINE, but we don't use APCs and just set it to null.
+    void *ApcRoutine, void *ApcContext, IO_STATUS_BLOCK *IoStatusBlock, void *FileInformation, ULONG Length,
+    // This is FILE_INFORMATION_CLASS, which I am not going to paste here.
+    // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ne-wdm-_file_information_class
+    DWORD FileInformationClass, BOOLEAN ReturnSingleEntry, UNICODE_STRING *FileName, BOOLEAN RestartScan);
+
+NtQueryDirectoryFile_t *pNtQueryDirectoryFile{nullptr};
+
+Sync::once_flag ntqdf_loaded_once;
+bool ntqdf_available{false};
+
+bool tryLoadNTQDF() noexcept {
+    Sync::call_once(ntqdf_loaded_once, []() {
+        auto *ntdll_handle{reinterpret_cast<dynutils::lib_obj *>(GetModuleHandle(TEXT("ntdll.dll")))};
+        if(ntdll_handle) {
+            pNtQueryDirectoryFile = dynutils::load_func<NtQueryDirectoryFile_t>(ntdll_handle, "NtQueryDirectoryFile");
+        }
+        if(!pNtQueryDirectoryFile) return;
+
+        // sanity check to see if the function actually works (e.g. not STATUS_NOT_IMPLEMENTED under Wine)
+        HANDLE testDir = CreateFileW(                                //
+            L".",                                                    //
+            FILE_LIST_DIRECTORY,                                     //
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,  //
+            nullptr,                                                 //
+            OPEN_EXISTING,                                           //
+            FILE_FLAG_BACKUP_SEMANTICS,                              //
+            nullptr                                                  //
+        );
+        if(testDir == INVALID_HANDLE_VALUE /* NOLINT */) return;
+
+        alignas(8) uint8_t buf[1 * 1024];
+        IO_STATUS_BLOCK iosb{};
+        NTSTATUS st = pNtQueryDirectoryFile(  //
+            testDir,                          //
+            nullptr,                          //
+            nullptr,                          //
+            nullptr,                          //
+            &iosb,                            //
+            &buf[0],                          //
+            sizeof(buf),                      //
+            FileDirectoryInformation,         //
+            FALSE,                            // ReturnSingleEntry
+            nullptr,                          //
+            TRUE                              // RestartScan
+        );
+        CloseHandle(testDir);
+        ntqdf_available = NT_SUCCESS(st);
+    });
+    return ntqdf_available;
+}
+
+bool readdirNTAPI(const std::wstring &dirPath, File::DirContents types,
+                  std::vector<std::string> &utf8NamesOut) noexcept {
+    using enum File::DirContents;
     using namespace flags::operators;
-    const bool wantDirectories = !!(types & DirContents::DIRECTORIES);
-    const bool wantFiles = !!(types & DirContents::FILES);
+    const bool wantDirectories = !!(types & DIRECTORIES);
+    const bool wantFiles = !!(types & FILES);
 
-    // Since we want to avoid wide strings in the codebase as much as possible,
-    // we convert wide paths to UTF-8 (as they fucking should be).
-    // We can't just use FindFirstFileA, because then any path with unicode
-    // characters will fail to open!
-    // Keep in mind that windows can't handle the way too modern 1993 UTF-8, so
-    // you have to use std::filesystem::u8path() or convert it back to a wstring
-    // before using the windows API.
+    HANDLE dirHandle = CreateFileW(                              //
+        dirPath.c_str(),                                         //
+        FILE_LIST_DIRECTORY,                                     //
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,  //
+        nullptr,                                                 //
+        OPEN_EXISTING,                                           //
+        FILE_FLAG_BACKUP_SEMANTICS,                              //
+        nullptr                                                  //
+    );
+    if(dirHandle == INVALID_HANDLE_VALUE /* NOLINT */) return false;
+
+    alignas(8) uint8_t buffer[64 * 1024];  // output buffer
+    IO_STATUS_BLOCK statusBlock{};
+
+    NTSTATUS status = pNtQueryDirectoryFile(  //
+        dirHandle,                            //
+        nullptr,                              //
+        nullptr,                              //
+        nullptr,                              //
+        &statusBlock,                         //
+        &buffer[0],                           //
+        sizeof(buffer),                       //
+        FileDirectoryInformation,             //
+        FALSE,                                // ReturnSingleEntry
+        nullptr,                              //
+        TRUE                                  // RestartScan
+    );
+
+    if(status == STATUS_NO_SUCH_FILE || status == STATUS_NO_MORE_FILES) {
+        CloseHandle(dirHandle);
+        return true;  // empty directory
+    }
+    if(!NT_SUCCESS(status)) {
+        CloseHandle(dirHandle);
+        return false;
+    }
+
+    utf8NamesOut.reserve(512);
+
+    for(;;) {
+        auto *entry = reinterpret_cast<FILE_DIRECTORY_INFORMATION *>(buffer);
+        for(;;) {
+            const wchar_t *name = &entry->FileName[0];
+            const size_t cchName = entry->FileNameLength / sizeof(wchar_t);
+
+            // skip . and ..
+            const bool isDot =
+                (cchName == 1 && name[0] == L'.') || (cchName == 2 && name[0] == L'.' && name[1] == L'.');
+            if(!isDot) {
+                const bool isDir = !!(entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+                if((wantDirectories && isDir) || (wantFiles && !isDir)) {
+                    utf8NamesOut.push_back(UniString::to_utf8(std::wstring_view{name, cchName}));
+                }
+            }
+
+            if(entry->NextEntryOffset == 0) break;
+            entry = reinterpret_cast<FILE_DIRECTORY_INFORMATION *>(reinterpret_cast<uint8_t *>(entry) +
+                                                                   entry->NextEntryOffset);
+        }
+
+        // fetch next batch (state is tied to the directory handle)
+        status = pNtQueryDirectoryFile(  //
+            dirHandle,                   //
+            nullptr,                     //
+            nullptr,                     //
+            nullptr,                     //
+            &statusBlock,                //
+            &buffer[0],                  //
+            sizeof(buffer),              //
+            FileDirectoryInformation,    //
+            FALSE,                       // ReturnSingleEntry
+            nullptr,                     //
+            FALSE                        // RestartScan
+        );
+        if(status == STATUS_NO_MORE_FILES) break;
+        if(!NT_SUCCESS(status)) break;
+    }
+
+    CloseHandle(dirHandle);
+
+    return true;
+}
+
+bool readdirWin32(const std::string &pathToEnum, File::DirContents types,
+                  std::vector<std::string> &utf8NamesOut) noexcept {
+    using enum File::DirContents;
+    using namespace flags::operators;
+    const bool wantDirectories = !!(types & DIRECTORIES);
+    const bool wantFiles = !!(types & FILES);
 
     std::wstring folder{UniString::to_wide(pathToEnum)};
+
+    // Win32: needs path\*.* search pattern
     // TODO: avoid this fragile bs
-    std::wstring endSep{L"/"};
-    std::wstring otherSep{L"\\"};
+    std::wstring endSep{L'/'};
+    std::wstring otherSep{L'\\'};
     // for UNC/long paths, make sure we use a backslash as the last separator
     if(folder.starts_with(LR"(\\?\)") || folder.starts_with(LR"(\\.\)")) {
         endSep = L'\\';
@@ -263,7 +631,7 @@ bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
 
     WIN32_FIND_DATAW data{};
     HANDLE handle = FindFirstFileW(folder.c_str(), &data);
-    if(handle != INVALID_HANDLE_VALUE) {
+    if(handle != INVALID_HANDLE_VALUE /* NOLINT */) {
         utf8NamesOut.reserve(512);
 
         do {
@@ -287,6 +655,20 @@ bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
     }
 
     return true;
+}
+
+}  // namespace
+
+// windows impl
+bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
+                               std::vector<std::string> &utf8NamesOut) noexcept {
+    if(pathToEnum.empty()) return false;
+
+    if(tryLoadNTQDF()) {
+        return readdirNTAPI(adjustPath_(pathToEnum, true), types, utf8NamesOut);
+    }
+
+    return readdirWin32(pathToEnum, types, utf8NamesOut);
 }
 
 #else
@@ -322,6 +704,10 @@ bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
 }
 
 #endif  // MCENGINE_PLATFORM_WINDOWS
+
+#ifndef MCENGINE_PLATFORM_WINDOWS
+#define adjustPath(dummy__) dummy__
+#endif
 
 //------------------------------------------------------------------------------
 // path resolution methods
@@ -406,184 +792,6 @@ void File::normalizeSlashes(std::string &str, unsigned char oldSlash, unsigned c
         return remove;
     });
 }
-
-#ifdef MCENGINE_PLATFORM_WINDOWS
-#include "dynutils.h"
-#include "RuntimePlatform.h"
-
-#include "WinDebloatDefs.h"
-#include <fileapi.h>
-#include <libloaderapi.h>
-#include <heapapi.h>
-#include <errhandlingapi.h>
-
-#include <string>
-
-namespace {
-Sync::once_flag long_path_check;
-bool std_filesystem_supports_long_paths{true};
-
-using wine_get_dos_file_name_t = LPWSTR CDECL(LPCSTR);
-wine_get_dos_file_name_t *pwine_get_dos_file_name{nullptr};
-bool tried_load_wine_func{false};
-
-void normalizeWideSlashes(std::wstring &str, wchar_t oldSlash, wchar_t newSlash) noexcept {
-    std::ranges::replace(str, oldSlash, newSlash);
-
-    bool prev = false;
-    std::erase_if(str, [&](wint_t c) {
-        const bool remove = prev && c == newSlash;
-        prev = (c == newSlash);
-        return remove;
-    });
-}
-
-forceinline std::wstring adjustPath_(std::string_view filepathNarrow) noexcept {
-    static constexpr const std::wstring_view extPrefix{LR"(\\?\)"sv};
-    static constexpr const std::wstring_view devicePrefix{LR"(\\.\)"sv};
-    static constexpr const std::wstring_view extUncPrefix{LR"(\\?\UNC\)"sv};
-    static constexpr const std::wstring_view uncStart{LR"(\\)"sv};
-
-    if(filepathNarrow.empty()) return {};
-
-    // Handle Unix absolute paths under Wine
-    if(filepathNarrow.size() >= 1 && filepathNarrow[0] == '/' &&
-       (filepathNarrow.size() < 2 || filepathNarrow[1] != '/')) {
-        if(pwine_get_dos_file_name ||
-           (!tried_load_wine_func && (RuntimePlatform::current() & RuntimePlatform::WIN_WINE) &&
-            (pwine_get_dos_file_name = dynutils::load_func<wine_get_dos_file_name_t>(
-                 reinterpret_cast<dynutils::lib_obj *>(GetModuleHandleA("kernel32.dll")), "wine_get_dos_file_name")))) {
-            std::string path{filepathNarrow};
-            File::normalizeSlashes(path, '\\', '/');  // normalize any mixed slashes in the path portion
-
-            LPWSTR dosPath = pwine_get_dos_file_name(path.c_str());  // use original with forward slashes
-            if(dosPath) {
-                std::wstring result{dosPath, std::wcslen(dosPath)};
-                // not sure if this is necessary or works as intended...
-                // but don't return an extended path unless it's too long
-                // some wine APIs don't work 100% properly with it (like SDL_OpenURL with a file:/// URI)
-
-                if(result.length() > MAX_PATH && !result.starts_with(L'\\')) {
-                    result = std::wstring{extPrefix} + result;
-                }
-
-                HeapFree(GetProcessHeap(), 0, dosPath);
-                return result;
-            }
-        } else {
-            tried_load_wine_func = true;
-        }
-        // Fallback: return as-is and let Wine handle it at file I/O layer
-        return UniString::to_wide(filepathNarrow);
-    }
-
-    // Detect existing prefix type and determine output prefix
-    std::wstring filepath{UniString::to_wide(filepathNarrow)};
-    std::wstring outputPrefix;
-    size_t stripLen = 0;
-    bool resolveAbsolute = false;
-
-    if(filepath.starts_with(extUncPrefix)) {
-        outputPrefix = extUncPrefix;
-        stripLen = extUncPrefix.size();
-    } else if(filepath.starts_with(extPrefix)) {
-        outputPrefix = extPrefix;
-        stripLen = extPrefix.size();
-    } else if(filepath.starts_with(devicePrefix)) {
-        outputPrefix = devicePrefix;
-        stripLen = devicePrefix.size();
-    } else if(filepath.starts_with(uncStart) && filepath.size() > 2 && filepath[2] != L'?' && filepath[2] != L'.') {
-        // Standard UNC path -> extended UNC
-        outputPrefix = extUncPrefix;
-        stripLen = uncStart.size();
-    } else {
-        // Regular DOS path needs absolute resolution
-        resolveAbsolute = true;
-
-        // Don't prepend anything if we're running under Wine, see the reasoning above (broken interactions with some APIs)
-        // Should work fine for not-long-paths anyways.
-        if(!(filepath.length() < MAX_PATH && (RuntimePlatform::current() & RuntimePlatform::WIN_WINE))) {
-            outputPrefix = extPrefix;
-        }
-    }
-
-    std::wstring path{filepath.substr(stripLen)};
-    normalizeWideSlashes(path, L'/', L'\\');
-
-    if(resolveAbsolute) {
-        DWORD len = GetFullPathNameW(path.c_str(), 0, nullptr, nullptr);
-        if(len == 0) {
-            logIfCV(debug_file, "GetFullPathNameW({}, 0, NULL, NULL): {:d}", UniString::to_utf8(path), GetLastError());
-            return filepath;
-        }
-
-        std::wstring buf(len, L'\0');
-        len = GetFullPathNameW(path.c_str(), len, buf.data(), nullptr);
-        if(len == 0) {
-            logIfCV(debug_file, "GetFullPathNameW({}, {}, {}, NULL): {:d}", UniString::to_utf8(path), len,
-                    UniString::to_utf8(buf), GetLastError());
-            return filepath;
-        }
-        buf.resize(len);
-
-        // GetFullPathNameW may return an already-prefixed path if CWD has an extended prefix
-        std::wstring_view resolved{buf};
-        if(resolved.starts_with(LR"(\\?\)") || resolved.starts_with(LR"(\\.\)")) {
-            return std::wstring{buf.data(), len};
-        }
-
-        // Standard UNC path from GetFullPathNameW -> extended UNC
-        if(resolved.starts_with(LR"(\\)") && resolved.size() > 2) {
-            return std::wstring{extUncPrefix} + std::wstring{buf.data() + 2, len - 2};
-        }
-
-        return outputPrefix + std::wstring{buf.data(), static_cast<size_t>(len)};
-    }
-
-    return outputPrefix + path;
-}
-
-std::wstring adjustPath(std::string_view filepath) noexcept {
-    if(!std_filesystem_supports_long_paths) return UniString::to_wide(filepath);
-
-    Sync::call_once(long_path_check, []() {
-        std::array<wchar_t, MAX_PATH + 1> buf{};
-        const size_t length = static_cast<size_t>(GetModuleFileNameW(nullptr, buf.data(), MAX_PATH));
-        if(length == 0) {
-            std_filesystem_supports_long_paths = false;
-            return;
-        }
-
-        std::string narrowPath{UniString::to_utf8(std::wstring_view{buf.data(), length})};
-        std::wstring wPath = adjustPath_(narrowPath);
-
-        if(wPath.length() == 0) {
-            std_filesystem_supports_long_paths = false;
-            return;
-        }
-
-        fs::path tempfs{wPath.c_str()};
-        std::error_code ec;
-
-        auto status = fs::status(tempfs, ec);
-        if(ec || status.type() == fs::file_type::not_found) {
-            std_filesystem_supports_long_paths = false;
-        }
-    });
-
-    if(!std_filesystem_supports_long_paths) {
-        debugLog("NOTE: current std::filesystem implementation does not support long paths, disabling.");
-        return UniString::to_wide(filepath);
-    }
-
-    return adjustPath_(filepath);
-}
-
-}  // namespace
-
-#else
-#define adjustPath(dummy__) dummy__
-#endif
 
 fs::path File::getFsPath(std::string_view utf8path) {
     if(utf8path.empty()) return fs::path{};
