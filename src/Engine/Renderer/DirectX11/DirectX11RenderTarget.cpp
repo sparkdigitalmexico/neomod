@@ -17,8 +17,7 @@
 
 #include "DirectX11Interface.h"
 
-DirectX11RenderTarget::DirectX11RenderTarget(int x, int y, int width, int height,
-                                             MultisampleType multiSampleType)
+DirectX11RenderTarget::DirectX11RenderTarget(int x, int y, int width, int height, MultisampleType multiSampleType)
     : RenderTarget(x, y, width, height, multiSampleType) {
     this->renderTexture = nullptr;
     this->depthStencilTexture = nullptr;
@@ -184,6 +183,10 @@ void DirectX11RenderTarget::draw(int x, int y, int width, int height) {
     unbind();
 }
 
+namespace {
+static constinit VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
+}
+
 void DirectX11RenderTarget::drawRect(int x, int y, int width, int height) {
     if(!this->isReady()) {
         debugLog("WARNING: RenderTarget is not ready!");
@@ -199,29 +202,27 @@ void DirectX11RenderTarget::drawRect(int x, int y, int width, int height) {
     {
         g->setColor(this->color);
 
-        static constinit VertexArrayObject vao;
+        triVAO.clear();
 
-        vao.clear();
+        triVAO.addTexcoord(texCoordWidth0, texCoordHeight1);
+        triVAO.addVertex(x, y);
 
-        vao.addTexcoord(texCoordWidth0, texCoordHeight1);
-        vao.addVertex(x, y);
+        triVAO.addTexcoord(texCoordWidth0, texCoordHeight0);
+        triVAO.addVertex(x, y + height);
 
-        vao.addTexcoord(texCoordWidth0, texCoordHeight0);
-        vao.addVertex(x, y + height);
+        triVAO.addTexcoord(texCoordWidth1, texCoordHeight0);
+        triVAO.addVertex(x + width, y + height);
 
-        vao.addTexcoord(texCoordWidth1, texCoordHeight0);
-        vao.addVertex(x + width, y + height);
+        triVAO.addTexcoord(texCoordWidth1, texCoordHeight0);
+        triVAO.addVertex(x + width, y + height);
 
-        vao.addTexcoord(texCoordWidth1, texCoordHeight0);
-        vao.addVertex(x + width, y + height);
+        triVAO.addTexcoord(texCoordWidth1, texCoordHeight1);
+        triVAO.addVertex(x + width, y);
 
-        vao.addTexcoord(texCoordWidth1, texCoordHeight1);
-        vao.addVertex(x + width, y);
+        triVAO.addTexcoord(texCoordWidth0, texCoordHeight1);
+        triVAO.addVertex(x, y);
 
-        vao.addTexcoord(texCoordWidth0, texCoordHeight1);
-        vao.addVertex(x, y);
-
-        g->drawVAO(&vao);
+        g->drawVAO(&triVAO);
     }
     unbind();
 }

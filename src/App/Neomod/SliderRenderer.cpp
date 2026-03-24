@@ -557,6 +557,8 @@ void updateConfigUniforms() {
     s_uniformCache.needsConfigUpdate = false;
 }
 
+static constinit VertexArrayObject quadDebugVAO{DrawPrimitive::QUADS};
+
 void drawDebugLegacy(std::span<const vec2> points, f32 hitcircleDiameter, Color undimmedColor, f32 colorRGBMultiplier,
                      f32 alpha, uSz drawFromIndex, uSz drawUpToIndex) {
     const f32 circleImageScale = hitcircleDiameter / (f32)osu->getSkin()->i_hitcircle.getWidth();
@@ -582,22 +584,21 @@ void drawDebugLegacy(std::span<const vec2> points, f32 hitcircleDiameter, Color 
             for(uSz i = drawFromIndex; i < drawUpToIndex; i++) {
                 const vec2 point = points[i] * circleImageScaleInv;
 
-                static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
-                vao.clear();
+                quadDebugVAO.clear();
                 {
-                    vao.addTexcoord(0, 0);
-                    vao.addVertex(point.x + x, point.y + y, z);
+                    quadDebugVAO.addTexcoord(0, 0);
+                    quadDebugVAO.addVertex(point.x + x, point.y + y, z);
 
-                    vao.addTexcoord(0, 1);
-                    vao.addVertex(point.x + x, point.y + y + height, z);
+                    quadDebugVAO.addTexcoord(0, 1);
+                    quadDebugVAO.addVertex(point.x + x, point.y + y + height, z);
 
-                    vao.addTexcoord(1, 1);
-                    vao.addVertex(point.x + x + width, point.y + y + height, z);
+                    quadDebugVAO.addTexcoord(1, 1);
+                    quadDebugVAO.addVertex(point.x + x + width, point.y + y + height, z);
 
-                    vao.addTexcoord(1, 0);
-                    vao.addVertex(point.x + x + width, point.y + y, z);
+                    quadDebugVAO.addTexcoord(1, 0);
+                    quadDebugVAO.addVertex(point.x + x + width, point.y + y, z);
                 }
-                g->drawVAO(&vao);
+                g->drawVAO(&quadDebugVAO);
             }
         }
         osu->getSkin()->i_hitcircle.unbind();

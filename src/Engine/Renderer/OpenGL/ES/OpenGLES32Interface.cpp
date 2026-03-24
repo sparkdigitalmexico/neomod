@@ -249,6 +249,10 @@ void OpenGLES32Interface::setAlpha(float alpha) {
     setColor(rgba(m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(), alpha));
 }
 
+namespace {
+static constinit VertexArrayObject lineLoopVAO{DrawPrimitive::LINE_LOOP};
+}
+
 void OpenGLES32Interface::drawRectf(const RectOptions &opts) {
     if(opts.cornerRadius <= 0.f || opts.lineThickness > 1.f) {
         // delegate to shared impl if we're not drawing rounded, or if line thickness > 1
@@ -260,24 +264,27 @@ void OpenGLES32Interface::drawRectf(const RectOptions &opts) {
         if(opts.cornerRadius > 0.f) {
             const float r = opts.cornerRadius;
             const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
-            static constinit VertexArrayObject vao(DrawPrimitive::LINE_LOOP);
             {
-                vao.clear();
-                addArcVertices(vao, opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
-                addArcVertices(vao, x2 - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
+                lineLoopVAO.clear();
+                addArcVertices(lineLoopVAO, opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
+                addArcVertices(lineLoopVAO, x2 - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
                 // extend the right edge 0.5px past the BR arc start to ensure the junction
                 // pixel is rasterized (diamond-exit rule: line ending exactly at pixel center
                 // doesn't exit the diamond, so the pixel isn't drawn without this)
-                vao.addVertex(x2, y2 - r + 0.5f);
-                addArcVertices(vao, x2 - r, y2 - r, r, 0.f, 0.5f * PI_F);
-                addArcVertices(vao, opts.x + r, y2 - r, r, 0.5f * PI_F, PI_F);
+                lineLoopVAO.addVertex(x2, y2 - r + 0.5f);
+                addArcVertices(lineLoopVAO, x2 - r, y2 - r, r, 0.f, 0.5f * PI_F);
+                addArcVertices(lineLoopVAO, opts.x + r, y2 - r, r, 0.5f * PI_F, PI_F);
                 // close; also needed for backends without native line loop
-                vao.addVertex(opts.x, opts.y + r);
+                lineLoopVAO.addVertex(opts.x, opts.y + r);
             }
-            this->drawVAO(&vao);
+            this->drawVAO(&lineLoopVAO);
             return;
         }
     }
+}
+
+namespace {
+static constinit VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
 }
 
 void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
@@ -340,21 +347,20 @@ void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, floa
         this->smoothClipShader->setMVP(m_data->MP);
     }
 
-    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
-    vao.clear();
+    triStripVAO.clear();
     {
-        vao.addVertex(x, y);
-        vao.addTexcoord(0, 0);
-        vao.addVertex(x, y + height);
-        vao.addTexcoord(0, 1);
-        vao.addVertex(x + width, y);
-        vao.addTexcoord(1, 0);
-        vao.addVertex(x + width, y + height);
-        vao.addTexcoord(1, 1);
+        triStripVAO.addVertex(x, y);
+        triStripVAO.addTexcoord(0, 0);
+        triStripVAO.addVertex(x, y + height);
+        triStripVAO.addTexcoord(0, 1);
+        triStripVAO.addVertex(x + width, y);
+        triStripVAO.addTexcoord(1, 0);
+        triStripVAO.addVertex(x + width, y + height);
+        triStripVAO.addTexcoord(1, 1);
     }
     image->bind();
     {
-        drawVAO(&vao);
+        drawVAO(&triStripVAO);
     }
     image->unbind();
 

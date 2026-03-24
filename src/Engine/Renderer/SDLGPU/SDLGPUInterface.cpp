@@ -632,6 +632,10 @@ void SDLGPUInterface::setAlpha(float alpha) {
 
 // 2d resource drawing
 
+namespace {
+static constinit VertexArrayObject triStripVAO(DrawPrimitive::TRIANGLE_STRIP);
+}
+
 void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
     // skip entirely transparent images
     if(image == nullptr || !image->isGPUReady()) {
@@ -683,22 +687,21 @@ void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float ed
         m_smoothClipShader->setMVP(m_data->MP);
     }
 
-    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
-    vao.clear();
+    triStripVAO.clear();
     {
-        vao.addVertex(x, y);
-        vao.addTexcoord(0, 0);
-        vao.addVertex(x, y + height);
-        vao.addTexcoord(0, 1);
-        vao.addVertex(x + width, y);
-        vao.addTexcoord(1, 0);
-        vao.addVertex(x + width, y + height);
-        vao.addTexcoord(1, 1);
+        triStripVAO.addVertex(x, y);
+        triStripVAO.addTexcoord(0, 0);
+        triStripVAO.addVertex(x, y + height);
+        triStripVAO.addTexcoord(0, 1);
+        triStripVAO.addVertex(x + width, y);
+        triStripVAO.addTexcoord(1, 0);
+        triStripVAO.addVertex(x + width, y + height);
+        triStripVAO.addTexcoord(1, 1);
     }
 
     image->bind();
     {
-        this->drawVAO(&vao);
+        this->drawVAO(&triStripVAO);
     }
     image->unbind();
 

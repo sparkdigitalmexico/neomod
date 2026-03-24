@@ -104,6 +104,12 @@ void HUD::onCursorTrailMaxChange() {
     this->cursorTrailSpectator2 = CursorTrail{};
 }
 
+// temp vao buffers
+namespace {
+static constinit VertexArrayObject quadVAO{DrawPrimitive::QUADS};
+static constinit VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
+}
+
 HUD::HUD() : UIScreen() {
     // resources
     this->tempFont = engine->getDefaultFont();
@@ -794,74 +800,70 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
 
         // top
         {
-            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
-            vao.clear();
+            quadVAO.clear();
 
-            vao.addVertex(playfieldBorderTopLeft);
-            vao.addColor(outerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + borderSize * 2, 0));
-            vao.addColor(outerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + borderSize, borderSize));
-            vao.addColor(innerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(borderSize, borderSize));
-            vao.addColor(innerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft);
+            quadVAO.addColor(outerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + borderSize * 2, 0));
+            quadVAO.addColor(outerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + borderSize, borderSize));
+            quadVAO.addColor(innerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(borderSize, borderSize));
+            quadVAO.addColor(innerColor);
 
-            g->drawVAO(&vao);
+            g->drawVAO(&quadVAO);
         }
 
         // left
         {
-            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
-            vao.clear();
+            quadVAO.clear();
 
-            vao.addVertex(playfieldBorderTopLeft);
-            vao.addColor(outerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(borderSize, borderSize));
-            vao.addColor(innerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(borderSize, playfieldBorderSize.y + borderSize));
-            vao.addColor(innerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(0, playfieldBorderSize.y + 2 * borderSize));
-            vao.addColor(outerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft);
+            quadVAO.addColor(outerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(borderSize, borderSize));
+            quadVAO.addColor(innerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(borderSize, playfieldBorderSize.y + borderSize));
+            quadVAO.addColor(innerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(0, playfieldBorderSize.y + 2 * borderSize));
+            quadVAO.addColor(outerColor);
 
-            g->drawVAO(&vao);
+            g->drawVAO(&quadVAO);
         }
 
         // right
         {
-            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
-            vao.clear();
+            quadVAO.clear();
 
-            vao.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + 2 * borderSize, 0));
-            vao.addColor(outerColor);
-            vao.addVertex(playfieldBorderTopLeft +
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + 2 * borderSize, 0));
+            quadVAO.addColor(outerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft +
                           vec2(playfieldBorderSize.x + 2 * borderSize, playfieldBorderSize.y + 2 * borderSize));
-            vao.addColor(outerColor);
-            vao.addVertex(playfieldBorderTopLeft +
+            quadVAO.addColor(outerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft +
                           vec2(playfieldBorderSize.x + borderSize, playfieldBorderSize.y + borderSize));
-            vao.addColor(innerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + borderSize, borderSize));
-            vao.addColor(innerColor);
+            quadVAO.addColor(innerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + borderSize, borderSize));
+            quadVAO.addColor(innerColor);
 
-            g->drawVAO(&vao);
+            g->drawVAO(&quadVAO);
         }
 
         // bottom
         {
-            static constinit VertexArrayObject vao(DrawPrimitive::QUADS);
-            vao.clear();
+            quadVAO.clear();
 
-            vao.addVertex(playfieldBorderTopLeft + vec2(borderSize, playfieldBorderSize.y + borderSize));
-            vao.addColor(innerColor);
-            vao.addVertex(playfieldBorderTopLeft +
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(borderSize, playfieldBorderSize.y + borderSize));
+            quadVAO.addColor(innerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft +
                           vec2(playfieldBorderSize.x + borderSize, playfieldBorderSize.y + borderSize));
-            vao.addColor(innerColor);
-            vao.addVertex(playfieldBorderTopLeft +
+            quadVAO.addColor(innerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft +
                           vec2(playfieldBorderSize.x + 2 * borderSize, playfieldBorderSize.y + 2 * borderSize));
-            vao.addColor(outerColor);
-            vao.addVertex(playfieldBorderTopLeft + vec2(0, playfieldBorderSize.y + 2 * borderSize));
-            vao.addColor(outerColor);
+            quadVAO.addColor(outerColor);
+            quadVAO.addVertex(playfieldBorderTopLeft + vec2(0, playfieldBorderSize.y + 2 * borderSize));
+            quadVAO.addColor(outerColor);
 
-            g->drawVAO(&vao);
+            g->drawVAO(&quadVAO);
         }
     }
     g->popTransform();
@@ -1756,8 +1758,7 @@ void HUD::drawProgressBar(f32 percent, bool waiting) {
         g->setColor(0xaaf2f2f2);
 
     {
-        static constinit VertexArrayObject vao;
-        vao.clear();
+        triVAO.clear();
 
         vec2 prevVertex{0.f};
         for(i32 i = 0; i < num_segments + 1; i++) {
@@ -1769,9 +1770,9 @@ void HUD::drawProgressBar(f32 percent, bool waiting) {
 
             // add vertex, triangle strip style (counter clockwise)
             if(i > 0) {
-                vao.addVertex(curVertex);
-                vao.addVertex(prevVertex);
-                vao.addVertex(center);
+                triVAO.addVertex(curVertex);
+                triVAO.addVertex(prevVertex);
+                triVAO.addVertex(center);
             }
 
             // apply the rotation
@@ -1785,7 +1786,7 @@ void HUD::drawProgressBar(f32 percent, bool waiting) {
 
         // draw it
         /// g->setAntialiasing(true); // commented for now
-        g->drawVAO(&vao);
+        g->drawVAO(&triVAO);
         /// g->setAntialiasing(false);
     }
 

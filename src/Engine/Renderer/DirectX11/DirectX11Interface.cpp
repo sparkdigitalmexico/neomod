@@ -468,6 +468,10 @@ void DirectX11Interface::drawPixel(int x, int y) {
     this->uploadAndDrawVertexBatch(D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
 }
 
+namespace {
+static constinit VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
+}
+
 void DirectX11Interface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
     // skip entirely transparent images
     if(image == nullptr || !image->isGPUReady()) {
@@ -531,22 +535,21 @@ void DirectX11Interface::drawImage(const Image *image, AnchorPoint anchor, float
         this->smoothClipShader->setMVP(m_data->MP);
     }
 
-    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
-    vao.clear();
+    triStripVAO.clear();
     {
-        vao.addVertex(x, y);
-        vao.addTexcoord(0, 0);
-        vao.addVertex(x, y + height);
-        vao.addTexcoord(0, 1);
-        vao.addVertex(x + width, y);
-        vao.addTexcoord(1, 0);
-        vao.addVertex(x + width, y + height);
-        vao.addTexcoord(1, 1);
+        triStripVAO.addVertex(x, y);
+        triStripVAO.addTexcoord(0, 0);
+        triStripVAO.addVertex(x, y + height);
+        triStripVAO.addTexcoord(0, 1);
+        triStripVAO.addVertex(x + width, y);
+        triStripVAO.addTexcoord(1, 0);
+        triStripVAO.addVertex(x + width, y + height);
+        triStripVAO.addTexcoord(1, 1);
     }
 
     image->bind();
     {
-        this->drawVAO(&vao);
+        this->drawVAO(&triStripVAO);
     }
     image->unbind();
 

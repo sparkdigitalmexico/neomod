@@ -150,6 +150,10 @@ ModFPoSu::~ModFPoSu() {
     cv::fposu_cube_size.reset();
 }
 
+namespace {
+static constinit VertexArrayObject lineVAO{DrawPrimitive::LINES};
+}
+
 void ModFPoSu::draw() {
     if(!cv::mod_fposu.getBool()) return;
 
@@ -172,29 +176,28 @@ void ModFPoSu::draw() {
             {
                 // axis lines at (0, 0, 0)
                 if(cv::fposu_noclip.getBool()) {
-                    static constinit VertexArrayObject vao(DrawPrimitive::LINES);
-                    vao.clear();
+                    lineVAO.clear();
                     {
                         vec3 pos = vec3(0, 0, 0);
                         float length = 1.0f;
 
-                        vao.addColor(0xffff0000);
-                        vao.addVertex(pos.x, pos.y, pos.z);
-                        vao.addColor(0xffff0000);
-                        vao.addVertex(pos.x + length, pos.y, pos.z);
+                        lineVAO.addColor(0xffff0000);
+                        lineVAO.addVertex(pos.x, pos.y, pos.z);
+                        lineVAO.addColor(0xffff0000);
+                        lineVAO.addVertex(pos.x + length, pos.y, pos.z);
 
-                        vao.addColor(0xff00ff00);
-                        vao.addVertex(pos.x, pos.y, pos.z);
-                        vao.addColor(0xff00ff00);
-                        vao.addVertex(pos.x, pos.y + length, pos.z);
+                        lineVAO.addColor(0xff00ff00);
+                        lineVAO.addVertex(pos.x, pos.y, pos.z);
+                        lineVAO.addColor(0xff00ff00);
+                        lineVAO.addVertex(pos.x, pos.y + length, pos.z);
 
-                        vao.addColor(0xff0000ff);
-                        vao.addVertex(pos.x, pos.y, pos.z);
-                        vao.addColor(0xff0000ff);
-                        vao.addVertex(pos.x, pos.y, pos.z + length);
+                        lineVAO.addColor(0xff0000ff);
+                        lineVAO.addVertex(pos.x, pos.y, pos.z);
+                        lineVAO.addColor(0xff0000ff);
+                        lineVAO.addVertex(pos.x, pos.y, pos.z + length);
                     }
                     g->setColor(0xffffffff);
-                    g->drawVAO(&vao);
+                    g->drawVAO(&lineVAO);
                 }
 
                 // skybox/cube

@@ -10,24 +10,13 @@
 
 #include <cmath>
 
-void ModernGraphicsShared::addArcVertices(VertexArrayObject &vao, float cx, float cy, float radius, float startAngle,
-                                          float endAngle) {
-    constexpr float step = 0.05f;
-    const int numSteps = (int)((endAngle - startAngle) / step);
-
-    // rotate (c,s) by step each iteration
-    const float cs = std::cos(step), ss = std::sin(step);
-    float c = std::cos(startAngle), s = std::sin(startAngle);
-    for(int i = 0; i <= numSteps; i++) {
-        vao.addVertex(radius * c + cx, radius * s + cy);
-        const float nc = c * cs - s * ss;
-        s = s * cs + c * ss;
-        c = nc;
-    }
-    vao.addVertex(radius * std::cos(endAngle) + cx, radius * std::sin(endAngle) + cy);
-}
-
 namespace {
+// temp vao buffers
+static constinit VertexArrayObject lineVAO{DrawPrimitive::LINES};
+static constinit VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
+static constinit VertexArrayObject triFanVAO{DrawPrimitive::TRIANGLE_FAN};
+static constinit VertexArrayObject lineStripVAO{DrawPrimitive::LINE_STRIP};
+
 // emit outer/inner vertex pairs for a triangle strip outline
 inline void addArcStripVertices(VertexArrayObject &vao, float cx, float cy, float rInner, float rOuter,
                                 float startAngle, float endAngle) {
@@ -52,6 +41,23 @@ inline void addArcStripVertices(VertexArrayObject &vao, float cx, float cy, floa
 }
 }  // namespace
 
+void ModernGraphicsShared::addArcVertices(VertexArrayObject &vao, float cx, float cy, float radius, float startAngle,
+                                          float endAngle) {
+    constexpr float step = 0.05f;
+    const int numSteps = (int)((endAngle - startAngle) / step);
+
+    // rotate (c,s) by step each iteration
+    const float cs = std::cos(step), ss = std::sin(step);
+    float c = std::cos(startAngle), s = std::sin(startAngle);
+    for(int i = 0; i <= numSteps; i++) {
+        vao.addVertex(radius * c + cx, radius * s + cy);
+        const float nc = c * cs - s * ss;
+        s = s * cs + c * ss;
+        c = nc;
+    }
+    vao.addVertex(radius * std::cos(endAngle) + cx, radius * std::sin(endAngle) + cy);
+}
+
 // 2d primitive drawing
 void ModernGraphicsShared::drawPixels(int /*x*/, int /*y*/, int /*width*/, int /*height*/, DrawPixelsType /*type*/,
                                       const void * /*pixels*/) {
@@ -67,13 +73,12 @@ void ModernGraphicsShared::drawLinef(float x1, float y1, float x2, float y2) {
     this->updateTransform();
     this->setTexturing(false);
 
-    static constinit VertexArrayObject vao(DrawPrimitive::LINES);
     {
-        vao.clear();
-        vao.addVertex(x1, y1);
-        vao.addVertex(x2, y2);
+        lineVAO.clear();
+        lineVAO.addVertex(x1, y1);
+        lineVAO.addVertex(x2, y2);
     }
-    this->drawVAO(&vao);
+    this->drawVAO(&lineVAO);
 }
 
 void ModernGraphicsShared::drawRectf(const RectOptions &opts) {
@@ -88,18 +93,17 @@ void ModernGraphicsShared::drawRectf(const RectOptions &opts) {
         const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
         const float hw = opts.lineThickness / 2.f;
         const float rInner = r - hw, rOuter = r + hw;
-        static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
         {
-            vao.clear();
-            addArcStripVertices(vao, opts.x + r, opts.y + r, rInner, rOuter, PI_F, 1.5f * PI_F);
-            addArcStripVertices(vao, x2 - r, opts.y + r, rInner, rOuter, 1.5f * PI_F, 2.f * PI_F);
-            addArcStripVertices(vao, x2 - r, y2 - r, rInner, rOuter, 0.f, 0.5f * PI_F);
-            addArcStripVertices(vao, opts.x + r, y2 - r, rInner, rOuter, 0.5f * PI_F, PI_F);
+            triStripVAO.clear();
+            addArcStripVertices(triStripVAO, opts.x + r, opts.y + r, rInner, rOuter, PI_F, 1.5f * PI_F);
+            addArcStripVertices(triStripVAO, x2 - r, opts.y + r, rInner, rOuter, 1.5f * PI_F, 2.f * PI_F);
+            addArcStripVertices(triStripVAO, x2 - r, y2 - r, rInner, rOuter, 0.f, 0.5f * PI_F);
+            addArcStripVertices(triStripVAO, opts.x + r, y2 - r, rInner, rOuter, 0.5f * PI_F, PI_F);
             // close back to first vertex pair
-            vao.addVertex(opts.x - hw, opts.y + r);
-            vao.addVertex(opts.x + hw, opts.y + r);
+            triStripVAO.addVertex(opts.x - hw, opts.y + r);
+            triStripVAO.addVertex(opts.x + hw, opts.y + r);
         }
-        this->drawVAO(&vao);
+        this->drawVAO(&triStripVAO);
         return;
     }
 
@@ -155,29 +159,27 @@ void ModernGraphicsShared::fillRectf(const FillRectOptions &opts) {
     if(opts.cornerRadius > 0.f) {
         const float r = opts.cornerRadius;
         const float x2 = opts.x + opts.width, y2 = opts.y + opts.height;
-        static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_FAN);
         {
-            vao.clear();
-            vao.addVertex(opts.x + opts.width * 0.5f, opts.y + opts.height * 0.5f);  // center (fan hub)
+            triFanVAO.clear();
+            triFanVAO.addVertex(opts.x + opts.width * 0.5f, opts.y + opts.height * 0.5f);  // center (fan hub)
 
-            addArcVertices(vao, opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
-            addArcVertices(vao, x2 - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
-            addArcVertices(vao, x2 - r, y2 - r, r, 0.f, 0.5f * PI_F);
-            addArcVertices(vao, opts.x + r, y2 - r, r, 0.5f * PI_F, PI_F);
+            addArcVertices(triFanVAO, opts.x + r, opts.y + r, r, PI_F, 1.5f * PI_F);
+            addArcVertices(triFanVAO, x2 - r, opts.y + r, r, 1.5f * PI_F, 2.f * PI_F);
+            addArcVertices(triFanVAO, x2 - r, y2 - r, r, 0.f, 0.5f * PI_F);
+            addArcVertices(triFanVAO, opts.x + r, y2 - r, r, 0.5f * PI_F, PI_F);
             // close the fan back to the first perimeter vertex
-            vao.addVertex(opts.x, opts.y + r);
+            triFanVAO.addVertex(opts.x, opts.y + r);
         }
-        this->drawVAO(&vao);
+        this->drawVAO(&triFanVAO);
     } else {
-        static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
         {
-            vao.clear();
-            vao.addVertex(opts.x, opts.y);
-            vao.addVertex(opts.x, opts.y + opts.height);
-            vao.addVertex(opts.x + opts.width, opts.y);
-            vao.addVertex(opts.x + opts.width, opts.y + opts.height);
+            triStripVAO.clear();
+            triStripVAO.addVertex(opts.x, opts.y);
+            triStripVAO.addVertex(opts.x, opts.y + opts.height);
+            triStripVAO.addVertex(opts.x + opts.width, opts.y);
+            triStripVAO.addVertex(opts.x + opts.width, opts.y + opts.height);
         }
-        this->drawVAO(&vao);
+        this->drawVAO(&triStripVAO);
     }
 }
 
@@ -185,12 +187,11 @@ void ModernGraphicsShared::drawArcf(float cx, float cy, float radius, float star
     this->updateTransform();
     this->setTexturing(false);
 
-    static constinit VertexArrayObject vao(DrawPrimitive::LINE_STRIP);
     {
-        vao.clear();
-        addArcVertices(vao, cx, cy, radius, startAngle, endAngle);
+        lineStripVAO.clear();
+        addArcVertices(lineStripVAO, cx, cy, radius, startAngle, endAngle);
     }
-    this->drawVAO(&vao);
+    this->drawVAO(&lineStripVAO);
 }
 
 void ModernGraphicsShared::fillGradient(int x, int y, int width, int height, Color topLeftColor, Color topRightColor,
@@ -198,38 +199,36 @@ void ModernGraphicsShared::fillGradient(int x, int y, int width, int height, Col
     this->updateTransform();
     this->setTexturing(false);  // disable texturing
 
-    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     {
-        vao.clear();
-        vao.addVertex((float)x, (float)y);
-        vao.addColor(topLeftColor);
-        vao.addVertex((float)x, (float)y + (float)height);
-        vao.addColor(bottomLeftColor);
-        vao.addVertex((float)x + (float)width, (float)y);
-        vao.addColor(topRightColor);
-        vao.addVertex((float)x + (float)width, (float)y + (float)height);
-        vao.addColor(bottomRightColor);
+        triStripVAO.clear();
+        triStripVAO.addVertex((float)x, (float)y);
+        triStripVAO.addColor(topLeftColor);
+        triStripVAO.addVertex((float)x, (float)y + (float)height);
+        triStripVAO.addColor(bottomLeftColor);
+        triStripVAO.addVertex((float)x + (float)width, (float)y);
+        triStripVAO.addColor(topRightColor);
+        triStripVAO.addVertex((float)x + (float)width, (float)y + (float)height);
+        triStripVAO.addColor(bottomRightColor);
     }
-    this->drawVAO(&vao);
+    this->drawVAO(&triStripVAO);
 }
 
 void ModernGraphicsShared::drawQuad(int x, int y, int width, int height) {
     this->updateTransform();
     this->setTexturing(true);  // enable texturing
 
-    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     {
-        vao.clear();
-        vao.addVertex((float)x, (float)y);
-        vao.addTexcoord(0, 0);
-        vao.addVertex((float)x, (float)y + (float)height);
-        vao.addTexcoord(0, 1);
-        vao.addVertex((float)x + (float)width, (float)y);
-        vao.addTexcoord(1, 0);
-        vao.addVertex((float)x + (float)width, (float)y + (float)height);
-        vao.addTexcoord(1, 1);
+        triStripVAO.clear();
+        triStripVAO.addVertex((float)x, (float)y);
+        triStripVAO.addTexcoord(0, 0);
+        triStripVAO.addVertex((float)x, (float)y + (float)height);
+        triStripVAO.addTexcoord(0, 1);
+        triStripVAO.addVertex((float)x + (float)width, (float)y);
+        triStripVAO.addTexcoord(1, 0);
+        triStripVAO.addVertex((float)x + (float)width, (float)y + (float)height);
+        triStripVAO.addTexcoord(1, 1);
     }
-    this->drawVAO(&vao);
+    this->drawVAO(&triStripVAO);
 }
 
 void ModernGraphicsShared::drawQuad(vec2 topLeft, vec2 topRight, vec2 bottomRight, vec2 bottomLeft, Color topLeftColor,
@@ -237,19 +236,18 @@ void ModernGraphicsShared::drawQuad(vec2 topLeft, vec2 topRight, vec2 bottomRigh
     this->updateTransform();
     this->setTexturing(false);  // disable texturing
 
-    static constinit VertexArrayObject vao(DrawPrimitive::TRIANGLE_STRIP);
     {
-        vao.clear();
-        vao.addVertex(topLeft.x, topLeft.y);
-        vao.addColor(topLeftColor);
-        vao.addVertex(bottomLeft.x, bottomLeft.y);
-        vao.addColor(bottomLeftColor);
-        vao.addVertex(topRight.x, topRight.y);
-        vao.addColor(topRightColor);
-        vao.addVertex(bottomRight.x, bottomRight.y);
-        vao.addColor(bottomRightColor);
+        triStripVAO.clear();
+        triStripVAO.addVertex(topLeft.x, topLeft.y);
+        triStripVAO.addColor(topLeftColor);
+        triStripVAO.addVertex(bottomLeft.x, bottomLeft.y);
+        triStripVAO.addColor(bottomLeftColor);
+        triStripVAO.addVertex(topRight.x, topRight.y);
+        triStripVAO.addColor(topRightColor);
+        triStripVAO.addVertex(bottomRight.x, bottomRight.y);
+        triStripVAO.addColor(bottomRightColor);
     }
-    this->drawVAO(&vao);
+    this->drawVAO(&triStripVAO);
 }
 
 #endif
