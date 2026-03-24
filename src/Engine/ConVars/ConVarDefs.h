@@ -250,7 +250,7 @@ CONVAR(fullscreen, false, CLIENT, [](float /*newValue*/) -> void { engine ? engi
 CONVAR(monitor, 0, CLIENT, "monitor/display device to switch to, 0 = primary monitor");
 CONVAR(r_sync_max_frames, 1, CLIENT,
        "maximum pre-rendered frames allowed in rendering pipeline");  // (a la "Max Prerendered Frames")
-CONVAR(alt_sleep, 1, CLIENT,
+CONVAR(alt_sleep, 0, CLIENT,
        "use an alternative sleep implementation (on Windows) for potentially more accurate frame limiting");
 
 // Constants
