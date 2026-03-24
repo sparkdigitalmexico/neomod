@@ -26,7 +26,8 @@ struct DiscordActivity create_base_activity() { return DiscordActivity{}; }
 
 namespace cv {
 static ConVar debug_discord_rpc("debug_discord_rpc", false, CLIENT, "print verbose discord rpc activity details");
-}
+static ConVar rich_presence_tickrate_ms("rich_presence_tickrate_ms", 500, CLIENT);
+}  // namespace cv
 
 namespace DiscRPC {
 namespace  // static
@@ -93,6 +94,7 @@ static constexpr int MAX_RECONNECT_ATTEMPTS = 3;
 static constexpr u64 RECONNECT_INTERVAL_NS = 5'000'000'000ULL;  // 5s
 static int reconnect_attempts{MAX_RECONNECT_ATTEMPTS};  // exhausted by default so we don't retry on initial failure
 static u64 last_reconnect_attempt{0};
+static u64 last_discord_tick{0};
 
 // establish (or re-establish) a connection to discord
 static bool connect() {
@@ -177,10 +179,11 @@ void tick() {
     }
 #endif
 
+    const u64 now = Timing::getTicksNS();
+
     if(!initialized) {
         if(!pDiscordCreate || reconnect_attempts >= MAX_RECONNECT_ATTEMPTS) return;
 
-        u64 now = Timing::getTicksNS();
         if(now - last_reconnect_attempt < RECONNECT_INTERVAL_NS) return;
         last_reconnect_attempt = now;
         reconnect_attempts++;
@@ -192,7 +195,11 @@ void tick() {
         return;
     }
 
-    DISCCALL(dapp.core->run_callbacks(dapp.core));
+    // throttle this shit it takes forever on windows
+    if((last_discord_tick + (cv::rich_presence_tickrate_ms.getVal<u64>() * Timing::NS_PER_MS)) <= now) {
+        last_discord_tick = now;
+        DISCCALL(dapp.core->run_callbacks(dapp.core));
+    }
 }
 
 void deinit() {
