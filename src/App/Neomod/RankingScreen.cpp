@@ -234,6 +234,7 @@ struct RankingScreen::RankingScreenImpl {
 };
 
 RankingScreen::RankingScreen() : ScreenBackable(), m_impl(this) {}
+RankingScreen::~RankingScreen() = default;
 
 void RankingScreen::draw() {
     if(!this->bVisible) return;

@@ -101,6 +101,8 @@ Graphics::Graphics() : m_data() {
     cv::vsync.setCallback([](float on) -> void { return !!g ? g->setVSync(!!static_cast<int>(on)) : (void)0; });
 }
 
+Graphics::~Graphics() = default;
+
 void Graphics::setBlending(bool enabled) { m_data->bBlendingEnabled = enabled; }
 bool Graphics::getBlending() const { return m_data->bBlendingEnabled; }
 void Graphics::setBlendMode(DrawBlendMode blendMode) { m_data->currentBlendMode = blendMode; }

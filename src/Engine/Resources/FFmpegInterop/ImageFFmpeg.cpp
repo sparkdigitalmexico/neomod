@@ -15,9 +15,10 @@ namespace Mc::FFmpeg {
 using namespace funcs;
 
 namespace {
+Sync::once_flag ffmpeg_init_once;
+bool ffmpeg_available{false};
+
 bool loadffmpeg() {
-    static Sync::once_flag ffmpeg_init_once;
-    static bool ffmpeg_available{false};
     Sync::call_once(ffmpeg_init_once, []() {
         ffmpeg_available = Mc::FFmpeg::init();
         if(!ffmpeg_available) {
@@ -63,8 +64,8 @@ struct MemReader {
 }  // namespace
 
 ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 size) {
-    if(!loadffmpeg()) return ImageDecodeResult::UNAVAILABLE;
     using enum ImageDecodeResult;
+    if(!loadffmpeg()) return UNAVAILABLE;
 
     MemReader mem{inData, size, 0};
 

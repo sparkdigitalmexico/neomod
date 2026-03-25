@@ -97,7 +97,7 @@ class Graphics {
     friend class Engine;
 
     Graphics();
-    virtual ~Graphics() = default;
+    virtual ~Graphics();
 
     // scene
     virtual void beginScene() = 0;

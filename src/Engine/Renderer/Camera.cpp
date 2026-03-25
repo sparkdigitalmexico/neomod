@@ -124,6 +124,13 @@ Camera::Camera(vec3 pos, vec3 viewDir, float fovDeg, CAMERA_TYPE camType) : m_im
     this->lookAt(pos + viewDir);
 }
 
+Camera::~Camera() = default;
+
+Camera::Camera(const Camera &) = default;
+Camera &Camera::operator=(const Camera &) = default;
+Camera::Camera(Camera &&) = default;
+Camera &Camera::operator=(Camera &&) = default;
+
 void Camera::setFov(float fovDeg) { m_impl->fFov = vec::radians(fovDeg); }
 void Camera::setFovRad(float fovRad) { m_impl->fFov = fovRad; }
 void Camera::setOrbitYAxis(bool orbitYAxis) { m_impl->bOrbitYAxis = orbitYAxis; }

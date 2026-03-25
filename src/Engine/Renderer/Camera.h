@@ -3,6 +3,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include "noinclude.h"
 #include "StaticPImpl.h"
 
 #include "Vectors_fwd.h"
@@ -35,6 +36,11 @@ class Camera {
 
     Camera(vec3 pos /* = vec3(0, 0, 0) */, vec3 viewDir /* = vec3(0, 0, 1) */, float fovDeg = 90.0f,
            CAMERA_TYPE camType = CAMERA_TYPE_FIRST_PERSON);
+    ~Camera();
+    Camera(const Camera &);
+    Camera &operator=(const Camera &);
+    Camera(Camera &&);
+    Camera &operator=(Camera &&);
 
     void rotateX(float pitchDeg);
     void rotateY(float yawDeg);

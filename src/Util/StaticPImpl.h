@@ -4,10 +4,7 @@
 #define STATIC_PIMPL_H
 
 #include <cstddef>
-#include <cstdlib>
-#include <cassert>
 #include <new>
-#include <type_traits>
 #include <utility>
 
 #ifndef really_forceinline
@@ -40,68 +37,43 @@ class StaticPImpl {
 #define PMUL_(real_) (size_t)((real_) * BLOAT_ACCOMODATION_MULTIPLIER)
     alignas(BufferAlignment) unsigned char m_buffer[PMUL_(RealImplSize)];
 
-    void (*m_destructor)(void *);
+    really_forceinline T *ptr() noexcept { return reinterpret_cast<T *>(&m_buffer[0]); }
+    really_forceinline const T *ptr() const noexcept { return reinterpret_cast<const T *>(&m_buffer[0]); }
 
    public:
-    [[nodiscard]] really_forceinline T *operator->() noexcept { return std::launder(reinterpret_cast<T *>(m_buffer)); }
-
-    [[nodiscard]] really_forceinline const T *operator->() const noexcept {
-        return std::launder(reinterpret_cast<const T *>(m_buffer));
-    }
-
-    [[nodiscard]] really_forceinline T &operator*() noexcept { return *std::launder(reinterpret_cast<T *>(m_buffer)); }
-
-    [[nodiscard]] really_forceinline const T &operator*() const noexcept {
-        return *std::launder(reinterpret_cast<const T *>(m_buffer));
-    }
-
-    // Construct a derived type U in-place (U must be T or derived from T)
-    template <typename U, typename... Args>
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
-    [[nodiscard]] really_forceinline explicit StaticPImpl(std::in_place_type_t<U> /**/, Args &&...args)
-        : m_destructor([](void *ptr) { static_cast<U *>(ptr)->~U(); }) {
-        static_assert(sizeof(U) <= PMUL_(RealImplSize));
-        static_assert(alignof(U) <= BufferAlignment);
-        static_assert(std::is_same_v<T, U> || std::is_base_of_v<T, U>);
-
-        new(m_buffer) U(std::forward<Args>(args)...);
-    }
+    [[nodiscard]] really_forceinline T *operator->() noexcept { return ptr(); }
+    [[nodiscard]] really_forceinline const T *operator->() const noexcept { return ptr(); }
+    [[nodiscard]] really_forceinline T &operator*() noexcept { return *ptr(); }
+    [[nodiscard]] really_forceinline const T &operator*() const noexcept { return *ptr(); }
 
     template <typename... Args>
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
-    [[nodiscard]] really_forceinline explicit StaticPImpl(Args &&...args)
-        : StaticPImpl(std::in_place_type<T>, std::forward<Args>(args)...) {}
-
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
-    [[nodiscard]] really_forceinline StaticPImpl(const StaticPImpl &rhs)
-        : m_destructor([](void *ptr) { static_cast<T *>(ptr)->~T(); }) {
-        new(m_buffer) T(*std::launder(reinterpret_cast<const T *>(rhs.m_buffer)));
+    [[nodiscard]] really_forceinline explicit StaticPImpl(Args &&...args) {
+        static_assert(sizeof(T) <= PMUL_(RealImplSize));
+        static_assert(alignof(T) <= BufferAlignment);
+        new(m_buffer) T(std::forward<Args>(args)...);
     }
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
-    [[nodiscard]] really_forceinline StaticPImpl(StaticPImpl &&rhs) noexcept
-        : m_destructor([](void *ptr) { static_cast<T *>(ptr)->~T(); }) {
-        new(m_buffer) T(static_cast<T &&>(*std::launder(reinterpret_cast<T *>(rhs.m_buffer))));
+    [[nodiscard]] really_forceinline StaticPImpl(const StaticPImpl &rhs) { new(m_buffer) T(*rhs.ptr()); }
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
+    [[nodiscard]] really_forceinline StaticPImpl(StaticPImpl &&rhs) noexcept {
+        new(m_buffer) T(static_cast<T &&>(*rhs.ptr()));
     }
 
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment, cert-oop54-cpp) // let the actual object handle self assignment
     really_forceinline StaticPImpl &operator=(const StaticPImpl &rhs) {
-        *std::launder(reinterpret_cast<T *>(m_buffer)) = *std::launder(reinterpret_cast<const T *>(rhs.m_buffer));
+        *ptr() = *rhs.ptr();
         return *this;
     }
 
     really_forceinline StaticPImpl &operator=(StaticPImpl &&rhs) noexcept {
-        *std::launder(reinterpret_cast<T *>(m_buffer)) =
-            static_cast<T &&>(*std::launder(reinterpret_cast<T *>(rhs.m_buffer)));
+        *ptr() = static_cast<T &&>(*rhs.ptr());
         return *this;
     }
 
-    really_forceinline ~StaticPImpl() {
-        if(m_destructor) {
-            m_destructor(m_buffer);
-        }
-        m_destructor = nullptr;
-    }
+    really_forceinline ~StaticPImpl() { ptr()->~T(); }
 };
 
 #undef PMUL_

@@ -11,8 +11,10 @@ class SkinImage;
 enum class ScoreGrade : uint8_t;
 
 class RankingScreen final : public ScreenBackable {
+    NOCOPY_NOMOVE(RankingScreen)
    public:
     RankingScreen();
+    ~RankingScreen() override;
 
     void draw() override;
     void update(CBaseUIEventCtx &c) override;

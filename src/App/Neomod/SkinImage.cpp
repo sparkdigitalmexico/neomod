@@ -45,6 +45,7 @@ struct SkinImage::SkinImageImpl {
 };
 
 SkinImage::SkinImage() : m_impl() {}
+SkinImage::~SkinImage() { this->destroy(); }
 
 std::vector<std::string> SkinImage::init(Skin* skin, const std::string& skinElementName, vec2 baseSizeForScaling2x,
                                          float osuSize, const std::string& animationSeparator, bool ignoreDefaultSkin) {

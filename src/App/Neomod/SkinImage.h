@@ -39,7 +39,7 @@ class SkinImage final {
     void destroy(bool everything = false);
 
    public:
-    inline ~SkinImage() { this->destroy(); }
+    ~SkinImage();
 
     [[nodiscard]] bool isReady() const;
 
