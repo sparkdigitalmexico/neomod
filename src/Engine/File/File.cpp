@@ -162,7 +162,6 @@ class DirectoryCache final {
     ((defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200809L)) || defined(_ATFILE_SOURCE))
 
 #include <dirent.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -709,6 +708,24 @@ bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
 #define adjustPath(dummy__) dummy__
 #endif
 
+namespace {
+
+File::FILETYPE typeFromStat(const struct stat64 &st) {
+    using enum File::FILETYPE;
+    if(S_ISDIR(st.st_mode)) return FOLDER;
+    if(S_ISREG(st.st_mode)) return FILE;
+
+#ifdef S_ISLNK
+    if(S_ISLNK(st.st_mode)) {
+        logIfCV(debug_file, "WARNING: file is symlink (unfollowed, unknown type)");
+    }
+#endif
+
+    return OTHER;
+}
+
+}  // namespace
+
 //------------------------------------------------------------------------------
 // path resolution methods
 //------------------------------------------------------------------------------
@@ -766,20 +783,27 @@ File::FILETYPE File::existsCaseInsensitive(std::string &filePath, fs::path &path
 }
 
 File::FILETYPE File::exists(std::string_view filePath, const fs::path &path) {
-    if(filePath.empty()) return File::FILETYPE::NONE;
+    using enum File::FILETYPE;
+    if(filePath.empty()) return NONE;
 
-    std::error_code ec;
-    auto status = fs::status(path, ec);
+#ifdef MCENGINE_PLATFORM_WINDOWS
+    // this is faster than stat on windows
+    if(DWORD attrs = GetFileAttributesW(path.wstring().c_str()); attrs != INVALID_FILE_ATTRIBUTES) {
+        return (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FOLDER : FILE /* assume file */;
+    } else {
+        return NONE;
+    }
+#else
+    struct stat64 tempst{};
+    const int statRet = stat64(path.string().c_str(), &tempst);
 
-    if(ec || status.type() == fs::file_type::not_found)
-        return File::FILETYPE::MAYBE_INSENSITIVE;  // path not found, try case-insensitive lookup
+    if(statRet != 0) {
+        // path not found, try case-insensitive lookup
+        return MAYBE_INSENSITIVE;
+    }
 
-    if(status.type() == fs::file_type::regular)
-        return File::FILETYPE::FILE;
-    else if(status.type() == fs::file_type::directory)
-        return File::FILETYPE::FOLDER;
-    else
-        return File::FILETYPE::OTHER;
+    return typeFromStat(tempst);
+#endif
 }
 
 void File::normalizeSlashes(std::string &str, unsigned char oldSlash, unsigned char newSlash) noexcept {
@@ -802,7 +826,7 @@ fs::path File::getFsPath(std::string_view utf8path) {
 #endif
 }
 
-FILE *File::fopen_c(const char *__restrict utf8filename, const char *__restrict modes) {
+FILE *File::fopen_c(const char *__restrict utf8filename, const char *__restrict modes) noexcept {
 #ifdef MCENGINE_PLATFORM_WINDOWS
     if(utf8filename == nullptr || utf8filename[0] == '\0') return nullptr;
     const std::wstring wideFilename{adjustPath(std::string_view{utf8filename})};
@@ -813,7 +837,7 @@ FILE *File::fopen_c(const char *__restrict utf8filename, const char *__restrict 
 #endif
 }
 
-int File::stat_c(const char *__restrict utf8filename, struct stat64 *__restrict buffer) {
+int File::stat_c(const char *__restrict utf8filename, struct stat64 *__restrict buffer) noexcept {
 #ifdef MCENGINE_PLATFORM_WINDOWS
     if(utf8filename == nullptr || utf8filename[0] == '\0' || buffer == nullptr) {
         errno = EINVAL;
@@ -862,30 +886,45 @@ File::File(std::string_view filePath, MODE mode)
 }
 
 bool File::openForReading() {
-    std::wstring wcharPath;  // windows only, used later
-    {
-        // lazy redundant conversion
-        std::string tempStdStr{this->sFilePath};
-        const std::string origPath{this->sFilePath};
-
-        // resolve the file path (handles case-insensitive matching)
-        FILETYPE fileType = File::existsCaseInsensitive(tempStdStr, this->fsPath);
-
-        if constexpr(Env::cfg(OS::WINDOWS)) {
-            wcharPath = this->fsPath.wstring();
-            this->sFilePath = UniString::to_utf8(wcharPath);
-        } else {
-            this->sFilePath = this->fsPath.string();
+    int statRet = -1;
+    // get file stats
+    // not using the stat_c helper because that would do redundant path conversion/validation
+#ifdef MCENGINE_PLATFORM_WINDOWS
+    statRet = _wstat64(this->fsPath.wstring().c_str(), &this->fsstat);
+    if(statRet == 0) {
+        // convert fs::path back to utf8
+        this->sFilePath = UniString::to_utf8(this->fsPath.wstring());
+    }
+#else
+    statRet = stat64(this->sFilePath.c_str(), &this->fsstat);
+    if(statRet != 0) {
+        // try case-insensitive lookup if stat failed
+        if(File::existsCaseInsensitive(this->sFilePath, this->fsPath) != FILETYPE::NONE) {
+            // re-stat
+            statRet = stat64(this->sFilePath.c_str(), &this->fsstat);
         }
+    }
+#endif
 
-        if(fileType != FILETYPE::FILE) {
-            if(cv::debug_file.getBool()) {
-                // usually the caller handles logging this sort of basic error
-                debugLog("File Error: Path {:s} (orig: {:s}) {:s}", this->sFilePath, origPath,
-                         fileType == FILETYPE::NONE ? "doesn't exist" : "is not a file");
-            }
-            return false;
-        }
+    if(statRet != 0) {
+        // usually the caller handles logging this sort of basic error
+        logIfCV(debug_file, "File Error: Couldn't stat() file {:s}: {}", this->sFilePath,
+                std::generic_category().message(errno));
+        return false;
+    }
+
+    // get type from stat
+    if(typeFromStat(this->fsstat) != FILETYPE::FILE) {
+        logIfCV(debug_file, "File Error: Path {:s} {:s}", this->sFilePath, "is not a file");
+        return false;
+    }
+
+    // validate file size
+    if(this->getFileSize() == 0) {  // empty file is valid
+        return true;
+    } else if(std::cmp_greater(this->getFileSize(), 1024 * 1024 * cv::file_size_max.getInt())) {  // size sanity check
+        debugLog("File Error: FileSize of {:s} is > {} MB!!!", this->sFilePath, cv::file_size_max.getInt());
+        return false;
     }
 
     // create and open input file stream
@@ -895,29 +934,6 @@ bool File::openForReading() {
     // check if file opened successfully
     if(!this->ifstream || !this->ifstream->good()) {
         debugLog("File Error: Couldn't open file {:s}", this->sFilePath);
-        return false;
-    }
-
-    // get file stats
-    int ret = -1;
-    // not using the stat_c helper because that would do redundant path conversion/validation
-#ifdef MCENGINE_PLATFORM_WINDOWS
-    ret = _wstat64(wcharPath.c_str(), &this->fsstat);
-#else
-    ret = stat64(this->sFilePath.c_str(), &this->fsstat);
-#endif
-
-    if(ret != 0) {
-        debugLog("File Error: Couldn't get file size for {:s}: {}", this->sFilePath,
-                 std::generic_category().message(errno));
-        return false;
-    }
-
-    // validate file size
-    if(this->getFileSize() == 0) {  // empty file is valid
-        return true;
-    } else if(std::cmp_greater(this->getFileSize(), 1024 * 1024 * cv::file_size_max.getInt())) {  // size sanity check
-        debugLog("File Error: FileSize of {:s} is > {} MB!!!", this->sFilePath, cv::file_size_max.getInt());
         return false;
     }
 

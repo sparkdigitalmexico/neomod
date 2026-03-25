@@ -90,10 +90,10 @@ class File {
     [[nodiscard]] static std::filesystem::path getFsPath(std::string_view utf8path);
 
     // passthrough to "_wfopen" on Windows, "fopen" otherwise
-    [[nodiscard]] static FILE *fopen_c(const char *__restrict utf8filename, const char *__restrict modes);
+    [[nodiscard]] static FILE *fopen_c(const char *__restrict utf8filename, const char *__restrict modes) noexcept;
 
     // passthrough to "_wstat64" on Windows, "stat64" otherwise
-    [[nodiscard]] static int stat_c(const char *__restrict utf8filename, struct stat64 *__restrict buffer);
+    [[nodiscard]] static int stat_c(const char *__restrict utf8filename, struct stat64 *__restrict buffer) noexcept;
 
     // copy file from source to destination, overwriting if exists
     [[nodiscard]] static bool copy(std::string_view fromPath, std::string_view toPath);
