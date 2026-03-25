@@ -100,6 +100,7 @@ void init_sleeper() {
     }
 
     // register callback instead of using getBool because convars are sub-optimal for precise timing (cache coherency)
+    s_force_use_sdl_sleep = !cv::alt_sleep.getBool();
     cv::alt_sleep.setCallback([](float newVal) -> void { s_force_use_sdl_sleep = !static_cast<i32>(newVal); });
 }
 
