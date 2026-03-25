@@ -2,6 +2,7 @@
 
 #include "Environment.h"
 
+#include "AsyncPool.h"
 #include "Engine.h"
 #include "MakeDelegateWrapper.h"
 #include "Mouse.h"
@@ -845,32 +846,40 @@ void Environment::openFileBrowser(std::string_view initialpath) const noexcept {
         // Apparently, "file://" URIs don't work with UNC paths on Windows (despite conflicting information from MSDN).
         // getFolderFromFilePath should do whatever cleanup is required anyways. Super deeply nested folders might not work, but that should be rare.
         encodedPath = fmt::format("file://{}", pathToOpen);
+        // windows sometimes (?) doesn't like it if it ends with any kind of slash, so strip it
+        if(encodedPath.ends_with('/') || encodedPath.ends_with('\\')) encodedPath.pop_back();
     } else {
         // On Linux/Unix, convert to a URI (for xdg-open to work).
         encodedPath = filesystemPathToURI(pathToOpen);
     }
 
     assert(!encodedPath.empty());
-    bool success = SDL_OpenURL(encodedPath.c_str());
-    if(!success && Env::cfg(OS::WINDOWS)) {
-        // bullshit
-        auto fspath = File::getFsPath(initialpath);
-        if(!fspath.empty()) {
-            namespace fs = std::filesystem;
-            std::error_code ec;
-            auto status = fs::status(fspath, ec);
-            const bool isMaybeAlreadyDir = (ec || initialpath.ends_with('\\') || initialpath.ends_with('/') ||
-                                            status.type() == fs::file_type::directory);
-            // apparently "replace_filename" can throw, let's hope it doesn't :)
-            encodedPath = fmt::format(
-                "file://{}",
-                UniString::to_utf8({isMaybeAlreadyDir ? fspath.wstring() : fspath.replace_filename({}).wstring()}));
-            success = SDL_OpenURL(encodedPath.c_str());
+    auto doOpenURL = [initialpath = std::string{initialpath}, encodedPath = std::move(encodedPath)]() mutable {
+        bool success = SDL_OpenURL(encodedPath.c_str());
+        if(!success && Env::cfg(OS::WINDOWS)) {
+            // bullshit
+            auto fspath = File::getFsPath(initialpath);
+            if(!fspath.empty()) {
+                namespace fs = std::filesystem;
+                std::error_code ec;
+                auto status = fs::status(fspath, ec);
+                const bool isMaybeAlreadyDir = (ec || initialpath.ends_with('\\') || initialpath.ends_with('/') ||
+                                                status.type() == fs::file_type::directory);
+                // apparently "replace_filename" can throw, let's hope it doesn't :)
+                encodedPath = fmt::format(
+                    "file://{}",
+                    UniString::to_utf8({isMaybeAlreadyDir ? fspath.wstring() : fspath.replace_filename({}).wstring()}));
+                if(encodedPath.ends_with('/') || encodedPath.ends_with('\\')) encodedPath.pop_back();
+                success = SDL_OpenURL(encodedPath.c_str());
+            }
         }
-    }
-    if(!success) {
-        debugLog("Failed to open file URI {:s}: {:s}", encodedPath, SDL_GetError());
-    }
+        if(!success) {
+            debugLog("Failed to open file URI {:s}: {:s}", encodedPath, SDL_GetError());
+        }
+    };
+
+    // this can block for a long time
+    Async::dispatch(std::move(doOpenURL), Lane::Background);
 }
 
 void Environment::restoreWindow() {
