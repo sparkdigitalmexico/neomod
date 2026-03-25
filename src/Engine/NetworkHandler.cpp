@@ -544,7 +544,7 @@ void NetworkImpl::Request::setupCurlHandle() {
                 curl_mime_filename(part, info.filename.c_str());
             }
             curl_mime_name(part, info.name.c_str());
-            curl_mime_data(part, (const char*)info.data.data(), info.data.size());
+            curl_mime_data(part, reinterpret_cast<const char*>(info.data.data()), info.data.size());
         }
 
         this->easy_handle.setopt(CURLOPT_MIMEPOST, this->mime.get());

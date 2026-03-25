@@ -94,7 +94,7 @@ set(SOUNDTOUCH_HASH "SHA512=8bd199c6363104ba6c9af1abbd3c4da3567ccda5fe3a68298917
 set_download_name("soundtouch" "${SOUNDTOUCH_VERSION}" "${SOUNDTOUCH_URL}")
 
 set(SOLOUD_VERSION "29debf4dce379657b10365abaaf8898392d5ad81")
-set(SOLOUD_URL "https://github.com/whrvt/neoloud/archive/${SOLOUD_VERSION}.tar.gz")
+set(SOLOUD_URL "https://github.com/neomodnet/neoloud/archive/${SOLOUD_VERSION}.tar.gz")
 set(SOLOUD_HASH "SHA512=787e2830c5def81988cdb566480e2f0e29d01bb2820a78df267a4d8c5b3294fe5cb0220a088f8bd633bb565ff9af1b3c67fe271abdcf8fc55c0ca4e2ef52af5e")
 set_download_name("soloud" "${SOLOUD_VERSION}" "${SOLOUD_URL}")
 
@@ -113,10 +113,10 @@ set(CTRE_URL "https://github.com/hanickadot/compile-time-regular-expressions/arc
 set(CTRE_HASH "SHA512=7633ac6297e61e1f2f59468b0eeb29d8f010dc069b0e866d261744cfa0a772c7ac2ae4818bb563cd578db5a1d86bc37f12aa9cddc87d551cba2942239ab09c87")
 set_download_name("ctre" "${CTRE_VERSION}" "${CTRE_URL}")
 
-set(CURL_VERSION "8.18.0")
+set(CURL_VERSION "8.19.0")
 string(REPLACE "." "_" _curl_ver_temp "${CURL_VERSION}")
 set(CURL_URL "https://github.com/curl/curl/releases/download/curl-${_curl_ver_temp}/curl-${CURL_VERSION}.tar.gz")
-set(CURL_HASH "SHA512=84f193f28369ccb7fba0d8933cfc24f5fbb282b046e7e8c2c1a0da35db8ec13d17e6407c240ce3a12cf4dccac62e5919bd98f3add77065408c6259cfe1071575")
+set(CURL_HASH "SHA512=745572f0cb9096ff88f737392d1ac25052fc8cff6c35bd09f970301e5e211e3b113f6c184ab2a5ae8c64ab989a9b1fdd6cbcb5d85a0b01d525706124c3ec1e4b")
 set_download_name("curl" "${CURL_VERSION}" "${CURL_URL}")
 unset(_curl_ver_temp)
 
