@@ -25,7 +25,7 @@ using namespace nsync;
 // condition_variable: for nsync mutex only
 // ===================================================================
 class nsync_condition_variable_t {
-   private:
+   protected:
     nsync_cv m_cv{};
 
    public:
@@ -83,6 +83,86 @@ class nsync_condition_variable_t {
     bool wait_for(unique_lock<mutex>& lock, const std::chrono::duration<Rep, Period>& timeout_duration,
                   Predicate pred) {
         return wait_until(lock, std::chrono::steady_clock::now() + timeout_duration, pred);
+    }
+};
+
+// ===================================================================
+// stoppable_condvar: condition_variable with stop_token support
+// ===================================================================
+class nsync_stoppable_condvar_t : public nsync_condition_variable_t {
+   public:
+    using nsync_condition_variable_t::wait;
+    using nsync_condition_variable_t::wait_for;
+    using nsync_condition_variable_t::wait_until;
+
+    template <typename Predicate>
+    // NOLINTNEXTLINE(performance-unnecessary-value-param)
+    bool wait(unique_lock<mutex>& lock, stop_token stop_token, Predicate pred) {
+        if(stop_token.stop_requested()) {
+            return pred();
+        }
+
+        nsync_note stop_note = stop_token.native_handle();
+        if(!stop_note) {
+#ifdef _DEBUG
+            fprintf(stderr,
+                    "underlying nsync_note for stop_token does not exist!? falling back to polling predicate...\n");
+#endif
+            while(!pred()) {
+                nsync_condition_variable_t::wait(lock);
+            }
+            return true;
+        }
+
+        while(!pred()) {
+            if(stop_token.stop_requested()) {
+                return false;
+            }
+            int result =
+                nsync_cv_wait_with_deadline(&m_cv, lock.mutex()->native_handle(), nsync_time_no_deadline, stop_note);
+            if(result == ECANCELED) {
+                return pred();
+            }
+        }
+        return true;
+    }
+
+    template <typename Clock, typename Duration, typename Predicate>
+    // NOLINTNEXTLINE(performance-unnecessary-value-param)
+    bool wait_until(unique_lock<mutex>& lock, stop_token stop_token,
+                    const std::chrono::time_point<Clock, Duration>& timeout_time, Predicate pred) {
+        if(stop_token.stop_requested()) {
+            return pred();
+        }
+
+        nsync_note stop_note = stop_token.native_handle();
+
+        while(!pred()) {
+            if(stop_token.stop_requested()) {
+                return false;
+            }
+
+            auto now = Clock::now();
+            if(timeout_time <= now) {
+                return pred();
+            }
+
+            auto timeout_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(timeout_time - now);
+            nsync_time deadline = nsync_time_add(nsync_time_now(), nsync_time_s_ns(0, timeout_ns.count()));
+
+            int result = nsync_cv_wait_with_deadline(&m_cv, lock.mutex()->native_handle(), deadline, stop_note);
+
+            if(result == ETIMEDOUT || result == ECANCELED) {
+                return pred();
+            }
+        }
+        return true;
+    }
+
+    template <typename Rep, typename Period, typename Predicate>
+    bool wait_for(unique_lock<mutex>& lock, stop_token stop_token,
+                  const std::chrono::duration<Rep, Period>& timeout_duration, Predicate pred) {
+        return wait_until(lock, std::move(stop_token), std::chrono::steady_clock::now() + timeout_duration, pred);
     }
 };
 
@@ -200,7 +280,8 @@ class nsync_condition_variable_any_t {
             // no actual stop token, fall back to polling
             // is this an error condition?
 #ifdef _DEBUG
-            fprintf(stderr, "underlying nsync_note for stop_token does not exist!? falling back to polling predicate...\n");
+            fprintf(stderr,
+                    "underlying nsync_note for stop_token does not exist!? falling back to polling predicate...\n");
 #endif
             while(!pred()) {
                 wait(lock);
@@ -286,11 +367,60 @@ class nsync_condition_variable_any_t {
 
 // type aliases matching standard library
 using condition_variable = nsync_condition_variable_t;
+using stoppable_condvar = nsync_stoppable_condvar_t;
 using condition_variable_any = nsync_condition_variable_any_t;
 
 #else
 // standard library fallback
 using condition_variable = std::condition_variable;
+
+class std_stoppable_condvar_t : public std::condition_variable {
+   public:
+    using std::condition_variable::wait;
+    using std::condition_variable::wait_for;
+    using std::condition_variable::wait_until;
+
+    template <typename Predicate>
+    bool wait(std::unique_lock<std::mutex>& lock, stop_token stoken, Predicate pred) {
+        if(stoken.stop_requested()) {
+            return pred();
+        }
+        stop_callback cb(stoken, [this] { notify_all(); });
+        while(!pred()) {
+            condition_variable::wait(lock);
+            if(stoken.stop_requested()) {
+                return pred();
+            }
+        }
+        return true;
+    }
+
+    template <typename Clock, typename Duration, typename Predicate>
+    bool wait_until(std::unique_lock<std::mutex>& lock, stop_token stoken,
+                    const std::chrono::time_point<Clock, Duration>& timeout_time, Predicate pred) {
+        if(stoken.stop_requested()) {
+            return pred();
+        }
+        stop_callback cb(stoken, [this] { notify_all(); });
+        while(!pred()) {
+            if(condition_variable::wait_until(lock, timeout_time) == std::cv_status::timeout) {
+                return pred();
+            }
+            if(stoken.stop_requested()) {
+                return pred();
+            }
+        }
+        return true;
+    }
+
+    template <typename Rep, typename Period, typename Predicate>
+    bool wait_for(std::unique_lock<std::mutex>& lock, stop_token stoken,
+                  const std::chrono::duration<Rep, Period>& timeout_duration, Predicate pred) {
+        return wait_until(lock, std::move(stoken), std::chrono::steady_clock::now() + timeout_duration, pred);
+    }
+};
+
+using stoppable_condvar = std_stoppable_condvar_t;
 using condition_variable_any = std::condition_variable_any;
 #endif
 

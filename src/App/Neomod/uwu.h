@@ -104,7 +104,7 @@ struct lazy_promise {
     }
 
     mutable Sync::mutex work_mtx;
-    Sync::condition_variable_any cv;
+    Sync::stoppable_condvar cv;
     std::optional<Func> pending;
 
     Sync::mutex ret_mtx;

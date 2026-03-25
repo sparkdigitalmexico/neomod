@@ -55,7 +55,7 @@ struct info_cache {
 
 const BeatmapDifficulty* current_map = nullptr;
 
-Sync::condition_variable_any cond;
+Sync::stoppable_condvar cond;
 Sync::jthread thr;
 
 Sync::mutex work_mtx;
