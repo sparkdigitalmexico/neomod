@@ -260,34 +260,26 @@ void HitObject::drawHitResultAnim(const HITRESULTANIM &hitresultanim) {
                               // scheduled with it, e.g. for slider end)
        && (hitresultanim.timeSecs + cv::hitresult_duration_max.getFloat() * (1.0f / m_pf->getBaseAnimationSpeed())) >
               engine->getTime()) {
-        const auto &skin = m_pf->getSkin();
-        {
-            const i32 skinAnimationTimeStartOffset =
-                m_clickTimeMS + (hitresultanim.addObjectDurationToSkinAnimationTimeStartOffset ? m_durationMS : 0) +
-                hitresultanim.deltaMS;
+        auto *skin = m_pf->getSkinMutable();
+        const f32 skinSpeedMultiplier = skin->anim_speed;
 
-            skin->i_hit0.setAnimationTimeOffset(skinAnimationTimeStartOffset);
-            skin->i_hit0.setAnimationFrameClampUp();
-            skin->i_hit50.setAnimationTimeOffset(skinAnimationTimeStartOffset);
-            skin->i_hit50.setAnimationFrameClampUp();
-            skin->i_hit100.setAnimationTimeOffset(skinAnimationTimeStartOffset);
-            skin->i_hit100.setAnimationFrameClampUp();
-            skin->i_hit100k.setAnimationTimeOffset(skinAnimationTimeStartOffset);
-            skin->i_hit100k.setAnimationFrameClampUp();
-            skin->i_hit300.setAnimationTimeOffset(skinAnimationTimeStartOffset);
-            skin->i_hit300.setAnimationFrameClampUp();
-            skin->i_hit300g.setAnimationTimeOffset(skinAnimationTimeStartOffset);
-            skin->i_hit300g.setAnimationFrameClampUp();
-            skin->i_hit300k.setAnimationTimeOffset(skinAnimationTimeStartOffset);
-            skin->i_hit300k.setAnimationFrameClampUp();
+        const i32 skinAnimationTimeStartOffset =
+            m_clickTimeMS + (hitresultanim.addObjectDurationToSkinAnimationTimeStartOffset ? m_durationMS : 0) +
+            hitresultanim.deltaMS;
 
-            const f32 animPercentInv =
-                1.0f - (((engine->getTime() - hitresultanim.timeSecs) * m_pf->getBaseAnimationSpeed()) /
-                        cv::hitresult_duration.getFloat());
-
-            drawHitResult(m_pf, m_pf->osuCoords2Pixels(hitresultanim.rawPos), hitresultanim.result, animPercentInv,
-                          std::clamp<f32>((f32)hitresultanim.deltaMS / m_pi->getHitWindow50(), -1.0f, 1.0f));
+        for(auto skinElem : {&Skin::i_hit0, &Skin::i_hit50, &Skin::i_hit100, &Skin::i_hit100k, &Skin::i_hit300,
+                             &Skin::i_hit300g, &Skin::i_hit300k}) {
+            SkinImage &image{skin->*skinElem};
+            image.setAnimationTimeOffset(skinSpeedMultiplier, skinAnimationTimeStartOffset);
+            image.setAnimationFrameClampUp();
         }
+
+        const f32 animPercentInv =
+            1.0f - (((engine->getTime() - hitresultanim.timeSecs) * m_pf->getBaseAnimationSpeed()) /
+                    cv::hitresult_duration.getFloat());
+
+        drawHitResult(m_pf, m_pf->osuCoords2Pixels(hitresultanim.rawPos), hitresultanim.result, animPercentInv,
+                      std::clamp<f32>((f32)hitresultanim.deltaMS / m_pi->getHitWindow50(), -1.0f, 1.0f));
     }
 }
 
@@ -805,6 +797,9 @@ void Circle::draw() {
 
     const bool hd = flags::has<ModFlags::Hidden>(curGameplayFlags);
 
+    const i32 animTimeOffset =
+        !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_approachTimeMS : m_pf->getCurMusicPosWithOffsets();
+
     // draw hit animation (if not hidden)
     if(!hd && !cv::instafade.getBool() && m_hitAnimation > 0.0f && m_hitAnimation != 1.0f) {
         f32 alpha = 1.0f - m_hitAnimation;
@@ -818,8 +813,8 @@ void Circle::draw() {
         g->pushTransform();
         {
             g->scale((1.0f + scale * foscale), (1.0f + scale * foscale));
-            skin->i_hitcircleoverlay.setAnimationTimeOffset(
-                !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_approachTimeMS : m_pf->getCurMusicPosWithOffsets());
+
+            skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
             drawCircle(m_pf, m_rawPos, m_comboNumber, m_colorCounter, m_colorOffset, 1.0f, 1.0f, alpha, alpha,
                        drawNumber);
         }
@@ -846,8 +841,7 @@ void Circle::draw() {
         smooth = -smooth * (smooth - 2);  // quad out twice
         shakeCorrectedPos.x += std::sin(engine->getTime() * 120) * smooth * cv::circle_shake_strength.getFloat();
     }
-    skin->i_hitcircleoverlay.setAnimationTimeOffset(!m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_approachTimeMS
-                                                                                   : m_pf->getCurMusicPosWithOffsets());
+    skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
 
     {
         const f32 approachScale = m_waiting && !hd ? 1.0f : m_approachScale;
@@ -1258,20 +1252,20 @@ void Slider::draw() {
             {
                 g->scale((1.0f + scale * foscale), (1.0f + scale * foscale));
                 if(m_curRepeat < 1) {
-                    skin->i_hitcircleoverlay.setAnimationTimeOffset(!m_pf->isInMafhamRenderChunk()
-                                                                        ? m_clickTimeMS - m_approachTimeMS
-                                                                        : m_pf->getCurMusicPosWithOffsets());
-                    skin->i_slider_start_circle_overlay2.setAnimationTimeOffset(
-                        !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_approachTimeMS
-                                                       : m_pf->getCurMusicPosWithOffsets());
+                    const i32 animTimeOffset = !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_approachTimeMS
+                                                                              : m_pf->getCurMusicPosWithOffsets();
+
+                    skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
+                    skin->i_slider_start_circle_overlay2.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
 
                     Circle::drawSliderStartCircle(m_pf, curvePointAt(0.0f), m_comboNumber, m_colorCounter,
                                                   m_colorOffset, 1.0f, 1.0f, alpha, number_alpha, drawNumber);
                 } else {
-                    skin->i_hitcircleoverlay.setAnimationTimeOffset(
-                        !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS : m_pf->getCurMusicPosWithOffsets());
-                    skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(
-                        !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS : m_pf->getCurMusicPosWithOffsets());
+                    const i32 animTimeOffset =
+                        !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS : m_pf->getCurMusicPosWithOffsets();
+
+                    skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
+                    skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
 
                     Circle::drawSliderEndCircle(m_pf, curvePointAt(0.0f), m_comboNumber, m_colorCounter, m_colorOffset,
                                                 1.0f, 1.0f, alpha, alpha, drawNumber);
@@ -1288,17 +1282,15 @@ void Slider::draw() {
             g->pushTransform();
             {
                 g->scale((1.0f + scale * foscale), (1.0f + scale * foscale));
-                {
-                    skin->i_hitcircleoverlay.setAnimationTimeOffset(!m_pf->isInMafhamRenderChunk()
-                                                                        ? m_clickTimeMS - m_fadeInTimeMS
-                                                                        : m_pf->getCurMusicPosWithOffsets());
-                    skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(!m_pf->isInMafhamRenderChunk()
-                                                                                  ? m_clickTimeMS - m_fadeInTimeMS
-                                                                                  : m_pf->getCurMusicPosWithOffsets());
 
-                    Circle::drawSliderEndCircle(m_pf, curvePointAt(1.0f), m_comboNumber, m_colorCounter, m_colorOffset,
-                                                1.0f, 1.0f, alpha, 0.0f, false);
-                }
+                const i32 animTimeOffset =
+                    !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_fadeInTimeMS : m_pf->getCurMusicPosWithOffsets();
+
+                skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
+                skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
+
+                Circle::drawSliderEndCircle(m_pf, curvePointAt(1.0f), m_comboNumber, m_colorCounter, m_colorOffset,
+                                            1.0f, 1.0f, alpha, 0.0f, false);
             }
             g->popTransform();
         }
@@ -1363,7 +1355,7 @@ void Slider::draw2(bool drawApproachCircle, bool drawOnlyApproachCircle) {
 
         g->setColor(Color(0xffffffff).setA(m_followCircleAnimationAlpha));
 
-        skin->i_slider_follow_circle.setAnimationTimeOffset(m_clickTimeMS);
+        skin->i_slider_follow_circle.setAnimationTimeOffset(skin->anim_speed, m_clickTimeMS);
         skin->i_slider_follow_circle.drawRaw(
             point,
             (m_pf->fSliderFollowCircleDiameter / skin->i_slider_follow_circle.getSizeBaseRaw().x) * tickAnimationScale *
@@ -1395,7 +1387,7 @@ void Slider::draw2(bool drawApproachCircle, bool drawOnlyApproachCircle) {
             g->pushTransform();
             {
                 g->rotate(ballAngle);
-                skin->i_sliderb.setAnimationTimeOffset(m_clickTimeMS);
+                skin->i_sliderb.setAnimationTimeOffset(skin->anim_speed, m_clickTimeMS);
                 skin->i_sliderb.drawRaw(point, m_pf->fHitcircleDiameter / skin->i_sliderb.getSizeBaseRaw().x);
             }
             g->popTransform();
@@ -1407,20 +1399,21 @@ void Slider::drawStartCircle(f32 alpha) {
     const Skin *skin = m_pf->getSkin();
 
     if(m_startFinished) {
-        skin->i_hitcircleoverlay.setAnimationTimeOffset(
-            !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS : m_pf->getCurMusicPosWithOffsets());
-        skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(
-            !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS : m_pf->getCurMusicPosWithOffsets());
+        const i32 animTimeOffset = !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS : m_pf->getCurMusicPosWithOffsets();
+
+        skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
+        skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
 
         Circle::drawSliderEndCircle(m_pf, curvePointAt(0.0f), m_comboNumber, m_colorCounter, m_colorOffset,
                                     m_hittableDimRGBColorMultiplierPct, 1.0f, alpha, 0.0f, false, false);
     } else {
         const i32 visibleTms =
             flags::has<ModFlags::FreezeFrame>(m_pf->getMods().flags) ? m_comboStartMS : m_clickTimeMS;
-        skin->i_hitcircleoverlay.setAnimationTimeOffset(
-            !m_pf->isInMafhamRenderChunk() ? visibleTms - m_approachTimeMS : m_pf->getCurMusicPosWithOffsets());
-        skin->i_slider_start_circle_overlay2.setAnimationTimeOffset(
-            !m_pf->isInMafhamRenderChunk() ? visibleTms - m_approachTimeMS : m_pf->getCurMusicPosWithOffsets());
+        const i32 animTimeOffset =
+            !m_pf->isInMafhamRenderChunk() ? visibleTms - m_approachTimeMS : m_pf->getCurMusicPosWithOffsets();
+
+        skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
+        skin->i_slider_start_circle_overlay2.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
 
         Circle::drawSliderStartCircle(m_pf, curvePointAt(0.0f), m_comboNumber, m_colorCounter, m_colorOffset,
                                       m_hittableDimRGBColorMultiplierPct, m_approachScale, alpha, alpha,
@@ -1430,11 +1423,11 @@ void Slider::drawStartCircle(f32 alpha) {
 
 void Slider::drawEndCircle(f32 alpha, f32 sliderSnake) {
     const Skin *skin = m_pf->getSkin();
+    const i32 animTimeOffset =
+        !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_fadeInTimeMS : m_pf->getCurMusicPosWithOffsets();
 
-    skin->i_hitcircleoverlay.setAnimationTimeOffset(!m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_fadeInTimeMS
-                                                                                   : m_pf->getCurMusicPosWithOffsets());
-    skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(
-        !m_pf->isInMafhamRenderChunk() ? m_clickTimeMS - m_fadeInTimeMS : m_pf->getCurMusicPosWithOffsets());
+    skin->i_hitcircleoverlay.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
+    skin->i_slider_end_circle_overlay2.setAnimationTimeOffset(skin->anim_speed, animTimeOffset);
 
     Circle::drawSliderEndCircle(m_pf, curvePointAt(sliderSnake), m_comboNumber, m_colorCounter, m_colorOffset,
                                 m_hittableDimRGBColorMultiplierPct, 1.0f, alpha, 0.0f, false, false);

@@ -10,13 +10,12 @@
 #include "Skin.h"
 #include "Graphics.h"
 #include "Logging.h"
+#include "FixedSizeArray.h"
 
 struct SkinImage::SkinImageImpl {
     // raw files
     std::vector<IMAGE> images;
     IMAGE nonAnimatedImage{.img = MISSING_TEXTURE, .scale = 2.f};
-
-    Skin* skin{nullptr};
 
     // scaling
     vec2 vBaseSizeForScaling2x{0.f, 0.f};
@@ -33,7 +32,6 @@ struct SkinImage::SkinImageImpl {
     // custom
     f32 fDrawClipWidthPercent{1.f};
 
-    bool bIsMissingTexture{false};
     bool bIsFromDefaultSkin{false};
 
     // if the nonAnimatedImage is inside the images vector, don't try to delete it twice
@@ -51,19 +49,14 @@ std::vector<std::string> SkinImage::init(Skin* skin, const std::string& skinElem
                                          float osuSize, const std::string& animationSeparator, bool ignoreDefaultSkin) {
     std::vector<std::string> toExport;
 
-    // sanity (should not happen with the way SkinImages are loaded atm)
-    if(m_impl->skin == skin) {
-        this->destroy(true);
-    }
-    m_impl->skin = skin;
     m_impl->vBaseSizeForScaling2x = baseSizeForScaling2x;
     m_impl->fOsuSize = osuSize;
 
     // logic: first load user skin (true), and if no image could be found then load the default skin (false)
     // this is necessary so that all elements can be correctly overridden with a user skin (e.g. if the user skin only
     // has sliderb.png, but the default skin has sliderb0.png!)
-    if(!this->load(skinElementName, animationSeparator, true, toExport)) {
-        if(!ignoreDefaultSkin) this->load(skinElementName, animationSeparator, false, toExport);
+    if(!this->load(skin, skinElementName, animationSeparator, true, toExport)) {
+        if(!ignoreDefaultSkin) this->load(skin, skinElementName, animationSeparator, false, toExport);
     }
 
     if(m_impl->nonAnimatedImage.img != MISSING_TEXTURE) {
@@ -79,31 +72,29 @@ std::vector<std::string> SkinImage::init(Skin* skin, const std::string& skinElem
 
     // if we couldn't load ANYTHING at all, gracefully fallback to missing texture
     if(m_impl->images.size() < 1) {
-        m_impl->bIsMissingTexture = true;
-
-        IMAGE missingTexture;
-
-        missingTexture.img = MISSING_TEXTURE;
-        missingTexture.scale = 2;
+        IMAGE missingTexture{
+            .img = MISSING_TEXTURE,
+            .scale = 2.f,
+        };
 
         m_impl->images.push_back(missingTexture);
     }
 
     // if AnimationFramerate is defined in skin, use that. otherwise derive framerate from number of frames
-    if(m_impl->skin->anim_framerate > 0.0f)
-        m_impl->fFrameDuration = 1.0f / m_impl->skin->anim_framerate;
+    if(skin->anim_framerate > 0.0f)
+        m_impl->fFrameDuration = 1.0f / skin->anim_framerate;
     else if(m_impl->images.size() > 0)
         m_impl->fFrameDuration = 1.0f / (float)m_impl->images.size();
 
     return toExport;
 }
 
-bool SkinImage::load(const std::string& skinElementName, const std::string& animationSeparator, bool ignoreDefaultSkin,
-                     std::vector<std::string>& exportVec) {
+bool SkinImage::load(Skin* skin, const std::string& skinElementName, const std::string& animationSeparator,
+                     bool ignoreDefaultSkin, std::vector<std::string>& exportVec) {
     std::string animatedSkinElementStartName = skinElementName;
     animatedSkinElementStartName.append(animationSeparator);
     animatedSkinElementStartName.append("0");
-    if(this->loadImage(animatedSkinElementStartName, ignoreDefaultSkin, true, true,
+    if(this->loadImage(skin, animatedSkinElementStartName, ignoreDefaultSkin, true, true,
                        exportVec))  // try loading the first animated element (if this exists then we continue
                                     // loading until the first missing frame)
     {
@@ -113,7 +104,7 @@ bool SkinImage::load(const std::string& skinElementName, const std::string& anim
             currentAnimatedSkinElementFrameName.append(animationSeparator);
             currentAnimatedSkinElementFrameName.append(std::to_string(frame));
 
-            if(!this->loadImage(currentAnimatedSkinElementFrameName, ignoreDefaultSkin, true, true, exportVec))
+            if(!this->loadImage(skin, currentAnimatedSkinElementFrameName, ignoreDefaultSkin, true, true, exportVec))
                 break;  // stop loading on the first missing frame
 
             frame++;
@@ -125,21 +116,21 @@ bool SkinImage::load(const std::string& skinElementName, const std::string& anim
             }
         }
         // also try to load non-animated skin element, but don't add it to images
-        this->loadImage(skinElementName, ignoreDefaultSkin, false, false, exportVec);
+        this->loadImage(skin, skinElementName, ignoreDefaultSkin, false, false, exportVec);
     } else {
         // load non-animated skin element
-        this->loadImage(skinElementName, ignoreDefaultSkin, false, true, exportVec);
+        this->loadImage(skin, skinElementName, ignoreDefaultSkin, false, true, exportVec);
     }
 
     return m_impl->images.size() > 0;  // if any image was found
 }
 
-bool SkinImage::loadImage(const std::string& skinElementName, bool ignoreDefaultSkin, bool animated, bool addToImages,
-                          std::vector<std::string>& exportVec) {
-    const size_t n_dirs = ignoreDefaultSkin ? 1 : m_impl->skin->search_dirs.size();
+bool SkinImage::loadImage(Skin* skin, const std::string& skinElementName, bool ignoreDefaultSkin, bool animated,
+                          bool addToImages, std::vector<std::string>& exportVec) {
+    const size_t n_dirs = ignoreDefaultSkin ? 1 : skin->search_dirs.size();
 
     for(size_t i = 0; i < n_dirs; i++) {
-        const auto& dir = m_impl->skin->search_dirs[i];
+        const auto& dir = skin->search_dirs[i];
 
         std::string base = dir;
         base.append(skinElementName);
@@ -150,14 +141,14 @@ bool SkinImage::loadImage(const std::string& skinElementName, bool ignoreDefault
         std::string path_1x = base;
         path_1x.append(".png");
 
-        const bool exists_2x = env->fileExists(path_2x);
-        const bool exists_1x = env->fileExists(path_1x);
+        const bool exists_2x = Environment::fileExists(path_2x);
+        const bool exists_1x = Environment::fileExists(path_1x);
 
         if(!exists_2x && !exists_1x) continue;
 
         // only the built-in default dir (last entry in the full search_dirs) counts as "from default"
         // compare against full size, not n_dirs, since ignoreDefaultSkin truncates the search
-        if(!m_impl->skin->is_default && i == m_impl->skin->search_dirs.size() - 1) m_impl->bIsFromDefaultSkin = true;
+        if(!skin->is_default && i == skin->search_dirs.size() - 1) m_impl->bIsFromDefaultSkin = true;
 
         // try @2x if HD enabled
         if(cv::skin_hd.getBool() && exists_2x) {
@@ -222,7 +213,6 @@ void SkinImage::destroy(bool everything) {
         m_impl->nonAnimatedImage.img = MISSING_TEXTURE;
     }
 
-    m_impl->skin = nullptr;
     m_impl->vBaseSizeForScaling2x = {0.f, 0.f};
     m_impl->fOsuSize = 0.f;
     m_impl->iCurMusicPos = 0;
@@ -231,7 +221,6 @@ void SkinImage::destroy(bool everything) {
     m_impl->fFrameDuration = 0.f;
     m_impl->iBeatmapAnimationTimeStartOffset = 0;
     m_impl->fDrawClipWidthPercent = 1.f;
-    m_impl->bIsMissingTexture = false;
     m_impl->bIsFromDefaultSkin = false;
     m_impl->bCanDeleteNonAnimatedImage = false;
     m_impl->bHasNonAnimatedImage = false;
@@ -397,9 +386,9 @@ void SkinImage::setAnimationFramerate(f32 fps) {
     m_impl->fFrameDuration = 1.0f / (fps > 9999.f ? 9999.f : fps < 1.f ? 1.f : fps);
 }
 
-void SkinImage::setAnimationTimeOffset(i32 offset) {
+void SkinImage::setAnimationTimeOffset(f32 speedMultiplier, i32 offset) {
     m_impl->iBeatmapAnimationTimeStartOffset = offset;
-    this->update(m_impl->skin->anim_speed, false, m_impl->iCurMusicPos);  // force update
+    this->update(speedMultiplier, false, m_impl->iCurMusicPos);  // force update
 }
 
 void SkinImage::setAnimationFrameForce(int frame) {
@@ -450,11 +439,13 @@ float SkinImage::getResolutionScale() const {
 int SkinImage::getNumImages() const { return static_cast<int>(m_impl->images.size()); }
 f32 SkinImage::getFrameDuration() const { return m_impl->fFrameDuration; }
 u32 SkinImage::getFrameNumber() const { return m_impl->iFrameCounter; }
-bool SkinImage::isMissingTexture() const { return m_impl->bIsMissingTexture; }
+bool SkinImage::isMissingTexture() const {
+    return m_impl->images.size() == 1 && m_impl->images[0].img == MISSING_TEXTURE;
+}
 bool SkinImage::isFromDefaultSkin() const { return m_impl->bIsFromDefaultSkin; }
 
 bool SkinImage::isReady() const {
-    if(!m_impl->skin) return false;
+    if(m_impl->images.empty()) return false;
     if(m_impl->bReady) return true;
 
     for(auto& image : m_impl->images) {
@@ -478,7 +469,7 @@ const SkinImage::IMAGE& SkinImage::getImageForCurrentFrame(bool animated) const 
     else {
         static IMAGE image{
             .img = MISSING_TEXTURE,
-            .scale = 1.f,
+            .scale = 2.f,
         };
 
         return image;

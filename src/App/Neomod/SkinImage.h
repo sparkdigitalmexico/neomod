@@ -54,7 +54,8 @@ class SkinImage final {
     void update(f32 speedMultiplier, bool useEngineTimeForAnimations = true, i32 curMusicPos = 0);
 
     void setAnimationFramerate(f32 fps);
-    void setAnimationTimeOffset(i32 offset);  // set this every frame (before drawing) to a fixed point in time
+    void setAnimationTimeOffset(f32 speedMultiplier,
+                                i32 offset);  // set this every frame (before drawing) to a fixed point in time
                                               // relative to curMusicPos where we become visible
     void setAnimationFrameForce(
         int frame);  // force set a frame, before drawing (e.g. for hitresults in UIRankingScreenRankingPanel)
@@ -91,15 +92,15 @@ class SkinImage final {
     [[nodiscard]] bool isFromDefaultSkin() const;
 
    private:
-    bool load(const std::string& skinElementName, const std::string& animationSeparator, bool ignoreDefaultSkin,
-              std::vector<std::string>& exportVec);
-    bool loadImage(const std::string& skinElementName, bool ignoreDefaultSkin, bool animated, bool addToImages,
-                   std::vector<std::string>& exportVec);
+    bool load(Skin* skin, const std::string& skinElementName, const std::string& animationSeparator,
+              bool ignoreDefaultSkin, std::vector<std::string>& exportVec);
+    bool loadImage(Skin* skin, const std::string& skinElementName, bool ignoreDefaultSkin, bool animated,
+                   bool addToImages, std::vector<std::string>& exportVec);
 
     [[nodiscard]] f32 getScale(bool animated = true) const;
     [[nodiscard]] f32 getImageScale(bool animated = true) const;
     void drawBrightQuad(VertexArrayObject* vao, f32 brightness) const;  // helper
 
     struct SkinImageImpl;
-    StaticPImpl<SkinImageImpl, sizeof(void*) == 8 ? 96 : 68> m_impl;
+    StaticPImpl<SkinImageImpl, sizeof(void*) == 8 ? 80 : 60, alignof(void*)> m_impl;
 };

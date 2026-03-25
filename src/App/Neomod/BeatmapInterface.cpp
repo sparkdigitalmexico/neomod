@@ -2144,7 +2144,7 @@ void BeatmapInterface::drawFollowPoints() {
                 {
                     g->rotate(vec::degrees(std::atan2(yDiff, xDiff)));
 
-                    skin->i_followpoint.setAnimationTimeOffset(fadeInTime);
+                    skin->i_followpoint.setAnimationTimeOffset(skin->anim_speed, fadeInTime);
 
                     // NOTE: getSizeBaseRaw() depends on the current animation time being set correctly beforehand!
                     // (otherwise you get incorrect scales, e.g. for animated elements with inconsistent @2x mixed in)
