@@ -261,7 +261,7 @@ void InfoLabel::updateScaling() {
     const auto screen = osu->getVirtScreenSize();
     const bool is_widescreen = ((i32)(std::max(0, (i32)((screen.x - (screen.y * 4.f / 3.f)) / 2.f))) > 0);
 
-    this->fGlobalScale = screen.x / (is_widescreen ? 1366.f : 1024.f);
+    this->fGlobalScale = (screen.x / (is_widescreen ? 1366.f : 1024.f)) / Osu::getUIScale();
     this->fTitleScale = (1.f * this->fGlobalScale) / this->getTitleFontRatio();
     this->fSubTitleScale = 0.65f * this->fGlobalScale;
     this->fSongInfoScale = 0.8f * this->fGlobalScale;

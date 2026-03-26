@@ -108,7 +108,7 @@ void HUD::onCursorTrailMaxChange() {
 namespace {
 static constinit VertexArrayObject quadVAO{DrawPrimitive::QUADS};
 static constinit VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
-}
+}  // namespace
 
 HUD::HUD() : UIScreen() {
     // resources
@@ -837,10 +837,10 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
             quadVAO.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + 2 * borderSize, 0));
             quadVAO.addColor(outerColor);
             quadVAO.addVertex(playfieldBorderTopLeft +
-                          vec2(playfieldBorderSize.x + 2 * borderSize, playfieldBorderSize.y + 2 * borderSize));
+                              vec2(playfieldBorderSize.x + 2 * borderSize, playfieldBorderSize.y + 2 * borderSize));
             quadVAO.addColor(outerColor);
             quadVAO.addVertex(playfieldBorderTopLeft +
-                          vec2(playfieldBorderSize.x + borderSize, playfieldBorderSize.y + borderSize));
+                              vec2(playfieldBorderSize.x + borderSize, playfieldBorderSize.y + borderSize));
             quadVAO.addColor(innerColor);
             quadVAO.addVertex(playfieldBorderTopLeft + vec2(playfieldBorderSize.x + borderSize, borderSize));
             quadVAO.addColor(innerColor);
@@ -855,10 +855,10 @@ void HUD::drawPlayfieldBorder(vec2 playfieldCenter, vec2 playfieldSize, f32 hitc
             quadVAO.addVertex(playfieldBorderTopLeft + vec2(borderSize, playfieldBorderSize.y + borderSize));
             quadVAO.addColor(innerColor);
             quadVAO.addVertex(playfieldBorderTopLeft +
-                          vec2(playfieldBorderSize.x + borderSize, playfieldBorderSize.y + borderSize));
+                              vec2(playfieldBorderSize.x + borderSize, playfieldBorderSize.y + borderSize));
             quadVAO.addColor(innerColor);
             quadVAO.addVertex(playfieldBorderTopLeft +
-                          vec2(playfieldBorderSize.x + 2 * borderSize, playfieldBorderSize.y + 2 * borderSize));
+                              vec2(playfieldBorderSize.x + 2 * borderSize, playfieldBorderSize.y + 2 * borderSize));
             quadVAO.addColor(outerColor);
             quadVAO.addVertex(playfieldBorderTopLeft + vec2(0, playfieldBorderSize.y + 2 * borderSize));
             quadVAO.addColor(outerColor);
@@ -1175,9 +1175,9 @@ void HUD::drawAccuracy(f32 accuracy) {
 
         // for HUD::drawProgressBar, to not move the progress bar depending on accuracy
         // TODO: seems like it should only depend on score_percent?
-        const f32 xOffsetConst = digitWidth * (numTotalDigits - 1) +  // questionable
-                                 dotWidth +                           //
-                                 pctWidth -                           //
+        const f32 xOffsetConst = (i32)((f32)digitWidth * 0.95f) * numTotalDigits +  // VERY questionable
+                                 dotWidth +                                        //
+                                 pctWidth -                                        //
                                  digitOverlapSize * numTotalDigits;
 
         const f32 drawXOffset = osu->getVirtScreenWidth() - xOffset - offset;

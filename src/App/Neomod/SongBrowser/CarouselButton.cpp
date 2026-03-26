@@ -37,7 +37,7 @@ CarouselButton::CarouselButton(float xPos, float yPos, float xSize, float ySize,
 
     this->fTargetRelPosY = yPos;
 
-    const float scale = Osu::getUIScale(baseOsuPixelsScale) * Osu::getUIScale();
+    const float scale = Osu::getUIScale(baseOsuPixelsScale);
     actualScaledOffsetWithMargin = vec::ceil(vec2{(int)marginPixelsX, (int)(marginPixelsY)} * scale);
     this->rect.setSize(vec::ceil(baseSize * scale));
 }
@@ -52,7 +52,7 @@ CarouselButton::CarouselButton(float xPos, float yPos, float xSize, float ySize,
 
     this->fTargetRelPosY = yPos;
 
-    const float scale = Osu::getUIScale(baseOsuPixelsScale) * Osu::getUIScale();
+    const float scale = Osu::getUIScale(baseOsuPixelsScale);
     actualScaledOffsetWithMargin = vec::ceil(vec2{(int)marginPixelsX, (int)(marginPixelsY)} * scale);
     this->rect.setSize(vec::ceil(baseSize * scale));
 }
@@ -137,7 +137,7 @@ bool CarouselButton::isMouseInside() {
 void CarouselButton::updateLayoutEx() {
     // these should barely ever change but we have no way to detect that as of now
     {
-        const float scale = Osu::getUIScale(baseOsuPixelsScale) * Osu::getUIScale();
+        const float scale = Osu::getUIScale(baseOsuPixelsScale);
 
         actualScaledOffsetWithMargin = vec::ceil(vec2{(int)marginPixelsX, (int)(marginPixelsY)} * scale);
         this->setSize(vec::ceil(baseSize * scale));

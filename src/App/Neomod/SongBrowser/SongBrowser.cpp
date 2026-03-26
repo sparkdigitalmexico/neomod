@@ -2116,7 +2116,7 @@ void SongBrowser::updateLayout() {
                                SongBrowser::getUIScale(80.f));
 
     // horizontal positioning by DPI makes no sense here if we want them to ever have a chance of lining up with skin elements
-    this->sortButton->setSize(200.f, 30.f * dpiScale);
+    this->sortButton->setSize(200.f * dpiScale, 30.f * dpiScale);
     this->sortButton->setRelPos((this->topbarRight->getSize() * (5.f / 6.f)).x - (this->sortButton->getSize().x / 2.f),
                                 std::max(0.f, this->topbarRight->getSize().y - (2 * (30.f * dpiScale) + 10.f)));
 
