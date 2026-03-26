@@ -1635,6 +1635,13 @@ neomod_resource.o: $(srcdir)/$(ASSETS_DIR)/resource.rc $(srcdir)/$(ASSETS_DIR)/n
 neomod_LDADD = neomod_resource.o $(WINPTHREAD_LDFLAGS)
 endif
 
+if MACOS_PLATFORM
+# bear doesn't work on macos, so use clang's -MJ flag instead (emits compile_commands fragments) and concatenate them at the end
+compile_commands.json: mostlyclean-compile
+	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
+	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) 'CFLAGS=$(CFLAGS) -MJ$$@.compdb' 'CXXFLAGS=$(CXXFLAGS) -MJ$$@.compdb' $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \
+	$(PYTHON) $(abs_top_srcdir)/tools/gen_compdb.py --strip-pch --delete -o $@ .
+else
 bear-check-version:
 	@$(BEAR) --version || { echo bear is unavailable to generate a compile_commands.json, install bear && exit 1; }
 	@if [ `$(BEAR) --version | cut -d' ' -f2 | cut -d'.' -f1` -ge 4 ]; then { \
@@ -1687,20 +1694,21 @@ compile_commands.json: bear.cfg mostlyclean-compile
 	$(BEAR) --config bear.cfg --append -- $(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
 	$(BEAR) --config bear.cfg --append -- $(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \
 	$(SED) -i '/"-include",/{N;/"\.\/pch\.h",/d;}' $@
+endif
 
 $(abs_top_srcdir)/.clangd: compile_commands.json
 	@if [ -f $@ ]; then { \
 		if grep -q "CompilationDatabase:" $@; then { \
-			$(SED) -i 's|CompilationDatabase:.*|CompilationDatabase: $(shell realpath --relative-to=$(abs_top_srcdir) $(CURDIR))|g' $@; \
+			$(SED) -i 's|CompilationDatabase:.*|CompilationDatabase: $(shell $(REALPATH) --relative-to=$(abs_top_srcdir) $(CURDIR))|g' $@; \
 		}; else { \
 			echo "CompileFlags:" >> $@; \
-			echo "    CompilationDatabase: $(shell realpath --relative-to=$(abs_top_srcdir) $(CURDIR))" >> $@; \
+			echo "    CompilationDatabase: $(shell $(REALPATH) --relative-to=$(abs_top_srcdir) $(CURDIR))" >> $@; \
 		}; fi; \
 	}; else { \
 		echo "CompileFlags:" > $@; \
 		echo "    Add: [-D_CLANGD]" >> $@; \
 		echo "    BuiltinHeaders: QueryDriver" >> $@; \
-		echo "    CompilationDatabase: $(shell realpath --relative-to=$(abs_top_srcdir) $(CURDIR))" >> $@; \
+		echo "    CompilationDatabase: $(shell $(REALPATH) --relative-to=$(abs_top_srcdir) $(CURDIR))" >> $@; \
 		echo "" >> $@; \
 		echo "InlayHints:" >> $@; \
 		echo "    Enabled: No" >> $@; \

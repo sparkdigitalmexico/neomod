@@ -226,7 +226,6 @@ AC_DEFUN([AC_PROG_GLSLC], [
     fi
 ])
 
-
 # needed for dep resolver
 #AC_PROG_WGET
 AC_PROG_CURLBIN
@@ -309,6 +308,14 @@ AS_IF([test "x$enable_clang" = "x"], [
     AS_CASE(["$host_os"],
         [darwin*], [enable_clang=yes]
     )
+])
+
+AS_CASE(["$host_os"], 
+[darwin*], [
+    # also try to find gnu realpath
+    AC_PATH_PROG([REALPATH], [realpath], [realpath], [/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH])
+], [*], [
+    AC_CHECK_PROG([REALPATH], [realpath], [realpath])
 ])
 
 AS_IF([test "x$enable_redistributable" != "xno"], [
@@ -839,7 +846,7 @@ AC_CHECK_PROG([CCACHE], [ccache], [ccache])
 # for wasm, emconfigure sets CC/CXX to full paths already
 AS_CASE(["$host_os"],
 [linux-gnu|darwin*], [
-    AS_VAR_SET([CC_REAL], [$CC])
+    AS_VAR_SET([CC_REAL], [${CC% -std=gnu23}]) # how does -std=gnu23 get in there on macos?
     AS_VAR_SET([CXX_REAL], [$CXX])
 ], [*], [
     AS_IF([test -n "$WASM_CC"], [
@@ -1101,7 +1108,7 @@ AS_IF([test "$SRCREMAP" != "no" && test "$host_os" = "mingw32" && { test -n "$SR
     # this ends up turning a path like "/home/xyz/neomod/build-folder" into "X:\build-folder"
 
     # FIXME: non-portable realpath?
-    rel_src_to_build_dirname="$(realpath --relative-to="$srcdir" "$PWD")"
+    rel_src_to_build_dirname="$($REALPATH --relative-to="$srcdir" "$PWD")"
 
     CXXFLAGS="$CXXFLAGS -ffile-prefix-map=\"\${abs_top_builddir}\"=\"${rel_src_to_build_dirname}\""
     CFLAGS="$CFLAGS -ffile-prefix-map=\"\${abs_top_builddir}\"=\"${rel_src_to_build_dirname}\""

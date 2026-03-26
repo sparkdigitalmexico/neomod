@@ -21,7 +21,10 @@
 extern "C" {
 #endif
 
-
+#if defined(__clang__) && defined(__APPLE__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type-mismatch"
+#endif
 
 int GLAD_GL_VERSION_1_0 = 0;
 int GLAD_GL_VERSION_1_1 = 0;
@@ -13178,6 +13181,10 @@ void gladLoaderUnloadGLES2(void) {
 }
 
 #endif /* GLAD_GLES2 */
+
+#if defined(__clang__) && defined(__APPLE__)
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef __cplusplus
 }
