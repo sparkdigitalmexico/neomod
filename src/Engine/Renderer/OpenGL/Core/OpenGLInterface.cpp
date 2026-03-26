@@ -25,10 +25,16 @@
 
 #include <cstddef>
 
-OpenGLInterface::OpenGLInterface()
-    : Graphics(),
+OpenGLInterface::OpenGLInterface(void *window)
+    : SDLGLInterface(static_cast<SDL_Window *>(window)),
       vResolution(engine->getScreenSize())  // initial viewport size = window size
-{
+{}
+
+OpenGLInterface::~OpenGLInterface() = default;
+
+bool OpenGLInterface::init() {
+    if(!SDLGLInterface::init()) return false;
+
     // quality
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
     glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
@@ -67,11 +73,11 @@ OpenGLInterface::OpenGLInterface()
 
     // initialize the state cache
     GLStateCache::initialize();
+    return true;
 }
 
-OpenGLInterface::~OpenGLInterface() = default;
-
 void OpenGLInterface::beginScene() {
+    SDLGLInterface::beginScene();
     this->bInScene = true;
 
     Matrix4 defaultProjectionMatrix =
@@ -109,6 +115,7 @@ void OpenGLInterface::endScene() {
     this->processPendingScreenshot();
 
     this->bInScene = false;
+    SDLGLInterface::endScene();
 }
 
 void OpenGLInterface::clearDepthBuffer() { glClear(GL_DEPTH_BUFFER_BIT); }

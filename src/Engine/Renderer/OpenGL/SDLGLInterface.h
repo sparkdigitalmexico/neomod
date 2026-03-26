@@ -7,23 +7,17 @@
 
 #if defined(MCENGINE_FEATURE_GLES32) || defined(MCENGINE_FEATURE_OPENGL)
 
-#ifdef MCENGINE_FEATURE_OPENGL
-#include "OpenGLInterface.h"
-#include "OpenGLVertexArrayObject.h"
-#include "OpenGLShader.h"
-
-using BackendGLInterface = OpenGLInterface;
-using BackendGLVAO = OpenGLVertexArrayObject;
-using BackendGLShader = OpenGLShader;
-#elif defined(MCENGINE_FEATURE_GLES32)
-#include "OpenGLES32Interface.h"
-#include "OpenGLES32VertexArrayObject.h"
-#include "OpenGLES32Shader.h"
-
-using BackendGLInterface = OpenGLES32Interface;
-using BackendGLVAO = OpenGLES32VertexArrayObject;
-using BackendGLShader = OpenGLES32Shader;
+#ifdef MCENGINE_FEATURE_GLES32
+#include "ModernGraphicsShared.h"
+using GLGraphicsBackend = ModernGraphicsShared;
+#else
+#include "Graphics.h"
+using GLGraphicsBackend = Graphics;
 #endif
+
+#include <string>
+#include <memory>
+#include <unordered_map>
 
 #ifndef GLAPIENTRY
 #ifdef APIENTRY
@@ -43,17 +37,8 @@ using GLsizei = int;
 class OpenGLSync;
 
 typedef struct SDL_Window SDL_Window;
-class SDLGLInterface final : public BackendGLInterface {
+class SDLGLInterface : public GLGraphicsBackend {
     NOCOPY_NOMOVE(SDLGLInterface);
-
-    friend class Environment;
-    friend class OpenGLInterface;
-    friend class OpenGLVertexArrayObject;
-    friend class OpenGLShader;
-    friend class OpenGLES32Interface;
-    friend class OpenGLES32VertexArrayObject;
-    friend class OpenGLES32Shader;
-    friend class OpenGLShader;
 
    public:
     SDLGLInterface(SDL_Window *window);
@@ -75,15 +60,18 @@ class SDLGLInterface final : public BackendGLInterface {
     int getVRAMRemaining() override;
     int getVRAMTotal() override;
 
-    // debugging
     static void setGLLog(bool on);
+
+    // debugging
     static void GLAPIENTRY glDebugCB(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                                      const GLchar *message, const void * /*userParam*/);
 
-   protected:
     static std::unordered_map<DrawPrimitive, int> primitiveToOpenGLMap;
     static std::unordered_map<DrawCompareFunc, int> compareFuncToOpenGLMap;
     static std::unordered_map<DrawUsageType, unsigned int> usageToOpenGLMap;
+
+   protected:
+    bool init() override;
 
    private:
     static void load();

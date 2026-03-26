@@ -13,16 +13,17 @@
 
 #ifdef MCENGINE_FEATURE_GLES32
 
-#include "ModernGraphicsShared.h"
+#include "SDLGLInterface.h"
 
 class OpenGLES32Shader;
 
-class OpenGLES32Interface : public ModernGraphicsShared {
+class OpenGLES32Interface final : public SDLGLInterface {
     NOCOPY_NOMOVE(OpenGLES32Interface)
     friend class OpenGLES32Shader;
 
    public:
-    OpenGLES32Interface();
+    OpenGLES32Interface() = delete;
+    OpenGLES32Interface(void *window);
     ~OpenGLES32Interface() override;
 
     // scene
@@ -37,7 +38,7 @@ class OpenGLES32Interface : public ModernGraphicsShared {
     void setAlpha(float alpha) final;
 
     // 2d primitive drawing (implemented in ModernGraphicsShared)
-    void drawRectf(const RectOptions &opts) final; // exception: overridden because GL_LINE_LOOP works better
+    void drawRectf(const RectOptions &opts) final;  // exception: overridden because GL_LINE_LOOP works better
 
     // 2d resource drawing
     void drawImage(const Image *image, AnchorPoint anchor = AnchorPoint::CENTER, float edgeSoftness = 0.0f,
@@ -108,6 +109,8 @@ class OpenGLES32Interface : public ModernGraphicsShared {
     [[nodiscard]] inline unsigned int getVBOTexcolors() const { return m_iVBOTexcolors; }
 
    protected:
+    bool init() final;
+
     void onTransformUpdate() final;
     std::vector<u8> getScreenshot(bool withAlpha = false) final;
 

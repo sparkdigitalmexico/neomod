@@ -29,7 +29,9 @@
 
 #include "binary_embed.h"
 
-OpenGLES32Interface::OpenGLES32Interface() : ModernGraphicsShared(), m_vResolution(engine->getScreenSize()) {
+OpenGLES32Interface::OpenGLES32Interface(void *window)
+    : SDLGLInterface(static_cast<SDL_Window *>(window)),
+      m_vResolution(engine->getScreenSize()) {
     // renderer
     m_bInScene = false;
 
@@ -44,6 +46,22 @@ OpenGLES32Interface::OpenGLES32Interface() : ModernGraphicsShared(), m_vResoluti
 
     // persistent vars
     m_bAntiAliasing = true;
+}
+
+OpenGLES32Interface::~OpenGLES32Interface() {
+    SAFE_DELETE(m_shaderTexturedGeneric);
+
+    if(m_iVBOVertices != 0) glDeleteBuffers(1, &m_iVBOVertices);
+    if(m_iVBOTexcoords != 0) glDeleteBuffers(1, &m_iVBOTexcoords);
+    if(m_iVBOTexcolors != 0) glDeleteBuffers(1, &m_iVBOTexcolors);
+
+    m_iVBOVertices = 0;
+    m_iVBOTexcoords = 0;
+    m_iVBOTexcolors = 0;
+}
+
+bool OpenGLES32Interface::init() {
+    if(!SDLGLInterface::init()) return false;
 
     // enable
     glEnable(GL_BLEND);
@@ -178,21 +196,12 @@ void main() {
 
     // initialize the state cache
     GLStateCache::initialize();
-}
 
-OpenGLES32Interface::~OpenGLES32Interface() {
-    SAFE_DELETE(m_shaderTexturedGeneric);
-
-    if(m_iVBOVertices != 0) glDeleteBuffers(1, &m_iVBOVertices);
-    if(m_iVBOTexcoords != 0) glDeleteBuffers(1, &m_iVBOTexcoords);
-    if(m_iVBOTexcolors != 0) glDeleteBuffers(1, &m_iVBOTexcolors);
-
-    m_iVBOVertices = 0;
-    m_iVBOTexcoords = 0;
-    m_iVBOTexcolors = 0;
+    return true;
 }
 
 void OpenGLES32Interface::beginScene() {
+    SDLGLInterface::beginScene();
     m_bInScene = true;
 
     // enable default shader (must happen before any uniform calls)
@@ -231,6 +240,7 @@ void OpenGLES32Interface::endScene() {
     }
 
     m_bInScene = false;
+    SDLGLInterface::endScene();
 }
 
 void OpenGLES32Interface::clearDepthBuffer() { glClear(GL_DEPTH_BUFFER_BIT); }

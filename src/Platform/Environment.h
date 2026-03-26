@@ -97,7 +97,7 @@ class Environment {
     void update();
 
     // engine/factory
-    Graphics *createRenderer();
+    std::unique_ptr<Graphics> createRenderer();
 
     [[nodiscard]] constexpr forceinline bool usingNullGraphics() const { return m_renderer == RuntimeRenderer::NULLGRAPHICS; }
 #ifdef MCENGINE_FEATURE_DIRECTX11

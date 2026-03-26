@@ -115,7 +115,7 @@ Engine::Engine() {
         this->keyboards.push_back(keyboard.get());
 
         // create graphics through environment
-        g.reset(env->createRenderer());
+        g = env->createRenderer();
         // needs init() separation due to potential graphics access
         this->runtime_assert(!!g && g->init(), "Graphics failed to initialize!");
 

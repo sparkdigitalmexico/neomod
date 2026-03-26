@@ -6,14 +6,15 @@
 #include "config.h"
 
 #ifdef MCENGINE_FEATURE_OPENGL
-#include "Graphics.h"
+#include "SDLGLInterface.h"
 
 class Image;
 
-class OpenGLInterface : public Graphics {
+class OpenGLInterface final : public SDLGLInterface {
     NOCOPY_NOMOVE(OpenGLInterface)
    public:
-    OpenGLInterface();
+    OpenGLInterface() = delete;
+    OpenGLInterface(void *window);
     ~OpenGLInterface() override;
 
     // scene
@@ -83,7 +84,7 @@ class OpenGLInterface : public Graphics {
 
     // renderer info
     [[nodiscard]] vec2 getResolution() const final { return this->vResolution; }
-    [[nodiscard]] inline const char *getName() const override { return "OpenGL Legacy"; }
+    [[nodiscard]] inline const char *getName() const final { return "OpenGL Legacy"; }
 
     // callbacks
     void onResolutionChange(vec2 newResolution) final;
@@ -99,6 +100,8 @@ class OpenGLInterface : public Graphics {
                                                bool keepInSystemMemory) final;
 
    protected:
+    bool init() final;
+
     void onTransformUpdate() final;
     std::vector<u8> getScreenshot(bool withAlpha = false) final;
 

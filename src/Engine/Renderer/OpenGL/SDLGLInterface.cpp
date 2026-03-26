@@ -90,21 +90,32 @@ void SDLGLInterface::unload() {
 }
 #endif
 
-SDLGLInterface::SDLGLInterface(SDL_Window *window)
-    : BackendGLInterface(), window(window), syncobj(std::make_unique<OpenGLSync>()) {}
+SDLGLInterface::SDLGLInterface(SDL_Window *window) : GLGraphicsBackend(), window(window) {}
 
-SDLGLInterface::~SDLGLInterface() = default;
+bool SDLGLInterface::init() {
+    load();
+    const bool success =
+#ifndef MCENGINE_PLATFORM_WASM
+#ifdef MCENGINE_FEATURE_OPENGL
+        GLLoaded;
+#else
+        GLESLoaded;
+#endif
+#else   // MCENGINE_FEATURE_OPENGL
+        true;
+#endif  // MCENGINE_PLATFORM_WASM
+    this->syncobj = std::make_unique<OpenGLSync>();
+    return success;
+}
+
+SDLGLInterface::~SDLGLInterface() { unload(); }
 
 void SDLGLInterface::beginScene() {
     // block on frame queue (if enabled)
     this->syncobj->begin();
-
-    BackendGLInterface::beginScene();
 }
 
 void SDLGLInterface::endScene() {
-    BackendGLInterface::endScene();
-
     SDL_GL_SwapWindow(this->window);
 
     // create sync obj for the gl commands this frame (if enabled)

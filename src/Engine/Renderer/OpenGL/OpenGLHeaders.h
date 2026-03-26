@@ -25,18 +25,10 @@
 	#include "OpenGLInterface.h"
 	#include "OpenGLVertexArrayObject.h"
 	#include "OpenGLShader.h"
-
-	using BackendGLInterface = OpenGLInterface;
-	using BackendGLVAO = OpenGLVertexArrayObject;
-	using BackendGLShader = OpenGLShader;
 #elif defined(MCENGINE_FEATURE_GLES32)
 	#include "OpenGLES32Interface.h"
 	#include "OpenGLES32VertexArrayObject.h"
 	#include "OpenGLES32Shader.h"
-
-	using BackendGLInterface = OpenGLES32Interface;
-	using BackendGLVAO = OpenGLES32VertexArrayObject;
-	using BackendGLShader = OpenGLES32Shader;
 #endif
 
 #endif

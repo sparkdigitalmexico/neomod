@@ -30,7 +30,13 @@
 #include "NullGraphics.h"
 #endif
 
-#include "SDLGLInterface.h"
+#ifdef MCENGINE_FEATURE_OPENGL
+#include "OpenGLInterface.h"
+#endif
+
+#ifdef MCENGINE_FEATURE_GLES32
+#include "OpenGLES32Interface.h"
+#endif
 
 #include <algorithm>
 #include <cassert>
@@ -188,10 +194,6 @@ Environment::~Environment() {
     }
     m_cursorIcons = {};
 
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_GLES32)
-    SDLGLInterface::unload();
-#endif
-
     env = nullptr;
 }
 
@@ -201,21 +203,23 @@ void Environment::update() {
     // m_bIsCursorInsideWindow = winFocused() && m_engine->getScreenRect().contains(getMousePos());
 }
 
-Graphics *Environment::createRenderer() {
+std::unique_ptr<Graphics> Environment::createRenderer() {
 #ifdef MCENGINE_PLATFORM_WASM
-    if(m_bHeadless) return new NullGraphics();
+    if(m_bHeadless) return std::make_unique<NullGraphics>();
 #endif
 #ifdef MCENGINE_FEATURE_DIRECTX11
     if(usingDX11())  // only if specified on the command line, for now
-        return new DirectX11Interface(Env::cfg(OS::WINDOWS) ? getHwnd() : reinterpret_cast<HWND>(m_window));
+        return std::make_unique<DirectX11Interface>(Env::cfg(OS::WINDOWS) ? getHwnd()
+                                                                          : reinterpret_cast<HWND>(m_window));
 #endif
 #ifdef MCENGINE_FEATURE_SDLGPU
-    if(usingSDLGPU()) return new SDLGPUInterface(m_window);
+    if(usingSDLGPU()) return std::make_unique<SDLGPUInterface>(m_window);
 #endif
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_GLES32)
-    // need to load stuff dynamically before the base class constructors
-    SDLGLInterface::load();
-    return new SDLGLInterface(m_window);
+#ifdef MCENGINE_FEATURE_OPENGL
+    return std::make_unique<OpenGLInterface>(m_window);
+#endif
+#ifdef MCENGINE_FEATURE_GLES32
+    return std::make_unique<OpenGLES32Interface>(m_window);
 #endif
 }
 
