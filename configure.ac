@@ -37,9 +37,10 @@ AC_CANONICAL_TARGET
 
 # early emscripten detection - must happen before checks that use host_os
 # emconfigure sets CC=emcc before running configure
-AS_IF([[case "$CC" in
-  *emcc*) WASM_CC=$CC ;;
-esac]])
+AS_CASE(["$CC"],
+  [*emcc*], [WASM_CC=$CC]
+)
+
 AS_IF([test -n "$WASM_CC"], [
     # override host triplet so subsequent checks see WASM, not linux
     host_cpu=wasm32
@@ -85,9 +86,9 @@ AC_PROG_SED
 # BSD sed (macOS default) requires -i '' which is incompatible
 AC_MSG_CHECKING([whether $SED supports GNU-style -i])
 echo "conftest_sed_content" > conftest.sed_test
-if $SED -i 's/conftest_sed_content/pass/' conftest.sed_test 2>/dev/null && test "x$(cat conftest.sed_test 2>/dev/null)" = "xpass"; then
+AS_IF([`$SED -i 's/conftest_sed_content/pass/' conftest.sed_test 2>/dev/null` && test "x`cat conftest.sed_test 2>/dev/null`" = "xpass"], [
     AC_MSG_RESULT([yes])
-else
+], [
     AC_MSG_RESULT([no])
     AC_CHECK_PROG([_GSED], [gsed], [gsed])
     if test -n "$_GSED"; then
@@ -96,7 +97,7 @@ else
     else
         AC_MSG_ERROR([GNU sed required but not found. On macOS: brew install gnu-sed])
     fi
-fi
+])
 rm -f conftest.sed_test conftest.sed_teste
 
 AC_DEFUN([AC_PROG_WGET], [
@@ -165,7 +166,7 @@ AC_DEFUN([AC_PROG_CMAKE], [
         AC_MSG_ERROR([cmake not found - required for building dependencies])
     fi
 ])
-AC_DEFUN([AC_PROG_LIBTOOLIZE], [
+AC_DEFUN([AC_PROG_LIB_TOOLIZE], [
     AC_CHECK_PROG([LIBTOOLIZE], [glibtoolize], [glibtoolize])
     if test -z "$LIBTOOLIZE"; then
         AC_CHECK_PROG([LIBTOOLIZE], [libtoolize], [libtoolize])
@@ -236,7 +237,7 @@ AC_PROG_NINJA
 AC_PROG_UNZIP
 AC_PROG_MESON
 AC_PROG_CMAKE
-AC_PROG_LIBTOOLIZE
+AC_PROG_LIB_TOOLIZE
 AC_PROG_PYTHON
 AC_SUBST([PYTHON])
 
@@ -305,9 +306,9 @@ AC_ARG_WITH([discord],
 # setup defaults
 # default to clang on macOS (GCC could be supported but later)
 AS_IF([test "x$enable_clang" = "x"], [
-    AS_IF([[case "$host_os" in
-        darwin*) enable_clang=yes ;;
-    esac]])
+    AS_CASE(["$host_os"],
+        [darwin*], [enable_clang=yes]
+    )
 ])
 
 AS_IF([test "x$enable_redistributable" != "xno"], [
@@ -578,9 +579,9 @@ AS_IF([test "x$enable_lto" != "xno"], [
 ])
 
 # detect emscripten (CC=emcc when using emconfigure)
-AS_IF([[case "$CC" in
-  *emcc*) WASM_CC=$CC ;;
-esac]])
+AS_CASE(["$CC"],
+  [*emcc*], [WASM_CC=$CC]
+)
 
 AS_IF([test -n "$WASM_CC"], [
     # emscripten/WASM build
@@ -634,9 +635,9 @@ AS_IF([test "$host_cpu" = "x86_64" && test -z "$LLVMMINGW" && test -z "$WASM_CC"
     CXXFLAGS="$CXXFLAGS -mtls-dialect=gnu2"
 ])
 
-AS_IF([[case "$host_cpu" in
-  i[[3456789]]86*) host_cpu=i686 ;;
-esac]])
+AS_CASE(["$host_cpu"],
+  [i[[3456789]]86*], [host_cpu=i686]
+)
 
 ac_cv_env_PKG_CONFIG_value="$PKG_CONFIG"
 ac_cv_env_PKG_CONFIG_set="set"
@@ -648,8 +649,9 @@ AC_SUBST([PKG_CONFIG_PATH_CUSTOM])
 
 win_subsystem_ver=6.00
 mkdir -p "$PWD/build"
-AS_IF([[case "$host_os" in
-*emscripten)
+
+AS_CASE(["$host_os"],
+[*emscripten], [
     # WASM/Emscripten build
     WASM_POLYFILL_DEP="\$(srcdir)/src/Platform/WASM/wasm-node-polyfill.js"
     emscripten_flags="-sPTHREAD_POOL_SIZE=32 -sAUDIO_WORKLET=1 -sWASM=1 -sWASM_WORKERS=1 -sUSE_PTHREADS=1 -sFETCH=1"
@@ -691,8 +693,9 @@ __EOF__
     EXEEXT=".html"
     AC_DEFINE([MCENGINE_PLATFORM_WASM], [1], [Define if compiling for WASM with Emscripten.])
     AC_DEFINE([NEOMOD_DATA_DIR], ["/persist/"], [Persistent writable data directory for WASM.])
-;;
-linux-gnu)
+
+], [linux-gnu], [
+
     AS_IF([test "$host_cpu" = "i686"], [
         cat > "$PWD/build/$target-$CC" <<EOF
 #!/usr/bin/env bash
@@ -746,8 +749,9 @@ __EOF__
     AC_SUBST([NATIVE_LDFLAGS])
 
     AC_DEFINE([MCENGINE_PLATFORM_LINUX], [1], [Define if compiling for Linux.])
-;;
-darwin*) # macOS
+
+], [darwin*], [ # macOS
+
     AC_PATH_PROG([CC_FOUND], [$CC], [], [/opt/homebrew/opt/llvm/bin:$PATH])
     AC_PATH_PROG([CXX_FOUND], [$CXX], [], [/opt/homebrew/opt/llvm/bin:$PATH])
 
@@ -784,8 +788,7 @@ __EOF__
     LIBPREFIX="lib"
 
     AC_DEFINE([MCENGINE_PLATFORM_MACOS], [1], [Define if compiling for macOS.])
-;;
-*) # Windows/mingw32
+], [*], [ # Windows/mingw32
     AC_CHECK_TOOL([WINDRES], [windres], [windres])
     AC_CHECK_TOOL([DLLTOOL], [dlltool], [dlltool]) # needed for ffmpeg build
 
@@ -816,14 +819,13 @@ __EOF__
     # increase default stack size to 8mb from 1mb
     NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,--stack,8388608"
     AC_DEFINE([MCENGINE_PLATFORM_WINDOWS], [1], [Define if compiling for Windows.])
-;;
-esac]])
+])
 
 AC_PROG_CC([$CC])
-AS_IF([[case "$CC" in
-  *clang) CXX=$CC++ ;;
-  *gcc) CXX=${CC%gcc}g++ ;;
-esac]])
+AS_CASE(["$CC"],
+  [*clang], [CXX=$CC++],
+  [*gcc], [CXX=${CC%gcc}g++]
+)
 AC_PROG_CXX([$CXX])
 
 AC_CHECK_PROG([STRIP], [strip], [strip]) # don't use mingw-strip, seems to not work as well as regular binutils strip even for windows builds...
@@ -835,21 +837,19 @@ AC_CHECK_PROG([CCACHE], [ccache], [ccache])
 # this is done mostly for mingw targets so that configure --host=x86_64-w64-mingw32 --enable-clang
 # saves the full path to the llvm-mingw compiler, in case $PATH changes for future compiles
 # for wasm, emconfigure sets CC/CXX to full paths already
-AS_IF([[case "$host_os" in
-    linux-gnu|darwin*)
+AS_CASE(["$host_os"],
+[linux-gnu|darwin*], [
+    AS_VAR_SET([CC_REAL], [$CC])
+    AS_VAR_SET([CXX_REAL], [$CXX])
+], [*], [
+    AS_IF([test -n "$WASM_CC"], [
         AS_VAR_SET([CC_REAL], [$CC])
         AS_VAR_SET([CXX_REAL], [$CXX])
-    ;;
-    *)
-        AS_IF([test -n "$WASM_CC"], [
-            AS_VAR_SET([CC_REAL], [$CC])
-            AS_VAR_SET([CXX_REAL], [$CXX])
-        ],[
-            AC_PATH_PROG([CC_REAL], [$CC])
-            AC_PATH_PROG([CXX_REAL], [$CXX])
-        ])
-    ;;
-esac]])
+    ],[
+        AC_PATH_PROG([CC_REAL], [$CC])
+        AC_PATH_PROG([CXX_REAL], [$CXX])
+    ])
+])
 
 # md5sum is GNU coreutils; macOS has md5 instead
 AC_CHECK_PROG([_HAVE_MD5SUM], [md5sum], [yes], [no])
@@ -1078,15 +1078,13 @@ AS_IF([test "x$enable_clang" = "xyes"], [
     AC_PATH_TOOL([RANLIB], [ranlib], [AC_MSG_ERROR([ranlib not found])])
 ])
 
-AS_IF([[case "$host_os" in
-    linux-gnu)
-        AC_CHECK_HEADERS([X11/Xlib.h GL/gl.h GL/glu.h], [],
-            [AC_MSG_ERROR([Missing required X11/OpenGL development headers])])
-    ;;
-    darwin*)
-        # macOS uses OpenGL framework, no X11 headers needed
-    ;;
-esac]])
+AS_CASE(["$host_os"],
+[linux-gnu], [
+    AC_CHECK_HEADERS([X11/Xlib.h GL/gl.h GL/glu.h], [],
+        [AC_MSG_ERROR([Missing required X11/OpenGL development headers])])
+], [darwin*], [
+    # macOS uses OpenGL framework, no X11 headers needed
+])
 
 # depending on the type of build, we may want to remap the file paths
 SRCREMAP=${SRCREMAP:-}
