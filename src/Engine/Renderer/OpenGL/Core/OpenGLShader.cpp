@@ -7,6 +7,73 @@
 #include "OpenGLHeaders.h"
 #include "OpenGLStateCache.h"
 
+#ifdef MCENGINE_PLATFORM_MACOS
+// macOS only supports core profile OpenGL (no ARB)
+// keep them around for compatibility though outside macOS
+static inline void _macOS_glDeleteObject(GLuint obj) {
+    if (glIsProgram(obj)) glDeleteProgram(obj);
+    else glDeleteShader(obj);
+}
+#define MCglDeleteObject _macOS_glDeleteObject
+static inline void _macOS_glGetObjectParameteriv(GLuint obj, GLenum pname, GLint *params) {
+    if (glIsProgram(obj)) glGetProgramiv(obj, pname, params);
+    else glGetShaderiv(obj, pname, params);
+}
+#define MCglGetObjectParameteriv _macOS_glGetObjectParameteriv
+
+#define MCglCreateProgramObject glCreateProgram
+#define MCglCreateShaderObject glCreateShader
+#define MCglAttachObject glAttachShader
+#define MCglUseProgramObject glUseProgram
+
+#define MCglShaderSource glShaderSource
+#define MCglCompileShader glCompileShader
+#define MCglLinkProgram glLinkProgram
+#define MCglValidateProgram glValidateProgram
+#define MCglGetUniformLocation glGetUniformLocation
+#define MCglGetAttribLocation glGetAttribLocation
+#define MCglGetInfoLog glGetShaderInfoLog
+
+#define MCglUniform1f glUniform1f
+#define MCglUniform1fv glUniform1fv
+#define MCglUniform1i glUniform1i
+#define MCglUniform2f glUniform2f
+#define MCglUniform2fv glUniform2fv
+#define MCglUniform3f glUniform3f
+#define MCglUniform3fv glUniform3fv
+#define MCglUniform4f glUniform4f
+#define MCglUniformMatrix4fv glUniformMatrix4fv
+
+#else
+
+#define MCglDeleteObject glDeleteObjectARB
+#define MCglGetObjectParameteriv glGetObjectParameterivARB
+
+#define MCglCreateProgramObject glCreateProgramObjectARB
+#define MCglCreateShaderObject glCreateShaderObjectARB
+#define MCglShaderSource glShaderSourceARB
+#define MCglCompileShader glCompileShaderARB
+#define MCglAttachObject glAttachObjectARB
+#define MCglLinkProgram glLinkProgramARB
+#define MCglValidateProgram glValidateProgramARB
+#define MCglUseProgramObject glUseProgramObjectARB
+#define MCglGetUniformLocation glGetUniformLocationARB
+#define MCglGetAttribLocation glGetAttribLocationARB
+#define MCglGetInfoLog glGetInfoLogARB
+
+#define MCglUniform1f glUniform1fARB
+#define MCglUniform1fv glUniform1fvARB
+#define MCglUniform1i glUniform1iARB
+#define MCglUniform2f glUniform2fARB
+#define MCglUniform2fv glUniform2fvARB
+#define MCglUniform3f glUniform3fARB
+#define MCglUniform3fv glUniform3fvARB
+#define MCglUniform4f glUniform4fARB
+#define MCglUniformMatrix4fv glUniformMatrix4fvARB
+
+#endif // MCENGINE_PLATFORM_MACOS
+
+
 #include "ConVar.h"
 #include "Engine.h"
 #include "Logging.h"
@@ -28,9 +95,9 @@ void OpenGLShader::init() { this->setReady(this->compile(this->sVsh, this->sFsh,
 void OpenGLShader::initAsync() { this->setAsyncReady(true); }
 
 void OpenGLShader::destroy() {
-    if(this->iProgram != 0) glDeleteObjectARB(this->iProgram);
-    if(this->iFragmentShader != 0) glDeleteObjectARB(this->iFragmentShader);
-    if(this->iVertexShader != 0) glDeleteObjectARB(this->iVertexShader);
+    if(this->iProgram != 0) MCglDeleteObject(this->iProgram);
+    if(this->iFragmentShader != 0) MCglDeleteObject(this->iFragmentShader);
+    if(this->iVertexShader != 0) MCglDeleteObject(this->iVertexShader);
 
     this->iProgram = 0;
     this->iFragmentShader = 0;
@@ -48,14 +115,14 @@ void OpenGLShader::enable() {
     if(currentProgram == this->iProgram) return;  // already active
 
     this->iProgramBackup = currentProgram;
-    glUseProgramObjectARB(this->iProgram);
+    MCglUseProgramObject(this->iProgram);
     GLStateCache::setCurrentProgram(this->iProgram);
 }
 
 void OpenGLShader::disable() {
     if(unlikely(!this->isReady())) return;
 
-    glUseProgramObjectARB(this->iProgramBackup);
+    MCglUseProgramObject(this->iProgramBackup);
 
     // update cache
     GLStateCache::setCurrentProgram(this->iProgramBackup);
@@ -73,33 +140,33 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
     switch(type) {
         using enum Shader::UniformType;
         case UNI_1F:
-            glUniform1fARB(id, *static_cast<const float *const>(data));
+            MCglUniform1f(id, *static_cast<const float *const>(data));
             break;
         case UNI_1FV:
-            glUniform1fvARB(id, static_cast<int>(dataSize / sizeof(float)), static_cast<const float *const>(data));
+            MCglUniform1fv(id, static_cast<int>(dataSize / sizeof(float)), static_cast<const float *const>(data));
             break;
         case UNI_1I:
-            glUniform1iARB(id, *static_cast<const int *const>(data));
+            MCglUniform1i(id, *static_cast<const int *const>(data));
             break;
         case UNI_2F:
-            glUniform2fARB(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1]);
+            MCglUniform2f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1]);
             break;
         case UNI_2FV:
-            glUniform2fvARB(id, static_cast<int>(dataSize / sizeof(float) / 2), static_cast<const float *const>(data));
+            MCglUniform2fv(id, static_cast<int>(dataSize / sizeof(float) / 2), static_cast<const float *const>(data));
             break;
         case UNI_3F:
-            glUniform3fARB(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
+            MCglUniform3f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
                            static_cast<const float *const>(data)[2]);
             break;
         case UNI_3FV:
-            glUniform3fvARB(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *const>(data));
+            MCglUniform3fv(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *const>(data));
             break;
         case UNI_4F:
-            glUniform4fARB(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
+            MCglUniform4f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
                            static_cast<const float *const>(data)[2], static_cast<const float *const>(data)[3]);
             break;
         case UNI_MATRIX4FV:
-            glUniformMatrix4fvARB(id, 1, GL_FALSE, static_cast<const float *const>(data));
+            MCglUniformMatrix4fv(id, 1, GL_FALSE, static_cast<const float *const>(data));
             break;
         default:
             debugLog("OpenGLShader ERROR: unhandled type {} name {}", (u32)type, name);
@@ -110,7 +177,7 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
 int OpenGLShader::getAttribLocation(std::string_view name) {
     if(unlikely(!this->isReady()) || name.empty()) return -1;
 
-    return glGetAttribLocation(this->iProgram, name.data());
+    return MCglGetAttribLocation(this->iProgram, name.data());
 }
 
 int OpenGLShader::getAndCacheUniformLocation(std::string_view name) {
@@ -119,7 +186,7 @@ int OpenGLShader::getAndCacheUniformLocation(std::string_view name) {
     const auto cachedValue = this->uniformLocationCache.find(name);
     const bool cached = (cachedValue != this->uniformLocationCache.end());
 
-    const int id = (cached ? cachedValue->second : glGetUniformLocationARB(this->iProgram, name.data()));
+    const int id = (cached ? cachedValue->second : MCglGetUniformLocation(this->iProgram, name.data()));
     if(!cached && id != -1) this->uniformLocationCache.emplace(name, id);
 
     return id;
@@ -140,30 +207,30 @@ bool OpenGLShader::compile(const std::string &vertexShader, const std::string &f
     }
 
     // create program
-    this->iProgram = glCreateProgramObjectARB();
+    this->iProgram = MCglCreateProgramObject();
     if(this->iProgram == 0) {
         engine->showMessageError("OpenGLShader Error", "Couldn't glCreateProgramObjectARB()");
         return false;
     }
 
     // attach
-    glAttachObjectARB(this->iProgram, this->iVertexShader);
-    glAttachObjectARB(this->iProgram, this->iFragmentShader);
+    MCglAttachObject(this->iProgram, this->iVertexShader);
+    MCglAttachObject(this->iProgram, this->iFragmentShader);
 
     // link
-    glLinkProgramARB(this->iProgram);
+    MCglLinkProgram(this->iProgram);
 
     int returnValue = GL_TRUE;
-    glGetObjectParameterivARB(this->iProgram, GL_OBJECT_LINK_STATUS_ARB, &returnValue);
+    MCglGetObjectParameteriv(this->iProgram, GL_OBJECT_LINK_STATUS_ARB, &returnValue);
     if(returnValue == GL_FALSE) {
         engine->showMessageError("OpenGLShader Error", "Couldn't glLinkProgramARB()");
         return false;
     }
 
     // validate
-    glValidateProgramARB(this->iProgram);
+    MCglValidateProgram(this->iProgram);
     returnValue = GL_TRUE;
-    glGetObjectParameterivARB(this->iProgram, GL_OBJECT_VALIDATE_STATUS_ARB, &returnValue);
+    MCglGetObjectParameteriv(this->iProgram, GL_OBJECT_VALIDATE_STATUS_ARB, &returnValue);
     if(returnValue == GL_FALSE) {
         engine->showMessageError("OpenGLShader Error", "Couldn't glValidateProgramARB()");
         return false;
@@ -173,7 +240,7 @@ bool OpenGLShader::compile(const std::string &vertexShader, const std::string &f
 }
 
 int OpenGLShader::createShaderFromString(std::string shaderSource, int shaderType) {
-    const GLhandleARB shader = glCreateShaderObjectARB(shaderType);
+    const auto shader = MCglCreateShaderObject(shaderType);
 
     if(shader == 0) {
         engine->showMessageError("OpenGLShader Error", "Couldn't glCreateShaderObjectARB()");
@@ -187,20 +254,20 @@ int OpenGLShader::createShaderFromString(std::string shaderSource, int shaderTyp
 
     // compile shader
     const char *shaderSourceChar = shaderSource.c_str();
-    glShaderSourceARB(shader, 1, &shaderSourceChar, nullptr);
-    glCompileShaderARB(shader);
+    MCglShaderSource(shader, 1, &shaderSourceChar, nullptr);
+    MCglCompileShader(shader);
 
     int returnValue = GL_TRUE;
-    glGetObjectParameterivARB(shader, GL_OBJECT_COMPILE_STATUS_ARB, &returnValue);
+    MCglGetObjectParameteriv(shader, GL_OBJECT_COMPILE_STATUS_ARB, &returnValue);
 
     if(returnValue == GL_FALSE) {
         debugLog("------------------OpenGLShader Compile Error------------------");
 
-        glGetObjectParameterivARB(shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &returnValue);
+        MCglGetObjectParameteriv(shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &returnValue);
 
         if(returnValue > 0) {
             char *errorLog = new char[returnValue];
-            glGetInfoLogARB(shader, returnValue, &returnValue, errorLog);
+            MCglGetInfoLog(shader, returnValue, &returnValue, errorLog);
             logRaw("{}", errorLog);
             delete[] errorLog;
         }

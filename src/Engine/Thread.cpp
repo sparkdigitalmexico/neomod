@@ -113,7 +113,7 @@ bool set_current_thread_name(const char *name) noexcept {
     }
     return pthread_setname_np(pthread_self(), truncated_name.c_str()) == 0;
 #elif defined(__APPLE__)
-    return pthread_setname_np(name.c_str()) == 0;
+    return pthread_setname_np(name) == 0;
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
     pthread_set_name_np(pthread_self(), name.c_str());
     return true;

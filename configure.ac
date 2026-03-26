@@ -81,6 +81,24 @@ AC_PROG_LN_S
 AC_PROG_GREP
 AC_PROG_SED
 
+# verify that $SED supports GNU-style in-place editing (sed -i 's/.../')
+# BSD sed (macOS default) requires -i '' which is incompatible
+AC_MSG_CHECKING([whether $SED supports GNU-style -i])
+echo "conftest_sed_content" > conftest.sed_test
+if $SED -i 's/conftest_sed_content/pass/' conftest.sed_test 2>/dev/null && test "x$(cat conftest.sed_test 2>/dev/null)" = "xpass"; then
+    AC_MSG_RESULT([yes])
+else
+    AC_MSG_RESULT([no])
+    AC_CHECK_PROG([_GSED], [gsed], [gsed])
+    if test -n "$_GSED"; then
+        SED="$_GSED"
+        AC_MSG_NOTICE([using gsed for GNU sed compatibility])
+    else
+        AC_MSG_ERROR([GNU sed required but not found. On macOS: brew install gnu-sed])
+    fi
+fi
+rm -f conftest.sed_test conftest.sed_teste
+
 AC_DEFUN([AC_PROG_WGET], [
     AC_CHECK_PROG([WGET], [wget], [wget])
     if test -z "$WGET"; then
@@ -104,6 +122,36 @@ AC_DEFUN([AC_PROG_TAR], [
     if test -z "$TAR"; then
         AC_MSG_ERROR([tar not found - required for extracting dependencies])
     fi
+    # verify that $TAR supports --wildcards (GNU tar feature used in dependency extraction)
+    # bsdtar (macOS default) doesn't accept --wildcards but does wildcards by default
+    AC_MSG_CHECKING([whether $TAR supports --wildcards])
+    if $TAR --wildcards -cf /dev/null /dev/null 2>/dev/null; then
+        AC_MSG_RESULT([yes])
+    else
+        AC_MSG_RESULT([no])
+        AC_CHECK_PROG([_GTAR], [gtar], [gtar])
+        if test -n "$_GTAR"; then
+            TAR="$_GTAR"
+            AC_MSG_NOTICE([using gtar for GNU tar compatibility])
+        else
+            # bsdtar does wildcards by default; create a wrapper that strips the unsupported flags
+            AC_MSG_NOTICE([creating tar wrapper to strip GNU-specific flags])
+            cat > "$ac_pwd/tar-compat" <<'_TAR_WRAPPER_EOF'
+#!/bin/sh
+new_args=""
+for arg in "$@"; do
+    case "$arg" in
+        --wildcards|--no-anchored) ;;
+        *) new_args="$new_args $arg" ;;
+    esac
+done
+exec tar $new_args
+_TAR_WRAPPER_EOF
+            chmod +x "$ac_pwd/tar-compat"
+            TAR="$ac_pwd/tar-compat"
+            AC_MSG_NOTICE([using $TAR])
+        fi
+    fi
 ])
 AC_DEFUN([AC_PROG_PKGCONF], [
     AC_CHECK_PROG([PKGCONF], [pkgconf], [pkgconf])
@@ -115,6 +163,15 @@ AC_DEFUN([AC_PROG_CMAKE], [
     AC_CHECK_PROG([CMAKE], [cmake], [cmake])
     if test -z "$CMAKE"; then
         AC_MSG_ERROR([cmake not found - required for building dependencies])
+    fi
+])
+AC_DEFUN([AC_PROG_LIBTOOLIZE], [
+    AC_CHECK_PROG([LIBTOOLIZE], [glibtoolize], [glibtoolize])
+    if test -z "$LIBTOOLIZE"; then
+        AC_CHECK_PROG([LIBTOOLIZE], [libtoolize], [libtoolize])
+    fi
+    if test -z "$LIBTOOLIZE"; then
+        AC_MSG_ERROR([libtoolize not found - required for building autotools-based dependencies. On macOS: brew install libtool])
     fi
 ])
 AC_DEFUN([AC_PROG_PYTHON], [
@@ -179,6 +236,7 @@ AC_PROG_NINJA
 AC_PROG_UNZIP
 AC_PROG_MESON
 AC_PROG_CMAKE
+AC_PROG_LIBTOOLIZE
 AC_PROG_PYTHON
 AC_SUBST([PYTHON])
 
@@ -206,7 +264,7 @@ AC_ARG_ENABLE([asan],
 AC_ARG_ENABLE([tsan],
     AS_HELP_STRING([--enable-tsan], [Enable TSan/UBSan (turns debug on as well) (default: no)]))
 AC_ARG_ENABLE([clang],
-    AS_HELP_STRING([--enable-clang], [Use clang/clang++ instead of gcc/g++ (default: no)]))
+    AS_HELP_STRING([--enable-clang], [Use clang/clang++ instead of gcc/g++ (default: yes on macOS, no otherwise)]))
 AC_ARG_ENABLE([mold],
     AS_HELP_STRING([--enable-mold], [Use the mold linker instead of lld/bfd (faster link time, non-Windows only) (default: off if LTO is enabled, on (if available) otherwise)]))
 AC_ARG_ENABLE([omp],
@@ -245,6 +303,13 @@ AC_ARG_WITH([discord],
     AS_HELP_STRING([--with-discord], [Build with Discord rich presence support (default on if supported (Windows, Linux 64-bit))]))
 
 # setup defaults
+# default to clang on macOS (GCC could be supported but later)
+AS_IF([test "x$enable_clang" = "x"], [
+    AS_IF([[case "$host_os" in
+        darwin*) enable_clang=yes ;;
+    esac]])
+])
+
 AS_IF([test "x$enable_redistributable" != "xno"], [
     enable_redistributable=yes
     disable_redistributable=no
@@ -582,7 +647,9 @@ AC_SUBST([PKG_CONFIG_PATH])
 AC_SUBST([PKG_CONFIG_PATH_CUSTOM])
 
 win_subsystem_ver=6.00
-AS_IF([test -n "$WASM_CC"], [
+mkdir -p "$PWD/build"
+AS_IF([[case "$host_os" in
+*emscripten)
     # WASM/Emscripten build
     WASM_POLYFILL_DEP="\$(srcdir)/src/Platform/WASM/wasm-node-polyfill.js"
     emscripten_flags="-sPTHREAD_POOL_SIZE=32 -sAUDIO_WORKLET=1 -sWASM=1 -sWASM_WORKERS=1 -sUSE_PTHREADS=1 -sFETCH=1"
@@ -605,10 +672,11 @@ AS_IF([test -n "$WASM_CC"], [
     AC_SUBST([WASM_POLYFILL_DEP])
 
     # pkg-config wrapper for emscripten
-    install -Dm755 /dev/stdin $PWD/build/pkg-config <<__EOF__
+    cat > "$PWD/build/pkg-config" <<__EOF__
 #!/usr/bin/env bash
 PKG_CONFIG_PATH="$PKG_CONFIG_PATH" $PKGCONF $pc_addflags "\$@"
 __EOF__
+    chmod +x "$PWD/build/pkg-config"
 
     # forward these for building dependencies
     AC_SUBST([CMAKE_CONF_PFX], [emcmake])
@@ -623,16 +691,19 @@ __EOF__
     EXEEXT=".html"
     AC_DEFINE([MCENGINE_PLATFORM_WASM], [1], [Define if compiling for WASM with Emscripten.])
     AC_DEFINE([NEOMOD_DATA_DIR], ["/persist/"], [Persistent writable data directory for WASM.])
-], [test "$host_os" = "linux-gnu"], [
+;;
+linux-gnu)
     AS_IF([test "$host_cpu" = "i686"], [
-        install -Dm755 /dev/stdin $PWD/build/$target-$CC <<EOF
+        cat > "$PWD/build/$target-$CC" <<EOF
 #!/usr/bin/env bash
 $CC -m32 "\$@"
 EOF
-        install -Dm755 /dev/stdin $PWD/build/$target-$CXX <<EOF
+        chmod +x "$PWD/build/$target-$CC"
+        cat > "$PWD/build/$target-$CXX" <<EOF
 #!/usr/bin/env bash
 $CXX -m32 "\$@"
 EOF
+        chmod +x "$PWD/build/$target-$CXX"
         AS_IF([test "x$enable_clang" = "xyes"], [
             NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -latomic"
         ])
@@ -642,21 +713,24 @@ EOF
         NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -no-pie"
         AC_SUBST([NASMOBJ],[elf32])
     ],[
-        install -Dm755 /dev/stdin $PWD/build/$target-$CC <<EOF
+        cat > "$PWD/build/$target-$CC" <<EOF
 #!/usr/bin/env bash
 $CC "\$@"
 EOF
-        install -Dm755 /dev/stdin $PWD/build/$target-$CXX <<EOF
+        chmod +x "$PWD/build/$target-$CC"
+        cat > "$PWD/build/$target-$CXX" <<EOF
 #!/usr/bin/env bash
 $CXX "\$@"
 EOF
+        chmod +x "$PWD/build/$target-$CXX"
         AC_SUBST([NASMOBJ],[elf64])
     ])
 
-    install -Dm755 /dev/stdin $PWD/build/pkg-config <<__EOF__
+    cat > "$PWD/build/pkg-config" <<__EOF__
 #!/usr/bin/env bash
 PKG_CONFIG_PATH="$PKG_CONFIG_PATH" $PKGCONF --personality=$host_cpu-pc-linux-gnu $pc_addflags "\$@"
 __EOF__
+    chmod +x "$PWD/build/pkg-config"
 
     CC="$PWD/build/$target-$CC"
     CXX="$PWD/build/$target-$CXX"
@@ -672,7 +746,46 @@ __EOF__
     AC_SUBST([NATIVE_LDFLAGS])
 
     AC_DEFINE([MCENGINE_PLATFORM_LINUX], [1], [Define if compiling for Linux.])
-],[
+;;
+darwin*) # macOS
+    AC_PATH_PROG([CC_FOUND], [$CC], [], [/opt/homebrew/opt/llvm/bin:$PATH])
+    AC_PATH_PROG([CXX_FOUND], [$CXX], [], [/opt/homebrew/opt/llvm/bin:$PATH])
+
+    cat > "$PWD/build/$target-$CC" <<EOF
+#!/usr/bin/env bash
+$CC_FOUND "\$@"
+EOF
+    chmod +x "$PWD/build/$target-$CC"
+    cat > "$PWD/build/$target-$CXX" <<EOF
+#!/usr/bin/env bash
+$CXX_FOUND "\$@"
+EOF
+    chmod +x "$PWD/build/$target-$CXX"
+    AC_SUBST([NASMOBJ],[macho64])
+
+    # add Homebrew libc++ library path if available
+    AS_IF([test -d "/opt/homebrew/opt/llvm/lib/c++"], [
+        LIBS="$LIBS -L/opt/homebrew/opt/llvm/lib/c++ -lc++abi"
+    ])
+
+    cat > "$PWD/build/pkg-config" <<__EOF__
+#!/usr/bin/env bash
+PKG_CONFIG_PATH="$PKG_CONFIG_PATH" $PKGCONF $pc_addflags "\$@"
+__EOF__
+    chmod +x "$PWD/build/pkg-config"
+
+    CC="$PWD/build/$target-$CC"
+    CXX="$PWD/build/$target-$CXX"
+    ac_tool_prefix=
+    CMAKE_SYSTEM_NAME="Darwin"
+    CMAKE_GEN="Ninja"
+    SYSNAME="macos"
+    DLLEXT=".dylib"
+    LIBPREFIX="lib"
+
+    AC_DEFINE([MCENGINE_PLATFORM_MACOS], [1], [Define if compiling for macOS.])
+;;
+*) # Windows/mingw32
     AC_CHECK_TOOL([WINDRES], [windres], [windres])
     AC_CHECK_TOOL([DLLTOOL], [dlltool], [dlltool]) # needed for ffmpeg build
 
@@ -703,7 +816,8 @@ __EOF__
     # increase default stack size to 8mb from 1mb
     NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,--stack,8388608"
     AC_DEFINE([MCENGINE_PLATFORM_WINDOWS], [1], [Define if compiling for Windows.])
-])
+;;
+esac]])
 
 AC_PROG_CC([$CC])
 AS_IF([[case "$CC" in
@@ -716,34 +830,49 @@ AC_CHECK_PROG([STRIP], [strip], [strip]) # don't use mingw-strip, seems to not w
 
 AC_CHECK_PROG([CCACHE], [ccache], [ccache])
 
-# we already set $CC and $CXX to absolute paths in the build/$arch-pc-linux-gnu-{$CC,$CXX} wrappers
-# for linux, so AC_PATH_PROG doesn't work for that (and isn't needed anyways)
+# we already set $CC and $CXX to absolute paths in the build/$arch-{$CC,$CXX} wrappers
+# for linux and macOS, so AC_PATH_PROG doesn't work for that (and isn't needed anyways)
 # this is done mostly for mingw targets so that configure --host=x86_64-w64-mingw32 --enable-clang
 # saves the full path to the llvm-mingw compiler, in case $PATH changes for future compiles
 # for wasm, emconfigure sets CC/CXX to full paths already
-AS_IF([test "$host_os" = "linux-gnu" || test -n "$WASM_CC"],[
-    AS_VAR_SET([CC_REAL], [$CC])
-    AS_VAR_SET([CXX_REAL], [$CXX])
-],[
-    AC_PATH_PROG([CC_REAL], [$CC])
-    AC_PATH_PROG([CXX_REAL], [$CXX])
-])
+AS_IF([[case "$host_os" in
+    linux-gnu|darwin*)
+        AS_VAR_SET([CC_REAL], [$CC])
+        AS_VAR_SET([CXX_REAL], [$CXX])
+    ;;
+    *)
+        AS_IF([test -n "$WASM_CC"], [
+            AS_VAR_SET([CC_REAL], [$CC])
+            AS_VAR_SET([CXX_REAL], [$CXX])
+        ],[
+            AC_PATH_PROG([CC_REAL], [$CC])
+            AC_PATH_PROG([CXX_REAL], [$CXX])
+        ])
+    ;;
+esac]])
 
-_cc_real_hash="$($CC --version | md5sum | cut -d ' ' -f 1),$host"
-_cxx_real_hash="$($CXX --version | md5sum | cut -d ' ' -f 1),$host"
+# md5sum is GNU coreutils; macOS has md5 instead
+AC_CHECK_PROG([_HAVE_MD5SUM], [md5sum], [yes], [no])
+AS_IF([test "$_HAVE_MD5SUM" = "yes"],
+    [_cc_real_hash="$($CC --version | md5sum | cut -d ' ' -f 1),$host"
+     _cxx_real_hash="$($CXX --version | md5sum | cut -d ' ' -f 1),$host"],
+    [_cc_real_hash="$($CC --version | md5 -q),$host"
+     _cxx_real_hash="$($CXX --version | md5 -q),$host"])
 
-install -Dm755 /dev/stdin $PWD/build/cc <<EOF
+cat > "$PWD/build/cc" <<EOF
 #!/usr/bin/env bash
 CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime \\
 CCACHE_COMPRESS=1 CCACHE_COMPRESSLEVEL=4 CCACHE_COMPILERTYPE=$_ccache_ctype CCACHE_COMPILERCHECK="string:$_cc_real_hash" \\
 $CCACHE $CC_REAL "\$@"
 EOF
-install -Dm755 /dev/stdin $PWD/build/cxx <<EOF
+chmod +x "$PWD/build/cc"
+cat > "$PWD/build/cxx" <<EOF
 #!/usr/bin/env bash
 CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime \\
 CCACHE_COMPRESS=1 CCACHE_COMPRESSLEVEL=4 CCACHE_COMPILERTYPE=$_ccache_ctype CCACHE_COMPILERCHECK="string:$_cxx_real_hash" \\
 $CCACHE $CXX_REAL "\$@"
 EOF
+chmod +x "$PWD/build/cxx"
 
 export CC="$PWD/build/cc"
 export CXX="$PWD/build/cxx"
@@ -814,7 +943,7 @@ AS_IF([test "$host_os" = "mingw32"], [
                 [pc_syslibdir=""])
         ])
 
-        install -Dm755 /dev/stdin $PWD/build/pkg-config <<__EOF__
+        cat > "$PWD/build/pkg-config" <<__EOF__
 #!/usr/bin/env bash
 PKG_CONFIG_LIBDIR="$pc_syslibdir" \\
 PKG_CONFIG_SYSTEM_INCLUDE_PATH="$pc_sysincpath" \\
@@ -822,15 +951,17 @@ PKG_CONFIG_SYSTEM_LIBRARY_PATH="$pc_syslibpath" \\
 PKG_CONFIG_PATH="$PKG_CONFIG_PATH" \\
 $PKGCONF --personality=$host_cpu-w64-mingw32 $pc_addflags "\$@"
 __EOF__
+        chmod +x "$PWD/build/pkg-config"
 
         CMAKE_GEN="Ninja"
     ], [
         # WIP: building in msys2
-        install -Dm755 /dev/stdin $PWD/build/pkg-config <<__EOF__
+        cat > "$PWD/build/pkg-config" <<__EOF__
 #!/usr/bin/env bash
 PKG_CONFIG_PATH="$PKG_CONFIG_PATH" \
 $PKGCONF --personality=$host_cpu-w64-mingw32 $pc_addflags "\$@"
 __EOF__
+        chmod +x "$PWD/build/pkg-config"
         CMAKE_GEN="MSYS Makefiles"
         CMAKEIDOPT="-DCMAKE_CXX_COMPILER_ID=$_cid -DCMAKE_C_COMPILER_ID=$_cid"
         CFLAGS="$CFLAGS -UHAVE_SYMLINK" # for some reason libarchive's configure thinks we have it then fails to compile...
@@ -851,18 +982,35 @@ AC_SUBST([DLLEXT])
 AC_SUBST([LIBPREFIX])
 
 # don't omit frame pointers, it's not worth it on 64-bit, and having them makes profiling/debugging better
-AS_IF([test "$host_cpu" != "i686" && test -z "$WASM_CC"], [COMMON_FLAGS="$COMMON_FLAGS -mcmodel=small -fno-omit-frame-pointer -momit-leaf-frame-pointer"])
+AS_IF([test "$host_cpu" != "i686" && test -z "$WASM_CC"], [
+    # -mcmodel=small is not supported on arm64/darwin
+    AS_IF([test "$SYSNAME" != "macos"], [
+        COMMON_FLAGS="$COMMON_FLAGS -mcmodel=small"
+    ])
+    COMMON_FLAGS="$COMMON_FLAGS -fno-omit-frame-pointer -momit-leaf-frame-pointer"
+])
 
 CPPFLAGS="$CPPFLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64"
 AS_IF([test -z "$WASM_CC"], [
-    COMMON_FLAGS="$COMMON_FLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 -pipe -ffunction-sections -fdata-sections -fwrapv -fno-strict-aliasing -ftls-model=initial-exec -pthread"
+    COMMON_FLAGS="$COMMON_FLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 -pipe -ffunction-sections -fdata-sections -fwrapv -fno-strict-aliasing -pthread"
+    # -ftls-model=initial-exec is not supported on macOS
+    AS_IF([test "$SYSNAME" != "macos"], [
+        COMMON_FLAGS="$COMMON_FLAGS -ftls-model=initial-exec"
+    ])
     LDFLAGS="$LDFLAGS -pthread"
 ], [
     COMMON_FLAGS="$COMMON_FLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 -pipe -ffunction-sections -fdata-sections -fwrapv -fno-strict-aliasing"
 ])
 CXXFLAGS="$CXXFLAGS $COMMON_FLAGS -fno-exceptions" # -fno-unwind-tables -fno-rtti
 CFLAGS="$CFLAGS $COMMON_FLAGS"
-LDFLAGS="$LDFLAGS -Wl,--gc-sections" # remove unused sections
+# remove unused sections
+AX_CHECK_LINK_FLAG([-Wl,--gc-sections], [
+    LDFLAGS="$LDFLAGS -Wl,--gc-sections"
+], [
+    AX_CHECK_LINK_FLAG([-Wl,-dead_strip], [
+        LDFLAGS="$LDFLAGS -Wl,-dead_strip"
+    ])
+])
 
 AC_SUBST([CXXFLAGS])
 AC_SUBST([CFLAGS])
@@ -892,8 +1040,9 @@ int main(void) { return 0; }
     ], [_is_linux_libcpp=yes], [_is_linux_libcpp=])
 ])
 
-AS_IF([test -z "$WASM_CC" && test -z "$_is_linux_libcpp"], [
+AS_IF([test -z "$WASM_CC" && test -z "$_is_linux_libcpp" && test "$SYSNAME" != "macos"], [
     # the default static libc++ build does not work with -fno-exceptions
+    # (also not supported with macos libc++)
     LDFLAGS="$LDFLAGS -static-libstdc++ -static-libgcc"
 ])
 
@@ -905,31 +1054,39 @@ AS_IF([test "x$enable_native" != "xno"], [
     AS_IF([test "$host_cpu" = "i686"], [
         CXXFLAGS="$CXXFLAGS -march=pentium4 -mtune=generic"
         CFLAGS="$CFLAGS -march=pentium4 -mtune=generic"
-    ], [
-        AS_IF([test "$host_cpu" = "x86_64"], [
-            CXXFLAGS="$CXXFLAGS -march=nocona -mtune=core-avx2"
-            CFLAGS="$CFLAGS -march=nocona -mtune=core-avx2"
-        ], [
-            AS_IF([test "$host_cpu" = "aarch64"], [
-                CXXFLAGS="$CXXFLAGS -march=armv8.2-a+fp16+simd -mtune=cortex-a76"
-                CFLAGS="$CFLAGS -march=armv8.2-a+fp16+simd -mtune=cortex-a76"
-            ])
+    ], [test "$host_cpu" = "aarch64"], [
+        # target cortex-a76 for linux aarch64, apple silicon doesn't need/want specific -march
+        AS_IF([test "$SYSNAME" != "macos"], [
+            CXXFLAGS="$CXXFLAGS -march=armv8.2-a+fp16+simd -mtune=cortex-a76"
+            CFLAGS="$CFLAGS -march=armv8.2-a+fp16+simd -mtune=cortex-a76"
         ])
+    ], [
+        # x86_64
+        CXXFLAGS="$CXXFLAGS -march=nocona -mtune=core-avx2"
+        CFLAGS="$CFLAGS -march=nocona -mtune=core-avx2"
     ])
 ])
+
 AC_PATH_TOOL([LD], [ld], [AC_MSG_ERROR([ld not found])])
-AS_IF([test "x$enable_clang" = "xyes" && test "$host_os" = "linux-gnu"], [
-    AC_PATH_PROG([AR], [llvm-ar], [llvm-ar], [AC_MSG_ERROR([llvm-ar not found])])
-    AC_PATH_PROG([RANLIB], [llvm-ranlib], [llvm-ranlib], [AC_MSG_ERROR([llvm-ranlib not found])])
+AS_IF([test "x$enable_clang" = "xyes"], [
+    AC_PATH_PROG([AR], [llvm-ar], [], [/opt/homebrew/opt/llvm/bin:$PATH])
+    AS_IF([test -z "$AR"], [AC_MSG_ERROR([llvm-ar not found])])
+    AC_PATH_PROG([RANLIB], [llvm-ranlib], [], [/opt/homebrew/opt/llvm/bin:$PATH])
+    AS_IF([test -z "$RANLIB"], [AC_MSG_ERROR([llvm-ranlib not found])])
 ], [
     AC_PATH_TOOL([AR], [ar], [AC_MSG_ERROR([ar not found])])
     AC_PATH_TOOL([RANLIB], [ranlib], [AC_MSG_ERROR([ranlib not found])])
 ])
 
-AS_IF([test "$host_os" = "linux-gnu"],[
-    AC_CHECK_HEADERS([X11/Xlib.h GL/gl.h GL/glu.h], [],
-        [AC_MSG_ERROR([Missing required X11/OpenGL development headers])])
-])
+AS_IF([[case "$host_os" in
+    linux-gnu)
+        AC_CHECK_HEADERS([X11/Xlib.h GL/gl.h GL/glu.h], [],
+            [AC_MSG_ERROR([Missing required X11/OpenGL development headers])])
+    ;;
+    darwin*)
+        # macOS uses OpenGL framework, no X11 headers needed
+    ;;
+esac]])
 
 # depending on the type of build, we may want to remap the file paths
 SRCREMAP=${SRCREMAP:-}
@@ -1197,6 +1354,9 @@ AS_IF([test "x$enable_werror" != "xno"], [
     AX_CHECK_COMPILE_FLAG([-Wno-error=format-y2k], [
         werror_flags_temp="$werror_flags_temp -Wno-error=format-y2k"
     ])
+    AX_CHECK_COMPILE_FLAG([-Wno-error=cast-function-type-mismatch], [
+        werror_flags_temp="$werror_flags_temp -Wno-error=cast-function-type-mismatch"
+    ])
     AS_IF([test -n "$WASM_CC"], [
         # not exactly sure why the above tests pass but then the actual compilation fails due to -Werror=unknown-warning-option
         AX_CHECK_COMPILE_FLAG([-Wno-unknown-warning-option], [
@@ -1225,7 +1385,7 @@ AC_SUBST([AUDIO_CFLAGS])
 AC_SUBST([AUDIO_LIBS])
 
 # the source files are also added through autogen.sh to Makefile.sources
-BUNDLED_INCLUDES="-I\$(srcdir)/libraries -I\$(srcdir)/libraries/delegatesv2 -I\$(srcdir)/libraries/unordered_dense"
+BUNDLED_INCLUDES="-I\$(srcdir)/libraries -I\$(srcdir)/libraries/delegatesv2 -I\$(srcdir)/libraries/unordered_dense -I\$(srcdir)/libraries/glad"
 AC_SUBST([BUNDLED_INCLUDES])
 
 AC_MSG_CHECKING([for shaders in $srcdir/$ASSETS_DIR/shaders])
@@ -1272,6 +1432,22 @@ AS_IF([test "x$use_opengl" = "xyes" || test "x$use_opengles32" = "xyes"], [
         PKG_CHECK_AUTO([XI], [xi], [have_xi=yes], [AC_MSG_ERROR([Missing xi (xinput) libs, required for OpenGL on Linux])])
         PKG_CHECK_AUTO([XRANDR], [xrandr], [have_xrandr=yes], [AC_MSG_ERROR([Missing xrandr libs, required for Linux])])
         PKG_CHECK_AUTO([EGL], [egl], [have_egl=yes], [AC_MSG_ERROR([Missing egl libs, required for OpenGL on Linux])])
+    ], [test "$SYSNAME" = "macos"], [
+        # macOS uses OpenGL framework
+        GL_CFLAGS=""
+        GL_LIBS="-framework OpenGL"
+        GLU_CFLAGS=""
+        GLU_LIBS=""
+        AC_SUBST([GL_CFLAGS])
+        AC_SUBST([GL_LIBS])
+        AC_SUBST([GLU_CFLAGS])
+        AC_SUBST([GLU_LIBS])
+        have_glu="framework"
+        have_gl="framework"
+        have_x11="not required"
+        have_xi="not required"
+        have_xrandr="not required"
+        have_egl="not required"
     ], [
         have_glu="not required"
         have_gl="not required"
@@ -1358,11 +1534,16 @@ AC_SUBST([DISCORDSDK_VERSION], [2.5.6]) # pre-built
 
 AC_SUBST([BASS_VERSION], [20260208_202602]) # just mark the date so we can invalidate the cache if necessary
 
-AS_IF([test "$SYSNAME" = "linux" || test "$SYSNAME" = "macos"], [
+AS_IF([test "$SYSNAME" = "linux"], [
     AS_IF([test "x$enable_system_deps" != "xno"], [
         PKG_CHECK_AUTO([CURL], [libcurl >= $CURL_MIN_VERSION], [have_curl=yes], [have_curl=no])
         PKG_CHECK_AUTO([LIBACL], [libacl >= $LIBACL_MIN_VERSION], [have_libacl=yes], [have_libacl=no])
     ])
+], [test "$SYSNAME" = "macos"], [
+    AS_IF([test "x$enable_system_deps" != "xno"], [
+        PKG_CHECK_AUTO([CURL], [libcurl >= $CURL_MIN_VERSION], [have_curl=yes], [have_curl=no])
+    ])
+    have_libacl="not required"
 ], [
     AS_IF([test "$SYSNAME" = "windows"], [
         # Windows-specific libraries
@@ -1381,6 +1562,13 @@ AS_IF([test "x$enable_system_deps" != "xno"], [
     PKG_CHECK_AUTO([ZLIB], [zlib >= $ZLIB_MIN_VERSION], [have_zlib=yes], [have_zlib=no])
     PKG_CHECK_AUTO([BZIP2], [bzip2 >= $BZIP2_MIN_VERSION], [have_bzip2=yes], [have_bzip2=no])
     PKG_CHECK_AUTO([FREETYPE2], [freetype2 >= $FREETYPE2_MIN_VERSION], [have_freetype2=yes], [have_freetype2=no])
+    AS_IF([test "x$have_freetype2" = "xyes"], [
+        # check if the system freetype was built with brotli (needed for WOFF2)
+        AS_IF([$PKG_CONFIG --static --libs freetype2 | grep -i brotli >/dev/null 2>&1], [], [
+            AC_MSG_NOTICE([System freetype2 does not seem to have brotli support (needed for WOFF2). Will build freetype2 from source.])
+            have_freetype2=no
+        ])
+    ])
     PKG_CHECK_AUTO([BROTLICOMMON], [libbrotlicommon >= $BROTLI_MIN_VERSION], [have_brotlicommon=yes], [have_brotlicommon=no])
     PKG_CHECK_AUTO([BROTLIDEC], [libbrotlidec >= $BROTLI_MIN_VERSION], [have_brotlidec=yes], [have_brotlidec=no])
     PKG_CHECK_AUTO([FMT], [fmt >= $FMT_MIN_VERSION], [have_fmt=yes], [have_fmt=no])
@@ -1402,16 +1590,15 @@ AS_IF([test "x$enable_system_deps" != "xno"], [
     ])
 ])
 
-# just assume the host freetype is built with brotli support, if building with system deps
-# otherwise we'd need to rebuild freetype
-AS_IF([test "x$have_freetype" != "xyes" && { test "x$have_brotlidec" != "xyes" || test "x$have_brotlicommon" != "xyes" ; }], [
+# if system freetype2 is not available (or lacks brotli), we need brotli to build freetype from source
+AS_IF([test "x$have_freetype2" != "xyes" && { test "x$have_brotlidec" != "xyes" || test "x$have_brotlicommon" != "xyes" ; }], [
     have_brotli=no
 ], [
     have_brotli=yes
 ])
 
-AC_SUBST([BROTLI_CFLAGS], [$BROTLICOMMON_CFLAGS $BROTLIDEC_CFLAGS])
-AC_SUBST([BROTLI_LIBS], [$BROTLICOMMON_LIBS $BROTLIDEC_LIBS])
+AC_SUBST([BROTLI_CFLAGS], ["$BROTLICOMMON_CFLAGS $BROTLIDEC_CFLAGS"])
+AC_SUBST([BROTLI_LIBS], ["$BROTLICOMMON_LIBS $BROTLIDEC_LIBS"])
 
 AS_IF([test -z "$ubercompat" && test "x$with_nsync" != "xno"], [
     AC_DEFINE([USE_NSYNC], [1], [Defined if nsync sync primitives are available.])

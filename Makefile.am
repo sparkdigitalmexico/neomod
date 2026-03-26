@@ -415,7 +415,7 @@ rbq := ')'
 CURL_INCLUDEDIR := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/$(SYSNAME)$(host_cpu)/include
 CURL_LIBDIR := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/$(SYSNAME)$(host_cpu)/lib
 CURL_CFLAGS += -I$(CURL_INCLUDEDIR) -DWITH_GZFILEOP -DCURL_STATICLIB
-CURL_LIBS += -L$(CURL_LIBDIR) $(shell find $(CURL_LIBDIR) -mindepth 1 -maxdepth 1 -type f -not $(lbq) -name '*dll*' $(rbq) -execdir printf '%s ' '{''}' ';' | $(SED) -e 's|./lib|-l|g' -e 's|\.a||g' -e 's|-lcurl|-l:libcurl.a|g')
+CURL_LIBS += -L$(CURL_LIBDIR) $(shell find $(CURL_LIBDIR) -mindepth 1 -maxdepth 1 -type f -not $(lbq) -name '*dll*' $(rbq) -execdir printf '%s ' '{''}' ';' | $(SED) -e 's|\./||g' -e 's|lib|-l|g' -e 's|\.a||g')
 
 PKG_CONFIG_PLUS_BUNDLED_OSSL += --with-path=$(CURL_LIBDIR)/pkgconfig
 OPENSSL_CFLAGS += -I$(CURL_INCLUDEDIR) $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --cflags openssl)
@@ -475,6 +475,8 @@ $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built: $(DEPS_CACHE)/mimalloc-$(MIMA
 		-D CMAKE_CXX_COMPILER="$(CXX)" \
 		-D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -485,11 +487,11 @@ $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built: $(DEPS_CACHE)/mimalloc-$(MIMA
 		-D MI_USE_CXX=ON \
 		-D MI_BUILD_SHARED=ON \
 		-D MI_BUILD_TESTS=OFF \
-		$(if $(findstring linux,$(host_os)),,-DMI_WIN_USE_FIXED_TLS=ON) \
+		$(if $(filter linux%,$(host_os)),,-DMI_WIN_USE_FIXED_TLS=ON) \
 		$(if $(ENABLE_ASAN),-DMI_LOCAL_DYNAMIC_TLS=ON -DMI_TRACK_ASAN=ON -DMI_DEBUG_UBSAN=ON,) \
 		-D MI_INSTALL_TOPLEVEL=ON \
 		-D MI_BUILD_STATIC=OFF \
-		-D MI_BUILD_OBJECT=$(if $(findstring linux,$(host_os)),ON,OFF) && \
+		-D MI_BUILD_OBJECT=$(if $(filter win%,$(host_os)),OFF,ON) && \
 	$(CMAKE) --build . "$(CMAKEPAROPT)" && \
 	$(CMAKE) --install .
 	cp $(DEPS_PREFIX)/mimalloc/bin/mimalloc-redirect*.lib $(DEPS_PREFIX)/lib/ || true
@@ -504,8 +506,16 @@ $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built:
 endif # BUILD_MIMALLOC
 
 if BUILD_SDL3
+SDL3_EXTRALIBS :=
+if MACOS_PLATFORM
+# workaround: SDL3 uses GCMouse from GameController.framework in its video subsystem
+# but only reports it in pkg-config when the joystick subsystem is enabled
+# (will upstream a fix soon)
+SDL3_EXTRALIBS += -Wl,-framework,GameController -Wl,-framework,CoreHaptics
+endif
+
 SDL3_CFLAGS += $(shell $(PKG_CONFIG) --cflags sdl3)
-SDL3_LIBS += $(shell $(PKG_CONFIG) --libs sdl3)
+SDL3_LIBS += $(shell $(PKG_CONFIG) --libs sdl3) $(SDL3_EXTRALIBS)
 $(DEPS_PREFIX)/SDL3-$(SDL3_VERSION).built: $(DEPS_CACHE)/SDL3-$(SDL3_VERSION).tar.gz $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built
 	rm -rf $(DEPS_PREFIX)/SDL3
 	$(MKDIR_P) $(DEPS_PREFIX)/SDL3 $(DEPS_PREFIX)/lib/pkgconfig
@@ -528,6 +538,8 @@ $(DEPS_PREFIX)/SDL3-$(SDL3_VERSION).built: $(DEPS_CACHE)/SDL3-$(SDL3_VERSION).ta
 		-D CMAKE_SYSTEM_NAME="$(CMAKE_SYSTEM_NAME)" \
 		-D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -577,7 +589,7 @@ $(DEPS_PREFIX)/mpg123-$(MPG123_VERSION).built: $(DEPS_CACHE)/mpg123-$(MPG123_VER
 	cd $(DEPS_PREFIX)/mpg123 && \
 	patch -Np1<$(BUILD_MISCDIR)/0001-libmpg123-initial-support-for-VBRI-tag-parsing.patch && \
 	$(if $(ubercompat),$(SED) -i -e 's|.*ThreadErrorMode.*||g' -e 's|mode_ok|0|' src/compat/compat_dl.c,true) && \
-	autoreconf -fiv && cd $(DEPS_PREFIX)/mpg123/build && \
+	ACLOCAL_PATH="/opt/homebrew/opt/libtool/share/aclocal:$$ACLOCAL_PATH" autoreconf -fiv && cd $(DEPS_PREFIX)/mpg123/build && \
 	PKG_CONFIG="$(PKG_CONFIG)" \
 		$(CONFIGURE_PFX) ../configure lt_cv_prog_gnu_ld=yes --host=$(host) --prefix="$(DEPS_PREFIX)" $(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		--disable-components --enable-libmpg123 --with-audio=dummy --disable-modules \
@@ -616,7 +628,7 @@ FFMPEG_CONFIGURE_FLAGS += --enable-demuxer=mp3,aac,ogg,flac,wav,mov,m4a,matroska
 FFMPEG_CONFIGURE_FLAGS += --enable-parser=aac,flac,mpegaudio,vorbis,opus,mjpeg
 FFMPEG_CONFIGURE_FLAGS += --enable-protocol=file
 FFMPEG_CONFIGURE_FLAGS += --arch=$(host_cpu)
-FFMPEG_CONFIGURE_FLAGS += --target-os=$(if $(findstring mingw,$(host_os)),mingw32,linux)
+FFMPEG_CONFIGURE_FLAGS += --target-os=$(if $(findstring mingw,$(host_os)),mingw32,$(if $(findstring darwin,$(host_os)),darwin,linux))
 FFMPEG_CONFIGURE_FLAGS += --ranlib=$(RANLIB) --ar=$(AR) --cc=$(CC) --cxx=$(CXX) --ld=$(CC)
 FFMPEG_CONFIGURE_FLAGS += $(if $(findstring mingw,$(host_os)),--disable-w32threads --enable-pthreads --windres=$(WINDRES),)
 FFMPEG_CONFIGURE_FLAGS += $(if $(ffmpeg_strip),,--disable-stripping)
@@ -661,6 +673,8 @@ $(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built: $(DEPS_CACHE)/SoLoud-$(SOLOUD_VER
 		-D CMAKE_CXX_FLAGS_RELEASE="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCFLAG) $(CXXFLAGS)" \
 		-D CMAKE_CXX_FLAGS_DEBUG="-DMA_ENABLE_AUDIO_WORKLETS=1 $(FFMPEG_INCFLAG) $(CXXFLAGS)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -691,6 +705,8 @@ $(DEPS_PREFIX)/SoundTouch-$(SOUNDTOUCH_VERSION).built: $(DEPS_CACHE)/SoundTouch-
 		-D CMAKE_CXX_FLAGS_RELEASE="$(CXXFLAGS) -DST_NO_EXCEPTION_HANDLING" \
 		-D CMAKE_CXX_FLAGS_DEBUG="$(CXXFLAGS) -DST_NO_EXCEPTION_HANDLING" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -764,6 +780,8 @@ $(DEPS_PREFIX)/libjpeg-$(LIBJPEG_VERSION).built: $(DEPS_CACHE)/libjpeg-$(LIBJPEG
 		-D CMAKE_C_COMPILER="$(CC)" \
 		-D CMAKE_SYSTEM_PROCESSOR="$(host_cpu)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -884,9 +902,15 @@ $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built: $(DEPS_CACHE)/zlib-$(ZLIB_VERSION).ta
 	rm -rf $(DEPS_PREFIX)/zlib
 	$(MKDIR_P) $(DEPS_PREFIX)/zlib/build $(DEPS_PREFIX)/lib/pkgconfig
 	$(TAR) xf $(DEPS_CACHE)/zlib-$(ZLIB_VERSION).tar.gz -C $(DEPS_PREFIX)/zlib --strip-components=1 && \
-	cd $(DEPS_PREFIX)/zlib/build && PKG_CONFIG="$(PKG_CONFIG)" \
-		$(if $(findstring linux,$(host_os)),,uname=mingw CHOST=$(host)) RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" \
-		$(CONFIGURE_PFX) ../configure --zlib-compat --prefix="$(DEPS_PREFIX)" $(if $(or $(DISABLE_NATIVE),$(ENABLE_DEBUG)),--without-optimizations,) $(if $(STATICBUILD),--static,) && \
+	cd $(DEPS_PREFIX)/zlib && \
+	$(SED) -i -e 's|AR=.*libtool.*|true # patched out: &|g' -e 's|ARFLAGS="-o"|ARFLAGS="rc"|' configure && \
+	cd build && \
+		PKG_CONFIG="$(PKG_CONFIG)" \
+		$(if $(filter win%,$(host_os)),uname=mingw CHOST=$(host),) \
+		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" \
+		CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" \
+			$(CONFIGURE_PFX) ../configure --zlib-compat --prefix="$(DEPS_PREFIX)" \
+				$(if $(or $(DISABLE_NATIVE),$(ENABLE_DEBUG)),--without-optimizations,) $(if $(STATICBUILD),--static,) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install && \
 	$(SED) -i 's|sharedlibdir=.*|sharedlibdir=$${libdir}|' $(DEPS_PREFIX)/lib/pkgconfig/zlib.pc && \
 	$(PKG_CONFIG) --exists --print-errors zlib
@@ -926,6 +950,8 @@ $(DEPS_PREFIX)/fmt-$(FMT_VERSION).built: $(DEPS_CACHE)/fmt-$(FMT_VERSION).tar.gz
 		-D CMAKE_CXX_FLAGS_RELEASE="$(CXXFLAGS) $(FMT_EXTRA_BUILDFLAGS)" \
 		-D CMAKE_CXX_FLAGS_DEBUG="$(CXXFLAGS) $(FMT_EXTRA_BUILDFLAGS)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -985,6 +1011,7 @@ $(DEPS_PREFIX)/nsync-$(NSYNC_VERSION).built: $(DEPS_CACHE)/nsync-$(NSYNC_VERSION
 	$(SED) -i 's|Windows.h|windows.h|' platform/win32/atomic.h && \
 	$(SED) -i 's|Windows.h|windows.h|' platform/win32/platform_c++11_os.h && \
 	$(SED) -i -e 's|.*"/TP".*||' -e 's|install (TARGETS nsync EXPORT nsync|\0 OPTIONAL|' CMakeLists.txt && \
+	mv BUILD BUILD.bazel 2>/dev/null || true && \
 	PKG_CONFIG="$(PKG_CONFIG)" CC="$(CC)" CXX="$(CXX)" LDFLAGS="$(LDFLAGS) -xnone" \
 	$(CMAKE_CONF_PFX) $(CMAKE) -S . -B build -G "$(CMAKE_GEN)" \
 		-DCMAKE_BUILD_TYPE="$(if $(ENABLE_DEBUG),Debug,Release)" \
@@ -998,6 +1025,8 @@ $(DEPS_PREFIX)/nsync-$(NSYNC_VERSION).built: $(DEPS_CACHE)/nsync-$(NSYNC_VERSION
 		-D CMAKE_CXX_FLAGS_RELEASE="$(CXXFLAGS) -xc++" \
 		-D CMAKE_CXX_FLAGS_DEBUG="$(CXXFLAGS) -xc++" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
 		-D CMAKE_CXX_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
@@ -1035,6 +1064,8 @@ $(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built: $(DEPS_CACHE)/brotli-$(BROTLI_VER
 		-D CMAKE_C_FLAGS="$(CFLAGS)" \
 		-D CMAKE_CXX_COMPILER="$(CXX)" \
 		-D CMAKE_CXX_FLAGS="$(CXXFLAGS)" \
+		-D CMAKE_AR="$(AR)" \
+		-D CMAKE_RANLIB="$(RANLIB)" \
 		-D CMAKE_C_COMPILER_AR="$(AR)" \
 		-D CMAKE_C_COMPILER_RANLIB="$(RANLIB)" \
 		-D BROTLI_BUILD_TOOLS=OFF \
@@ -1069,6 +1100,8 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/brotli-$(BROT
 		-D CMAKE_C_FLAGS="$(CFLAGS)" \
 		-D CMAKE_CXX_COMPILER="$(CXX)" \
 		-D CMAKE_CXX_FLAGS="$(CXXFLAGS)" \
+		-D CMAKE_AR="$(AR)" \
+		-D CMAKE_RANLIB="$(RANLIB)" \
 		-D CMAKE_C_COMPILER_AR="$(AR)" \
 		-D CMAKE_C_COMPILER_RANLIB="$(RANLIB)" \
 		-D FT_DISABLE_HARFBUZZ=ON \
@@ -1106,6 +1139,7 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/brotli-$(BROT
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
 		LDFLAGS="$(LDFLAGS)" && \
+	$(SED) -i 's|.*#.*define FT_CONFIG_OPTION_USE_BROTLI.*|#define FT_CONFIG_OPTION_USE_BROTLI|' builds/unix/ftoption.h && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
 	$(PKG_CONFIG) --exists --print-errors freetype2
@@ -1154,6 +1188,8 @@ $(DEPS_PREFIX)/simdutf-$(SIMDUTF_VERSION).built: $(DEPS_CACHE)/simdutf-$(SIMDUTF
 		-D CMAKE_CXX_FLAGS_RELEASE="$(CXXFLAGS) $(SIMDUTF_EXTRA_BUILDFLAGS)" \
 		-D CMAKE_CXX_FLAGS_DEBUG="$(CXXFLAGS) $(SIMDUTF_EXTRA_BUILDFLAGS)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -1210,6 +1246,8 @@ $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built: $(DEPS_CACHE)/liblzma-$(LZMA_VERSI
 		-D XZ_SANDBOX=no \
 		-D XZ_THREADS="$(if $(ubercompat),win95,yes)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		-D CMAKE_AR=$(AR) \
+		-D CMAKE_RANLIB=$(RANLIB) \
 		-D CMAKE_C_COMPILER_AR=$(AR) \
 		-D CMAKE_C_COMPILER_RANLIB=$(RANLIB) \
 		-D CMAKE_CXX_COMPILER_AR=$(AR) \
@@ -1284,8 +1322,8 @@ endif # BUILD_LIBACL
 # NOTE: if we have bundled openssl, then this assumes we also have zstd libs (since the static-curl project builds that and provides the static archive)
 LIBARCHIVE_CFLAGS += $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --cflags libarchive)
 LIBARCHIVE_LIBS += $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --libs libarchive)
-$(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built: $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz $(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built $\
-											$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built $\
+$(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built: $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz $(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built \
+											$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built \
 											$(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built
 	rm -rf $(DEPS_PREFIX)/libarchive
 	$(MKDIR_P) $(DEPS_PREFIX)/libarchive/build $(DEPS_PREFIX)/lib/pkgconfig
@@ -1460,7 +1498,10 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built
 
 if !WASM_PLATFORM
-BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
+BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem
+endif
+if USE_FFMPEG
+BUILT_SOURCES += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 endif
 
 # (this is also disabled in CI by default, because we dont cache the pch there, so there's no point)
@@ -1503,7 +1544,7 @@ endif # BUILD_PCH
 $(neomod_OBJECTS): $(BUILT_SOURCES) $(PCH_OUTPUT) | $(EMBED_OUTPUT)
 
 # add all paths with sources as an include ("-I") flag
-NEOMOD_INCLUDE_FLAGS := $(shell find $(srcdir)/src -not -path '*/.*' -type d -printf "-I%p ")
+NEOMOD_INCLUDE_FLAGS := $(shell find $(srcdir)/src -not -path '*/.*' -type d -print | sed 's|^|-I|' | tr '\n' ' ')
 
 neomod_CPPFLAGS := $(NEOMOD_CPPFLAGS)
 
@@ -1543,15 +1584,24 @@ neomod_CXXFLAGS := \
 	$(NEOMOD_CXXFLAGS) \
 	$(CXXFLAGS_EXTRA)
 
-# Wl,--start-group with no --end-group is a stupid hack. it's required to make the linker resolve all the symbols on windows, for some reason (i don't know why)
-# harmless on other platforms, i think
+# TODO: check for -Wl,--start-group in configure instead of hardcoding macos here
+if MACOS_PLATFORM
+# without --start-group, repeat libs that have circular deps
+START_GROUP_FLAGS :=
+END_GROUP_FLAGS := $(ZLIB_LIBS) $(BROTLI_LIBS)
+else
+# Wl,--start-group with no --end-group is a stupid hack. it's required to make the linker resolve all the symbols with circular dependencies
+START_GROUP_FLAGS := -Wl,--start-group
+END_GROUP_FLAGS :=
+endif
+
 # WASM_PRELOAD_FLAGS and NATIVE_LDFLAGS come from configure (empty when not applicable)
 neomod_LDFLAGS := \
 	$(WASM_PRELOAD_FLAGS) \
 	$(NATIVE_LDFLAGS) \
 	$(MIMALLOC_OBJ) \
 	$(MIMALLOC_DYNAMIC_LIBS) \
-	-Wl,--start-group \
+	$(START_GROUP_FLAGS) \
 	$(CURL_LIBS) \
 	$(SDL3_LIBS) \
 	$(AUDIO_LIBS) \
@@ -1566,6 +1616,7 @@ neomod_LDFLAGS := \
 	$(LZMA_LIBS) \
 	$(NSYNC_LIBS) \
 	$(SIMDUTF_LIBS) \
+	$(END_GROUP_FLAGS) \
 	$(NEOMOD_LDFLAGS) \
 	$(EXTRA_WIN_LDFLAGS) \
 	$(LDFLAGS_EXTRA)
@@ -1702,9 +1753,9 @@ install-dirs:
 ASSET_FILES = $(wildcard $(srcdir)/$(ASSETS_DIR)/fonts/* $(srcdir)/$(ASSETS_DIR)/materials/* $(srcdir)/$(ASSETS_DIR)/materials/default/*)
 
 stamp-install-assets: $(ASSET_FILES) | install-dirs
-	find $(srcdir)/$(ASSETS_DIR)/fonts -type f -exec $(INSTALL) -Dm 644 '{''}' "$(DESTDIR)$(bindir)/fonts" ';'
-	find $(srcdir)/$(ASSETS_DIR)/materials -mindepth 1 -maxdepth 1 -type f -exec $(INSTALL) -Dm 644 '{''}' "$(DESTDIR)$(bindir)/materials" ';'
-	find $(srcdir)/$(ASSETS_DIR)/materials/default -mindepth 1 -maxdepth 1 -type f -exec $(INSTALL) -Dm 644 '{''}' "$(DESTDIR)$(bindir)/materials/default" ';'
+	find $(srcdir)/$(ASSETS_DIR)/fonts -type f -exec cp -f '{''}' "$(DESTDIR)$(bindir)/fonts" ';'
+	find $(srcdir)/$(ASSETS_DIR)/materials -mindepth 1 -maxdepth 1 -type f -exec cp -f '{''}' "$(DESTDIR)$(bindir)/materials" ';'
+	find $(srcdir)/$(ASSETS_DIR)/materials/default -mindepth 1 -maxdepth 1 -type f -exec cp -f '{''}' "$(DESTDIR)$(bindir)/materials/default" ';'
 	@touch $@
 
 INSTALL_STAMPS += stamp-install-assets
@@ -1784,7 +1835,7 @@ endif
 INSTALL_STAMPS += stamp-install-sharedlibs
 
 # --- patchelf rpath (linux only) ---
-if !WIN_PLATFORM
+if LINUX_PLATFORM
 stamp-install-rpath: stamp-install-sharedlibs
 	find "$(DESTDIR)$(bindir)/lib" -maxdepth 1 -name '*'.so'*' -execdir $(PATCHELF) --set-rpath '$$ORIGIN:$$ORIGIN/../' '{''}' ';'
 	find "$(DESTDIR)$(bindir)" -maxdepth 1 -name '*'.so'*' -execdir $(PATCHELF) --set-rpath '$$ORIGIN:$$ORIGIN/lib' '{''}' ';'
@@ -1797,8 +1848,9 @@ endif
 # --- strip binaries (must run after rpath to avoid racing on the same files) ---
 if STRIPBINS
 stamp-install-strip: stamp-install-sharedlibs $(INSTALL_RPATH_STAMP) $(bin_PROGRAMS)
-	find "$(DESTDIR)$(bindir)" -name '*'$(DLLEXT)'*' -execdir $(STRIP) -s '{''}' '+'
-	$(STRIP) -s "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
+	-find "$(DESTDIR)$(bindir)" -name '*'$(DLLEXT)'*' -execdir $(STRIP) -s '{''}' '+'
+	-$(STRIP) -s "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
+	-$(STRIP) "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
 	@touch $@
 
 INSTALL_STAMPS += stamp-install-strip
