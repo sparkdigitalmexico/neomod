@@ -381,12 +381,21 @@ void DirectX11Shader::writeUniform(std::string_view name, UniformType type, cons
 
         // HACKHACK: REMOVE/FIX
         if(type == UNI_MATRIX4FV) {
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#endif
             Matrix4 transposed(static_cast<const float *const>(src));
             auto *dataReal = transposed.transpose().get();
             if(memcmp(dataReal, &bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], numBytes) != 0) {
                 memcpy(&bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], dataReal, numBytes);
                 this->bConstantBuffersUpToDate = false;
             }
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
         } else {
             if(memcmp(src, &bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], numBytes) !=
                0)  // NOTE: ignore redundant updates

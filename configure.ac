@@ -1051,19 +1051,18 @@ AS_IF([test "x$enable_native" != "xno"], [
     CXXFLAGS="$CXXFLAGS -march=native -mtune=native"
     CFLAGS="$CFLAGS -march=native -mtune=native"
 ],[
-    AS_IF([test "$host_cpu" = "i686"], [
-        CXXFLAGS="$CXXFLAGS -march=pentium4 -mtune=generic"
-        CFLAGS="$CFLAGS -march=pentium4 -mtune=generic"
-    ], [test "$host_cpu" = "aarch64"], [
-        # target cortex-a76 for linux aarch64, apple silicon doesn't need/want specific -march
-        AS_IF([test "$SYSNAME" != "macos"], [
+    AS_IF([test "$SYSNAME" != "macos" && test "$SYSNAME" != "wasm"], [
+        AS_CASE(["$host_cpu"],
+        [i686], [
+            CXXFLAGS="$CXXFLAGS -march=pentium4 -mtune=generic"
+            CFLAGS="$CFLAGS -march=pentium4 -mtune=generic"
+        ], [aarch64], [
             CXXFLAGS="$CXXFLAGS -march=armv8.2-a+fp16+simd -mtune=cortex-a76"
             CFLAGS="$CFLAGS -march=armv8.2-a+fp16+simd -mtune=cortex-a76"
+        ], [x86_64], [
+            CXXFLAGS="$CXXFLAGS -march=nocona -mtune=core-avx2"
+            CFLAGS="$CFLAGS -march=nocona -mtune=core-avx2"
         ])
-    ], [
-        # x86_64
-        CXXFLAGS="$CXXFLAGS -march=nocona -mtune=core-avx2"
-        CFLAGS="$CFLAGS -march=nocona -mtune=core-avx2"
     ])
 ])
 

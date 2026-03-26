@@ -11,13 +11,17 @@
 // macOS only supports core profile OpenGL (no ARB)
 // keep them around for compatibility though outside macOS
 static inline void _macOS_glDeleteObject(GLuint obj) {
-    if (glIsProgram(obj)) glDeleteProgram(obj);
-    else glDeleteShader(obj);
+    if(glIsProgram(obj))
+        glDeleteProgram(obj);
+    else
+        glDeleteShader(obj);
 }
 #define MCglDeleteObject _macOS_glDeleteObject
 static inline void _macOS_glGetObjectParameteriv(GLuint obj, GLenum pname, GLint *params) {
-    if (glIsProgram(obj)) glGetProgramiv(obj, pname, params);
-    else glGetShaderiv(obj, pname, params);
+    if(glIsProgram(obj))
+        glGetProgramiv(obj, pname, params);
+    else
+        glGetShaderiv(obj, pname, params);
 }
 #define MCglGetObjectParameteriv _macOS_glGetObjectParameteriv
 
@@ -71,8 +75,7 @@ static inline void _macOS_glGetObjectParameteriv(GLuint obj, GLenum pname, GLint
 #define MCglUniform4f glUniform4fARB
 #define MCglUniformMatrix4fv glUniformMatrix4fvARB
 
-#endif // MCENGINE_PLATFORM_MACOS
-
+#endif  // MCENGINE_PLATFORM_MACOS
 
 #include "ConVar.h"
 #include "Engine.h"
@@ -137,6 +140,13 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
         return;
     }
 
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#endif
+
     switch(type) {
         using enum Shader::UniformType;
         case UNI_1F:
@@ -156,14 +166,14 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
             break;
         case UNI_3F:
             MCglUniform3f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
-                           static_cast<const float *const>(data)[2]);
+                          static_cast<const float *const>(data)[2]);
             break;
         case UNI_3FV:
             MCglUniform3fv(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *const>(data));
             break;
         case UNI_4F:
             MCglUniform4f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
-                           static_cast<const float *const>(data)[2], static_cast<const float *const>(data)[3]);
+                          static_cast<const float *const>(data)[2], static_cast<const float *const>(data)[3]);
             break;
         case UNI_MATRIX4FV:
             MCglUniformMatrix4fv(id, 1, GL_FALSE, static_cast<const float *const>(data));
@@ -172,6 +182,10 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
             debugLog("OpenGLShader ERROR: unhandled type {} name {}", (u32)type, name);
             break;
     }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 }
 
 int OpenGLShader::getAttribLocation(std::string_view name) {
