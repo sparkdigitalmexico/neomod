@@ -66,7 +66,7 @@ void OpenGLES32Shader::destroy() {
 }
 
 void OpenGLES32Shader::enable() {
-    if(!this->isReady()) return;
+    if(unlikely(!this->isReady())) return;
 
     int currentProgram = static_cast<int>(GLStateCache::getCurrentProgram());
     if(currentProgram == m_iProgram)  // already active
@@ -86,7 +86,7 @@ void OpenGLES32Shader::enable() {
 }
 
 void OpenGLES32Shader::disable() {
-    if(!this->isReady()) return;
+    if(unlikely(!this->isReady())) return;
 
     glUseProgram(m_iProgramBackup);  // restore
 
@@ -95,7 +95,7 @@ void OpenGLES32Shader::disable() {
 }
 
 int OpenGLES32Shader::getAndCacheUniformLocation(std::string_view name) {
-    if(!this->isReady() || name.empty()) return -1;
+    if(unlikely(!this->isReady()) || name.empty()) return -1;
 
     const auto cachedValue = m_uniformLocationCache.find(name);
     const bool cached = (cachedValue != m_uniformLocationCache.end());
@@ -106,99 +106,53 @@ int OpenGLES32Shader::getAndCacheUniformLocation(std::string_view name) {
     return id;
 }
 
-void OpenGLES32Shader::setUniform1f(std::string_view name, float value) {
-    if(!this->isReady()) return;
+void OpenGLES32Shader::writeUniform(std::string_view name, UniformType type, const void *data, u32 dataSize) {
+    if(unlikely(!this->isReady())) return;
 
     const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform1f(id, value);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniform1fv(std::string_view name, int count, const float *const values) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform1fv(id, count, values);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniform1i(std::string_view name, int value) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform1i(id, value);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniform2f(std::string_view name, float value1, float value2) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform2f(id, value1, value2);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniform2fv(std::string_view name, int count, const float *const vectors) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform2fv(id, count, (float *)&vectors[0]);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniform3f(std::string_view name, float x, float y, float z) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform3f(id, x, y, z);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniform3fv(std::string_view name, int count, const float *const vectors) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform3fv(id, count, (float *)&vectors[0]);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniform4f(std::string_view name, float x, float y, float z, float w) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniform4f(id, x, y, z, w);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniformMatrix4fv(std::string_view name, const Matrix4 &matrix) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniformMatrix4fv(id, 1, GL_FALSE, matrix.get());
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
-}
-
-void OpenGLES32Shader::setUniformMatrix4fv(std::string_view name, const float *const v) {
-    if(!this->isReady()) return;
-    const int id = getAndCacheUniformLocation(name);
-    if(id != -1)
-        glUniformMatrix4fv(id, 1, GL_FALSE, v);
-    else if(cv::debug_shaders.getBool())
-        debugLog("OpenGLES32Shader Warning: Can't find uniform {:s}", name);
+    if(id == -1) {
+        logIfCV(debug_shaders, "OpenGLES32Shader Warning: Can't find uniform {:s}", name);
+        return;
+    }
+    switch(type) {
+        using enum Shader::UniformType;
+        case UNI_1F:
+            glUniform1f(id, *static_cast<const float *const>(data));
+            break;
+        case UNI_1FV:
+            glUniform1fv(id, static_cast<int>(dataSize / sizeof(float)), static_cast<const float *const>(data));
+            break;
+        case UNI_1I:
+            glUniform1i(id, *static_cast<const int *const>(data));
+            break;
+        case UNI_2F:
+            glUniform2f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1]);
+            break;
+        case UNI_2FV:
+            glUniform2fv(id, static_cast<int>(dataSize / sizeof(float) / 2), static_cast<const float *const>(data));
+            break;
+        case UNI_3F:
+            glUniform3f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
+                        static_cast<const float *const>(data)[2]);
+            break;
+        case UNI_3FV:
+            glUniform3fv(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *const>(data));
+            break;
+        case UNI_4F:
+            glUniform4f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
+                        static_cast<const float *const>(data)[2], static_cast<const float *const>(data)[3]);
+            break;
+        case UNI_MATRIX4FV:
+            glUniformMatrix4fv(id, 1, GL_FALSE, static_cast<const float *const>(data));
+            break;
+        default:
+            debugLog("OpenGLES32Shader ERROR: unhandled type {} name {}", (u32)type, name);
+            break;
+    }
 }
 
 int OpenGLES32Shader::getAttribLocation(std::string_view name) {
-    if(!this->isReady() || name.empty()) return -1;
+    if(unlikely(!this->isReady()) || name.empty()) return -1;
 
     return glGetAttribLocation(m_iProgram, name.data());
 }

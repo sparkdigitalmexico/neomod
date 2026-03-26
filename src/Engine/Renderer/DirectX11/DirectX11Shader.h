@@ -76,17 +76,6 @@ class DirectX11Shader final : public Shader {
     void enable() override;
     void disable() override;
 
-    void setUniform1f(std::string_view name, float value) override;
-    void setUniform1fv(std::string_view name, int count, const float *const values) override;
-    void setUniform1i(std::string_view name, int value) override;
-    void setUniform2f(std::string_view name, float x, float y) override;
-    void setUniform2fv(std::string_view name, int count, const float *const vectors) override;
-    void setUniform3f(std::string_view name, float x, float y, float z) override;
-    void setUniform3fv(std::string_view name, int count, const float *const vectors) override;
-    void setUniform4f(std::string_view name, float x, float y, float z, float w) override;
-    void setUniformMatrix4fv(std::string_view name, const Matrix4 &matrix) override;
-    void setUniformMatrix4fv(std::string_view name, const float *const v) override;
-
     // ILLEGAL:
     void onJustBeforeDraw();
     inline unsigned long getStatsNumConstantBufferUploadsPerFrame() const {
@@ -141,7 +130,7 @@ class DirectX11Shader final : public Shader {
 
     bool compile(const std::string &vertexShader, const std::string &fragmentShader);
 
-    void setUniform(std::string_view name, const void *const src, size_t numBytes);
+    void writeUniform(std::string_view name, UniformType type, const void *data, unsigned int dataSize) override;
 
     const CACHE_ENTRY getAndCacheUniformLocation(std::string_view name);
 

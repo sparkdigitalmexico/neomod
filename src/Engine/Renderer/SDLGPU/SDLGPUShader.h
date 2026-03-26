@@ -45,17 +45,7 @@ class SDLGPUShader final : public Shader {
     void enable() override;
     void disable() override;
 
-    void setUniform1f(std::string_view name, float value) override;
-    void setUniform1fv(std::string_view name, int count, const float *const values) override;
-    void setUniform1i(std::string_view name, int value) override;
-    void setUniform2f(std::string_view name, float x, float y) override;
-    void setUniform2fv(std::string_view name, int count, const float *const vectors) override;
-    void setUniform3f(std::string_view name, float x, float y, float z) override;
-    void setUniform3fv(std::string_view name, int count, const float *const vectors) override;
-    void setUniform4f(std::string_view name, float x, float y, float z, float w) override;
-    void setUniformMatrix4fv(std::string_view name, const Matrix4 &matrix) override;
-    void setUniformMatrix4fv(std::string_view name, const float *const v) override;
-
+    // for SDLGPUInterface
     [[nodiscard]] SDL_GPUShader *getVertexShader() const { return m_gpuVertexShader; }
     [[nodiscard]] SDL_GPUShader *getFragmentShader() const { return m_gpuFragmentShader; }
 
@@ -93,6 +83,9 @@ class SDLGPUShader final : public Shader {
     // access uniform blocks for snapshotting into deferred draw commands
     [[nodiscard]] const FixedSizeArray<UniformBlock> &getUniformBlocks() const { return m_uniformBlocks; }
 
+   protected:
+    void writeUniform(std::string_view name, UniformType type, const void *data, u32 dataSize) override;
+
    private:
     // parse a .shdpk shader pack, extracting GLSL source and the best-matching binary for the device
     static bool parseShaderPack(SDL_GPUDevice *device, const u8 *data, size_t dataSize, std::string *glslOut,
@@ -104,8 +97,6 @@ class SDLGPUShader final : public Shader {
     static u32 typeSize(std::string_view typeName);
     static u32 typeAlignment(std::string_view typeName);
 
-    void writeUniform(std::string_view name, const void *data, u32 dataSize);
-
     SDLGPUInterface *m_gpu;
     SDL_GPUDevice *m_device;
 
@@ -115,11 +106,6 @@ class SDLGPUShader final : public Shader {
     SDLGPUShader *m_lastActiveShader{nullptr};  // for restore, to allow nested shaders to restore last enabled shader
     SDL_GPUShader *m_gpuVertexShader{nullptr};
     SDL_GPUShader *m_gpuFragmentShader{nullptr};
-
-    u32 m_vertexNumSamplers{0};
-    u32 m_vertexNumUniformBuffers{0};
-    u32 m_fragmentNumSamplers{0};
-    u32 m_fragmentNumUniformBuffers{0};
 
     // uniform blocks parsed from GLSL (fragment stage only for custom shaders)
     // index 0 = vertex uniforms (set=1), rest = fragment uniform blocks

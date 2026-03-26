@@ -76,24 +76,24 @@ void SDLGPUShader::init() {
     }
 
     // count samplers and uniform buffers from GLSL decorations
-    m_vertexNumSamplers = 0;
-    m_vertexNumUniformBuffers = 0;
-    m_fragmentNumSamplers = 0;
-    m_fragmentNumUniformBuffers = 0;
+    u32 vertexNumSamplers = 0;
+    u32 vertexNumUniformBuffers = 0;
+    u32 fragmentNumSamplers = 0;
+    u32 fragmentNumUniformBuffers = 0;
 
     // count samplers from GLSL source
     {
         static constexpr ctll::fixed_string samplerPat{R"(uniform\s+sampler\w+\s+)"};
-        for([[maybe_unused]] auto _ : ctre::search_all<samplerPat>(vshGlsl)) m_vertexNumSamplers++;
-        for([[maybe_unused]] auto _ : ctre::search_all<samplerPat>(fshGlsl)) m_fragmentNumSamplers++;
+        for([[maybe_unused]] auto _ : ctre::search_all<samplerPat>(vshGlsl)) vertexNumSamplers++;
+        for([[maybe_unused]] auto _ : ctre::search_all<samplerPat>(fshGlsl)) fragmentNumSamplers++;
     }
 
     // count uniform buffers from blocks
     for(auto &block : m_uniformBlocks) {
         if(block.set == 1) {
-            m_vertexNumUniformBuffers++;
+            vertexNumUniformBuffers++;
         } else {
-            m_fragmentNumUniformBuffers++;
+            fragmentNumUniformBuffers++;
         }
     }
 
@@ -104,10 +104,10 @@ void SDLGPUShader::init() {
         .entrypoint = "main",
         .format = vshFormat,
         .stage = SDL_GPU_SHADERSTAGE_VERTEX,
-        .num_samplers = m_vertexNumSamplers,
+        .num_samplers = vertexNumSamplers,
         .num_storage_textures = 0,
         .num_storage_buffers = 0,
-        .num_uniform_buffers = m_vertexNumUniformBuffers,
+        .num_uniform_buffers = vertexNumUniformBuffers,
         .props = 0,
     };
 
@@ -117,10 +117,10 @@ void SDLGPUShader::init() {
         .entrypoint = "main",
         .format = fshFormat,
         .stage = SDL_GPU_SHADERSTAGE_FRAGMENT,
-        .num_samplers = m_fragmentNumSamplers,
+        .num_samplers = fragmentNumSamplers,
         .num_storage_textures = 0,
         .num_storage_buffers = 0,
-        .num_uniform_buffers = m_fragmentNumUniformBuffers,
+        .num_uniform_buffers = fragmentNumUniformBuffers,
         .props = 0,
     };
 
@@ -132,10 +132,6 @@ void SDLGPUShader::init() {
         this->setReady(false);
         return;
     }
-
-    // free source data now that shaders are compiled
-    m_sVsh.clear();
-    m_sFsh.clear();
 
     this->setReady(true);
 }
@@ -184,7 +180,8 @@ void SDLGPUShader::disable() {
 
 // uniform setters
 
-void SDLGPUShader::writeUniform(std::string_view name, const void *data, u32 dataSize) {
+void SDLGPUShader::writeUniform(std::string_view name, [[maybe_unused]] UniformType type, const void *data,
+                                u32 dataSize) {
     if(unlikely(!m_gpu || !m_device || !this->isReady())) return;
 
     u8 *uniformVarDataPtr;  // NOLINT(cppcoreguidelines-init-variables)
@@ -213,45 +210,6 @@ void SDLGPUShader::writeUniform(std::string_view name, const void *data, u32 dat
     }
 
     std::memcpy(uniformVarDataPtr, data, std::min(dataSize, varSize));
-}
-
-void SDLGPUShader::setUniform1f(std::string_view name, float value) { writeUniform(name, &value, sizeof(float)); }
-
-void SDLGPUShader::setUniform1fv(std::string_view name, int count, const float *const values) {
-    writeUniform(name, values, (u32)(sizeof(float) * count));
-}
-
-void SDLGPUShader::setUniform1i(std::string_view name, int value) { writeUniform(name, &value, sizeof(int)); }
-
-void SDLGPUShader::setUniform2f(std::string_view name, float x, float y) {
-    float v[2] = {x, y};
-    writeUniform(name, &v[0], sizeof(v));
-}
-
-void SDLGPUShader::setUniform2fv(std::string_view name, int count, const float *const vectors) {
-    writeUniform(name, vectors, (u32)(sizeof(float) * 2 * count));
-}
-
-void SDLGPUShader::setUniform3f(std::string_view name, float x, float y, float z) {
-    float v[3] = {x, y, z};
-    writeUniform(name, &v[0], sizeof(v));
-}
-
-void SDLGPUShader::setUniform3fv(std::string_view name, int count, const float *const vectors) {
-    writeUniform(name, vectors, (u32)(sizeof(float) * 3 * count));
-}
-
-void SDLGPUShader::setUniform4f(std::string_view name, float x, float y, float z, float w) {
-    float v[4] = {x, y, z, w};
-    writeUniform(name, &v[0], sizeof(v));
-}
-
-void SDLGPUShader::setUniformMatrix4fv(std::string_view name, const Matrix4 &matrix) {
-    setUniformMatrix4fv(name, matrix.get());
-}
-
-void SDLGPUShader::setUniformMatrix4fv(std::string_view name, const float *const v) {
-    writeUniform(name, v, sizeof(float) * 16);
 }
 
 // shader pack parsing

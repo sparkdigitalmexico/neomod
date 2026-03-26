@@ -372,62 +372,31 @@ void DirectX11Shader::disable() {
     }
 }
 
-void DirectX11Shader::setUniform1f(std::string_view name, float value) { setUniform(name, &value, sizeof(float) * 1); }
-
-void DirectX11Shader::setUniform1fv(std::string_view name, int count, const float *const values) {
-    setUniform(name, values, sizeof(float) * 1 * count);
-}
-
-void DirectX11Shader::setUniform1i(std::string_view name, int value) { setUniform(name, &value, sizeof(int32_t) * 1); }
-
-void DirectX11Shader::setUniform2f(std::string_view name, float x, float y) {
-    vec2 f(x, y);
-    setUniform(name, &f[0], sizeof(float) * 2);
-}
-
-void DirectX11Shader::setUniform2fv(std::string_view name, int count, const float *const vectors) {
-    setUniform(name, vectors, sizeof(float) * 2 * count);
-}
-
-void DirectX11Shader::setUniform3f(std::string_view name, float x, float y, float z) {
-    vec3 f(x, y, z);
-    setUniform(name, &f[0], sizeof(float) * 3);
-}
-
-void DirectX11Shader::setUniform3fv(std::string_view name, int count, const float *const vectors) {
-    setUniform(name, vectors, sizeof(float) * 3 * count);
-}
-
-void DirectX11Shader::setUniform4f(std::string_view name, float x, float y, float z, float w) {
-    vec4 f(x, y, z, w);
-    setUniform(name, &f[0], sizeof(float) * 4);
-}
-
-void DirectX11Shader::setUniformMatrix4fv(std::string_view name, const Matrix4 &matrix) {
-    Matrix4 transposed{matrix};  // HACKHACK
-    transposed.transpose();
-    setUniformMatrix4fv(name, transposed.get());
-}
-
-void DirectX11Shader::setUniformMatrix4fv(std::string_view name, const float *const v) {
-    setUniform(name, v, sizeof(float) * 4 * 4);
-}
-
-void DirectX11Shader::setUniform(std::string_view name, const void *const src, size_t numBytes) {
+void DirectX11Shader::writeUniform(std::string_view name, UniformType type, const void *src, unsigned int numBytes) {
     if(!this->isReady()) return;
 
     const CACHE_ENTRY cacheEntry = getAndCacheUniformLocation(name);
     if(cacheEntry.bindIndex > -1) {
         BIND_DESC &bindDesc = this->bindDescs[cacheEntry.bindIndex];
 
-        if(memcmp(src, &bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], numBytes) !=
-           0)  // NOTE: ignore redundant updates
-        {
-            memcpy(&bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], src, numBytes);
+        // HACKHACK: REMOVE/FIX
+        if(type == UNI_MATRIX4FV) {
+            Matrix4 transposed(static_cast<const float *const>(src));
+            auto *dataReal = transposed.transpose().get();
+            if(memcmp(dataReal, &bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], numBytes) != 0) {
+                memcpy(&bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], dataReal, numBytes);
+                this->bConstantBuffersUpToDate = false;
+            }
+        } else {
+            if(memcmp(src, &bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], numBytes) !=
+               0)  // NOTE: ignore redundant updates
+            {
+                memcpy(&bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], src, numBytes);
 
-            // NOTE: uniforms will be lazy updated later in onJustBeforeDraw() below
-            // NOTE: this way we concatenate multiple uniform updates into one single gpu memory transfer
-            this->bConstantBuffersUpToDate = false;
+                // NOTE: uniforms will be lazy updated later in onJustBeforeDraw() below
+                // NOTE: this way we concatenate multiple uniform updates into one single gpu memory transfer
+                this->bConstantBuffersUpToDate = false;
+            }
         }
     }
 }

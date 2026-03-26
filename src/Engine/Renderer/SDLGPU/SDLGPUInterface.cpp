@@ -1586,12 +1586,12 @@ RenderTarget *SDLGPUInterface::createRenderTarget(int x, int y, int width, int h
 }
 
 Shader *SDLGPUInterface::createShaderFromFile(std::string vertexShaderFilePath, std::string fragmentShaderFilePath) {
-    return new SDLGPUShader(this, m_device, vertexShaderFilePath, fragmentShaderFilePath,
+    return new SDLGPUShader(this, m_device, std::move(vertexShaderFilePath), std::move(fragmentShaderFilePath),
                             false);  // NOTE: not currently implemented (all shaders are included as binary data)
 }
 
 Shader *SDLGPUInterface::createShaderFromSource(std::string vertexShader, std::string fragmentShader) {
-    return new SDLGPUShader(this, m_device, vertexShader, fragmentShader);
+    return new SDLGPUShader(this, m_device, std::move(vertexShader), std::move(fragmentShader));
 }
 
 VertexArrayObject *SDLGPUInterface::createVertexArrayObject(DrawPrimitive primitive, DrawUsageType usage,
