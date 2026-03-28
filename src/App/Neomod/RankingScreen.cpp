@@ -484,6 +484,7 @@ void RankingScreen::setScore(const FinishedScore &newscore) {
     if(flags::has<NoKeylock>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_no_keylock);
     if(flags::has<NoPausing>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_no_pausing);
     if(flags::has<NoHP>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::drain_disabled);
+    if(flags::has<DKS>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_dks);
 }
 
 void RankingScreen::updateLayout() {

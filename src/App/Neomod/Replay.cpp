@@ -246,6 +246,7 @@ Mods Mods::from_cvars() {
     ADDIFCV(mod_singletap, Singletap);
     ADDIFCV(mod_no_keylock, NoKeylock);
     ADDIFCV(mod_no_pausing, NoPausing);
+    ADDIFCV(mod_dks, DKS);
     ADDIFCV(mod_traceable, Traceable);
     ADDIFCV(mod_freeze_frame, FreezeFrame);
     if(cv::mod_autoplay.getBool()) {
@@ -331,6 +332,7 @@ void Mods::use(const Mods &mods) {
     CVFROMFLAG(mod_singletap, Singletap);
     CVFROMFLAG(mod_no_keylock, NoKeylock);
     CVFROMFLAG(mod_no_pausing, NoPausing);
+    CVFROMFLAG(mod_dks, DKS);
     CVFROMFLAG(mod_traceable, Traceable);
     CVFROMFLAG(mod_freeze_frame, FreezeFrame);
 

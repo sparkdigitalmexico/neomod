@@ -1643,6 +1643,11 @@ f64 computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attrib
         speedValue *= 0.5;
     }
 
+    // DKS nerf (XXX: might be too harsh/weak)
+    if(flags::has<ModFlags::DKS>(score.modFlags)) {
+        speedValue *= 0.5;
+    }
+
     return speedValue;
 }
 

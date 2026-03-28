@@ -136,6 +136,7 @@ std::string modsStringFromMods(ModFlags mods, float speed) {
     if(sd) modsString.append("SD,");
     if(dt) modsString.append("DT,");
     if(nc) modsString.append("NC,");
+    if(flags::has<DKS>(mods)) modsString.append("DKS,");
     if(flags::has<Relax>(mods)) modsString.append("Relax,");
     if(ht) modsString.append("HT,");
     if(flags::has<Flashlight>(mods)) modsString.append("FL,");

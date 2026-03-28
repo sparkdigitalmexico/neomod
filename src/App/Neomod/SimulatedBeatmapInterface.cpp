@@ -66,6 +66,14 @@ void SimulatedBeatmapInterface::simulate_to(i32 music_pos) {
                 this->clicks.push_back(click);
                 if(!this->bInBreak) this->live_score.addKeyCount(key);
             }
+
+            if(this->mods.has(ModFlags::DKS)) {
+                if((this->last_keys & key) && !(this->current_keys & key)) {
+                    this->lastPressedKey = key;
+                    this->clicks.push_back(click);
+                    if(!this->bInBreak) this->live_score.addKeyCount(key);
+                }
+            }
         }
 
         this->interpolatedMousePos = vec2{current_frame.x, current_frame.y};

@@ -739,7 +739,7 @@ void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap 
     this->sScoreAccuracyFC = fmt::format("{}{:.2f}%", sc.perfect ? "PFC " : (fullCombo ? "FC " : ""), accuracy);
 
     this->sScoreMods = getModsStringForDisplay(sc.mods);
-    this->sCustom = (sc.mods.speed != 1.0f ? fmt::format("Spd: {:g}x", sc.mods.speed) : "");
+    this->sCustom = (sc.mods.speed != 1.0f ? fmt::format("Speed: {:g}x", sc.mods.speed) : "");
     if(map != nullptr) {
         const LegacyReplay::BEATMAP_VALUES beatmapValuesForModsLegacy = LegacyReplay::getBeatmapValuesForModsLegacy(
             sc.mods.to_legacy(), map->getAR(), map->getCS(), map->getOD(), map->getHP());
@@ -882,6 +882,7 @@ std::string ScoreButton::getModsStringForDisplay(const Replay::Mods &mods) {
     if(sd) modsString.append("SD,");
     if(dt) modsString.append("DT,");
     if(nc) modsString.append("NC,");
+    if(flags::has<DKS>(mods.flags)) modsString.append("DKS,");
     if(flags::has<Relax>(mods.flags)) modsString.append("Relax,");
     if(ht) modsString.append("HT,");
     if(flags::has<Flashlight>(mods.flags)) modsString.append("FL,");

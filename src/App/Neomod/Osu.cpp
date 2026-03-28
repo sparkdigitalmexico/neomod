@@ -2144,6 +2144,7 @@ bool Osu::getModNC() const {
     return this->score->mods.speed == 1.5f && flags::has<ModFlags::NoPitchCorrection>(this->score->mods.flags);
 }
 bool Osu::getModHT() const { return this->score->mods.speed == 0.75f; }
+bool Osu::getModDKS() const { return flags::has<ModFlags::DKS>(this->score->mods.flags); }
 
 bool Osu::isKioskMode() {
     // environment variables can't change under normal circumstances

@@ -432,6 +432,7 @@ CONVAR(mod_artimewarp_multiplier, 0.5f, CLIENT | SERVER | GAMEPLAY);
 CONVAR(mod_arwobble, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_arwobble_interval, 7.0f, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_arwobble_strength, 1.0f, CLIENT | SERVER | PROTECTED | GAMEPLAY);
+CONVAR(mod_dks, false, CLIENT | SKINS | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_endless, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_fadingcursor, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_fadingcursor_combo, 50.0f, CLIENT | SERVER | GAMEPLAY);

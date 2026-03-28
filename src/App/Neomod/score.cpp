@@ -415,6 +415,7 @@ std::string LiveScore::getModsStringForRichPresence() const {
         modsString.append("NC");
     else if(osu->getModDT())
         modsString.append("DT");
+    if(osu->getModDKS()) modsString.append("DKS");
     if(osu->getModRelax()) modsString.append("RX");
     if(osu->getModHT()) modsString.append("HT");
     if(osu->getModAuto()) modsString.append("AT");

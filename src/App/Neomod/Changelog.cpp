@@ -37,6 +37,7 @@ Changelog::Changelog() : ScreenBackable() {
     CHANGELOG v43_08;
     v43_08.title = "43.08 (" CHANGELOG_TIMESTAMP ")";
     v43_08.changes = {
+        R"(- Added DKS experimental mod)",
         R"(- Added nicer text rendering effects)",
         R"(- Cursor now fades out after 15 seconds of inactivity)",
         R"(- Fixed dying with no pausing mod changing song browser music pitch)",

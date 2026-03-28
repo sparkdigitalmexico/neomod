@@ -325,6 +325,15 @@ void BeatmapInterface::skipEmptySection() {
 void BeatmapInterface::onKey(GameplayKeys key_flag, bool down, u64 timestamp) {
     if(this->is_watching || BanchoState::spectating) return;
 
+    bool hasAnyHitObjects = (likely(!this->hitobjects.empty()));
+    bool is_too_early = hasAnyHitObjects && this->iCurMusicPosWithOffsets < this->hitobjects[0]->getClickTime();
+    bool should_count_keypress = !is_too_early && !this->bInBreak && !this->bIsInSkippableSection && this->bIsPlaying;
+    bool should_click = (!osu->getModAuto() && !osu->getModRelax()) || !cv::auto_and_relax_block_user_input.getBool();
+
+    // music position to be interped to next update (in update2())
+    Click click{
+        .timestampNS = timestamp, .cursorPos = this->getCursorPos(), .musicPosMS = this->iCurMusicPosWithOffsets};
+
     if(down) {  // pressed
         // this needs to be immediately updated here, to update state outside of early returns
         this->current_keys |= key_flag;
@@ -371,21 +380,20 @@ void BeatmapInterface::onKey(GameplayKeys key_flag, bool down, u64 timestamp) {
 
         if(this->bFailed) return;
 
-        bool hasAnyHitObjects = (likely(!this->hitobjects.empty()));
-        bool is_too_early = hasAnyHitObjects && this->iCurMusicPosWithOffsets < this->hitobjects[0]->getClickTime();
-        bool should_count_keypress =
-            !is_too_early && !this->bInBreak && !this->bIsInSkippableSection && this->bIsPlaying;
         if(should_count_keypress) osu->getScore()->addKeyCount(key_flag);
-
         this->lastPressedKey = key_flag;
-
-        if((!osu->getModAuto() && !osu->getModRelax()) || !cv::auto_and_relax_block_user_input.getBool()) {
-            // music position to be interped to next update (in update2())
-            this->clicks.push_back(Click{.timestampNS = timestamp,
-                                         .cursorPos = this->getCursorPos(),
-                                         .musicPosMS = this->iCurMusicPosWithOffsets});
+        if(should_click) {
+            this->clicks.push_back(click);
         }
     } else {  // released
+        if(osu->getModDKS()) {
+            if(should_count_keypress) osu->getScore()->addKeyCount(key_flag);
+            this->lastPressedKey = key_flag;
+            if(should_click) {
+                this->clicks.push_back(click);
+            }
+        }
+
         // always allow released key to animate
         ui->getHUD()->animateInputOverlay(key_flag, false);
         this->current_keys &= ~key_flag;
@@ -2804,6 +2812,11 @@ void BeatmapInterface::update2() {
             // Key releases
             for(auto key : {GameplayKeys::K1, GameplayKeys::K2, GameplayKeys::M1, GameplayKeys::M2}) {
                 if((this->last_keys & key) && !(this->current_keys & key)) {
+                    if(mods.has(ModFlags::DKS)) {
+                        this->lastPressedKey = key;
+                        this->clicks.push_back(click);
+                        if(should_count_keypress) osu->getScore()->addKeyCount(key);
+                    }
                     ui->getHUD()->animateInputOverlay(key, false);
                 }
             }

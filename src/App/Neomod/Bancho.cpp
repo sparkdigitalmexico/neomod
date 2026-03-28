@@ -191,7 +191,7 @@ void BanchoState::initialize_neomod_server_session() {
         "mod_wobble", "mod_wobble2",
         "mod_wobble_frequency", "mod_wobble_rotation_speed", "mod_wobble_strength",
         "mod_fullalternate", "mod_singletap", "mod_no_keylock", "notelock_type",
-        "mod_freeze_frame"
+        "mod_dks", "mod_freeze_frame"
     };
     // clang-format on
 
