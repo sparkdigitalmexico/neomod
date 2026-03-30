@@ -984,6 +984,13 @@ __EOF__
     ])
 ])
 
+CMAKE_AR_RANLIB_FLAGS="-DCMAKE_C_COMPILER_AR=\"\$(AR)\" -DCMAKE_C_COMPILER_RANLIB=\"\$(RANLIB)\" -DCMAKE_CXX_COMPILER_AR=\"\$(AR)\" -DCMAKE_CXX_COMPILER_RANLIB=\"\$(RANLIB)\""
+AS_CASE(["$build_os"], [darwin*], [
+    # not sure why this is needed additionally for macOS
+    CMAKE_AR_RANLIB_FLAGS+=" -DCMAKE_AR=\"\$(AR)\" -DCMAKE_RANLIB=\"\$(RANLIB)\""
+])
+AC_SUBST([CMAKE_AR_RANLIB_FLAGS])
+
 PKG_CONFIG="$PWD/build/pkg-config"
 AC_SUBST([PKG_CONFIG])
 AC_SUBST([CMAKE_SYSTEM_NAME])
@@ -1094,12 +1101,9 @@ AS_IF([test "x$enable_clang" = "xyes"], [
     AC_PATH_TOOL([RANLIB], [ranlib], [AC_MSG_ERROR([ranlib not found])])
 ])
 
-AS_CASE(["$host_os"],
-[linux-gnu], [
+AS_IF([test "$SYSNAME" = "linux"], [
     AC_CHECK_HEADERS([X11/Xlib.h GL/gl.h GL/glu.h], [],
         [AC_MSG_ERROR([Missing required X11/OpenGL development headers])])
-], [darwin*], [
-    # macOS uses OpenGL framework, no X11 headers needed
 ])
 
 # depending on the type of build, we may want to remap the file paths
