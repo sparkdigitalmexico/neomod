@@ -172,6 +172,12 @@ Environment::Environment(const Mc::AppDescriptor &appDesc,
             ? GLES
         : GL;
         // clang-format on
+        if constexpr(Env::cfg(OS::MAC) && Env::cfg(REND::SDLGPU) && Env::cfg(REND::GL)) {
+            // use sdl_gpu by default on macOS, actually
+            if(!(m_mArgMap.contains("-gl") || m_mArgMap.contains("-opengl"))) {
+                m_renderer = SDLGPU;
+            }
+        }
     }
 
     // setup callbacks
@@ -1008,7 +1014,7 @@ bool Environment::setWindowPos(int x, int y) { return SDL_SetWindowPosition(m_wi
 bool Environment::setWindowSize(int width, int height) {
     int realWidth = width;
     int realHeight = height;
-    if (!m_bDPIOverride) {
+    if(!m_bDPIOverride) {
         realHeight = static_cast<int>(static_cast<float>(realHeight) / m_fPixelDensity);
         realWidth = static_cast<int>(static_cast<float>(realWidth) / m_fPixelDensity);
     }
