@@ -1005,7 +1005,15 @@ void Environment::syncWindow() { SDL_SyncWindow(m_window); }
 
 bool Environment::setWindowPos(int x, int y) { return SDL_SetWindowPosition(m_window, x, y); }
 
-bool Environment::setWindowSize(int width, int height) { return SDL_SetWindowSize(m_window, width, height); }
+bool Environment::setWindowSize(int width, int height) {
+    int realWidth = width;
+    int realHeight = height;
+    if (!m_bDPIOverride) {
+        realHeight = static_cast<int>(static_cast<float>(realHeight) / m_fPixelDensity);
+        realWidth = static_cast<int>(static_cast<float>(realWidth) / m_fPixelDensity);
+    }
+    return SDL_SetWindowSize(m_window, realWidth, realHeight);
+}
 
 // NOTE: the SDL header states:
 // "You can't change the resizable state of a fullscreen window."
