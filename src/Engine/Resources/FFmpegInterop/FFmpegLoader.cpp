@@ -142,6 +142,8 @@ struct FFmpegFuncset {
 
 #ifdef MCENGINE_PLATFORM_WINDOWS
 #define LNAMESTR(x, ver) fmt::format("{:s}-{:d}.dll", x, ver)
+#elif defined(MCENGINE_PLATFORM_MACOS)
+#define LNAMESTR(x, ver) fmt::format("lib{:s}.{:d}.dylib", x, ver)
 #else
 #define LNAMESTR(x, ver) fmt::format("lib{:s}.so.{:d}", x, ver)
 #endif

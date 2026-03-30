@@ -793,6 +793,10 @@ __EOF__
     SYSNAME="macos"
     DLLEXT=".dylib"
     LIBPREFIX="lib"
+    # BSD cp doesn't support -u (update); prefer gcp (GNU coreutils) if available
+    AS_IF([command -v gcp >/dev/null 2>&1],
+        [CP_INSTALL="gcp -Pu"],
+        [CP_INSTALL="cp -P"])
 
     AC_DEFINE([MCENGINE_PLATFORM_MACOS], [1], [Define if compiling for macOS.])
 ], [*], [ # Windows/mingw32
@@ -987,6 +991,8 @@ AC_SUBST([CMAKE_GEN])
 AC_SUBST([SYSNAME])
 AC_SUBST([DLLEXT])
 AC_SUBST([LIBPREFIX])
+: "${CP_INSTALL:=cp -Pu}"
+AC_SUBST([CP_INSTALL])
 
 # don't omit frame pointers, it's not worth it on 64-bit, and having them makes profiling/debugging better
 AS_IF([test "$host_cpu" != "i686" && test -z "$WASM_CC"], [
@@ -1520,8 +1526,7 @@ CTRE_MIN_VERSION=3.10.0 # regex support that doesn't have exceptions FORCED enab
 CTRE_BUILD_VERSION=6225211806c48230e5d17a1e555ef69e7325051c # git as of Jan 28th, 2026
 
 # always build these from source if we want to use them
-AC_SUBST([SOLOUD_VERSION], [29debf4dce379657b10365abaaf8898392d5ad81]) # neoloud fork
-#AC_SUBST([SOLOUD_VERSION], [cb174f53804d8ba3fc81a2dfa49879103fbbcb2e])
+AC_SUBST([SOLOUD_VERSION], [aa5bd395becd371a694755388cac2cb4fb09d27a]) # neoloud fork
 AC_SUBST([SOLOUD_PREFIX],[$DEPS_PREFIX])
 AC_SUBST([SOUNDTOUCH_VERSION], [b8e2a5f3f04483691962ab1a36ffa166abdcd675])
 AC_SUBST([SOUNDTOUCH_PREFIX],[$DEPS_PREFIX])

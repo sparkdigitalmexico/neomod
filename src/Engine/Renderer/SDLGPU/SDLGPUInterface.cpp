@@ -91,11 +91,15 @@ bool SDLGPUInterface::init() {
     std::vector<std::pair<std::string, unsigned int>> initOrder;
     const bool vkAvailable = drivers.contains("vulkan");
     const bool d3dAvailable = drivers.contains("direct3d12");
+    const bool metalAvailable = drivers.contains("metal");
     if(d3dAvailable) {
         initOrder.emplace_back("D3D12", SDL_GPU_SHADERFORMAT_DXIL);
     }
     if(vkAvailable) {
         initOrder.emplace_back("Vulkan", SDL_GPU_SHADERFORMAT_SPIRV);
+    }
+    if(metalAvailable) {
+        initOrder.emplace_back("Metal", SDL_GPU_SHADERFORMAT_MSL);
     }
     if(initOrder.empty()) {
         debugLog("SDLGPUInterface: No compatible drivers available!");
