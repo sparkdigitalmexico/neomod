@@ -164,7 +164,7 @@ void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
         icon->setPos(pos_counter);
         icon->setSize(30.f * scale, 30.f * scale);
         icon->setTooltipText(fmt::format("{}{}", diff.diffname,
-                                         diff.star_rating > 0.f ? fmt::format(" ({:.2f} ★)", diff.star_rating) : ""));
+                                         diff.star_rating > 0.f ? fmt::format(" ({:.2f} ⭐)", diff.star_rating) : ""));
 
         this->addBaseUIElement(icon);
 
