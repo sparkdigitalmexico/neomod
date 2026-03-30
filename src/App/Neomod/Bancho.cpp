@@ -940,7 +940,7 @@ void BanchoState::handle_packet(Packet &packet) {
                         .name = "osu_file",
                         .data = std::move(osu_file),
                     }},
-                    .timeout = 60,
+                    .timeout = cv::net_transfer_timeout.getVal<long>(),
                     .connect_timeout = 5,
                 };
                 networkHandler->httpRequestAsync(url, std::move(options));

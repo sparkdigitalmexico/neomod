@@ -121,7 +121,7 @@ class DownloadManager {
             .user_agent = BanchoState::user_agent,
             .progress_callback =
                 [request](float progress) { request->progress.store(progress, std::memory_order_release); },
-            .timeout = 30,
+            .timeout = cv::net_transfer_timeout.getVal<long>(),
             .connect_timeout = 5,
             .flags = Mc::Net::RequestOptions::FOLLOW_REDIRECTS,
         };

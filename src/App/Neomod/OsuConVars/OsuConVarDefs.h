@@ -565,6 +565,7 @@ CONVAR(mp_password_md5, ""sv, CLIENT | HIDDEN);
 CONVAR(mp_server, NEOMOD_DOMAIN ""sv, CLIENT);
 CONVAR(name, "Guest"sv, CLIENT);
 CONVAR(prefer_websockets, true, CLIENT, "prefer websocket connections over http polling");
+CONVAR(net_transfer_timeout, 300, CLIENT | SERVER, "default upload/download timeout (in seconds)");
 
 // Server settings
 CONVAR(sv_allow_speed_override, false, SERVER,

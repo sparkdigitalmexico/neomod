@@ -129,7 +129,7 @@ void UpdateHandler::onVersionCheckComplete(const std::string &response, bool suc
 
     Mc::Net::RequestOptions options{
         .user_agent = BanchoState::user_agent,
-        .timeout = 300,  // 5 minutes for large downloads
+        .timeout = cv::net_transfer_timeout.getVal<long>(),
         .connect_timeout = 10,
         .flags = Mc::Net::RequestOptions::FOLLOW_REDIRECTS,
     };

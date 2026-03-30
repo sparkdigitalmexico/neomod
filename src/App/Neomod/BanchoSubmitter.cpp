@@ -30,7 +30,7 @@ void submit_score(FinishedScore score) {
 
     Mc::Net::RequestOptions options{
         .user_agent = "osu!",
-        .timeout = 60,
+        .timeout = cv::net_transfer_timeout.getVal<long>(),
         .connect_timeout = 5,
     };
 
