@@ -1139,7 +1139,12 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/brotli-$(BROT
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
 		LDFLAGS="$(LDFLAGS)" && \
-	$(SED) -i 's|.*#.*define FT_CONFIG_OPTION_USE_BROTLI.*|#define FT_CONFIG_OPTION_USE_BROTLI|' builds/unix/ftoption.h && \
+	$(SED) -i \
+		-e 's|.*#.*define FT_CONFIG_OPTION_SYSTEM_ZLIB.*|#define FT_CONFIG_OPTION_SYSTEM_ZLIB|' \
+		-e 's|.*#.*define FT_CONFIG_OPTION_USE_BZIP2.*|#define FT_CONFIG_OPTION_USE_BZIP2|' \
+		-e 's|.*#.*define FT_CONFIG_OPTION_USE_PNG.*|#define FT_CONFIG_OPTION_USE_PNG|' \
+		-e 's|.*#.*define FT_CONFIG_OPTION_USE_BROTLI.*|#define FT_CONFIG_OPTION_USE_BROTLI|' \
+		builds/unix/ftoption.h && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
 	$(PKG_CONFIG) --exists --print-errors freetype2
