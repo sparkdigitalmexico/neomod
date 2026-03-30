@@ -589,11 +589,6 @@ AS_IF([test "x$enable_lto" != "xno"], [
     disable_lto=no
 ])
 
-# detect emscripten (CC=emcc when using emconfigure)
-AS_CASE(["$CC"],
-  [*emcc*], [WASM_CC=$CC]
-)
-
 AS_IF([test -n "$WASM_CC"], [
     # emscripten/WASM build
     CXXFLAGS="$CXXFLAGS -sWASM_WORKERS=1 -pthread -msimd128 -Qunused-arguments -Wno-unused-command-line-argument -Wno-c2x-extensions"
@@ -837,9 +832,10 @@ __EOF__
 ])
 
 AC_PROG_CC([$CC])
-AS_CASE(["$CC"],
-  [*clang], [CXX=$CC++],
-  [*gcc], [CXX=${CC%gcc}g++]
+_cc_prog="${CC%% *}" # remove flags embedded in $CC
+AS_CASE(["$_cc_prog"],
+  [*clang], [CXX=${_cc_prog}++],
+  [*gcc], [CXX=${_cc_prog%gcc}g++]
 )
 AC_PROG_CXX([$CXX])
 
@@ -854,8 +850,8 @@ AC_CHECK_PROG([CCACHE], [ccache], [ccache])
 # for wasm, emconfigure sets CC/CXX to full paths already
 AS_CASE(["$host_os"],
 [linux-gnu|darwin*], [
-    AS_VAR_SET([CC_REAL], [${CC% -std=gnu23}]) # how does -std=gnu23 get in there on macos?
-    AS_VAR_SET([CXX_REAL], [$CXX])
+    AS_VAR_SET([CC_REAL], ["${CC%% *}"])
+    AS_VAR_SET([CXX_REAL], ["${CXX%% *}"])
 ], [*], [
     AS_IF([test -n "$WASM_CC"], [
         AS_VAR_SET([CC_REAL], [$CC])
