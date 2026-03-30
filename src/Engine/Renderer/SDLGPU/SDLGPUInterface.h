@@ -12,6 +12,7 @@
 
 #ifdef MCENGINE_FEATURE_SDLGPU
 
+#include "BaseEnvironment.h"
 #include "ModernGraphicsShared.h"
 #include "Hashing.h"
 #include "SyncMutex.h"
@@ -346,7 +347,7 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     // state
     Viewport m_viewport{.pos = {0.f, 0.f}, .size = {1.f, 1.f}};
 
-    int m_maxFrameLatency{1};
+    int m_maxFrameLatency{Env::cfg(OS::MAC) ? 2 : 1};
     bool m_texturingEnabled{false};
     bool m_colorInversion{false};
     bool m_vsyncEnabled{false};
