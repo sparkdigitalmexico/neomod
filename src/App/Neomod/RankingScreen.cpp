@@ -491,6 +491,7 @@ void RankingScreen::updateLayout() {
     ScreenBackable::updateLayout();
 
     const float uiScale = Osu::getRawUIScale();
+    const float dpiScale = Osu::getUIScale();
 
     this->setSize(osu->getVirtScreenSize());
 
@@ -510,13 +511,13 @@ void RankingScreen::updateLayout() {
                               osu->getVirtScreenSize().y - m_impl->songInfo->getSize().y + 3);
     m_impl->rankings->setRelPosY(m_impl->songInfo->getSize().y - 1);
 
-    float btn_width = 150.f * uiScale;
-    float btn_height = 50.f * uiScale;
+    float btn_width = 150.f * dpiScale;
+    float btn_height = 50.f * dpiScale;
     m_impl->retry_btn->setSize(btn_width, btn_height);
     m_impl->watch_btn->setSize(btn_width, btn_height);
     vec2 btn_pos(m_impl->rankings->getSize().x * 0.98f - btn_width, m_impl->rankings->getSize().y * 0.90f - btn_height);
     m_impl->watch_btn->setRelPos(btn_pos);
-    btn_pos.y -= btn_height + 5.f * uiScale;
+    btn_pos.y -= btn_height + 5.f * dpiScale;
     m_impl->retry_btn->setRelPos(btn_pos);
 
     this->update_pos();

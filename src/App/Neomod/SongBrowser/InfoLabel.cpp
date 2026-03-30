@@ -113,7 +113,7 @@ void InfoLabel::draw() {
     {
         const f32 scale = this->fSubTitleScale * globalScale;
         // account for slightly taller/larger title font glyphs
-        const f32 extraTitleFontMargin = (this->iMargin / 2.f) * this->getTitleFontRatio();
+        const f32 extraTitleFontMargin = (SPACING_MARGIN / 2.f) * this->getTitleFontRatio();
 
         yCounter += this->font->getHeight() * scale + extraTitleFontMargin * globalScale * 1.0f;
 
@@ -132,7 +132,7 @@ void InfoLabel::draw() {
                                : 0xffffffff);
         const f32 scale = this->fSongInfoScale * globalScale * 0.9f;
 
-        yCounter += this->font->getHeight() * scale + (this->iMargin / 2) * globalScale * 1.0f;
+        yCounter += this->font->getHeight() * scale + (SPACING_MARGIN / 2) * globalScale * 1.0f;
 
         g->scale(scale, scale);
         g->translate((i32)(this->getPos().x), yCounter);
@@ -147,7 +147,7 @@ void InfoLabel::draw() {
         shadow.col_text = osu->getModEZ() ? 0xffadd8e6 : (osu->getModHR() ? 0xffff7f7f : 0xffffffff);
         const f32 scale = this->fDiffInfoScale * globalScale * 0.9f;
 
-        yCounter += this->font->getHeight() * scale + this->iMargin * globalScale * 0.85f;
+        yCounter += this->font->getHeight() * scale + SPACING_MARGIN * globalScale * 0.85f;
 
         g->scale(scale, scale);
         g->translate((i32)(this->getPos().x), yCounter);
@@ -162,7 +162,7 @@ void InfoLabel::draw() {
             shadow.col_text = 0xffffffff;
             const f32 scale = this->fOffsetInfoScale * globalScale * 0.8f;
 
-            yCounter += this->font->getHeight() * scale + this->iMargin * globalScale * 0.85f;
+            yCounter += this->font->getHeight() * scale + SPACING_MARGIN * globalScale * 0.85f;
 
             g->scale(scale, scale);
             g->translate((i32)(this->getPos().x), yCounter);
@@ -409,5 +409,5 @@ f32 InfoLabel::getMinimumHeight() const {
     const f32 diffInfoHeight = fontHeight * this->fDiffInfoScale;
     const f32 offsetInfoHeight = fontHeight * this->fOffsetInfoScale;
 
-    return titleHeight + subTitleHeight + songInfoHeight + diffInfoHeight + offsetInfoHeight + this->iMargin * 6;
+    return titleHeight + subTitleHeight + songInfoHeight + diffInfoHeight + offsetInfoHeight + SPACING_MARGIN * 6;
 }

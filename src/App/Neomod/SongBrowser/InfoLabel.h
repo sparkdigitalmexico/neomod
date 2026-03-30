@@ -53,7 +53,7 @@ class InfoLabel final : public CBaseUIButton {
 
     McFont *titleFont;
 
-    i32 iMargin{8};
+    static constexpr f32 SPACING_MARGIN{8.f};
 
     // updated in updateScaling
     f32 fGlobalScale{1.f};
