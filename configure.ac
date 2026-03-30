@@ -1367,6 +1367,10 @@ AS_IF([test "x$enable_werror" != "xno"], [
     AX_CHECK_COMPILE_FLAG([-Wno-error=cast-function-type-mismatch], [
         werror_flags_temp="$werror_flags_temp -Wno-error=cast-function-type-mismatch"
     ])
+    # zlib-ng errors on some visibility attribute on 32-bit mingw builds with LTO, silence it (harmless)
+    AX_CHECK_COMPILE_FLAG([-Wno-attributes], [
+        werror_flags_temp="$werror_flags_temp -Wno-attributes"
+    ])
     AS_IF([test -n "$WASM_CC"], [
         # not exactly sure why the above tests pass but then the actual compilation fails due to -Werror=unknown-warning-option
         AX_CHECK_COMPILE_FLAG([-Wno-unknown-warning-option], [
