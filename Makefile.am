@@ -1393,7 +1393,7 @@ EMBED_CACERT_ARGS := curl_ca_embed:$(CACERT_INCDIR)cacert.pem
 endif
 
 #####################################################################################################################################################
-## SDL_GPU SHADER COMPILATION (GLSL → SPIR-V → .shdpk shader packs)
+## SDL_GPU SHADER COMPILATION (GLSL → SPIR-V / MSL → .shdpk shader packs)
 #####################################################################################################################################################
 
 if USE_SDLGPU
@@ -1403,9 +1403,11 @@ SDLGPU_SHADER_DIR := $(builddir)/gen/shaders
 SDLGPU_SHADER_MANIFEST := $(SDLGPU_SHADER_DIR)/sdlgpu_shaders.manifest
 SDLGPU_GLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].glsl)
 SDLGPU_HLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].hlsl)
+SDLGPU_MSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].msl)
 SDLGPU_EMBED_DEPS := $(SDLGPU_SHADER_MANIFEST)
 SDLGPU_EMBED_MANIFEST_FLAG := -F $(SDLGPU_SHADER_MANIFEST)
 
+SDLGPU_GLSLC_FLAG := $(if $(GLSLC),--glslc $(GLSLC),)
 SDLGPU_DXC_FLAG := $(if $(DXC),--dxc $(DXC),)
 if DOWNLOAD_DXC
 $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.source: $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.tar.gz
@@ -1422,13 +1424,13 @@ endif
 
 # the manifest is the natural "stamp". pack_sdlgpu_shader.py always writes it,
 # so its mtime reflects when shaders were last compiled/packed
-$(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_HLSL_INPUTS) $(SDLGPU_PACK_SCRIPT)
+$(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_HLSL_INPUTS) $(SDLGPU_MSL_INPUTS) $(SDLGPU_PACK_SCRIPT)
 	$(MKDIR_P) $(SDLGPU_SHADER_DIR)
 	$(PYTHON) $(SDLGPU_PACK_SCRIPT) \
 		--shader-dir $(srcdir)/$(ASSETS_DIR)/shaders \
 		--output-dir $(SDLGPU_SHADER_DIR) \
 		--manifest $(SDLGPU_SHADER_MANIFEST) \
-		--glslc $(GLSLC) \
+		$(SDLGPU_GLSLC_FLAG) \
 		$(SDLGPU_DXC_FLAG)
 
 # individual .shdpk files are side effects of the manifest rule;

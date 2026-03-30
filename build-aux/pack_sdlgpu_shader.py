@@ -3,8 +3,8 @@
 # Compiles and packs all SDLGPU shaders into .shdpk shader pack files.
 #
 # Finds SDLGPU_*_{v,f}.glsl in --shader-dir, compiles each to SPIR-V
-# via glslc or glslangValidator, packs GLSL source + binary into .shdpk,
-# and writes a manifest file compatible with gen_binary_embed.py.
+# via glslc or glslangValidator (if available), includes matching .msl
+# and .hlsl sources, and packs everything into .shdpk files.
 #
 # Usage:
 #   pack_sdlgpu_shader.py --shader-dir <dir> --output-dir <dir> --manifest <file> [--glslc <path>] [--dxc <path>]
@@ -109,7 +109,7 @@ def main():
     parser.add_argument('--shader-dir', required=True, help='Directory containing SDLGPU_*.glsl files')
     parser.add_argument('--output-dir', required=True, help='Output directory for .spv and .shdpk files')
     parser.add_argument('--manifest', required=True, help='Output manifest file for gen_binary_embed.py')
-    parser.add_argument('--glslc', default="glslc", help='Path to glslc')
+    parser.add_argument('--glslc', default=None, help='Path to glslc (optional; SPIR-V is skipped if not provided)')
     parser.add_argument('--dxc', default=None, help='Path to dxc (optional, for HLSL->DXIL)')
     args = parser.parse_args()
 
@@ -126,34 +126,48 @@ def main():
     for name, stage, glsl_path in shaders:
         shdpk_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.shdpk')
         symbol = f'SDLGPU_{name}_{stage}sh'
+        shader_dir = os.path.dirname(glsl_path)
 
-        # compile GLSL -> SPIR-V -> .shdpk
-        spv_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.spv')
-        if not compile_glsl(args.glslc, glsl_path, spv_path, stage):
-            ok = False
-            continue
-
+        # always include GLSL source (needed for runtime uniform block parsing)
         with open(glsl_path, 'rb') as f:
             glsl_data = f.read()
-        with open(spv_path, 'rb') as f:
-            spv_data = f.read()
+        sections = [(FMT_GLSL, glsl_data)]
 
-        sections = [(FMT_GLSL, glsl_data), (FMT_SPIRV, spv_data)]
+        # compile GLSL -> SPIR-V (if glslc is available)
+        if args.glslc:
+            spv_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.spv')
+            if not compile_glsl(args.glslc, glsl_path, spv_path, stage):
+                ok = False
+                continue
+            with open(spv_path, 'rb') as f:
+                sections.append((FMT_SPIRV, f.read()))
 
         # optionally compile matching HLSL -> DXIL
         if args.dxc:
-            hlsl_path = os.path.join(os.path.dirname(glsl_path), f'SDLGPU_{name}_{stage}.hlsl')
+            hlsl_path = os.path.join(shader_dir, f'SDLGPU_{name}_{stage}.hlsl')
             if os.path.exists(hlsl_path):
                 dxil_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.dxil')
                 if not compile_hlsl(args.dxc, hlsl_path, dxil_path, stage):
                     ok = False
                     continue
                 with open(dxil_path, 'rb') as f:
-                    dxil_data = f.read()
-                sections.append((FMT_DXIL, dxil_data))
+                    sections.append((FMT_DXIL, f.read()))
+
+        # include matching MSL source (no compilation needed; SDL3 compiles at runtime)
+        msl_path = os.path.join(shader_dir, f'SDLGPU_{name}_{stage}.msl')
+        if os.path.exists(msl_path):
+            with open(msl_path, 'rb') as f:
+                sections.append((FMT_MSL, f.read()))
+
+        # must have at least one binary/native format besides GLSL source
+        has_binary = any(fmt != FMT_GLSL for fmt, _ in sections)
+        if not has_binary:
+            print(f'error: no binary shader format produced for SDLGPU_{name}_{stage} '
+                  f'(need glslc for SPIR-V, or .msl file for Metal)', file=sys.stderr)
+            ok = False
+            continue
 
         write_shdpk(shdpk_path, sections)
-
         manifest_lines.append(f'{symbol} : {shdpk_path}')
 
     if not ok:

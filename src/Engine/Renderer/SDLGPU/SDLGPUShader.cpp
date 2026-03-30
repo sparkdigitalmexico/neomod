@@ -98,10 +98,14 @@ void SDLGPUShader::init() {
     }
 
     // create GPU shader objects
+    // MSL reserves "main" for shader entry points; our MSL sources use "main0"
+    const char *vshEntry = (vshFormat == SDL_GPU_SHADERFORMAT_MSL) ? "main0" : "main";
+    const char *fshEntry = (fshFormat == SDL_GPU_SHADERFORMAT_MSL) ? "main0" : "main";
+
     SDL_GPUShaderCreateInfo vertInfo{
         .code_size = vshBinary.size(),
         .code = vshBinary.data(),
-        .entrypoint = "main",
+        .entrypoint = vshEntry,
         .format = vshFormat,
         .stage = SDL_GPU_SHADERSTAGE_VERTEX,
         .num_samplers = vertexNumSamplers,
@@ -114,7 +118,7 @@ void SDLGPUShader::init() {
     SDL_GPUShaderCreateInfo fragInfo{
         .code_size = fshBinary.size(),
         .code = fshBinary.data(),
-        .entrypoint = "main",
+        .entrypoint = fshEntry,
         .format = fshFormat,
         .stage = SDL_GPU_SHADERSTAGE_FRAGMENT,
         .num_samplers = fragmentNumSamplers,

@@ -213,16 +213,15 @@ AC_DEFUN([AC_PROG_NASM], [
     fi
 ])
 
-# needed for building SPIR-V shaders (if building it is required)
+# needed for building SPIR-V shaders (optional on macOS where MSL suffices)
 # tries glslc first (from shaderc), falls back to glslangValidator (from glslang-tools)
 AC_DEFUN([AC_PROG_GLSLC], [
     AC_CHECK_PROG([GLSLC], [glslc], [glslc])
     if test -z "$GLSLC"; then
         AC_CHECK_PROG([GLSLANG_VALIDATOR], [glslangValidator], [glslangValidator])
-        if test -z "$GLSLANG_VALIDATOR"; then
-            AC_MSG_ERROR([neither glslc nor glslangValidator found - one is required for compiling GLSL shaders to SPIR-V])
+        if test -n "$GLSLANG_VALIDATOR"; then
+            GLSLC="$GLSLANG_VALIDATOR"
         fi
-        GLSLC="$GLSLANG_VALIDATOR"
     fi
 ])
 
@@ -467,6 +466,11 @@ AS_IF([test "x$use_dx11" = "xyes" ], [
 
 AS_IF([test "x$use_sdlgpu" = "xyes" ], [
     AC_PROG_GLSLC
+    AS_CASE([$host_os], [darwin*], [], [
+        AS_IF([test -z "$GLSLC"], [
+            AC_MSG_ERROR([neither glslc nor glslangValidator found - required for compiling GLSL shaders to SPIR-V])
+        ])
+    ])
     AS_IF([test "$host_os" = "mingw32"], [
         # needed for compiling HLSL shaders to DXIL (Windows/D3D12 only)
         # will download & cache a release from github if not available (only if building on linux though (lazy))

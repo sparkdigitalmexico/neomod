@@ -1,0 +1,31 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentIn {
+    float4 position [[position]];
+    float4 fragColor;
+    float2 fragTexcoord;
+};
+
+struct FragUniforms {
+    float4 misc; // x = texturing enabled, y = color inversion, z/w = unused
+    float4 col;  // global color (m_color)
+};
+
+fragment float4 main0(FragmentIn in [[stage_in]],
+                     constant FragUniforms &uniforms [[buffer(0)]],
+                     texture2d<float> tex0 [[texture(0)]],
+                     sampler samp0 [[sampler(0)]]) {
+    float4 result;
+    if (uniforms.misc.x > 0.5) {
+        result = tex0.sample(samp0, in.fragTexcoord) * uniforms.col * in.fragColor;
+    } else {
+        result = in.fragColor;
+    }
+
+    if (uniforms.misc.y > 0.5) {
+        result.rgb = float3(1.0) - result.rgb;
+    }
+
+    return result;
+}

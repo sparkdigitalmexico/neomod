@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentIn {
+    float4 position [[position]];
+};
+
+struct FragParams {
+    float max_opacity;
+    float flashlight_radius;
+    float2 flashlight_center;
+};
+
+fragment float4 main0(FragmentIn in [[stage_in]],
+                     constant FragParams &uniforms [[buffer(0)]]) {
+    float dist = distance(uniforms.flashlight_center, in.position.xy);
+    float opacity = 1.0 - smoothstep(uniforms.flashlight_radius, uniforms.flashlight_radius * 1.4, dist);
+    opacity = 1.0 - min(opacity, uniforms.max_opacity);
+    return float4(0.0, 0.0, 0.0, opacity);
+}

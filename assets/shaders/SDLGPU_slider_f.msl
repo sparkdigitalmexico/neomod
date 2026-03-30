@@ -1,0 +1,103 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentIn {
+    float4 position [[position]];
+    float2 tex_coord;
+};
+
+struct FragParams {
+    int style;
+    float bodyColorSaturation;
+    float bodyAlphaMultiplier;
+    float borderSizeMultiplier;
+    float borderFeather;
+    float _pad0; float _pad1; float _pad2;
+    float3 colBorder;
+    float _pad3;
+    float3 colBody;
+    float _pad4;
+};
+
+constant float defaultTransitionSize = 0.011;
+constant float defaultBorderSize = 0.11;
+constant float outerShadowSize = 0.08;
+
+float4 getInnerBodyColor(float4 bodyColor) {
+    float brightnessMultiplier = 0.25;
+    bodyColor.r = min(1.0f, bodyColor.r * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+    bodyColor.g = min(1.0f, bodyColor.g * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+    bodyColor.b = min(1.0f, bodyColor.b * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+    return bodyColor;
+}
+
+float4 getOuterBodyColor(float4 bodyColor) {
+    float darknessMultiplier = 0.1;
+    bodyColor.r = min(1.0f, bodyColor.r / (1.0 + darknessMultiplier));
+    bodyColor.g = min(1.0f, bodyColor.g / (1.0 + darknessMultiplier));
+    bodyColor.b = min(1.0f, bodyColor.b / (1.0 + darknessMultiplier));
+    return bodyColor;
+}
+
+fragment float4 main0(FragmentIn in [[stage_in]],
+                     constant FragParams &uniforms [[buffer(0)]],
+                     texture2d<float> tex0 [[texture(0)]],
+                     sampler samp0 [[sampler(0)]]) {
+    float borderSize = (defaultBorderSize + uniforms.borderFeather) * uniforms.borderSizeMultiplier;
+    float transitionSize = defaultTransitionSize + uniforms.borderFeather;
+
+    // output var
+    float4 out_color = float4(0.0);
+
+    // dynamic color calculations
+    float4 borderColor = float4(uniforms.colBorder.x, uniforms.colBorder.y, uniforms.colBorder.z, 1.0);
+    float4 bodyColor = float4(uniforms.colBody.x, uniforms.colBody.y, uniforms.colBody.z, 0.7 * uniforms.bodyAlphaMultiplier);
+    float4 outerShadowColor = float4(0.0, 0.0, 0.0, 0.25);
+    float4 innerBodyColor = getInnerBodyColor(bodyColor);
+    float4 outerBodyColor = getOuterBodyColor(bodyColor);
+
+    innerBodyColor.rgb *= uniforms.bodyColorSaturation;
+    outerBodyColor.rgb *= uniforms.bodyColorSaturation;
+
+    // osu!next style color modifications
+    if (uniforms.style == 1) {
+        outerBodyColor.rgb = bodyColor.rgb * uniforms.bodyColorSaturation;
+        outerBodyColor.a = 1.0 * uniforms.bodyAlphaMultiplier;
+        innerBodyColor.rgb = bodyColor.rgb * 0.5 * uniforms.bodyColorSaturation;
+        innerBodyColor.a = 0.0;
+    }
+
+    // a bit of a hack, but better than rough edges
+    if (uniforms.borderSizeMultiplier < 0.01)
+        borderColor = outerShadowColor;
+
+    // conditional variant
+
+    if (in.tex_coord.x < outerShadowSize - transitionSize) // just shadow
+    {
+        float delta = in.tex_coord.x / (outerShadowSize - transitionSize);
+        out_color = mix(float4(0.0), outerShadowColor, delta);
+    }
+    if (in.tex_coord.x > outerShadowSize - transitionSize && in.tex_coord.x < outerShadowSize + transitionSize) // shadow + border
+    {
+        float delta = (in.tex_coord.x - outerShadowSize + transitionSize) / (2.0 * transitionSize);
+        out_color = mix(outerShadowColor, borderColor, delta);
+    }
+    if (in.tex_coord.x > outerShadowSize + transitionSize && in.tex_coord.x < outerShadowSize + borderSize - transitionSize) // just border
+    {
+        out_color = borderColor;
+    }
+    if (in.tex_coord.x > outerShadowSize + borderSize - transitionSize && in.tex_coord.x < outerShadowSize + borderSize + transitionSize) // border + outer body
+    {
+        float delta = (in.tex_coord.x - outerShadowSize - borderSize + transitionSize) / (2.0 * transitionSize);
+        out_color = mix(borderColor, outerBodyColor, delta);
+    }
+    if (in.tex_coord.x > outerShadowSize + borderSize + transitionSize) // outer body + inner body
+    {
+        float size = outerShadowSize + borderSize + transitionSize;
+        float delta = ((in.tex_coord.x - size) / (1.0 - size));
+        out_color = mix(outerBodyColor, innerBodyColor, delta);
+    }
+
+    return out_color;
+}

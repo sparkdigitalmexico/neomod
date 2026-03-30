@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentIn {
+    float4 position [[position]];
+    float2 tex_coord;
+    float vtx_alpha;
+};
+
+fragment float4 main0(FragmentIn in [[stage_in]],
+                     texture2d<float> tex0 [[texture(0)]],
+                     sampler samp0 [[sampler(0)]]) {
+    float4 color = tex0.sample(samp0, in.tex_coord);
+    color.a *= in.vtx_alpha;
+    return color;
+}
