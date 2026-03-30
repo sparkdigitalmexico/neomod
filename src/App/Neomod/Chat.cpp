@@ -89,7 +89,7 @@ void ChatChannel::onChannelButtonClick(CBaseUIButton * /*btn*/) {
 }
 
 void ChatChannel::add_message(ChatMessage msg) {
-    const float line_height = 20;
+    const float line_height = 20.f * ((f32)chat_font->getDPI() / 96.f);
     const Color system_color = 0xffffff00;
 
     float x = 10;
