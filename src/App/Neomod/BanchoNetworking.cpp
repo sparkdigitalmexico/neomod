@@ -52,6 +52,11 @@ void parse_packets(std::span<u8> packet_data) {
         .pos = 0,
     };
 
+    // Treat packet_data as a PONG even if it's empty
+    // For HTTP polling, this makes sense (bancho.py sends nothing to save bandwidth)
+    // And on websockets, we only call parse_packets() when it's not empty
+    pong_expected_before = -1.0;
+
     // + 7 for packet header
     while(batch.pos + 7 <= batch.size) {
         u16 packet_id = batch.read<u16>();
@@ -73,8 +78,11 @@ void parse_packets(std::span<u8> packet_data) {
         };
         BanchoState::handle_packet(incoming);
 
-        seconds_between_pings = 1.0;
-        pong_expected_before = -1.0;
+        // When we receive actual data, start polling fast again
+        if(incoming.id != INP_PONG) {
+            seconds_between_pings = 1.0;
+        }
+
         batch.pos += packet_len;
     }
 }

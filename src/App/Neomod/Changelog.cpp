@@ -41,6 +41,7 @@ Changelog::Changelog() : ScreenBackable() {
         R"(- Added nicer text rendering effects)",
         R"(- Cursor now fades out after 15 seconds of inactivity)",
         R"(- Fixed dying with no pausing mod changing song browser music pitch)",
+        R"(- Fixed getting disconnected from bancho.py servers after 60 seconds)",
         R"(- Fixed mod selector being instantly closeable after pressing the mod select button)",
         R"(- Fixed Discord rich presence integration)",
     };
