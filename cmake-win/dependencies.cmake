@@ -43,9 +43,9 @@ set(LIBJPEG_URL "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/downloa
 set(LIBJPEG_HASH "SHA512=d3410a072044b4962c1aa08eb144b4e4b959f4f65203dfac4013b14e2fd987b9a6ee9b59f5570980fa691ddf5e9f9d3aa328a63afb487a46c2e76de722f3d693")
 set_download_name("libjpeg" "${LIBJPEG_VERSION}" "${LIBJPEG_URL}")
 
-set(LIBPNG_VERSION "1.6.54")
+set(LIBPNG_VERSION "1.6.56")
 set(LIBPNG_URL "https://github.com/pnggroup/libpng/archive/refs/tags/v${LIBPNG_VERSION}.tar.gz")
-set(LIBPNG_HASH "SHA512=f09e41c5e05714760b8dd05bd11bfe8b6b5840c277e5377a3854f5260879b69709c708f9581c07bdc2ffafda45796066ec258b67b0e96af64614b12346bedb1b")
+set(LIBPNG_HASH "SHA512=352ea0d78ae50c19ee2b99714f9a66773ad18f22c18a5fb693481d9c87a372a6bf8cd7b3e7c482f2e0474ed80ddc337a2e8ec38d148212eb175d15ca0257c03a")
 set_download_name("libpng" "${LIBPNG_VERSION}" "${LIBPNG_URL}")
 
 set(ZLIB_VERSION "2.3.2")
