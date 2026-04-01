@@ -34,8 +34,15 @@ Changelog::Changelog() : ScreenBackable() {
 
     std::vector<CHANGELOG> changelogs;
 
+    CHANGELOG v43_09;
+    v43_09.title = "43.09 (" CHANGELOG_TIMESTAMP ")";
+    v43_09.changes = {
+        R"()",
+    };
+    changelogs.push_back(v43_09);
+
     CHANGELOG v43_08;
-    v43_08.title = "43.08 (" CHANGELOG_TIMESTAMP ")";
+    v43_08.title = "43.08 (2026-04-01)";
     v43_08.changes = {
         R"(- Added DKS experimental mod)",
         R"(- Added nicer text rendering effects)",
