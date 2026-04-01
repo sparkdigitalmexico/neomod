@@ -7,10 +7,12 @@
 
 #include <cstring>
 
+#ifndef BUILD_TOOLS_ONLY
 #if !defined(__GLIBCXX__) || defined(__EMSCRIPTEN__)
 #include "fmt/format.h"
 #else
 #include <cinttypes>
+#endif
 #endif
 
 namespace SString {
@@ -174,6 +176,7 @@ template std::string join<char>(const std::vector<std::string>&, char);
 template std::string join<const char*>(const std::vector<std::string>&, const char*);
 template std::string join<std::string_view>(const std::vector<std::string>&, std::string_view);
 
+#ifndef BUILD_TOOLS_ONLY
 template <Integral T>
 std::string thousands(T n) {
     // I don't know how to check for support for the ' format specifier,
@@ -202,5 +205,6 @@ template std::string thousands(int64_t n);
 template std::string thousands(uint64_t n);
 template std::string thousands(int32_t n);
 template std::string thousands(uint32_t n);
+#endif
 
 }  // namespace SString

@@ -10,10 +10,6 @@ INCLUDES = -I$(SRCDIR)/App/Neomod -I$(SRCDIR)/App/Neomod/DiffCalc -I$(SRCDIR)/Ut
 GLM_INCLUDE ?=
 INCLUDES += $(GLM_INCLUDE)
 
-# FMT: use system headers by default, override with FMT_INCLUDE=-I/path/to/fmt
-FMT_INCLUDE ?= $(shell pkg-config --cflags fmt 2>/dev/null || echo "-I/opt/homebrew/include")
-INCLUDES += $(FMT_INCLUDE)
-
 SOURCES = \
 	NeomodJs.cpp \
 	$(SRCDIR)/App/Neomod/DatabaseBeatmap.cpp \

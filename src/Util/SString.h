@@ -129,13 +129,6 @@ inline std::unique_ptr<char[]> strcpy_u(const char* data) {
     return ret;
 }
 
-// format an integer with thousands separators (locale-dependent commas/spaces/periods)
-template <typename T>
-concept Integral = std::is_integral_v<T>;
-
-template <Integral T>
-std::string thousands(T n);
-
 // extern template decls, we only instantiate+compile them in SString.cpp
 
 extern template std::vector<std::string> split<std::string, char>(std::string_view, char);
@@ -166,9 +159,18 @@ extern template std::string join<char>(const std::vector<std::string>&, char);
 extern template std::string join<const char*>(const std::vector<std::string>&, const char*);
 extern template std::string join<std::string_view>(const std::vector<std::string>&, std::string_view);
 
+#ifndef BUILD_TOOLS_ONLY
+// format an integer with thousands separators (locale-dependent commas/spaces/periods)
+template <typename T>
+concept Integral = std::is_integral_v<T>;
+
+template <Integral T>
+std::string thousands(T n);
+
 extern template std::string thousands(int64_t n);
 extern template std::string thousands(uint64_t n);
 extern template std::string thousands(int32_t n);
 extern template std::string thousands(uint32_t n);
+#endif
 
 }  // namespace SString
