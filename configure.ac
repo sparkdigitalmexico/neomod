@@ -780,11 +780,6 @@ EOF
     chmod +x "$PWD/build/$target-$CXX"
     AC_SUBST([NASMOBJ],[macho64])
 
-    # add Homebrew libc++ library path if available
-    AS_IF([test -d "/opt/homebrew/opt/llvm/lib/c++"], [
-        LIBS="$LIBS -L/opt/homebrew/opt/llvm/lib/c++ -lc++abi"
-    ])
-
     cat > "$PWD/build/pkg-config" <<__EOF__
 #!/usr/bin/env bash
 PKG_CONFIG_PATH="$PKG_CONFIG_PATH" $PKGCONF $pc_addflags "\$@"
