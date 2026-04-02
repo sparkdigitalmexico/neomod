@@ -1,5 +1,6 @@
 // Copyright (c) 2026, WH, All rights reserved.
 #include "AppRunner.h"
+#ifdef MCENGINE_TESTS
 
 #include "AppDescriptor.h"
 
@@ -9,7 +10,6 @@
 #include "Font.h"
 #include "Logging.h"
 #include "KeyBindings.h"
-
 
 #include <cstring>
 
@@ -235,3 +235,5 @@ Sound *AppRunner::getSound(ActionSound action) const {
 void AppRunner::showNotification(const NotificationInfo &info) {
     if(m_activeApp) m_activeApp->showNotification(info);
 }
+
+#endif  // MCENGINE_TESTS

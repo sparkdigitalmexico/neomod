@@ -7,6 +7,8 @@
 #include <emscripten/emscripten.h>
 #endif
 
+#include "AppDescriptor.h"
+#include "App.h"
 #include "AppRunner.h"
 #include "MakeDelegateWrapper.h"
 
@@ -257,13 +259,19 @@ void Engine::loadApp() {
         //*****************//
 
 #ifndef BUILD_TOOLS_ONLY
+#ifdef MCENGINE_TESTS
         {
             const auto &it = env->getLaunchArgs().find("-testapp");
             const bool testMode = (it != env->getLaunchArgs().end());
             app = std::make_unique<AppRunner>(testMode, testMode ? it->second.value_or("") : "");
         }
+#else
+        if(const auto &defaultApp = Mc::getDefaultAppDescriptor(); !!defaultApp.create) {
+            app.reset(defaultApp.create());
+        }
+#endif  // MCENGINE_TESTS
         this->runtime_assert(!!app, "App failed to initialize!");
-#endif
+#endif  // BUILD_TOOLS_ONLY
 
         // start listening to the default keyboard input
         keyboard->addListener(app.get());

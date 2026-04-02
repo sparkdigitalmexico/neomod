@@ -27,6 +27,7 @@ enum class FEAT : uint8_t {
     STEAM = 1 << 0,
     DISCORD = 1 << 1,
     MAINCB = 1 << 2,
+    TESTS = 1 << 3,
     NONE = 0,
 };
 enum class AUD : uint8_t {
@@ -101,6 +102,9 @@ consteval FEAT getFeatures() {
 #endif
 #if defined(MCENGINE_PLATFORM_WASM) || defined(MCENGINE_FEATURE_MAINCALLBACKS)
         FEAT::MAINCB |
+#endif
+#if defined(MCENGINE_TESTS)
+        FEAT::TESTS |
 #endif
         FEAT::NONE;
 }

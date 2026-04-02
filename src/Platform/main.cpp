@@ -233,7 +233,7 @@ MAIN_FUNC /* int argc, char *argv[] */
     // if we have an "existing window handler", let it run very early
     // use the handler for the desired app-to-launch, so we don't collide with a running instance of a different kind of app
     const Mc::AppDescriptor *appDesc{nullptr};
-    if(arg_map.contains("-testapp") && arg_map["-testapp"].has_value()) {
+    if(Env::cfg(FEAT::TESTS) && arg_map.contains("-testapp") && arg_map["-testapp"].has_value()) {
         const auto &testappName = arg_map["-testapp"].value();
         for(const auto &entry : Mc::getAllAppDescriptors()) {
             if(testappName == entry.name) {

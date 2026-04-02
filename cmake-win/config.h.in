@@ -30,6 +30,7 @@
 /* Other flags */
 #cmakedefine USE_NSYNC
 #cmakedefine MCENGINE_FEATURE_DISCORD
+#cmakedefine MCENGINE_TESTS
 
 /* Windows-specific definitions */
 #ifdef _WIN32

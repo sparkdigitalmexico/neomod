@@ -75,6 +75,17 @@ WIN_SOURCES := \
 	$(NULL)
 endif
 
+if BUILD_TESTS
+TEST_SOURCES := \
+	src/App/Tests/AsyncPoolTest.cpp \
+	src/App/Tests/AudioTester/AudioTester.cpp \
+	src/App/Tests/BaseFrameworkTest/BaseFrameworkTest.cpp \
+	src/App/Tests/EmojiRenderTest/EmojiRenderTest.cpp \
+	src/App/Tests/Neomod/HitSoundTest.cpp \
+	src/App/Tests/Neomod/SkinLoadTest.cpp \
+	$(NULL)
+endif
+
 if !WASM_PLATFORM
 if USE_OPENGL
 GLAD_SOURCES := \
@@ -195,12 +206,6 @@ neomod_SOURCES = \
 	src/App/Neomod/UserStatsScreen.cpp \
 	src/App/Neomod/VolumeOverlay.cpp \
 	src/App/Neomod/score.cpp \
-	src/App/Tests/AsyncPoolTest.cpp \
-	src/App/Tests/AudioTester/AudioTester.cpp \
-	src/App/Tests/BaseFrameworkTest/BaseFrameworkTest.cpp \
-	src/App/Tests/EmojiRenderTest/EmojiRenderTest.cpp \
-	src/App/Tests/Neomod/HitSoundTest.cpp \
-	src/App/Tests/Neomod/SkinLoadTest.cpp \
 	src/Engine/AnimationHandler.cpp \
 	src/Engine/Async/AsyncPool.cpp \
 	src/Engine/ConVars/ConVar.cpp \
@@ -283,4 +288,5 @@ neomod_SOURCES = \
 	$(BASS_SOURCES) \
 	$(WIN_SOURCES) \
 	$(FFMPEG_SOURCES) \
+	$(TEST_SOURCES) \
 	$(NULL)

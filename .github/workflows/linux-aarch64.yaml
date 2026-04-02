@@ -4,9 +4,9 @@ on:
     branches:
       - master
     paths-ignore:
-      - 'cmake-win/**'
-      - 'tools/**'
-      - '*.md'
+      - 'cmake-win/**/*'
+      - 'tools/**/*'
+      - '**/*.md'
       - '.clangd-template'
       - '.gitignore'
       - '.git-blame-ignore-revs'
@@ -14,9 +14,9 @@ on:
     branches:
       - master
     paths-ignore:
-      - 'cmake-win/**'
-      - 'tools/**'
-      - '*.md'
+      - 'cmake-win/**/*'
+      - 'tools/**/*'
+      - '**/*.md'
       - '.clangd-template'
       - '.gitignore'
       - '.git-blame-ignore-revs'
@@ -79,7 +79,7 @@ jobs:
           export MAKEFLAGS="-j$(nproc)"
           export CCACHE_DIR="${{ env.CCACHE_DIR }}"
           cd build-out && \
-          ../configure \
+          ../configure --disable-tests \
             ${{ (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/dev') && '--disable-strip' || '' }} \
             --host=aarch64-pc-linux-gnu && \
           make install

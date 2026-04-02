@@ -48,6 +48,7 @@ cond_sources "if USE_SOLOUD"   "SOLOUD_SOURCES"    src/Engine/Sound/SoLoud
 cond_sources "if USE_BASS"     "BASS_SOURCES"      src/Engine/Sound/BASS
 cond_sources "if USE_FFMPEG"   "FFMPEG_SOURCES"    src/Engine/Resources/FFmpegInterop # i don't know what folder this should really go in, whatever
 cond_sources "if WIN_PLATFORM" "WIN_SOURCES"       src/Platform/Windows
+cond_sources "if BUILD_TESTS"  "TEST_SOURCES"      src/App/Tests
 
 # glad (needed for native GL/GLES builds; WASM has its own loader)
 # shellcheck disable=SC2016
@@ -74,7 +75,8 @@ cond_sources "if WIN_PLATFORM" "WIN_SOURCES"       src/Platform/Windows
         -not -path 'src/Engine/Sound/SoLoud/*' \
         -not -path 'src/Platform/Windows/*' \
         -not -path 'src/Engine/Resources/FFmpegInterop/*' \
-        -not -path 'libraries/glad/*'
+        -not -path 'libraries/glad/*' \
+        -not -path 'src/App/Tests/*'
 
     cat << 'EOF'
 	$(GL_SHARED_SOURCES) \
@@ -87,6 +89,7 @@ cond_sources "if WIN_PLATFORM" "WIN_SOURCES"       src/Platform/Windows
 	$(BASS_SOURCES) \
 	$(WIN_SOURCES) \
 	$(FFMPEG_SOURCES) \
+	$(TEST_SOURCES) \
 	$(NULL)
 EOF
 } >> "$SOURCES_FILE"

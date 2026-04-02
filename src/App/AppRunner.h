@@ -4,6 +4,10 @@
 #ifndef APPRUNNER_H
 #define APPRUNNER_H
 
+#include "config.h"
+
+#ifdef MCENGINE_TESTS
+
 #include "App.h"
 #include "MouseListener.h"
 
@@ -57,5 +61,7 @@ class AppRunner : public App, public MouseListener {
     int m_iMouseDownIndex{-1};
     bool m_bTestMode;
 };
+
+#endif  // MCENGINE_TESTS
 
 #endif

@@ -248,6 +248,8 @@ AC_SUBST([WINE])
 AC_CHECK_PROG([MOLD], [mold], [mold])
 AC_CHECK_PROG([LLD], [lld], [lld])
 
+AC_ARG_ENABLE([tests],
+    AS_HELP_STRING([--enable-tests], [Build tests and support running with -testapp <test> (default: yes)]))
 AC_ARG_ENABLE([optimize],
     AS_HELP_STRING([--enable-optimize], [Optimize for speed (default: yes)]))
 AC_ARG_ENABLE([native],
@@ -378,6 +380,11 @@ AS_IF([test "x$with_discord" != "xno" && { test "$host_os" = "mingw32" || { test
     AC_DEFINE([MCENGINE_FEATURE_DISCORD], [1], [Defined if building with Discord RPC integration.])
 ], [
     with_discord=no
+])
+
+# enable tests by default
+AS_IF([test "x$enable_tests" != "xno"], [
+    AC_DEFINE([MCENGINE_TESTS], [1], [Defined if building with support for the testing framework.])
 ])
 
 AC_SUBST([NOIME])
@@ -1834,6 +1841,7 @@ AM_CONDITIONAL([WINSHARED_DLLS_NEEDED], [test -n "$WINSHARED_DLLS"])
 AM_CONDITIONAL([BUILD_WINPTHREAD_NOVERSION], 
     [test "$host_os" = "mingw32" && test "x$enable_static" = "xyes"])
 
+AM_CONDITIONAL([BUILD_TESTS], [test "x$enable_tests" != "xno"])
 AM_CONDITIONAL([AUDIO_SHORTCUTS], [test -n "$make_audio_shortcuts" && test -n "$WINE" && test "$SYSNAME" = "windows"])
 AM_CONDITIONAL([BUNDLE_BEATMAPS], [test -n "$WASM_CC" && test "x$enable_redistributable" = "xno"])
 
