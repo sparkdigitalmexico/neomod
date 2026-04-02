@@ -37,9 +37,10 @@ AC_CANONICAL_TARGET
 
 # early emscripten detection - must happen before checks that use host_os
 # emconfigure sets CC=emcc before running configure
-AS_CASE(["$CC"],
-  [*emcc*], [WASM_CC=$CC]
-)
+AS_CASE(["$CC"], [*emcc*], [
+    WASM_CC=$CC
+    AC_SUBST([WASM_CC])
+])
 
 AS_IF([test -n "$WASM_CC"], [
     # override host triplet so subsequent checks see WASM, not linux
