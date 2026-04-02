@@ -884,7 +884,8 @@ $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built: $(DEPS_CACHE)/zlib-$(ZLIB_VERSION).ta
 		$(if $(filter win%,$(host_os)),uname=mingw CHOST=$(host),) \
 		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" \
 		CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" \
-			$(CONFIGURE_PFX) ../configure --zlib-compat --prefix="$(DEPS_PREFIX)" $(if $(STATICBUILD),--static,) && \
+			$(CONFIGURE_PFX) ../configure --zlib-compat --prefix="$(DEPS_PREFIX)" $(if $(STATICBUILD),--static,) \
+				$(if $(WASM_CC),--without-optimizations,) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install && \
 	$(SED) -i 's|sharedlibdir=.*|sharedlibdir=$${libdir}|' $(DEPS_PREFIX)/lib/pkgconfig/zlib.pc && \
 	$(PKG_CONFIG) --exists --print-errors zlib
