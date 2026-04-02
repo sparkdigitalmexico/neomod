@@ -884,8 +884,7 @@ $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built: $(DEPS_CACHE)/zlib-$(ZLIB_VERSION).ta
 		$(if $(filter win%,$(host_os)),uname=mingw CHOST=$(host),) \
 		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" \
 		CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" \
-			$(CONFIGURE_PFX) ../configure --zlib-compat --prefix="$(DEPS_PREFIX)" \
-				$(if $(or $(DISABLE_NATIVE),$(ENABLE_DEBUG)),--without-optimizations,) $(if $(STATICBUILD),--static,) && \
+			$(CONFIGURE_PFX) ../configure --zlib-compat --prefix="$(DEPS_PREFIX)" $(if $(STATICBUILD),--static,) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install && \
 	$(SED) -i 's|sharedlibdir=.*|sharedlibdir=$${libdir}|' $(DEPS_PREFIX)/lib/pkgconfig/zlib.pc && \
 	$(PKG_CONFIG) --exists --print-errors zlib
@@ -1835,9 +1834,8 @@ endif
 # --- strip binaries (must run after rpath to avoid racing on the same files) ---
 if STRIPBINS
 stamp-install-strip: stamp-install-sharedlibs $(INSTALL_RPATH_STAMP) $(bin_PROGRAMS)
-	-find "$(DESTDIR)$(bindir)" -name '*'$(DLLEXT)'*' -execdir $(STRIP) -s '{''}' '+'
-	-$(STRIP) -s "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
-	-$(STRIP) "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
+	-find "$(DESTDIR)$(bindir)" -name '*'$(DLLEXT)'*' -execdir $(STRIP) $(STRIP_ALL_FLAGS) '{''}' '+'
+	-$(STRIP) $(STRIP_ALL_FLAGS) "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
 	@touch $@
 
 INSTALL_STAMPS += stamp-install-strip

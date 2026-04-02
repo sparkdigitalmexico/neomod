@@ -852,6 +852,10 @@ AS_CASE(["$_cc_prog"],
 AC_PROG_CXX([$CXX])
 
 AC_CHECK_PROG([STRIP], [strip], [strip]) # don't use mingw-strip, seems to not work as well as regular binutils strip even for windows builds...
+# macOS strip -s means "save symbols listed in file", not "strip all"; -x is the equivalent
+AS_IF([test "$SYSNAME" = "macos"],
+    [AC_SUBST([STRIP_ALL_FLAGS], [-x])],
+    [AC_SUBST([STRIP_ALL_FLAGS], [-s])])
 
 AC_CHECK_PROG([CCACHE], [ccache], [ccache])
 
@@ -1220,7 +1224,9 @@ AS_IF([test "x$enable_debug" = "xyes"], [
         ])
     ])
     AS_IF([test "x$enable_strip" != "xno"], [
-        NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,-s" # strip flag
+        AS_IF([test "$SYSNAME" != "macos"], [
+            NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,-s" # strip flag (ld64 considers this obsolete, so just rely on post-link strip)
+        ])
     ], [
         AS_IF([test -z "$WASM_CC"],[
             # add minimal debug info
@@ -1517,7 +1523,7 @@ LIBJPEG_BUILD_VERSION=3.1.3
 LIBPNG_MIN_VERSION=1.6.38
 LIBPNG_BUILD_VERSION=1.6.56
 ZLIB_MIN_VERSION=1.3
-ZLIB_BUILD_VERSION=2.3.2 # zlib-ng
+ZLIB_BUILD_VERSION=2.3.3 # zlib-ng
 BZIP2_MIN_VERSION=1.0.8
 BZIP2_BUILD_VERSION=1.0.8
 FMT_MIN_VERSION=11.0.0

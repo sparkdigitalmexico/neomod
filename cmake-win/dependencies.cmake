@@ -48,9 +48,9 @@ set(LIBPNG_URL "https://github.com/pnggroup/libpng/archive/refs/tags/v${LIBPNG_V
 set(LIBPNG_HASH "SHA512=352ea0d78ae50c19ee2b99714f9a66773ad18f22c18a5fb693481d9c87a372a6bf8cd7b3e7c482f2e0474ed80ddc337a2e8ec38d148212eb175d15ca0257c03a")
 set_download_name("libpng" "${LIBPNG_VERSION}" "${LIBPNG_URL}")
 
-set(ZLIB_VERSION "2.3.2")
+set(ZLIB_VERSION "2.3.3")
 set(ZLIB_URL "https://github.com/zlib-ng/zlib-ng/archive/refs/tags/${ZLIB_VERSION}.tar.gz")
-set(ZLIB_HASH "SHA512=8781ee4bfda7cb8c8c5150c2e6a067d699580616b61af2ea4cf03cbe14c6715b31a29a20b7c3dd97254a9e487c72c5228c9cfa817ff71aa765fe7043ab136f04")
+set(ZLIB_HASH "SHA512=e2057c764f1d5aaee738edee7e977182c5b097e3c95489dcd8de813f237d92a05daaa86d68d44b331d9fec5d1802586a8f6cfb658ba849874aaa14e72a8107f5")
 set_download_name("zlib" "${ZLIB_VERSION}" "${ZLIB_URL}")
 
 set(BZIP2_VERSION "1ea1ac188ad4b9cb662e3f8314673c63df95a589")
