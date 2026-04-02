@@ -102,10 +102,6 @@ struct BanchoState final {
     // internal helpers
     static void update_channel(const std::string &name, const std::string &topic, i32 nb_members, bool join);
 
-    [[nodiscard]] static std::string get_disk_uuid_win32();
-    [[nodiscard]] static std::string get_disk_uuid_blkid();
-    [[nodiscard]] static std::string get_disk_uuid_wasm();
-
     static bool print_new_channels;
 
     // use get_username() to avoid having to check for online status

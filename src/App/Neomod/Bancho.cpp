@@ -50,6 +50,12 @@
 #include <sys/stat.h>
 #include "dynutils.h"
 
+#elif defined(MCENGINE_PLATFORM_MACOS)
+
+#include <sys/attr.h>
+#include <unistd.h>
+#include <uuid/uuid.h>
+
 #endif
 
 // defs
@@ -1076,24 +1082,9 @@ void BanchoState::update_channel(const std::string &name, const std::string &top
     }
 }
 
-const std::string &BanchoState::get_disk_uuid() {
-    static bool once = false;
-    if(!once) {
-        once = true;
-        if constexpr(Env::cfg(OS::WINDOWS)) {
-            BanchoState::disk_uuid = get_disk_uuid_win32();
-        } else if constexpr(Env::cfg(OS::LINUX)) {
-            BanchoState::disk_uuid = get_disk_uuid_blkid();
-        } else if constexpr(Env::cfg(OS::WASM)) {
-            BanchoState::disk_uuid = get_disk_uuid_wasm();
-        } else {
-            BanchoState::disk_uuid = "error getting disk uuid (unsupported platform)";
-        }
-    }
-    return BanchoState::disk_uuid;
-}
+namespace {
 
-std::string BanchoState::get_disk_uuid_blkid() {
+std::string get_disk_uuid_platform() {
     std::string retuuid{"error getting disk UUID"};
 #ifdef MCENGINE_PLATFORM_LINUX
     using blkid_cache = struct blkid_struct_cache *;
@@ -1154,13 +1145,8 @@ std::string BanchoState::get_disk_uuid_blkid() {
 
     free(devname);
     unload_lib(blkid_lib);
-#endif
-    return retuuid;
-}
 
-std::string BanchoState::get_disk_uuid_win32() {
-    std::string retuuid{"error getting disk UUID"};
-#ifdef MCENGINE_PLATFORM_WINDOWS
+#elif defined(MCENGINE_PLATFORM_WINDOWS)
 
     // get the path to the executable
     const std::string &exe_path = Environment::getPathToSelf();
@@ -1225,12 +1211,7 @@ std::string BanchoState::get_disk_uuid_win32() {
         }
     }
 
-#endif
-    return retuuid;
-}
-
-std::string BanchoState::get_disk_uuid_wasm() {
-#ifdef MCENGINE_PLATFORM_WASM
+#elif defined(MCENGINE_PLATFORM_WASM)
     FILE *f = File::fopen_c(NEOMOD_DATA_DIR "client_id", "r");
     if(f) {
         std::array<char, 64> buf{};
@@ -1245,8 +1226,39 @@ std::string BanchoState::get_disk_uuid_wasm() {
         fputs(uuid, f);
         fclose(f);
     }
-    return uuid;
+    retuuid = uuid;
+#elif defined(MCENGINE_PLATFORM_MACOS)
+    const std::string &exe_path = Environment::getPathToSelf();
+
+    struct attrlist attrList{};
+    attrList.bitmapcount = ATTR_BIT_MAP_COUNT;
+    attrList.volattr = ATTR_VOL_INFO | ATTR_VOL_UUID;
+
+    struct TempUUIDBuffer {
+        u_int32_t length;
+        uuid_t uuid;
+    } buf{};
+
+    if(getattrlist(exe_path.c_str(), &attrList, &buf, sizeof(TempUUIDBuffer), 0) == 0) {
+        char uuid_str[37]{};
+        uuid_unparse(&buf.uuid[0], &uuid_str[0]);
+        retuuid.assign(&uuid_str[0]);
+    }
+
 #else
-    return "error getting disk uuid (unsupported platform)";
+#warning "disk uuid unimplemented for current platform, connect to third party servers with caution"
+    retuuid = "error getting disk uuid (unsupported platform)";
 #endif
+    return retuuid;
+}
+
+}  // namespace
+
+const std::string &BanchoState::get_disk_uuid() {
+    static bool once = false;
+    if(!once) {
+        once = true;
+        BanchoState::disk_uuid = get_disk_uuid_platform();
+    }
+    return BanchoState::disk_uuid;
 }
