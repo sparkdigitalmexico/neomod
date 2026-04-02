@@ -1859,14 +1859,28 @@ endif # WASM_PLATFORM
 CLEANFILES += $(INSTALL_STAMPS) .install-state
 
 # install hooks
-# copy pdb (windows)
+# copy pdb (windows), create app bundle (macos)
 install-exec-hook: install-libs
 if WIN_PLATFORM
 	@cp -P neomod.pdb "$(DESTDIR)$(bindir)" &>/dev/null || true # don't fail install if we had no pdb
 endif
+if MACOS_PLATFORM
+	@echo "  BUNDLE neomod.app"
+	@$(MKDIR_P) "$(DESTDIR)$(prefix)/neomod.app/Contents/Resources"
+	@printf 'APPL????' > "$(DESTDIR)$(prefix)/neomod.app/Contents/PkgInfo"
+	@sed 's/%%VERSION%%/$(PACKAGE_VERSION)/g' \
+		"$(srcdir)/assets/Info.plist.in" > "$(DESTDIR)$(prefix)/neomod.app/Contents/Info.plist"
+	@cp "$(srcdir)/assets/neomod.icns" \
+		"$(DESTDIR)$(prefix)/neomod.app/Contents/Resources/neomod.icns"
+	@ln -sfn "neomod.app/Contents/MacOS" "$(DESTDIR)$(prefix)/bin-$(host_cpu)"
+endif
 
 uninstall-local:
+if MACOS_PLATFORM
+	rm -rf "$(DESTDIR)$(prefix)/neomod.app/" "$(DESTDIR)$(prefix)/bin-$(host_cpu)"
+else
 	rm -rf "$(DESTDIR)$(bindir)/"
+endif
 
 # cleanup targets
 clean-local:

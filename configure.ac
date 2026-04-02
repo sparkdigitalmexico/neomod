@@ -1443,7 +1443,9 @@ AC_SUBST([DEPS_PREFIX], ['${abs_top_builddir}/build/deps'])
 AC_SUBST([DEPS_CACHE], ['${abs_top_srcdir}/build-aux/cache'])
 AC_SUBST([TEMP_WINEPFX], ['${abs_top_srcdir}/build-aux/.tmpwinepfx'])
 AC_SUBST([BUILD_MISCDIR], ['${abs_top_srcdir}/build-aux/misc'])
-AC_SUBST([bindir], [$bindir-$host_cpu])
+AS_IF([test "$SYSNAME" = "macos"],
+    [AC_SUBST([bindir], ['${prefix}/neomod.app/Contents/MacOS'])],
+    [AC_SUBST([bindir], [$bindir-$host_cpu])])
 
 AS_IF([test "x$use_opengl" = "xyes" || test "x$use_opengles32" = "xyes"], [
     AS_IF([test "$SYSNAME" = "linux"], [
