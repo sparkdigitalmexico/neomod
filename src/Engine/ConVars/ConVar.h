@@ -486,36 +486,32 @@ class ConVar {
 
         if(doCallback) {
             // handle possible execution callbacks
-            if(!std::holds_alternative<std::monostate>(this->callback)) {
-                std::visit(
-                    [&](auto &&callback) {
-                        using CBType = std::decay_t<decltype(callback)>;
-                        if constexpr(std::is_same_v<CBType, VoidCB>)
-                            callback();
-                        else if constexpr(std::is_same_v<CBType, StringCB>)
-                            callback(newString);
-                        else if constexpr(std::is_same_v<CBType, FloatCB>)
-                            callback(static_cast<float>(newDouble));
-                        else if constexpr(std::is_same_v<CBType, DoubleCB>)
-                            callback(newDouble);
-                    },
-                    this->callback);
-            }
+            std::visit(
+                [&newString, newDouble](auto &&callback) -> void {
+                    using CBType = std::decay_t<decltype(callback)>;
+                    if constexpr(std::is_same_v<CBType, VoidCB>)
+                        callback();
+                    else if constexpr(std::is_same_v<CBType, StringCB>)
+                        callback(newString);
+                    else if constexpr(std::is_same_v<CBType, FloatCB>)
+                        callback(static_cast<float>(newDouble));
+                    else if constexpr(std::is_same_v<CBType, DoubleCB>)
+                        callback(newDouble);
+                },
+                this->callback);
 
             // handle possible change callbacks
-            if(!std::holds_alternative<std::monostate>(this->changeCallback)) {
-                std::visit(
-                    [&](auto &&callback) {
-                        using CBType = std::decay_t<decltype(callback)>;
-                        if constexpr(std::is_same_v<CBType, StringChangeCB>)
-                            callback(oldString, newString);
-                        else if constexpr(std::is_same_v<CBType, FloatChangeCB>)
-                            callback(static_cast<float>(oldDouble), static_cast<float>(newDouble));
-                        else if constexpr(std::is_same_v<CBType, DoubleChangeCB>)
-                            callback(oldDouble, newDouble);
-                    },
-                    this->changeCallback);
-            }
+            std::visit(
+                [&oldString, &newString, oldDouble, newDouble](auto &&callback) -> void {
+                    using CBType = std::decay_t<decltype(callback)>;
+                    if constexpr(std::is_same_v<CBType, StringChangeCB>)
+                        callback(oldString, newString);
+                    else if constexpr(std::is_same_v<CBType, FloatChangeCB>)
+                        callback(static_cast<float>(oldDouble), static_cast<float>(newDouble));
+                    else if constexpr(std::is_same_v<CBType, DoubleChangeCB>)
+                        callback(oldDouble, newDouble);
+                },
+                this->changeCallback);
         }
     }
 

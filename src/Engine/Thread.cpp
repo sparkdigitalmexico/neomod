@@ -152,8 +152,8 @@ bool is_main_thread() noexcept { return SDL_IsMainThread(); }
 int get_logical_cpu_count() noexcept { return SDL_GetNumLogicalCPUCores(); }
 
 void set_current_thread_prio(Priority prio) noexcept {
-    SDL_ThreadPriority sdlprio{};
-    const char *priostring;
+    SDL_ThreadPriority sdlprio{SDL_THREAD_PRIORITY_NORMAL};
+    const char *priostring{"normal"};
     if(prio < NORMAL || prio > REALTIME) prio = NORMAL;  // sanity
     switch(prio) {
         case NORMAL:
@@ -171,6 +171,8 @@ void set_current_thread_prio(Priority prio) noexcept {
         case REALTIME:
             sdlprio = SDL_THREAD_PRIORITY_TIME_CRITICAL;
             priostring = "realtime";
+            break;
+        default:
             break;
     }
     if(!SDL_SetCurrentThreadPriority(sdlprio)) {

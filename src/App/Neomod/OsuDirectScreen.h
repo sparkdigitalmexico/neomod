@@ -22,16 +22,6 @@ class OsuDirectScreen final : public ScreenBackable {
     OsuDirectScreen();
     ~OsuDirectScreen() override;
 
-    enum RankingStatusFilter : u8 {
-        RANKED = 0,
-        PENDING = 2,
-        QUALIFIED = 3,
-        ALL = 4,
-        GRAVEYARD = 5,
-        PLAYED = 7,
-        LOVED = 8,
-    };
-
     CBaseUIContainer* setVisible(bool visible) override;
     void draw() override;
     void update(CBaseUIEventCtx &c) override;

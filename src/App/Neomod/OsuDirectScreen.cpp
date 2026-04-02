@@ -36,7 +36,18 @@
 #include "DatabaseBeatmap.h"
 
 #include <charconv>
-
+namespace {
+enum class RankingStatusFilter : u8 {
+    RANKED = 0,
+    APPROVED = 1,
+    PENDING = 2,
+    QUALIFIED = 3,
+    ALL = 4,
+    GRAVEYARD = 5,
+    PLAYED = 7,
+    LOVED = 8,
+};
+}
 // represents: one single beatmapset element inside the OsuDirectScreen scrollview
 // it's a container because it contains UIIcons with tooltips for difficulties
 class OnlineMapListing : public CBaseUIContainer {
@@ -498,9 +509,10 @@ void OsuDirectScreen::reset() {
 void OsuDirectScreen::search(std::string_view query) {
     if(this->loading) return;
 
+    // TODO: show "approved" maps when ranked only is checked (how?)
     const i32 offset = this->results->container.getElements().size();
     const i32 filter = cv::direct_ranking_status_filter.getInt();
-    std::string url = fmt::format("osu.{}/web/osu-search.php?m=0&r={}&q={}&p={}", BanchoState::endpoint, filter,
+    std::string url = fmt::format("osu.{:s}/web/osu-search.php?m=0&r={:d}&q={:s}&p={:d}", BanchoState::endpoint, filter,
                                   Mc::Net::urlEncode(query), offset);
     BANCHO::Api::append_auth_params(url);
 
