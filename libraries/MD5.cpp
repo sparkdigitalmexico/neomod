@@ -338,12 +338,12 @@ std::string MD5::hexdigest() const
   if (!finalized)
     return "";
 
-  char buf[33];
+  std::string buf;
+  buf.resize(32);
   for (int i=0; i<16; i++)
-    sprintf(buf+i*2, "%02x", digest[i]);
-  buf[32]=0;
+    snprintf(buf.data() + i*2, 3, "%02x", digest[i]); // NOLINT(bugprone-implicit-widening-of-multiplication-result)
 
-  return std::string(buf);
+  return buf;
 }
 
 //////////////////////////////
