@@ -67,12 +67,18 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
     using enum ImageDecodeResult;
     if(!loadffmpeg()) return UNAVAILABLE;
 
+    const bool ff_debug_enabled = [] -> bool {
+        if(cv::debug_ffmpeg.isDefault()) return false;
+        const auto &str = cv::debug_ffmpeg.getString();
+        return (!str.empty() && str != "0" && str != "none" && str != "false");
+    }();
+
     MemReader mem{inData, size, 0};
 
     constexpr int avioBufSize = 32768;
     auto *avioBuf = static_cast<u8 *>(av_malloc(avioBufSize));
     if(!avioBuf) {
-        logIfCV(debug_ffmpeg, "av_malloc failed");
+        logIf(ff_debug_enabled, "av_malloc failed");
         return FAIL;
     }
 
@@ -111,7 +117,7 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
         });
     if(!avioCtx) {
         av_free(avioBuf);
-        logIfCV(debug_ffmpeg, "avio_alloc_context failed");
+        logIf(ff_debug_enabled, "avio_alloc_context failed");
         return FAIL;
     }
 
@@ -119,18 +125,18 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
 
     ff.fmtCtx = avformat_alloc_context();
     if(!ff.fmtCtx) {
-        logIfCV(debug_ffmpeg, "avformat_alloc_context failed");
+        logIf(ff_debug_enabled, "avformat_alloc_context failed");
         return FAIL;
     }
     ff.fmtCtx->pb = avioCtx;
 
     // filepath is just passed as a hint for extension-based format probing (image2 demuxer); actual (memory) I/O still goes through the avioCtx
     if(int averr = avformat_open_input(&ff.fmtCtx, this_->sFilePath.c_str(), nullptr, nullptr); averr != 0) {
-        logIfCV(debug_ffmpeg, "avformat_open_input failed: {}", av_err2str(averr));
+        logIf(ff_debug_enabled, "avformat_open_input failed: {}", av_err2str(averr));
         return FAIL;  // avformat_open_input nulls fmtCtx on failure
     }
     if(int averr = avformat_find_stream_info(ff.fmtCtx, nullptr); averr != 0) {
-        logIfCV(debug_ffmpeg, "avformat_find_stream_info failed: {:s}", av_err2str(averr));
+        logIf(ff_debug_enabled, "avformat_find_stream_info failed: {:s}", av_err2str(averr));
         return FAIL;
     }
 
@@ -145,37 +151,37 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
         }
     }
     if(videoIdx < 0) {
-        logIfCV(debug_ffmpeg, "video < 0 (not found)");
+        logIf(ff_debug_enabled, "video < 0 (not found)");
         return FAIL;
     }
 
     AVCodecParameters *codecPar = ff.fmtCtx->streams[videoIdx]->codecpar;
     const AVCodec *codec = avcodec_find_decoder(codecPar->codec_id);
     if(!codec) {
-        logIfCV(debug_ffmpeg, "avcodec_find_decoder({}) failed", (u32)codecPar->codec_id);
+        logIf(ff_debug_enabled, "avcodec_find_decoder({}) failed", (u32)codecPar->codec_id);
         return FAIL;
     }
 
     ff.codecCtx = avcodec_alloc_context3(codec);
     if(!ff.codecCtx) {
-        logIfCV(debug_ffmpeg, "avcodec_alloc_context3 failed");
+        logIf(ff_debug_enabled, "avcodec_alloc_context3 failed");
         return FAIL;
     }
 
     if(int averr = avcodec_parameters_to_context(ff.codecCtx, codecPar); averr != 0) {
-        logIfCV(debug_ffmpeg, "avcodec_parameters_to_context failed: {:s}", av_err2str(averr));
+        logIf(ff_debug_enabled, "avcodec_parameters_to_context failed: {:s}", av_err2str(averr));
         return FAIL;
     }
 
     if(int averr = avcodec_open2(ff.codecCtx, codec, nullptr); averr != 0) {
-        logIfCV(debug_ffmpeg, "avcodec_open2 failed: {:s}", av_err2str(averr));
+        logIf(ff_debug_enabled, "avcodec_open2 failed: {:s}", av_err2str(averr));
         return FAIL;
     }
 
     ff.pkt = av_packet_alloc();
     ff.frame = av_frame_alloc();
     if(!ff.pkt || !ff.frame) {
-        logIfCV(debug_ffmpeg, "{:s} failed", !ff.pkt ? "av_packet_alloc" : "av_frame_alloc");
+        logIf(ff_debug_enabled, "{:s} failed", !ff.pkt ? "av_packet_alloc" : "av_frame_alloc");
         return FAIL;
     }
 
@@ -199,7 +205,7 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
     }
 
     if(!decoded) {
-        logIfCV(debug_ffmpeg, "!decoded");
+        logIf(ff_debug_enabled, "!decoded");
         return FAIL;
     }
 
@@ -211,6 +217,28 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
     }
 
     if(this_->isInterrupted()) return INTERRUPTED;
+
+    // normalize deprecated YUVJ pixel formats (JPEG decoders still emit these)
+    switch(ff.frame->format) {
+        case AV_PIX_FMT_YUVJ420P:
+            ff.frame->format = AV_PIX_FMT_YUV420P;
+            ff.frame->color_range = AVCOL_RANGE_JPEG;
+            break;
+        case AV_PIX_FMT_YUVJ422P:
+            ff.frame->format = AV_PIX_FMT_YUV422P;
+            ff.frame->color_range = AVCOL_RANGE_JPEG;
+            break;
+        case AV_PIX_FMT_YUVJ444P:
+            ff.frame->format = AV_PIX_FMT_YUV444P;
+            ff.frame->color_range = AVCOL_RANGE_JPEG;
+            break;
+        case AV_PIX_FMT_YUVJ440P:
+            ff.frame->format = AV_PIX_FMT_YUV440P;
+            ff.frame->color_range = AVCOL_RANGE_JPEG;
+            break;
+        default:
+            break;
+    }
 
     // convert to RGBA (frame-based API handles color range/space from frame metadata)
     ff.swsCtx = sws_alloc_context();
@@ -229,7 +257,7 @@ ImageDecodeResult decodeFFmpegFromMemory(Image *this_, const u8 *inData, u64 siz
     ff.rgbaFrame->height = outHeight;
 
     if(int averr = sws_scale_frame(ff.swsCtx, ff.rgbaFrame, ff.frame); averr < 0) {
-        logIfCV(debug_ffmpeg, "sws_scale_frame failed: {:s}", av_err2str(averr));
+        logIf(ff_debug_enabled, "sws_scale_frame failed: {:s}", av_err2str(averr));
         return FAIL;
     }
 

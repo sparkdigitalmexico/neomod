@@ -205,6 +205,12 @@ AC_DEFUN([AC_PROG_PATCHELF], [
         AC_MSG_ERROR([patchelf not found - required for fixing up dependencies])
     fi
 ])
+AC_DEFUN([AC_PROG_INSTALL_NAME_TOOL], [
+    AC_CHECK_PROG([INSTALL_NAME_TOOL], [install_name_tool], [install_name_tool])
+    if test -z "$INSTALL_NAME_TOOL"; then
+        AC_MSG_ERROR([install_name_tool not found - required for fixing up dependencies])
+    fi
+])
 # needed for building libjpeg (if building it is required)
 AC_DEFUN([AC_PROG_NASM], [
     AC_CHECK_PROG([NASM], [nasm], [nasm])
@@ -400,6 +406,10 @@ AS_IF([test "$host_os" = "linux-gnu"], [
     AC_PROG_PATCHELF # only need this for linux
 ])
 
+AS_CASE(["$host_os"], [darwin*], [
+    AC_PROG_INSTALL_NAME_TOOL # only need this for macos
+])
+
 AS_IF([test "$host_os" = "mingw32"], [
     NEOMOD_CPPFLAGS="$NEOMOD_CPPFLAGS -D_UNICODE -DUNICODE=1"
     NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -D_UNICODE -DUNICODE=1 -municode"
@@ -473,7 +483,7 @@ AS_IF([test "x$use_dx11" = "xyes" ], [
 
 AS_IF([test "x$use_sdlgpu" = "xyes" ], [
     AC_PROG_GLSLC
-    AS_CASE([$host_os], [darwin*], [], [
+    AS_CASE(["$host_os"], [darwin*], [], [
         AS_IF([test -z "$GLSLC"], [
             AC_MSG_ERROR([neither glslc nor glslangValidator found - required for compiling GLSL shaders to SPIR-V])
         ])
@@ -937,15 +947,15 @@ AS_IF([test "$host_os" = "mingw32"], [
         # set library search paths if not already provided
         AS_VAR_SET_IF([PKG_CONFIG_SYSTEM_LIBRARY_PATH],
             [pc_syslibpath="$PKG_CONFIG_SYSTEM_LIBRARY_PATH"], [
-            pc_syslibpath="$($CC -print-search-dirs | grep '^libraries:' | sed 's/libraries: =//')"
+            pc_syslibpath="$($CC -print-search-dirs | $GREP '^libraries:' | $SED 's/libraries: =//')"
         ])
 
         # set include search paths if not already provided
         AS_VAR_SET_IF([PKG_CONFIG_SYSTEM_INCLUDE_PATH],
             [pc_sysincpath="$PKG_CONFIG_SYSTEM_INCLUDE_PATH"], [
             pc_sysincpath="$($CC -E -v -x c /dev/null 2>&1 >/dev/null | \
-                sed -n '/#include <...> search starts here:/,/End of search list./p' | \
-                sed '1d;$d' | sed 's/^ //' | tr '\n' ':' | sed 's/:$//')"
+                $SED -n '/#include <...> search starts here:/,/End of search list./p' | \
+                $SED '1d;$d' | $SED 's/^ //' | tr '\n' ':' | $SED 's/:$//')"
         ])
 
         # set pkg-config library directory if not already provided
@@ -1199,8 +1209,8 @@ AS_IF([test "x$enable_debug" = "xyes"], [
     AS_IF([test "x$enable_optimize" != "xno"], [
         CPPFLAGS="$CPPFLAGS -DNDEBUG -D_NDEBUG"
         # put it at the start so -O3 is overrideable from the command line
-        CXXFLAGS="-O3 $(printf '%s' "$CXXFLAGS" | sed 's/-O2//g')" # where do those -g -O2 flags even come from...
-        CFLAGS="-O3 $(printf '%s' "$CFLAGS" | sed 's/-O2//g')"
+        CXXFLAGS="-O3 $(printf '%s' "$CXXFLAGS" | $SED 's/-O2//g')" # where do those -g -O2 flags even come from...
+        CFLAGS="-O3 $(printf '%s' "$CFLAGS" | $SED 's/-O2//g')"
         NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,-O1"
 
         AS_IF([test "x$enable_clang" != "xyes" && test -z "$WASM_CC"], [
@@ -1581,7 +1591,7 @@ AS_IF([test "x$enable_system_deps" != "xno"], [
     PKG_CHECK_AUTO([FREETYPE2], [freetype2 >= $FREETYPE2_MIN_VERSION], [have_freetype2=yes], [have_freetype2=no])
     AS_IF([test "x$have_freetype2" = "xyes"], [
         # check if the system freetype was built with brotli (needed for WOFF2)
-        AS_IF([$PKG_CONFIG --static --libs freetype2 | grep -i brotli >/dev/null 2>&1], [], [
+        AS_IF([$PKG_CONFIG --static --libs freetype2 | $GREP -i brotli >/dev/null 2>&1], [], [
             AC_MSG_NOTICE([System freetype2 does not seem to have brotli support (needed for WOFF2). Will build freetype2 from source.])
             have_freetype2=no
         ])
@@ -1825,7 +1835,7 @@ AM_CONDITIONAL([BUILD_PCH], [test "$using_pch" = "yes"])
 
 # copy winpthread dll to install directory
 AS_IF([test "$SYSNAME" = "windows" && test "x$enable_static" != "xyes"], [
-    WINSHARED_DLLS="$($CC -print-search-dirs | grep '^programs:' | sed 's/programs: =//' | tr ':' '\n' | while read dir; do
+    WINSHARED_DLLS="$($CC -print-search-dirs | $GREP '^programs:' | $SED 's/programs: =//' | tr ':' '\n' | while read dir; do
                         if test -n "$dir"; then
                             find "$dir" -name "libwinpthread-1.dll" 2>/dev/null
                         fi

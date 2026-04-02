@@ -1500,7 +1500,7 @@ endif # BUILD_PCH
 $(neomod_OBJECTS): $(BUILT_SOURCES) $(PCH_OUTPUT) | $(EMBED_OUTPUT)
 
 # add all paths with sources as an include ("-I") flag
-NEOMOD_INCLUDE_FLAGS := $(shell find $(srcdir)/src -not -path '*/.*' -type d -print | sed 's|^|-I|' | tr '\n' ' ')
+NEOMOD_INCLUDE_FLAGS := $(shell find $(srcdir)/src -not -path '*/.*' -type d -print | $(SED) 's|^|-I|' | tr '\n' ' ')
 
 neomod_CPPFLAGS := $(NEOMOD_CPPFLAGS)
 
@@ -1654,7 +1654,7 @@ endif
 
 $(abs_top_srcdir)/.clangd: compile_commands.json
 	@if [ -f $@ ]; then { \
-		if grep -q "CompilationDatabase:" $@; then { \
+		if $(GREP) -q "CompilationDatabase:" $@; then { \
 			$(SED) -i 's|CompilationDatabase:.*|CompilationDatabase: $(shell $(REALPATH) --relative-to=$(abs_top_srcdir) $(CURDIR))|g' $@; \
 		}; else { \
 			echo "CompileFlags:" >> $@; \
@@ -1809,6 +1809,29 @@ INSTALL_RPATH_STAMP += stamp-install-rpath
 INSTALL_STAMPS += stamp-install-rpath
 endif
 
+# --- install_name_tool rpath (macos only) ---
+# rewrite absolute build-time install names to @loader_path so dylibs resolve
+# their dependencies from the directory they were installed to, not the build tree
+if MACOS_PLATFORM
+stamp-install-rpath: stamp-install-sharedlibs
+	@for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)/lib"; do \
+		test -d "$$dir" || continue; \
+		find "$$dir" -maxdepth 1 -name '*.dylib' | while read -r lib; do \
+			$(INSTALL_NAME_TOOL) -id "@loader_path/$$(basename "$$lib")" "$$lib" 2>/dev/null; \
+			otool -L "$$lib" | $(SED) -n 's/^[[:space:]]*\([^[:space:]]*\).*/\1/p' | while read -r dep; do \
+				depbn=$$(basename "$$dep"); \
+				if test -f "$$dir/$$depbn"; then \
+					$(INSTALL_NAME_TOOL) -change "$$dep" "@loader_path/$$depbn" "$$lib" 2>/dev/null; \
+				fi; \
+			done; \
+		done; \
+	done
+	@touch $@
+
+INSTALL_RPATH_STAMP += stamp-install-rpath
+INSTALL_STAMPS += stamp-install-rpath
+endif
+
 # --- strip binaries (must run after rpath to avoid racing on the same files) ---
 if STRIPBINS
 stamp-install-strip: stamp-install-sharedlibs $(INSTALL_RPATH_STAMP) $(bin_PROGRAMS)
@@ -1868,7 +1891,7 @@ if MACOS_PLATFORM
 	@echo "  BUNDLE neomod.app"
 	@$(MKDIR_P) "$(DESTDIR)$(prefix)/neomod.app/Contents/Resources"
 	@printf 'APPL????' > "$(DESTDIR)$(prefix)/neomod.app/Contents/PkgInfo"
-	@sed 's/%%VERSION%%/$(PACKAGE_VERSION)/g' \
+	@$(SED) 's/%%VERSION%%/$(PACKAGE_VERSION)/g' \
 		"$(srcdir)/assets/Info.plist.in" > "$(DESTDIR)$(prefix)/neomod.app/Contents/Info.plist"
 	@cp "$(srcdir)/assets/neomod.icns" \
 		"$(DESTDIR)$(prefix)/neomod.app/Contents/Resources/neomod.icns"

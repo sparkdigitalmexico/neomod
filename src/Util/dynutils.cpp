@@ -21,7 +21,11 @@
 
 #else
 #define LPREFIX "lib"
+#ifdef MCENGINE_PLATFORM_MACOS
+#define LSUFFIX ".dylib"
+#else
 #define LSUFFIX ".so"
+#endif
 #endif
 
 #define LNAMESTR(lib) fmt::format(LPREFIX "{:s}" LSUFFIX, (lib))
