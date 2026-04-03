@@ -328,9 +328,12 @@ bool import_from_osu_stable() {
         return false;
     }
 
-    std::string cfg_path = fmt::format("{}/osu!.{}.cfg", cv::osu_folder.getString(), username);
+    std::string cfg_path = fmt::format("{}/osu!.{}.cfg", osu_folder, username);
     File file(cfg_path);
-    if(!file.canRead()) return false;
+    if(!file.canRead()) {
+        debugLog("{} doesn't exist/isn't readable", cfg_path);
+        return false;
+    }
 
     std::string str;
     bool b;
