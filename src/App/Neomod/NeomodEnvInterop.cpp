@@ -572,7 +572,7 @@ void neomod::handleExistingWindow(int argc, char *argv[]) {
     }
 }
 
-#elif defined(MCENGINE_PLATFORM_LINUX)
+#elif defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
 
 #include "NetworkHandler.h"
 #include "SString.h"

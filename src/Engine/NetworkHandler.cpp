@@ -21,7 +21,7 @@
 #include <queue>
 #include <atomic>
 
-#ifdef MCENGINE_PLATFORM_LINUX
+#if defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
@@ -206,7 +206,7 @@ struct NetworkImpl {
 
         curl_global_cleanup();
 
-#ifdef MCENGINE_PLATFORM_LINUX
+#if defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
         // close IPC socket so restart works (this instance is gone)
         if(int sock = this->ipc_socket_fd.load(std::memory_order_acquire); sock != -1) {
             close(sock);
@@ -246,7 +246,7 @@ struct NetworkImpl {
     CURLM* multi_handle{nullptr};
     Sync::jthread network_thread;
 
-    // IPC socket for instance detection (Linux)
+    // IPC socket for instance detection (Linux/macOS)
     std::atomic<int> ipc_socket_fd{-1};
     IPCCallback ipc_callback;
     Sync::mutex ipc_mutex;
@@ -273,7 +273,7 @@ void NetworkImpl::threadLoopFunc(const Sync::stop_token& stopToken) {
 
     Sync::stop_callback stop_cb(stopToken, [this] { curl_multi_wakeup(this->multi_handle); });
 
-#ifdef MCENGINE_PLATFORM_LINUX
+#if defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
     int ipc_socket_local = -1;
 #endif
 
@@ -295,7 +295,7 @@ void NetworkImpl::threadLoopFunc(const Sync::stop_token& stopToken) {
         // wait for activity on curl handles (including websockets) and IPC socket;
         // woken by curl_multi_wakeup() when new requests are submitted
         int numfds = 0;
-#ifdef MCENGINE_PLATFORM_LINUX
+#if defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
         curl_waitfd ipc_fd{};
         if(ipc_socket_local == -1) {
             ipc_socket_local = this->ipc_socket_fd.load(std::memory_order_acquire);
@@ -755,7 +755,7 @@ void NetworkImpl::setIPCSocket(int fd, IPCCallback callback) {
 }
 
 void NetworkImpl::handleIPCConnection([[maybe_unused]] int ipc_fd) {
-#ifdef MCENGINE_PLATFORM_LINUX
+#if defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
     int client_fd = accept(ipc_fd, nullptr, nullptr);
     if(client_fd < 0) return;
 
