@@ -191,7 +191,7 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
 int OpenGLShader::getAttribLocation(std::string_view name) {
     if(unlikely(!this->isReady()) || name.empty()) return -1;
 
-    return MCglGetAttribLocation(this->iProgram, name.data());
+    return MCglGetAttribLocation(this->iProgram, std::string{name}.c_str());
 }
 
 int OpenGLShader::getAndCacheUniformLocation(std::string_view name) {
@@ -200,7 +200,7 @@ int OpenGLShader::getAndCacheUniformLocation(std::string_view name) {
     const auto cachedValue = this->uniformLocationCache.find(name);
     const bool cached = (cachedValue != this->uniformLocationCache.end());
 
-    const int id = (cached ? cachedValue->second : MCglGetUniformLocation(this->iProgram, name.data()));
+    const int id = (cached ? cachedValue->second : MCglGetUniformLocation(this->iProgram, std::string{name}.c_str()));
     if(!cached && id != -1) this->uniformLocationCache.emplace(name, id);
 
     return id;

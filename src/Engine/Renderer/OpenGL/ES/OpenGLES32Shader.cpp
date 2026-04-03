@@ -100,7 +100,7 @@ int OpenGLES32Shader::getAndCacheUniformLocation(std::string_view name) {
     const auto cachedValue = m_uniformLocationCache.find(name);
     const bool cached = (cachedValue != m_uniformLocationCache.end());
 
-    const int id = (cached ? cachedValue->second : glGetUniformLocation(m_iProgram, name.data()));
+    const int id = (cached ? cachedValue->second : glGetUniformLocation(m_iProgram, std::string{name}.c_str()));
     if(!cached && id != -1) m_uniformLocationCache.emplace(name, id);
 
     return id;
@@ -154,7 +154,7 @@ void OpenGLES32Shader::writeUniform(std::string_view name, UniformType type, con
 int OpenGLES32Shader::getAttribLocation(std::string_view name) {
     if(unlikely(!this->isReady()) || name.empty()) return -1;
 
-    return glGetAttribLocation(m_iProgram, name.data());
+    return glGetAttribLocation(m_iProgram, std::string{name}.c_str());
 }
 
 bool OpenGLES32Shader::isActive() {
