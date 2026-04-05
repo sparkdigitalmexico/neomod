@@ -10,6 +10,12 @@
 #define FILE_H
 #include "config.h"
 
+// MSVC things
+#ifdef _CRT_INTERNAL_NONSTDC_NAMES
+#undef _CRT_INTERNAL_NONSTDC_NAMES
+#endif
+#define _CRT_INTERNAL_NONSTDC_NAMES 1
+
 #include "noinclude.h"
 #include "types.h"
 
@@ -17,6 +23,7 @@
 #include <fstream>
 #include <memory>
 #include <vector>
+
 #include <sys/stat.h>
 
 #ifdef MCENGINE_PLATFORM_WINDOWS
