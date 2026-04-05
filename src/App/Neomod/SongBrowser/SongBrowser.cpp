@@ -2378,14 +2378,8 @@ void SongBrowser::rebuildScoreButtons() {
         // build
         std::vector<ScoreButton *> scoreButtons;
         for(int i = 0; i < numScores; i++) {
-            auto &sc = scores[i];
-            if(map) {
-                // preload pp immediately (flicker reduction)
-                sc.map = map;
-                sc.get_or_calc_pp();
-            }
             ScoreButton *button = this->scoreButtonCache[i];
-            button->setScore(sc, map, i + 1);
+            button->setScore(scores[i], map, i + 1);
             scoreButtons.push_back(button);
         }
 
