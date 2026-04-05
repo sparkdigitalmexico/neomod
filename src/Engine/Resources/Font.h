@@ -61,7 +61,12 @@ class McFont final : public Resource {
     [[nodiscard]] float getGlyphHeight(char32_t character) const;
     [[nodiscard]] float getStringWidth(std::string_view text) const;
     [[nodiscard]] float getStringHeight(std::string_view text) const;
+
+    // return "text" broken up into a vector of strings which are wrapped at word boundaries, with each fitting within max_width
     [[nodiscard]] std::vector<std::string> wrap(std::string_view text, f64 max_width) const;
+
+    // return a representation of "text" which fits within max_width, possibly truncated with ... appended
+    [[nodiscard]] std::string ellipsize(std::string_view text, f64 max_width) const;
 
    public:
     McFont *asFont() override { return this; }

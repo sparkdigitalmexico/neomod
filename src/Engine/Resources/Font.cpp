@@ -254,6 +254,7 @@ struct McFontImpl final {
 
     // Public util
     [[nodiscard]] std::vector<std::string> wrap(std::string_view text, f64 max_width) const;
+    [[nodiscard]] std::string ellipsize(std::string_view text, f64 max_width) const;
 
    private:
     // Shared ctor helper
@@ -357,7 +358,7 @@ float McFont::getStringHeight(std::string_view text) const { return pImpl->getSt
 std::vector<std::string> McFont::wrap(std::string_view text, f64 max_width) const {
     return pImpl->wrap(text, max_width);
 }
-
+std::string McFont::ellipsize(std::string_view text, f64 max_width) const { return pImpl->ellipsize(text, max_width); }
 ////////////////////////////////////////////////////////////////////////////////////
 // Public passthroughs end, implementation begins
 ////////////////////////////////////////////////////////////////////////////////////
@@ -784,6 +785,29 @@ std::vector<std::string> McFontImpl::wrap(std::string_view text, f64 max_width) 
     lines[line].append(word);
 
     return lines;
+}
+
+std::string McFontImpl::ellipsize(std::string_view text, f64 max_width) const {
+    if(!m_parent->isReady()) return std::string{text};
+
+    // if the full string fits, return it as-is
+    if(getStringWidth(text) <= max_width) return std::string{text};
+
+    const f64 ellipsis_width = getGlyphMetrics(U'.').advance_x * 3.0;
+
+    // find how many codepoints fit with room for "..."
+    std::string ret;
+    f64 width = 0.0;
+    for(char32_t ch : UniString::codepoints(text)) {
+        const f64 ch_width = getGlyphMetrics(ch).advance_x;
+        if(width + ch_width + ellipsis_width > max_width) break;
+        const char32_t charray[]{ch, U'\0'};
+        ret.append(UniString::to_utf8(std::u32string_view{&charray[0]}));
+        width += ch_width;
+    }
+
+    ret.append("...");
+    return ret;
 }
 
 // Internal helper methods

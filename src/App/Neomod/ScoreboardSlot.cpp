@@ -106,6 +106,7 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
     {
         const std::string indexString = fmt::format("{:d}"_cf, this->index + 1);
         const float scale = (avatar_height / font_bold->getHeight()) * 0.5f;
+        const TextFX indexShadow{.col_text = Color(0xffffffff).setA(0.7f * alpha), .col_shadow = Color(0xff000000).setA(0.3f * alpha), .offs_px = 0.5f};
 
         g->scale(scale, scale);
 
@@ -113,21 +114,14 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
         g->translate(avatar_width / 2.0f - (font_bold->getStringWidth(indexString) * scale / 2.0f),
                      start_y + (avatar_height / 2.0f) + font_bold->getHeight() * scale / 2.0f * 0.9f);
 
-        g->translate(0.5f, 0.5f);
-        g->setColor(Color(0xff000000).setA(0.3f * alpha));
-
-        g->drawString(font_bold, indexString);
-
-        g->translate(-0.5f, -0.5f);
-        g->setColor(Color(0xffffffff).setA(0.7f * alpha));
-
-        g->drawString(font_bold, indexString);
+        g->drawString(font_bold, indexString, indexShadow);
     }
     g->popTransform();
 
-    // Draw name
     const bool drawTextShadow = (cv::background_dim.getFloat() < 0.7f);
-    const Color textShadowColor = 0x66000000;
+    TextFX textShadow{.col_shadow = drawTextShadow ? Color(0x66000000).setA((f32)alpha) : Color(0)};
+
+    // Draw name
     const float nameScale = 0.315f;
 
     g->pushTransform();
@@ -137,18 +131,18 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
         const float scale = (height / font_normal->getHeight()) * nameScale;
         g->scale(scale, scale);
         g->translate(avatar_width + padding, start_y + padding + font_normal->getHeight() * scale);
-        if(drawTextShadow) {
-            g->translate(1, 1);
-            g->setColor(Color(textShadowColor).setA((f32)alpha));
 
-            g->drawString(font_normal, this->score.name);
-            g->translate(-1, -1);
+        const Color textColor = Color(slot_colors[OTHER][cur_slot_color_effect]).setA(alpha);
+        // text color is not applied in drawString if no text effects are used (e.g. text shadow with 0 alpha)
+        // so set color manually in that case
+        if(drawTextShadow) {
+            textShadow.col_text = textColor;
+        } else {
+            g->setColor(textColor);
         }
 
-        g->setColor(slot_colors[OTHER][cur_slot_color_effect]);
-
-        g->setAlpha(alpha);
-        g->drawString(font_normal, this->score.name);
+        const std::string nameEllipsized = font_normal->ellipsize(this->score.name, (width - 2 * padding) / scale);
+        g->drawString(font_normal, nameEllipsized, textShadow);
         g->popClipRect();
     }
     g->popTransform();
@@ -166,18 +160,14 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
         g->scale(scoreScale, scoreScale);
         g->translate(avatar_width + width - stringWidth * scoreScale - padding * 1.35f, start_y + height - 2 * padding);
 
+        const Color textColor = Color(slot_colors[COMBOACC][cur_slot_color_effect]).setA(alpha);
         if(drawTextShadow) {
-            g->translate(1, 1);
-            g->setColor(Color(textShadowColor).setA((f32)alpha));
-
-            g->drawString(font_normal, comboString);
-            g->translate(-1, -1);
+            textShadow.col_text = textColor;
+        } else {
+            g->setColor(textColor);
         }
 
-        g->setColor(slot_colors[COMBOACC][cur_slot_color_effect]);
-
-        g->setAlpha(alpha);
-        g->drawString(font_normal, comboString);
+        g->drawString(font_normal, comboString, textShadow);
     }
     g->popTransform();
 
@@ -207,18 +197,14 @@ void ScoreboardSlot::draw(WinCondition scoring_metric, float override_alpha) {
             g->scale(scoreScale, scoreScale);
             g->translate(avatar_width + padding * 1.35f, start_y + height - 2 * padding);
 
+            const Color textColor = Color(slot_colors[wincond_based_coltype][cur_slot_color_effect]).setA(alpha);
             if(drawTextShadow) {
-                g->translate(1, 1);
-                g->setColor(Color(textShadowColor).setA((f32)alpha));
-
-                g->drawString(font_normal, wincond_based_scoretext);
-                g->translate(-1, -1);
+                textShadow.col_text = textColor;
+            } else {
+                g->setColor(textColor);
             }
 
-            g->setColor(slot_colors[wincond_based_coltype][cur_slot_color_effect]);
-
-            g->setAlpha(alpha);
-            g->drawString(font_normal, wincond_based_scoretext);
+            g->drawString(font_normal, wincond_based_scoretext, textShadow);
         }
         g->popTransform();
     }
