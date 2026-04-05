@@ -264,19 +264,22 @@ bool load_raw(std::string_view lzma_path, FinishedScore& score_out) {
 }  // namespace
 
 bool load_from_disk(FinishedScore& score, bool update_db) {
-    const bool is_peppy = score.peppy_replay_tms > 0;
-    const auto path =
-        is_peppy
-            ? fmt::format("{}/Data/r/{}-{}.osr", cv::osu_folder.getString(), score.beatmap_hash, score.peppy_replay_tms)
-            : fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
-
-    if(is_peppy) {
-        if(!load_osr(path, score)) return false;
-    } else {
-        if(!load_raw(path, score)) return false;
+    bool succeeded = false;
+    if(score.peppy_replay_tms > 0) {  // peppy score
+        const std::string path =
+            fmt::format("{}/Data/r/{}-{}.osr", cv::osu_folder.getString(), score.beatmap_hash, score.peppy_replay_tms);
+        succeeded = load_osr(path, score);
+    } else {  // neomod score
+        std::string path = fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
+        succeeded = load_raw(path, score);
+        if(!succeeded) {
+            // try local path
+            path = fmt::format(NEOMOD_REPLAYS_PATH "/{}.replay.lzma", score.unixTimestamp);
+            succeeded = load_raw(path, score);
+        }
     }
 
-    if(update_db) {
+    if(succeeded && update_db) {
         Sync::unique_lock lk(db->scores_mtx);
         if(const auto& it = db->getScoresMutable().find(score.beatmap_hash); it != db->getScoresMutable().end()) {
             if(auto scorevecIt = std::ranges::find(it->second, score); scorevecIt != it->second.end()) {
@@ -285,7 +288,7 @@ bool load_from_disk(FinishedScore& score, bool update_db) {
         }
     }
 
-    return true;
+    return succeeded;
 }
 
 void load_and_watch(FinishedScore score) {
