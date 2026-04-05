@@ -897,8 +897,12 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
                       &cv::mod_touchdevice_always);
 
     this->addSubSection("Songbrowser");
-    this->addCheckbox("Prefer metadata in original language", &cv::prefer_cjk);
-    this->elemContainers.back()->searchTags = "native character cjk";
+    // Fallback font support is currently implemented for these platforms
+    // Remember to update this if adding support for another platform
+    if constexpr(Env::cfg(OS::LINUX | OS::WINDOWS)) {
+        this->addCheckbox("Prefer metadata in original language", &cv::prefer_cjk);
+        this->elemContainers.back()->searchTags = "native character cjk";
+    }
     this->addCheckbox("Draw Strain Graph in Songbrowser",
                       "Hold either SHIFT/CTRL to show only speed/aim strains.\nSpeed strain is red, aim strain is "
                       "green.\n(See osu_hud_scrubbing_timeline_strains_*)",
