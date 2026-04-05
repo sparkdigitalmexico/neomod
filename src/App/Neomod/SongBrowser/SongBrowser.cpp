@@ -2376,10 +2376,16 @@ void SongBrowser::rebuildScoreButtons() {
         this->scoreBrowser->container.addBaseUIElement(toAdd, this->scoreBrowserScoresStillLoadingElement->getRelPos());
     } else {
         // build
+        CBaseUIEventCtx fakeHack;
+        fakeHack.consume_mouse();
         std::vector<ScoreButton *> scoreButtons;
         for(int i = 0; i < numScores; i++) {
             ScoreButton *button = this->scoreButtonCache[i];
             button->setScore(scores[i], map, i + 1);
+            button->setVisible(false);
+            // HACKHACK: preload pp immediately (flicker reduction)
+            // ScoreButton::update should not have a side effect of updating the database!
+            button->update(fakeHack);
             scoreButtons.push_back(button);
         }
 
