@@ -38,6 +38,7 @@ Changelog::Changelog() : ScreenBackable() {
     v43_10.title = "43.10 (" CHANGELOG_TIMESTAMP ")";
     v43_10.changes = {
         R"(- Settings forced by a skin or a server are now grayed out in the options menu)",
+        R"(- Updated osu! version to b20260412.1)",
         R"(- (Web) URL now updates to match current page)",
     };
     changelogs.push_back(v43_10);
