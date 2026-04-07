@@ -2,6 +2,9 @@
 // Copyright (c) 2016, PG, All rights reserved.
 #include "ModFlags.h"
 
+// TODO: maybe we should rename this to something other than "Replay" (or move code somewhere else)
+//       i just kept adding more stuff to McOsu's .h file! and now it makes little sense.
+
 class DatabaseBeatmap;
 
 namespace Replay {

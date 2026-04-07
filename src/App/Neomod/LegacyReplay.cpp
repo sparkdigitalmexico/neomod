@@ -7,7 +7,10 @@
 #include <lzma.h>
 
 #include "AsyncIOHandler.h"
-#include "OsuConVars.h"
+#include "ByteBufferedFile.h"
+#include "ConVar.h"
+#include "ConVarHandler.h"
+#include "crypto.h"
 #include "Bancho.h"
 #include "BanchoApi.h"
 #include "File.h"
@@ -17,6 +20,7 @@
 #include "NetworkHandler.h"
 #include "NotificationOverlay.h"
 #include "Osu.h"
+#include "OsuConVars.h"
 #include "SongBrowser.h"
 #include "score.h"
 #include "Parsing.h"
@@ -205,7 +209,8 @@ Info from_bytes(u8* data, uSz s_data) {
     }
 
     // XXX: handle lazer replay data (versions 30000001 to 30000016)
-    // XXX: handle neomod replay data (versions 40000000+?)
+
+    // TODO: handle neomod replay data (versions 40000000+)
 
     return info;
 }
@@ -246,6 +251,67 @@ bool load_osr(std::string_view osr_path, FinishedScore& score_out) {
     return true;
 }
 
+bool save_osr(const FinishedScore& score, bool include_cvars) {
+    if(score.replay.empty()) {
+        debugLog("Cannot save empty replay!");
+        return false;
+    }
+
+    auto osr_path =
+        fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}-{}.osr", score.server, score.player_id, score.unixTimestamp);
+    ByteBufferedFile::Writer osr(osr_path);
+    if(!osr.good()) {
+        debugLog("Cannot save replay to {}: {}", osr_path, osr.error());
+        return false;
+    }
+
+    auto compressed_replay = LegacyReplay::compress_frames(score.replay);
+    auto compressed_replay_hash = crypto::hash::md5_hex(compressed_replay.data(), compressed_replay.size());
+
+    osr.write<u8>(0);          // ruleset
+    osr.write<u32>(40000000);  // osu_version (30m+ is lazer-specific, 40m+ is neomod-specific)
+    osr.write_string(score.beatmap_hash.to_chars().string());
+    osr.write_string(score.playerName);
+    osr.write_string(compressed_replay_hash.string());
+    osr.write<u16>(score.num300s);
+    osr.write<u16>(score.num100s);
+    osr.write<u16>(score.num50s);
+    osr.write<u16>(score.numGekis);
+    osr.write<u16>(score.numKatus);
+    osr.write<u16>(score.numMisses);
+    osr.write<u32>(score.score);
+    osr.write<u16>(score.comboMax);
+    osr.write<u8>(score.perfect);
+    osr.write<u32>((u32)score.mods.to_legacy());
+    osr.write_string(""sv);  // life_bar_graph
+    osr.write<i64>(score.unixTimestamp * TICKS_PER_SECOND + UNIX_EPOCH_TICKS);
+    osr.write<i32>(compressed_replay.size());
+    osr.write_bytes(compressed_replay.data(), compressed_replay.size());
+    osr.write<i64>(score.bancho_score_id);
+
+    // neomod-specific
+    Replay::Mods::pack_and_write(osr, score.mods);
+
+    if(include_cvars) {
+        std::vector<ConVar*> saveable_cvars;
+        for(auto* cvar : cvars().getConVarArray()) {
+            // Very important: do not save passwords in replays
+            if(cvar->isFlagSet(cv::HIDDEN)) continue;
+            if(cvar->isFlagSet(cv::NOSAVE)) continue;
+
+            saveable_cvars.push_back(cvar);
+        }
+
+        osr.write<u32>(saveable_cvars.size());
+        for(auto* cvar : saveable_cvars) {
+            osr.write_string(cvar->getName());
+            osr.write_string(cvar->getString());
+        }
+    }
+
+    return true;
+}
+
 namespace {
 bool load_raw(std::string_view lzma_path, FinishedScore& score_out) {
     uSz file_size = 0;
@@ -260,22 +326,55 @@ bool load_raw(std::string_view lzma_path, FinishedScore& score_out) {
     score_out.replay = get_frames(buffer.get(), file_size);
     return !score_out.replay.empty();
 }
+
+void watch(FinishedScore score) {
+    if(score.replay.empty()) {
+        ui->getNotificationOverlay()->addToast("Failed to load replay", ERROR_TOAST);
+        return;
+    }
+
+    auto* map = db->getBeatmapDifficulty(score.beatmap_hash);
+    if(map == nullptr) {
+        // XXX: Auto-download beatmap
+        ui->getNotificationOverlay()->addToast("Missing beatmap for this replay", ERROR_TOAST);
+    } else {
+        ui->getSongBrowser()->onDifficultySelected(map, false);
+        ui->getSongBrowser()->selectSelectedBeatmapSongButton();
+        osu->getMapInterface()->watch(score, 0);
+    }
+}
 }  // namespace
 
 bool load_from_disk(FinishedScore& score, bool update_db) {
     bool succeeded = false;
-    if(score.peppy_replay_tms > 0) {  // peppy score
+
+    // peppy score
+    if(score.peppy_replay_tms > 0) {
         const std::string path =
             fmt::format("{}/Data/r/{}-{}.osr", cv::osu_folder.getString(), score.beatmap_hash, score.peppy_replay_tms);
         succeeded = load_osr(path, score);
-    } else {  // neomod score
-        std::string path = fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
-        succeeded = load_raw(path, score);
-        if(!succeeded) {
-            // try local path
-            path = fmt::format(NEOMOD_REPLAYS_PATH "/{}.replay.lzma", score.unixTimestamp);
-            succeeded = load_raw(path, score);
-        }
+    }
+
+    // neomod 43.09+
+    if(!succeeded) {
+        // Quirk that will totally never bite us in the ass: if score was set offline,
+        // server is "" and windows/linux/osx ignore the extra "/" in the path
+        std::string osr_path =
+            fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}-{}.osr", score.server, score.player_id, score.unixTimestamp);
+        succeeded = load_osr(osr_path, score);
+    }
+
+    // neomod (legacy)
+    if(!succeeded) {
+        std::string lzma_path =
+            fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
+        succeeded = load_raw(lzma_path, score);
+    }
+
+    // neomod (legacy) (we sometimes saved the replay in the wrong location...)
+    if(!succeeded) {
+        std::string lzma_path = fmt::format(NEOMOD_REPLAYS_PATH "/{}.replay.lzma", score.unixTimestamp);
+        succeeded = load_raw(lzma_path, score);
     }
 
     if(succeeded && update_db) {
@@ -291,65 +390,49 @@ bool load_from_disk(FinishedScore& score, bool update_db) {
 }
 
 void load_and_watch(FinishedScore score) {
-    // Check if replay is loaded
-    if(score.replay.empty()) {
-        if(!load_from_disk(score, true)) {
-            if(score.server != BanchoState::endpoint) {
-                auto msg = fmt::format("Please connect to {} to view this replay!", score.server);
-                ui->getNotificationOverlay()->addToast(msg, ERROR_TOAST);
-            }
-
-            std::string url = "osu." + BanchoState::endpoint;
-            url.append(fmt::format("/web/osu-getreplay.php?m=0&c={}", score.bancho_score_id));
-            BANCHO::Api::append_auth_params(url);
-
-            Mc::Net::RequestOptions options{
-                .user_agent = "osu!",
-                .timeout = 5,
-                .connect_timeout = 5,
-            };
-            networkHandler->httpRequestAsync(url, std::move(options), [score](const Mc::Net::Response& response) {
-                if(response.success) {
-                    auto replay_path =
-                        fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
-
-                    // TODO: progress bars? how do we make sure the user doesnt do anything weird while its saving to disk and break the flow
-                    debugLog("Saving replay to {}...", replay_path);
-
-                    io->write(replay_path, (const u8*)response.body.data(), response.body.size(),
-                              [score](bool success) {
-                                  if(success) {
-                                      LegacyReplay::load_and_watch(score);
-                                  } else {
-                                      ui->getNotificationOverlay()->addToast("Failed to save replay", ERROR_TOAST);
-                                  }
-                              });
-                } else {
-                    // Most likely, 404
-                    ui->getNotificationOverlay()->addToast("Failed to download replay", ERROR_TOAST);
-                }
-            });
-
-            ui->getNotificationOverlay()->addNotification("Downloading replay...");
-            return;
-        }
-    }
-
-    // We tried loading from memory, we tried loading from file, we tried loading from server... RIP
-    if(score.replay.empty()) {
-        ui->getNotificationOverlay()->addToast("Failed to load replay", ERROR_TOAST);
+    if(!score.replay.empty()) {
+        // Replay already loaded
+        watch(score);
         return;
     }
 
-    auto* map = db->getBeatmapDifficulty(score.beatmap_hash);
-    if(map == nullptr) {
-        // XXX: Auto-download beatmap
-        ui->getNotificationOverlay()->addToast("Missing beatmap for this replay", ERROR_TOAST);
-    } else {
-        ui->getSongBrowser()->onDifficultySelected(map, false);
-        ui->getSongBrowser()->selectSelectedBeatmapSongButton();
-        osu->getMapInterface()->watch(score, 0);
+    if(load_from_disk(score, true)) {
+        // Score was successfully loaded from disk
+        watch(score);
+        return;
     }
+
+    // We don't have the replay, try loading it from the server
+    if(score.server != BanchoState::endpoint) {
+        auto msg = fmt::format("Please connect to {} to view this replay!", score.server);
+        ui->getNotificationOverlay()->addToast(msg, ERROR_TOAST);
+        return;
+    }
+
+    ui->getNotificationOverlay()->addNotification("Downloading replay...");
+
+    std::string url = "osu." + BanchoState::endpoint;
+    url.append(fmt::format("/web/osu-getreplay.php?m=0&c={}", score.bancho_score_id));
+    BANCHO::Api::append_auth_params(url);
+    Mc::Net::RequestOptions options{
+        .user_agent = "osu!",
+        .timeout = 5,
+        .connect_timeout = 5,
+    };
+    networkHandler->httpRequestAsync(url, std::move(options), [score](const Mc::Net::Response& response) mutable {
+        if(!response.success) {
+            // Most likely, 404
+            ui->getNotificationOverlay()->addToast("Failed to download replay", ERROR_TOAST);
+            return;
+        }
+
+        // Unzip replay frames from server response
+        score.replay = get_frames((u8*)response.body.data(), response.body.size());
+        watch(score);
+
+        // Save it to disk (XXX: blocking main thread)
+        save_osr(score, false);
+    });
 }
 
 }  // namespace LegacyReplay

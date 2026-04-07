@@ -37,12 +37,12 @@ Changelog::Changelog() : ScreenBackable() {
     CHANGELOG v43_09;
     v43_09.title = "43.09 (" CHANGELOG_TIMESTAMP ")";
     v43_09.changes = {
-        R"()",
+        R"(- Replays are now saved in .osr file format)",
     };
     changelogs.push_back(v43_09);
 
     CHANGELOG v43_08;
-    v43_08.title = "43.08 (2026-04-01)";
+    v43_08.title = "43.08 (2026-03-31)";
     v43_08.changes = {
         R"(- Added DKS experimental mod)",
         R"(- Added nicer text rendering effects)",

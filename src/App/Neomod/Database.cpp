@@ -430,9 +430,9 @@ void Database::update() {
                                       this->database_files[DatabaseType::STABLE_COLLECTIONS]);
 
                 // for all diffs within the set with fStarsNomod <= 0.f (peppy difficulties needing recalc)
-                for (auto &set : this->beatmapsets) {
-                    for (auto &diff : set->getDifficulties()) {
-                        if (diff->fStarsNomod < 0.f) {
+                for(auto &set : this->beatmapsets) {
+                    for(auto &diff : set->getDifficulties()) {
+                        if(diff->fStarsNomod < 0.f) {
                             diff->fStarsNomod *= -1.f;
                         }
                     }
@@ -565,18 +565,7 @@ bool Database::addScore(const FinishedScore &score) {
 
         this->score_save_future = Async::submit(
             [this, scorecopy = score] {
-                auto compressed_replay = LegacyReplay::compress_frames(scorecopy.replay);
-                if(!compressed_replay.empty()) {
-                    auto replay_path = fmt::format(NEOMOD_REPLAYS_PATH "/{:d}.replay.lzma", scorecopy.unixTimestamp);
-                    debugLog("Saving replay to {}...", replay_path);
-                    io->write(replay_path, std::move(compressed_replay), [replay_path](bool success) {
-                        if(success) {
-                            debugLog("Replay saved.");
-                        } else {
-                            debugLog("Failed to save replay to {}!", replay_path);
-                        }
-                    });
-                }
+                LegacyReplay::save_osr(scorecopy, true);
 
                 if(!engine->isShuttingDown() && cv::scores_save_immediately.getBool()) {
                     this->saveScores();
@@ -585,7 +574,6 @@ bool Database::addScore(const FinishedScore &score) {
             Lane::Background);
     }
 
-    // @PPV3: use new replay format
     return added;
 }
 

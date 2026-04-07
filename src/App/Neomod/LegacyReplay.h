@@ -3,6 +3,9 @@
 #include "ModFlags.h"
 #include "MD5Hash.h"
 
+// TODO: we should rename this to something else than "LegacyReplay"
+//       it's no longer just "legacy", as we export in this format too...
+
 struct FinishedScore;
 
 namespace LegacyReplay {
@@ -68,6 +71,7 @@ std::vector<Frame> get_frames(u8* replay_data, uSz replay_size);
 std::vector<u8> compress_frames(const std::vector<Frame>& frames);
 bool load_from_disk(FinishedScore& score, bool update_db);
 bool load_osr(std::string_view osr_path, FinishedScore& score_out);
+bool save_osr(const FinishedScore& score, bool include_cvars);
 void load_and_watch(FinishedScore score);
 
 }  // namespace LegacyReplay
