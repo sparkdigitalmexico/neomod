@@ -1,6 +1,7 @@
 // Copyright (c) 2025, kiwec, All rights reserved.
 #include "BanchoApi.h"
 #include "Bancho.h"
+#include "NetworkHandler.h"
 #include "fmt/format.h"
 
 namespace BANCHO::Api {
@@ -17,7 +18,7 @@ void append_auth_params(std::string &url, std::string user_param, std::string pw
         pw = BanchoState::pw_md5.string();
     }
 
-    url.append(fmt::format("&{:s}={:s}&{:s}={:s}", user_param, user, pw_param, pw));
+    url.append(fmt::format("&{}={}&{}={}", user_param, Mc::Net::urlEncode(user), pw_param, Mc::Net::urlEncode(pw)));
 }
 
 }  // namespace BANCHO::Api

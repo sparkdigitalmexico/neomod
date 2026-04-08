@@ -37,6 +37,7 @@ Changelog::Changelog() : ScreenBackable() {
     CHANGELOG v43_09;
     v43_09.title = "43.09 (" CHANGELOG_TIMESTAMP ")";
     v43_09.changes = {
+        R"(- Fixed online functionality for users with spaces in username)",
         R"(- Replays are now saved in .osr file format)",
     };
     changelogs.push_back(v43_09);

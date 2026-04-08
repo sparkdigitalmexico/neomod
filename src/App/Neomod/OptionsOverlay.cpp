@@ -4317,6 +4317,7 @@ bool OptionsOverlayImpl::should_use_oauth_login() const {
     static constexpr const auto oauth_servers = std::array{
         "neosu.local"sv,
         "neosu.net"sv,
+        PACKAGE_NAME ".localhost"sv,
         PACKAGE_NAME ".local"sv,
         PACKAGE_NAME ".net"sv,
     };
