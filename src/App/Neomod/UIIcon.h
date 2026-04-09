@@ -2,7 +2,7 @@
 // Copyright (c) 2025, kiwec, All rights reserved.
 #include "CBaseUILabel.h"
 
-class UIIcon final : public CBaseUILabel {
+class UIIcon : public CBaseUILabel {
    public:
     UIIcon(char32_t icon);
 

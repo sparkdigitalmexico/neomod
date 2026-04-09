@@ -36,18 +36,8 @@
 #include "DatabaseBeatmap.h"
 
 #include <charconv>
-namespace {
-enum class RankingStatusFilter : u8 {
-    RANKED = 0,
-    APPROVED = 1,
-    PENDING = 2,
-    QUALIFIED = 3,
-    ALL = 4,
-    GRAVEYARD = 5,
-    PLAYED = 7,
-    LOVED = 8,
-};
-}
+#include <cmath>
+
 // represents: one single beatmapset element inside the OsuDirectScreen scrollview
 // it's a container because it contains UIIcons with tooltips for difficulties
 class OnlineMapListing : public CBaseUIContainer {
@@ -151,6 +141,93 @@ void OnlineMapListing::onMouseUpOutside(bool /*left*/, bool /*right*/) { this->m
 void OnlineMapListing::onMouseInside() { this->hover_anim.set(0.25f, 0.15f, anim::QuadInOut); }
 void OnlineMapListing::onMouseOutside() { this->hover_anim.set(0.f, 0.15f, anim::QuadInOut); }
 
+namespace {
+enum class RankingStatusFilter : u8 {
+    RANKED = 0,
+    APPROVED = 1,
+    PENDING = 2,
+    QUALIFIED = 3,
+    ALL = 4,
+    GRAVEYARD = 5,
+    PLAYED = 7,
+    LOVED = 8,
+};
+
+Color get_difficulty_color(f32 star_rating) {
+    // using this: https://github.com/ppy/osu-web/blob/2d211ba69831f32bc4aed06d4f3bd0020c50b440/resources/js/utils/beatmap-helper.ts#L22
+    // (maybe already outdated?)
+    static constexpr const struct ColorMap {
+        f32 domain;
+        Color color;
+    } tbl[] = {
+        {0.10f, rgb(0x42, 0x90, 0xFB)},  //
+        {1.25f, rgb(0x4F, 0xC0, 0xFF)},  //
+        {2.00f, rgb(0x4F, 0xFF, 0xD5)},  //
+        {2.50f, rgb(0x7C, 0xFF, 0x4F)},  //
+        {3.30f, rgb(0xF6, 0xF0, 0x5C)},  //
+        {4.20f, rgb(0xFF, 0x80, 0x68)},  //
+        {4.90f, rgb(0xFF, 0x4E, 0x6F)},  //
+        {5.80f, rgb(0xC6, 0x45, 0xB8)},  //
+        {6.70f, rgb(0x65, 0x63, 0xDE)},  //
+        {7.70f, rgb(0x18, 0x15, 0x8E)},  //
+        {9.00f, rgb(0x00, 0x00, 0x00)},  //
+    };
+
+    // clamp bounds
+    static constexpr uSz end_idx = (sizeof(tbl) / sizeof(tbl[0])) - 1;
+    if(star_rating <= tbl[0].domain) return tbl[0].color;
+    if(star_rating >= tbl[end_idx].domain) return tbl[end_idx].color;
+
+    // find the segment [i-1, i] straddling star_rating (upper bound is guaranteed by the clamp above)
+    sSz i = 1;
+    while(star_rating > tbl[i].domain) ++i;
+
+    const f32 t = (star_rating - tbl[i - 1].domain) / (tbl[i].domain - tbl[i - 1].domain);
+    const Color a = tbl[i - 1].color;
+    const Color b = tbl[i].color;
+
+    // gamma-corrected lerp (d3.interpolateRgb.gamma(2.2)):
+    // linearize each channel with c^gamma, lerp, then undo with the 1/gamma root
+    constexpr f32 gamma = 2.2f;
+    auto lerp_ch = [t](f32 ca, f32 cb) {
+        const f32 ag = std::pow(ca, gamma);
+        const f32 bg = std::pow(cb, gamma);
+        return std::pow(ag + t * (bg - ag), 1.f / gamma);
+    };
+
+    return rgb(lerp_ch(a.Rf(), b.Rf()), lerp_ch(a.Gf(), b.Gf()), lerp_ch(a.Bf(), b.Bf()));
+}
+
+class DiffLabel final : public UIIcon {
+   public:
+    using UIIcon::UIIcon;
+    // TODO: crap duplication (CBaseUILabel only supports shadows, TextFX was added later... should retrofit it there to avoid needing this)
+    void drawText() override {
+        if(!this->font || this->sText.empty()) {
+            return;
+        }
+
+        g->pushTransform();
+        {
+            g->scale(this->fScale, this->fScale);
+            g->translate((i32)(this->getPos().x),
+                         (i32)(this->getPos().y + this->getSize().y / 2.f + this->fStringHeight / 2.f));
+
+            const f32 outline_scale = Osu::getUIScale();
+            const TextFX icon_fx{.col_text = this->textColor,
+                                 .col_shadow = 0 /*no shadow*/,
+                                 .col_outline = rgb(0, 0, 0),
+                                 .outline_px = 1.f * outline_scale,
+                                 .shadow_softness_px = 0.5f * outline_scale};
+
+            g->drawString(this->font, this->sText, icon_fx);
+        }
+        g->popTransform();
+    }
+};
+
+}  // namespace
+
 void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
     this->full_title = fmt::format("{} - {}", this->meta.artist, this->meta.title);
     this->creator_width = this->font->getStringWidth(this->meta.creator);
@@ -158,24 +235,32 @@ void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
     const f32 scale = Osu::getUIScale();
     vec2 pos_counter = this->getSize() - (40.f * scale);
 
-    auto icon_elems_copy = reinterpret_cast<std::vector<UIIcon*>&>(this->vElements);
+    auto icon_elems_copy = reinterpret_cast<std::vector<DiffLabel*>&>(this->vElements);
     this->invalidate();  // clear this->vElements and rebuild
 
     for(sSz added_elem_i = 0; const auto& diff : this->meta.beatmaps) {
         if(diff.mode != 0) continue;
 
-        UIIcon* icon = nullptr;
+        DiffLabel* icon = nullptr;
         if(added_elem_i < icon_elems_copy.size()) {
             icon = icon_elems_copy[added_elem_i];
             icon_elems_copy[added_elem_i] = nullptr;  // set to null so we don't delete it later
         } else {
-            icon = new UIIcon(Icons::CIRCLE);
+            icon = new DiffLabel(Icons::CIRCLE);
         }
 
         icon->setPos(pos_counter);
         icon->setSize(30.f * scale, 30.f * scale);
-        icon->setTooltipText(fmt::format("{}{}", diff.diffname,
-                                         diff.star_rating > 0.f ? fmt::format(" ({:.2f} ⭐)", diff.star_rating) : ""));
+
+        if(diff.star_rating > 0.f) {
+            // has star rating
+            icon->setTooltipText(fmt::format("{:s} ({:.2f} ⭐)", diff.diffname, diff.star_rating));
+            icon->setTextColor(get_difficulty_color(diff.star_rating));
+        } else {
+            // didn't parse star rating for this difficulty
+            icon->setTooltipText(diff.diffname);
+            icon->setTextColor((Color)-1);
+        }
 
         this->addBaseUIElement(icon);
 
@@ -277,7 +362,8 @@ void OnlineMapListing::draw() {
         color.setA(alpha);
 
         g->setColor(color);
-        g->fillRect(pos_counter.x + download_width, pos_counter.y, progress_size.x - download_width, progress_size.y);
+        g->fillRect(static_cast<int>(pos_counter.x + download_width), static_cast<int>(pos_counter.y),
+                    static_cast<int>(progress_size.x - download_width), static_cast<int>(progress_size.y));
 
         const f32 outline_scale = Osu::getUIScale();
         const TextFX string_style{.col_text = rgb(255, 255, 255),
@@ -390,10 +476,10 @@ void OsuDirectScreen::draw() {
 
     if(this->loading) {
         const f32 spinner_size = (40.f * Osu::getUIScale());
-        const f32 scale = spinner_size / osu->getSkin()->i_loading_spinner.getSize().y;
+        const f32 scale = spinner_size / (f32)osu->getSkin()->i_loading_spinner.getSize().y;
         g->setColor(0xffffffff);
         g->pushTransform();
-        g->rotate(engine->getTime() * 180, 0, 0, 1);
+        g->rotate((f32)std::fmod(engine->getTime(), PI * 2) * 180.f, 0, 0, 1);
         g->scale(scale, scale);
         g->translate(this->spinner_pos.x, this->spinner_pos.y);
         g->drawImage(osu->getSkin()->i_loading_spinner);
@@ -449,13 +535,13 @@ void OsuDirectScreen::onResolutionChange(vec2 newResolution) {
     y += this->title->getSize().y;
 
     const f32 results_width = std::min(newResolution.x - 10.f * scale, 1024.f * scale);
-    const f32 x_start = osu->getVirtScreenWidth() / 2.f - results_width / 2.f;
+    const f32 x_start = (f32)osu->getVirtScreenWidth() / 2.f - results_width / 2.f;
     x = x_start;
     y += 50.f * scale;
 
     // Search bar & buttons
     this->search_bar->setRelPos(x, y);
-    this->search_bar->setSize(400.0 * scale, 40.0 * scale);
+    this->search_bar->setSize(400.0f * scale, 40.0f * scale);
     x += this->search_bar->getSize().x;
     const f32 BUTTONS_MARGIN = 10.f * scale;
     x += BUTTONS_MARGIN;
@@ -515,7 +601,8 @@ void OsuDirectScreen::search(std::string_view query) {
     if(this->loading) return;
 
     // TODO: show "approved" maps when ranked only is checked (how?)
-    const i32 offset = this->results->container.getElements().size();
+    // NOTE: implemented server-side for neomod.net, other servers still won't work
+    const uSz offset = this->results->container.getElements().size();
     const i32 filter = cv::direct_ranking_status_filter.getInt();
     std::string url = fmt::format("osu.{:s}/web/osu-search.php?m=0&r={:d}&q={:s}&p={:d}", BanchoState::endpoint, filter,
                                   Mc::Net::urlEncode(query), offset);
@@ -528,7 +615,7 @@ void OsuDirectScreen::search(std::string_view query) {
         .flags = Mc::Net::RequestOptions::FOLLOW_REDIRECTS,
     };
 
-    debugLog("Searching for maps matching \"{}\" (offset {})", query, offset);
+    debugLog("Searching for maps matching \"{:s}\" (offset {:d})", query, offset);
     const auto current_request_id = ++this->request_id;
     this->current_query = query;
     this->last_search_time = engine->getTime();

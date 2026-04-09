@@ -39,6 +39,7 @@ Changelog::Changelog() : ScreenBackable() {
     v43_09.changes = {
         R"(- Fixed online functionality for users with spaces in username)",
         R"(- Replays are now saved in .osr file format)",
+        R"(- Improved appearance of online beatmaps screen (text outlines + difficulty icon colors))",
     };
     changelogs.push_back(v43_09);
 

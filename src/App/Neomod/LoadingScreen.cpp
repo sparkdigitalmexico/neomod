@@ -54,7 +54,7 @@ void LoadingScreen::drawLoadingSpinner() {
     const float scale = Osu::getImageScale(osu->getSkin()->i_beatmap_import_spinner, 100);
     g->pushTransform();
     {
-        g->rotate(engine->getTime() * 180, 0, 0, 1);
+        g->rotate((f32)std::fmod(engine->getTime(), PI * 2) * 180.f, 0, 0, 1);
         g->scale(scale, scale);
         g->translate(osu->getVirtScreenWidth() / 2, osu->getVirtScreenHeight() / 2);
         g->drawImage(osu->getSkin()->i_beatmap_import_spinner);
