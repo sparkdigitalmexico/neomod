@@ -279,20 +279,25 @@ void OnlineMapListing::draw() {
         g->setColor(color);
         g->fillRect(pos_counter.x + download_width, pos_counter.y, progress_size.x - download_width, progress_size.y);
 
+        const f32 outline_scale = Osu::getUIScale();
+        const TextFX string_style{.col_text = rgb(255, 255, 255),
+                                  .col_shadow = 0 /*no shadow*/,
+                                  .col_outline = rgb(50, 50, 50),
+                                  .outline_px = 1.f * outline_scale,
+                                  .shadow_softness_px = 0.5f * outline_scale};
+
         g->pushTransform();
         {
-            g->setColor(0xffffffff);
             g->translate(pos_counter.x + padding, pos_counter.y + padding + this->font->getHeight());
-            g->drawString(this->font, this->full_title);
+            g->drawString(this->font, this->full_title, string_style);
         }
         g->popTransform();
 
         g->pushTransform();
         {
-            g->setColor(0xffffffff);
             g->translate(pos_counter.x + progress_size.x - (this->creator_width + 2 * padding),
                          pos_counter.y + padding + this->font->getHeight());
-            g->drawString(this->font, this->meta.creator);
+            g->drawString(this->font, this->meta.creator, string_style);
         }
         g->popTransform();
     }
