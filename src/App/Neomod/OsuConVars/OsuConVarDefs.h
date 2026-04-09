@@ -758,7 +758,7 @@ CONVAR(
     hitresult_delta_colorize_multiplier, 2.0f, CLIENT | SKINS | SERVER,
     "early/late colors are multiplied by this (assuming interpolation is enabled, increasing this will make early/late "
     "colors appear fully earlier)");
-CONVAR(hitresult_draw_300s, false, CLIENT | SKINS | SERVER);
+CONVAR(hitresult_draw_300s, true, CLIENT | SKINS | SERVER);
 CONVAR(hitresult_duration, 1.100f, CLIENT | SKINS | SERVER,
        "max duration of the entire hitresult in seconds (this limits all other values, except for animated skins!)");
 CONVAR(hitresult_duration_max, 5.0f, CLIENT | SKINS | SERVER,
