@@ -1169,7 +1169,8 @@ void Environment::setRawMouseInput(bool raw) {
 
     if(!raw && mouse) {
         // need to manually set the cursor position if we're disabling raw input
-        setOSMousePos(mouse->getRealPos());
+        // NOTE (TODO?): un-applying pixel density scale here to re-convert to desktop coords, see Mouse::update
+        setOSMousePos(mouse->getRealPos() / getPixelDensity());
     }
 
     if(!SDL_SetWindowRelativeMouseMode(m_window, raw)) {

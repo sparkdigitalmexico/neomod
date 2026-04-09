@@ -211,9 +211,12 @@ SDL_AppResult SDLMain::initialize() {
 
     updateWindowStateCache();
 
-    // (this seems to not work on wayland, will be handled by the first SDL_WINDOW_EVENT_MOUSE_ENTER event)
     {
-        const vec2 realPos = getAsyncMousePos();
+        // initialize virtual mouse pos
+        // NOTE (TODO?): about getPixelDensity(): see Mouse::update(), SDL seems to use inconsistent coordinate systems for mouse pos/window size/window pos
+        // (at least on macOS with pixel density != 1)
+        // also NOTE: this seems to not work on wayland, will be handled by the first SDL_EVENT_WINDOW_MOUSE_ENTER event
+        const vec2 realPos = getAsyncMousePos() * getPixelDensity();
         mouse->onPosChange(realPos);
     }
 
@@ -373,7 +376,7 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
                     if(mouse) {
                         if(!m_bVirtualMousePositionInitialized) {
                             m_bVirtualMousePositionInitialized = true;
-                            mouse->onPosChange(getAsyncMousePos());
+                            mouse->onPosChange(getAsyncMousePos() * getPixelDensity());
                         }
                     }
                     m_bIsCursorInsideWindow = true;
