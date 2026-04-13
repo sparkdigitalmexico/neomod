@@ -149,6 +149,10 @@ class SCEDMBuilder final {
    public:
     void reset() { m_allPoints.clear(); }
 
+    void addRawPoints(std::span<const vec2> points) {
+        m_allPoints.insert(m_allPoints.end(), points.begin(), points.end());
+    }
+
     void addBezierSegment(const vec2 *controlPoints, u32 count) { generateBezierPoints(controlPoints, count); }
 
     void addCatmullSegment(const std::array<vec2, 4> &initPoints) {
@@ -385,33 +389,32 @@ void SliderCurve::constructCatmull(std::span<const vec2> controlPoints, f32 curv
 //	 Circular Curves	//
 //**********************//
 
+namespace {
+
+// Helpers
+forceinline vec2 circ_intersect(vec2 a, vec2 ta, vec2 b, vec2 tb) {
+    const f32 des = (tb.x * ta.y - tb.y * ta.x);
+    if(std::abs(des) < 0.0001f) {
+        debugLog("ERROR: Vectors are parallel!!!");
+        return {0.f, 0.f};
+    }
+
+    const f32 u = ((b.y - a.y) * ta.x + (a.x - b.x) * ta.y) / des;
+    return (b + vec2(tb.x * u, tb.y * u));
+};
+
+#define CIRC_ISIN(a, b, c) (((b) > (a) && (b) < (c)) || ((b) < (a) && (b) > (c)))
+
+}  // namespace
+
 void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 curvePointsSeparation) {
     // initialize
-    m_vCircleCenterX = 0.f;
-    m_vCircleCenterY = 0.f;
-    m_radius = 0.f;
-    m_calcStartAngleDeg = 0.f;
-    m_calcEndAngleDeg = 0.f;
+    m_circCenterX = m_circCenterY = m_circRadius = m_circStartAngle = m_circEndAngle = 0.f;
 
     if(controlPoints.size() != 3) {
         debugLog("ERROR: controlPoints.size() != 3");
         return;
     }
-
-    // helpers
-    static constexpr auto intersect = [] [[gnu::always_inline]] (vec2 a, vec2 ta, vec2 b, vec2 tb) -> vec2 {
-        const f32 des = (tb.x * ta.y - tb.y * ta.x);
-        if(std::abs(des) < 0.0001f) {
-            debugLog("constructCircular::intersect() ERROR: Vectors are parallel!!!");
-            return {0.f, 0.f};
-        }
-
-        const f32 u = ((b.y - a.y) * ta.x + (a.x - b.x) * ta.y) / des;
-        return (b + vec2(tb.x * u, tb.y * u));
-    };
-    static constexpr auto isIn = [] [[gnu::always_inline]] (f32 a, f32 b, f32 c) -> bool {
-        return ((b > a && b < c) || (b < a && b > c));
-    };
 
     // construct the three points
     const vec2 start = controlPoints[0];
@@ -431,76 +434,134 @@ void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 cur
     norb.x = -norb.y;
     norb.y = temp;
 
-    const vec2 intersection = intersect(mida, nora, midb, norb);
-    m_vCircleCenterX = intersection.x;
-    m_vCircleCenterY = intersection.y;
+    const vec2 center = circ_intersect(mida, nora, midb, norb);
 
     // find the angles relative to the circle center
-    const vec2 startAngPoint = start - intersection;
-    const vec2 midAngPoint = mid - intersection;
-    const vec2 endAngPoint = end - intersection;
+    const vec2 startAngPoint = start - center;
+    const vec2 midAngPoint = mid - center;
+    const vec2 endAngPoint = end - center;
 
-    m_calcStartAngleDeg = (f32)std::atan2(startAngPoint.y, startAngPoint.x);
+    f32 startAngle = (f32)std::atan2(startAngPoint.y, startAngPoint.x);
     const f32 midAng = (f32)std::atan2(midAngPoint.y, midAngPoint.x);
-    m_calcEndAngleDeg = (f32)std::atan2(endAngPoint.y, endAngPoint.x);
+    f32 endAngle = (f32)std::atan2(endAngPoint.y, endAngPoint.x);
 
     // find the angles that pass through midAng
 
     // clang-format off
-    if(!isIn(m_calcStartAngleDeg, midAng, m_calcEndAngleDeg)) {
+    if(!CIRC_ISIN(startAngle, midAng, endAngle)) {
         if(
-            (std::abs(m_calcStartAngleDeg + 2.f * PI_F - m_calcEndAngleDeg) < 2.f * PI_F) &&
-                 isIn(m_calcStartAngleDeg + (2.f * PI_F), midAng, m_calcEndAngleDeg)
+            (std::abs(startAngle + 2.f * PI_F - endAngle) < 2.f * PI_F) &&
+            CIRC_ISIN(startAngle + (2.f * PI_F), midAng, endAngle)
             ) {
-            m_calcStartAngleDeg += 2.f * PI_F;
+            startAngle += 2.f * PI_F;
         } else if(
-            (std::abs(m_calcStartAngleDeg - (m_calcEndAngleDeg + 2.f * PI_F)) < 2.f * PI_F) &&
-                 isIn(m_calcStartAngleDeg, midAng, m_calcEndAngleDeg + (2.f * PI_F))
+            (std::abs(startAngle - (endAngle + 2.f * PI_F)) < 2.f * PI_F) &&
+            CIRC_ISIN(startAngle, midAng, endAngle + (2.f * PI_F))
             ) {
-            m_calcEndAngleDeg += 2.f * PI_F;
+            endAngle += 2.f * PI_F;
         } else if(
-            (std::abs(m_calcStartAngleDeg - 2.f * PI_F - m_calcEndAngleDeg) < 2.f * PI_F) &&
-                 isIn(m_calcStartAngleDeg - (2.f * PI_F), midAng, m_calcEndAngleDeg)
+            (std::abs(startAngle - 2.f * PI_F - endAngle) < 2.f * PI_F) &&
+            CIRC_ISIN(startAngle - (2.f * PI_F), midAng, endAngle)
             ) {
-            m_calcStartAngleDeg -= 2.f * PI_F;
+            startAngle -= 2.f * PI_F;
         } else if(
-            (std::abs(m_calcStartAngleDeg - (m_calcEndAngleDeg - 2.f * PI_F)) < 2.f * PI_F) &&
-                 isIn(m_calcStartAngleDeg, midAng, m_calcEndAngleDeg - (2.f * PI_F))
+            (std::abs(startAngle - (endAngle - 2.f * PI_F)) < 2.f * PI_F) &&
+            CIRC_ISIN(startAngle, midAng, endAngle - (2.f * PI_F))
             ) {
-            m_calcEndAngleDeg -= 2.f * PI_F;
+            endAngle -= 2.f * PI_F;
         } else {
             debugLog("ERROR: Cannot find angles between midAng ({} {} {})",
-                     m_calcStartAngleDeg, midAng, m_calcEndAngleDeg);
+                     startAngle, midAng, endAngle);
             return;
         }
     }
     // clang-format on
 
+    const f32 maxPoints = SLIDER_CURVE_MAX_POINTS;
+
     // find an angle with an arc length of pixelLength along this circle
-    m_radius = vec::length(startAngPoint);
-    const f32 arcAng = m_pixelLength / m_radius;  // len = theta * r / theta = len / r
+    const f32 radius = vec::length(startAngPoint);
+    const f32 naturalArcAngle = std::abs(endAngle - startAngle);
+    const f32 naturalArcLength = naturalArcAngle * radius;
 
-    // now use it for our new end angle
-    m_calcEndAngleDeg =
-        (m_calcEndAngleDeg > m_calcStartAngleDeg) ? m_calcStartAngleDeg + arcAng : m_calcStartAngleDeg - arcAng;
+    // if pixel length exceeds the natural arc, extend tangentially
+    // (matches osu!stable/lazer behavior for "lengthened" perfect circle sliders (manually edited .osu file quirk))
+    if(m_pixelLength > naturalArcLength) {
+        m_type = SLIDERCURVETYPE::BEZIER;
 
-    // find the angles to draw for repeats
-    m_endAngle = (f32)((m_calcEndAngleDeg + (m_calcStartAngleDeg > m_calcEndAngleDeg ? PI_F / 2.0f : -PI_F / 2.0f)) *
-                       180.0f / PI_F);
-    m_startAngle =
-        (f32)((m_calcStartAngleDeg + (m_calcStartAngleDeg > m_calcEndAngleDeg ? -PI_F / 2.0f : PI_F / 2.0f)) * 180.0f /
-              PI_F);
+        const f32 direction = (endAngle > startAngle) ? 1.f : -1.f;
 
-    // calculate points
-    const f32 max_points = SLIDER_CURVE_MAX_POINTS;
-    const f32 steps = std::min(m_pixelLength / (std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), max_points);
-    const i32 intSteps = (i32)std::round(steps) + 2;  // must guarantee an int range of 0 to steps!
-    for(i32 i = 0; i < intSteps; i++) {
-        f32 t = std::clamp<f32>((f32)i / steps, 0.0f, 1.0f);
-        m_curvePoints.push_back(pointAt(t));
+        // generate piecewise-linear arc points
+        // see https://github.com/ppy/osu/blob/0e9664bfdfa69b4b26ff9cf84615c4b83a195a0e/osu.Game/Rulesets/Objects/SliderPath.cs#L343
+        static constexpr f32 CIRC_ARC_TOLERANCE = 0.1f;
+        const i32 amountPoints =
+            (2.f * radius <= CIRC_ARC_TOLERANCE)
+                ? 2
+                : std::max(2, (i32)std::ceil(naturalArcAngle /
+                                             (2.0 * std::acos(1.0 - (f64)CIRC_ARC_TOLERANCE / (f64)radius))));
 
-        if(t >= 1.0f)  // early break if we've already reached the end
-            break;
+        std::vector<vec2> arcPoints;
+        arcPoints.reserve(amountPoints);
+        for(i32 i = 0; i < amountPoints; ++i) {
+            const f64 fract = (f64)i / (f64)(amountPoints - 1);
+            const f64 theta = (f64)startAngle + (f64)direction * fract * (f64)naturalArcAngle;
+            arcPoints.emplace_back((f32)(std::cos(theta) * (f64)radius) + center.x,
+                                   (f32)(std::sin(theta) * (f64)radius) + center.y);
+        }
+
+        // extend the last point tangentially to match m_pixelLength
+        // (move the last point along the last segment's direction)
+        // see: https://github.com/ppy/osu/blob/0e9664bfdfa69b4b26ff9cf84615c4b83a195a0e/osu.Game/Rulesets/Objects/SliderPath.cs#L414
+        if(arcPoints.size() >= 2) {
+            f32 cumDist = 0.f;
+            for(size_t i = 1; i < arcPoints.size(); ++i) cumDist += vec::length(arcPoints[i] - arcPoints[i - 1]);
+
+            vec2 lastSeg = arcPoints.back() - arcPoints[arcPoints.size() - 2];
+            f32 lastSegLen = vec::length(lastSeg);
+            if(lastSegLen > 0.0001f) {
+                vec2 dir = lastSeg * (1.f / lastSegLen);
+                f32 cumDistBeforeLast = cumDist - lastSegLen;
+                arcPoints.back() = arcPoints[arcPoints.size() - 2] + dir * (m_pixelLength - cumDistBeforeLast);
+            }
+        }
+
+        // equal-distance resample via SCEDMBuilder
+        m_NCurve =
+            std::min((u32)(m_pixelLength / std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), (u32)maxPoints);
+
+        g_curveBuilder.reset();
+        g_curveBuilder.addRawPoints(arcPoints);
+        if(g_curveBuilder.hasPoints()) {
+            g_curveBuilder.build(m_curvePoints, m_startAngle, m_endAngle, m_NCurve, m_pixelLength);
+        }
+    } else {
+        // actual perfect circle
+        m_circCenterX = center.x;
+        m_circCenterY = center.y;
+
+        m_circRadius = radius;
+        const f32 arcAng = m_pixelLength / m_circRadius;  // len = theta * r / theta = len / r
+
+        // now use it for our new end angle
+        m_circStartAngle = startAngle;
+        m_circEndAngle = (endAngle > startAngle) ? startAngle + arcAng : startAngle - arcAng;
+
+        // find the angles to draw for repeats
+        m_endAngle =
+            (f32)((m_circEndAngle + (m_circStartAngle > m_circEndAngle ? PI_F / 2.0f : -PI_F / 2.0f)) * 180.0f / PI_F);
+        m_startAngle = (f32)((m_circStartAngle + (m_circStartAngle > m_circEndAngle ? -PI_F / 2.0f : PI_F / 2.0f)) *
+                             180.0f / PI_F);
+
+        // calculate points
+        const f32 steps = std::min(m_pixelLength / (std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), maxPoints);
+        const i32 intSteps = (i32)std::round(steps) + 2;  // must guarantee an int range of 0 to steps!
+        for(i32 i = 0; i < intSteps; i++) {
+            f32 t = std::clamp<f32>((f32)i / steps, 0.0f, 1.0f);
+            m_curvePoints.push_back(pointAt(t));
+
+            if(t >= 1.0f)  // early break if we've already reached the end
+                break;
+        }
     }
 }
 
@@ -564,7 +625,6 @@ SliderCurve::SliderCurve(SLIDERCURVETYPE ctorType, std::span<const vec2> control
 }
 
 vec2 SliderCurve::pointAt(f32 t) const {
-    using enum SLIDERCURVETYPE;
     if(m_type != CIRCULAR /* BEZIER || CATMULL */) {
         if(m_curvePoints.size() < 1) return {0.f, 0.f};
 
@@ -593,10 +653,10 @@ vec2 SliderCurve::pointAt(f32 t) const {
     } else {  // CIRCULAR
         const f32 sanityRange =
             SLIDER_CURVE_MAX_LENGTH;  // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
-        const f32 ang = std::lerp(m_calcStartAngleDeg, m_calcEndAngleDeg, t);
+        const f32 ang = std::lerp(m_circStartAngle, m_circEndAngle, t);
 
-        return {std::clamp<f32>(std::cos(ang) * m_radius + m_vCircleCenterX, -sanityRange, sanityRange),
-                std::clamp<f32>(std::sin(ang) * m_radius + m_vCircleCenterY, -sanityRange, sanityRange)};
+        return {std::clamp<f32>(std::cos(ang) * m_circRadius + m_circCenterX, -sanityRange, sanityRange),
+                std::clamp<f32>(std::sin(ang) * m_circRadius + m_circCenterY, -sanityRange, sanityRange)};
     }
 }
 
