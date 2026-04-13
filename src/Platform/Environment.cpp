@@ -939,7 +939,7 @@ bool Environment::minimizeWindow() {
         }
         if(!getEnvVariable("I3SOCK").empty() || !getEnvVariable("SWAYSOCK").empty() ||
            !getEnvVariable("WINE_HOST_I3SOCK").empty() || !getEnvVariable("WINE_HOST_SWAYSOCK").empty()) {
-            logIf(m_bEnvDebug, "Disabled minimize support due to being on sway/i3", desktop);
+            logIf(m_bEnvDebug, "Disabled minimize support due to being on sway/i3 (desktop: {})", desktop);
             m_bMinimizeSupported = false;
         }
         if(m_bIsWayland && !desktop.empty() && desktop == "KDE") {

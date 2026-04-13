@@ -76,9 +76,9 @@ class SliderCurve final {
         };
         struct {
             // type == CIRCULAR
-            f32 m_circCenterX{0.f}, m_circCenterY{0.f};
-            f32 m_circRadius{0.f};
-            f32 m_circStartAngle{0.f}, m_circEndAngle{0.f};
+            f32 m_circCenterX, m_circCenterY;
+            f32 m_circRadius;
+            f32 m_circStartAngle, m_circEndAngle;
         };
     };
 
