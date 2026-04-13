@@ -215,9 +215,10 @@ class DiffLabel final : public UIIcon {
 
             const f32 outline_scale = Osu::getUIScale();
             const TextFX icon_fx{.col_text = this->textColor,
-                                 .col_shadow = 0 /*no shadow*/,
-                                 .col_outline = rgb(0, 0, 0),
-                                 .outline_px = 1.f * outline_scale};
+                                 .col_shadow = 0,                                 // no shadow
+                                 .col_outline = Colors::invert(this->textColor),  // TODO: this is kind of ugly
+                                 .outline_px = 1.f * outline_scale,
+                                 .shadow_softness_px = 0.5f * outline_scale};
 
             g->drawString(this->font, this->sText, icon_fx);
         }
@@ -366,7 +367,7 @@ void OnlineMapListing::draw() {
 
         const f32 outline_scale = Osu::getUIScale();
         const TextFX string_style{.col_text = rgb(255, 255, 255),
-                                  .col_shadow = 0 /*no shadow*/,
+                                  .col_shadow = 0,  // no shadow
                                   .col_outline = rgb(50, 50, 50),
                                   .outline_px = 1.f * outline_scale,
                                   .shadow_softness_px = 0.5f * outline_scale};
