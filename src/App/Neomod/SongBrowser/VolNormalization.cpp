@@ -1,5 +1,5 @@
 // Copyright (c) 2024, kiwec, All rights reserved.
-#include "LoudnessCalcThread.h"
+#include "VolNormalization.h"
 
 #include "OsuConVars.h"
 #include "DatabaseBeatmap.h"

@@ -19,7 +19,7 @@
 #include "NotificationOverlay.h"
 #include "AsyncPool.h"
 #include "AsyncPPCalculator.h"
-#include "SongBrowser/LoudnessCalcThread.h"
+#include "SongBrowser/VolNormalization.h"
 #include "DiffCalc/BatchDiffCalc.h"
 #include "SongBrowser/SongBrowser.h"
 #include "Timing.h"

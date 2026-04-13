@@ -35,7 +35,7 @@
 #include "UIBackButton.h"
 #include "UILabel.h"
 
-#include "LoudnessCalcThread.h"
+#include "VolNormalization.h"
 #include "NetworkHandler.h"
 #include "Bancho.h"
 #include "Mouse.h"

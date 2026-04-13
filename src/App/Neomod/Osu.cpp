@@ -56,7 +56,7 @@
 #include "Skin.h"
 #include "AsyncPPCalculator.h"
 #include "AsyncPool.h"
-#include "SongBrowser/LoudnessCalcThread.h"
+#include "SongBrowser/VolNormalization.h"
 #include "DiffCalc/BatchDiffCalc.h"
 #include "SongBrowser/SongBrowser.h"
 #include "SoundEngine.h"

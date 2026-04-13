@@ -27,7 +27,7 @@
 
 #include "BatchDiffCalc.h"
 #include "AsyncPPCalculator.h"
-#include "LoudnessCalcThread.h"
+#include "VolNormalization.h"
 
 #include "Skin.h"
 #include "SkinImage.h"

@@ -4,7 +4,7 @@
 #include "AnimationHandler.h"
 #include "OsuConVars.h"
 #include "Engine.h"
-#include "LoudnessCalcThread.h"
+#include "VolNormalization.h"
 #include "BatchDiffCalc.h"
 #include "Mouse.h"
 #include "OptionsOverlay.h"

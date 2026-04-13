@@ -172,11 +172,11 @@ neomod_SOURCES = \
 	src/App/Neomod/SongBrowser/CarouselButton.cpp \
 	src/App/Neomod/SongBrowser/CollectionButton.cpp \
 	src/App/Neomod/SongBrowser/InfoLabel.cpp \
-	src/App/Neomod/SongBrowser/LoudnessCalcThread.cpp \
 	src/App/Neomod/SongBrowser/ScoreButton.cpp \
 	src/App/Neomod/SongBrowser/SongBrowser.cpp \
 	src/App/Neomod/SongBrowser/SongButton.cpp \
 	src/App/Neomod/SongBrowser/SongDifficultyButton.cpp \
+	src/App/Neomod/SongBrowser/VolNormalization.cpp \
 	src/App/Neomod/SpectatorScreen.cpp \
 	src/App/Neomod/ThumbnailManager.cpp \
 	src/App/Neomod/Tools/DiffCalcTool.cpp \
