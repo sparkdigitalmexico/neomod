@@ -217,8 +217,7 @@ class DiffLabel final : public UIIcon {
             const TextFX icon_fx{.col_text = this->textColor,
                                  .col_shadow = 0 /*no shadow*/,
                                  .col_outline = rgb(0, 0, 0),
-                                 .outline_px = 1.f * outline_scale,
-                                 .shadow_softness_px = 0.5f * outline_scale};
+                                 .outline_px = 1.f * outline_scale};
 
             g->drawString(this->font, this->sText, icon_fx);
         }
