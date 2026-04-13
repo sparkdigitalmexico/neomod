@@ -523,6 +523,7 @@ $(DEPS_PREFIX)/SDL3-$(SDL3_VERSION).built: $(DEPS_CACHE)/SDL3-$(SDL3_VERSION).ta
 	patch -Np1<$(BUILD_MISCDIR)/SDL3-PR14048-emscripten-clipboard.patch && \
 	patch -Np1<$(BUILD_MISCDIR)/SDL3-WIP-gpu_vulkan-Address-more-defragmentation-related-.patch && \
 	patch -Np1<$(BUILD_MISCDIR)/SDL3-gpu_metal-Hold-disposeLock-in-PerformPendingDestroys.patch && \
+	patch -Np1<$(BUILD_MISCDIR)/SDL3-PR15376-macos-scrollwheel.patch && \
 	PKG_CONFIG="$(PKG_CONFIG)" LDFLAGS="$(LDFLAGS)" CC="$(CC)" CXX="$(CXX)" \
 	$(CMAKE_CONF_PFX) $(CMAKE) -S . -B build -G "$(CMAKE_GEN)" \
 		-D CMAKE_BUILD_TYPE="$(if $(ENABLE_DEBUG),Debug,Release)" \
