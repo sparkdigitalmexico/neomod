@@ -3,6 +3,7 @@
 
 #include "AsyncIOHandler.h"
 #include "Bancho.h"
+#include "ConVarHandler.h"
 #include "ContainerRanges.h"
 #include "Parsing.h"
 #include "SString.h"
@@ -563,9 +564,20 @@ bool Database::addScore(const FinishedScore &score) {
         // wait for any previous save to finish before starting a new one
         if(this->score_save_future.valid()) this->score_save_future.wait();
 
+        std::vector<std::string> saveable_cvars;
+        for(auto *cvar : cvars().getConVarArray()) {
+            // Very important: do not save passwords in replays
+            if(cvar->isFlagSet(cv::HIDDEN)) continue;
+            if(cvar->isFlagSet(cv::NOSAVE)) continue;
+
+            saveable_cvars.emplace_back(cvar->getName());
+            saveable_cvars.emplace_back(cvar->getString());
+        }
+
         this->score_save_future = Async::submit(
-            [this, scorecopy = score] {
-                LegacyReplay::save_osr(scorecopy, true);
+            [this, scorecopy = score, additional_data = std::move(saveable_cvars)] {
+                // NOTE: if we ever read cvars out of the replay data, # of cvars would be additional_data.size()/2
+                LegacyReplay::save_osr(scorecopy, additional_data);
 
                 if(!engine->isShuttingDown() && cv::scores_save_immediately.getBool()) {
                     this->saveScores();

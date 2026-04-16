@@ -8,8 +8,6 @@
 
 #include "AsyncIOHandler.h"
 #include "ByteBufferedFile.h"
-#include "ConVar.h"
-#include "ConVarHandler.h"
 #include "crypto.h"
 #include "Bancho.h"
 #include "BanchoApi.h"
@@ -59,7 +57,7 @@ BEATMAP_VALUES getBeatmapValuesForModsLegacy(LegacyFlags modsLegacy, float legac
     return v;
 }
 
-std::vector<Frame> get_frames(u8* replay_data, uSz replay_size) {
+std::vector<Frame> get_frames(const u8* replay_data, uSz replay_size) {
     std::vector<Frame> replay_frames;
     if(replay_size <= 0) return replay_frames;
 
@@ -164,11 +162,11 @@ std::vector<u8> compress_frames(const std::vector<Frame>& frames) {
     return compressed;
 }
 
-Info from_bytes(u8* data, uSz s_data) {
+Info from_bytes(const u8* data, uSz s_data) {
     Info info;
 
     Packet replay;
-    replay.memory = data;
+    replay.memory = (u8*)data;
     replay.size = s_data;
 
     info.gamemode = replay.read<u8>();
@@ -251,13 +249,13 @@ bool load_osr(std::string_view osr_path, FinishedScore& score_out) {
     return true;
 }
 
-bool save_osr(const FinishedScore& score, bool include_cvars) {
+bool save_osr(const FinishedScore& score, std::span<const std::string> additional_data) {
     if(score.replay.empty()) {
         debugLog("Cannot save empty replay!");
         return false;
     }
 
-    auto osr_path =
+    const std::string osr_path =
         fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}-{}.osr", score.server, score.player_id, score.unixTimestamp);
     ByteBufferedFile::Writer osr(osr_path);
     if(!osr.good()) {
@@ -284,28 +282,18 @@ bool save_osr(const FinishedScore& score, bool include_cvars) {
     osr.write<u8>(score.perfect);
     osr.write<u32>((u32)score.mods.to_legacy());
     osr.write_string(""sv);  // life_bar_graph
-    osr.write<i64>(score.unixTimestamp * TICKS_PER_SECOND + UNIX_EPOCH_TICKS);
-    osr.write<i32>(compressed_replay.size());
+    osr.write<i64>((i64)score.unixTimestamp * TICKS_PER_SECOND + UNIX_EPOCH_TICKS);
+    osr.write<i32>((i32)compressed_replay.size());
     osr.write_bytes(compressed_replay.data(), compressed_replay.size());
     osr.write<i64>(score.bancho_score_id);
 
     // neomod-specific
     Replay::Mods::pack_and_write(osr, score.mods);
 
-    if(include_cvars) {
-        std::vector<ConVar*> saveable_cvars;
-        for(auto* cvar : cvars().getConVarArray()) {
-            // Very important: do not save passwords in replays
-            if(cvar->isFlagSet(cv::HIDDEN)) continue;
-            if(cvar->isFlagSet(cv::NOSAVE)) continue;
-
-            saveable_cvars.push_back(cvar);
-        }
-
-        osr.write<u32>(saveable_cvars.size());
-        for(auto* cvar : saveable_cvars) {
-            osr.write_string(cvar->getName());
-            osr.write_string(cvar->getString());
+    if(!additional_data.empty()) {
+        osr.write<u32>(additional_data.size());
+        for(const auto& str : additional_data) {
+            osr.write_string(str);
         }
     }
 
@@ -327,19 +315,17 @@ bool load_raw(std::string_view lzma_path, FinishedScore& score_out) {
     return !score_out.replay.empty();
 }
 
-void watch(FinishedScore score) {
-    if(score.replay.empty()) {
-        ui->getNotificationOverlay()->addToast("Failed to load replay", ERROR_TOAST);
-        return;
-    }
+void watch(const FinishedScore& score) {
+    assert(!score.replay.empty());
 
     auto* map = db->getBeatmapDifficulty(score.beatmap_hash);
     if(map == nullptr) {
         // XXX: Auto-download beatmap
         ui->getNotificationOverlay()->addToast("Missing beatmap for this replay", ERROR_TOAST);
     } else {
-        ui->getSongBrowser()->onDifficultySelected(map, false);
-        ui->getSongBrowser()->selectSelectedBeatmapSongButton();
+        auto* sb = ui->getSongBrowser();
+        sb->onDifficultySelected(map, false);
+        sb->selectSelectedBeatmapSongButton();
         osu->getMapInterface()->watch(score, 0);
     }
 }
@@ -347,34 +333,28 @@ void watch(FinishedScore score) {
 
 bool load_from_disk(FinishedScore& score, bool update_db) {
     bool succeeded = false;
-
-    // peppy score
-    if(score.peppy_replay_tms > 0) {
-        const std::string path =
-            fmt::format("{}/Data/r/{}-{}.osr", cv::osu_folder.getString(), score.beatmap_hash, score.peppy_replay_tms);
-        succeeded = load_osr(path, score);
+    for(const auto& osr : std::array{
+            // peppy replay
+            (score.peppy_replay_tms > 0 ? fmt::format("{}/Data/r/{}-{}.osr", cv::osu_folder.getString(),
+                                                      score.beatmap_hash, score.peppy_replay_tms)
+                                        : ""s),
+            // neomod 43.09+
+            (score.server.empty() ? fmt::format(NEOMOD_REPLAYS_PATH "/{}-{}.osr", score.player_id, score.unixTimestamp)
+                                  : fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}-{}.osr", score.server, score.player_id,
+                                                score.unixTimestamp))}) {
+        if(osr.empty()) continue;
+        if((succeeded = load_osr(osr, score))) break;
     }
 
-    // neomod 43.09+
     if(!succeeded) {
-        // Quirk that will totally never bite us in the ass: if score was set offline,
-        // server is "" and windows/linux/osx ignore the extra "/" in the path
-        std::string osr_path =
-            fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}-{}.osr", score.server, score.player_id, score.unixTimestamp);
-        succeeded = load_osr(osr_path, score);
-    }
-
-    // neomod (legacy)
-    if(!succeeded) {
-        std::string lzma_path =
-            fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma", score.server, score.unixTimestamp);
-        succeeded = load_raw(lzma_path, score);
-    }
-
-    // neomod (legacy) (we sometimes saved the replay in the wrong location...)
-    if(!succeeded) {
-        std::string lzma_path = fmt::format(NEOMOD_REPLAYS_PATH "/{}.replay.lzma", score.unixTimestamp);
-        succeeded = load_raw(lzma_path, score);
+        // neomod (legacy)
+        for(const auto& raw : std::array{(fmt::format(NEOMOD_REPLAYS_PATH "/{}.replay.lzma", score.unixTimestamp)),
+                                         (score.server.empty() ? ""s
+                                                               : fmt::format(NEOMOD_REPLAYS_PATH "/{}/{}.replay.lzma",
+                                                                             score.server, score.unixTimestamp))}) {
+            if(raw.empty()) continue;
+            if((succeeded = load_raw(raw, score))) break;
+        }
     }
 
     if(succeeded && update_db) {
@@ -404,15 +384,15 @@ void load_and_watch(FinishedScore score) {
 
     // We don't have the replay, try loading it from the server
     if(score.server != BanchoState::endpoint) {
-        auto msg = fmt::format("Please connect to {} to view this replay!", score.server);
-        ui->getNotificationOverlay()->addToast(msg, ERROR_TOAST);
+        ui->getNotificationOverlay()->addToast(fmt::format("Please connect to {:s} to view this replay!", score.server),
+                                               ERROR_TOAST);
         return;
     }
 
     ui->getNotificationOverlay()->addNotification("Downloading replay...");
 
-    std::string url = "osu." + BanchoState::endpoint;
-    url.append(fmt::format("/web/osu-getreplay.php?m=0&c={}", score.bancho_score_id));
+    std::string url =
+        fmt::format("osu.{:s}/web/osu-getreplay.php?m=0&c={:d}", BanchoState::endpoint, score.bancho_score_id);
     BANCHO::Api::append_auth_params(url);
     Mc::Net::RequestOptions options{
         .user_agent = "osu!",
@@ -427,11 +407,16 @@ void load_and_watch(FinishedScore score) {
         }
 
         // Unzip replay frames from server response
-        score.replay = get_frames((u8*)response.body.data(), response.body.size());
-        watch(score);
+        score.replay = get_frames((const u8*)response.body.data(), response.body.size());
+        if(!score.replay.empty()) {
+            // Save it to disk (XXX: blocking main thread)
+            save_osr(score);
 
-        // Save it to disk (XXX: blocking main thread)
-        save_osr(score, false);
+            // Watch it
+            watch(score);
+        } else {
+            ui->getNotificationOverlay()->addToast("Failed to load replay", ERROR_TOAST);
+        }
     });
 }
 

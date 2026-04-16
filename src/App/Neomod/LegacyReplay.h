@@ -3,6 +3,8 @@
 #include "ModFlags.h"
 #include "MD5Hash.h"
 
+#include <span>
+
 // TODO: we should rename this to something else than "LegacyReplay"
 //       it's no longer just "legacy", as we export in this format too...
 
@@ -66,12 +68,12 @@ struct Info {
 BEATMAP_VALUES getBeatmapValuesForModsLegacy(LegacyFlags modsLegacy, float legacyAR, float legacyCS, float legacyOD,
                                              float legacyHP);
 
-Info from_bytes(u8* data, uSz s_data);
-std::vector<Frame> get_frames(u8* replay_data, uSz replay_size);
+Info from_bytes(const u8* data, uSz s_data);
+std::vector<Frame> get_frames(const u8* replay_data, uSz replay_size);
 std::vector<u8> compress_frames(const std::vector<Frame>& frames);
 bool load_from_disk(FinishedScore& score, bool update_db);
 bool load_osr(std::string_view osr_path, FinishedScore& score_out);
-bool save_osr(const FinishedScore& score, bool include_cvars);
+bool save_osr(const FinishedScore& score, std::span<const std::string> additional_data = {});
 void load_and_watch(FinishedScore score);
 
 }  // namespace LegacyReplay

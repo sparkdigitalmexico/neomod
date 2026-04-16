@@ -210,8 +210,8 @@ class DiffLabel final : public UIIcon {
         g->pushTransform();
         {
             g->scale(this->fScale, this->fScale);
-            g->translate((i32)(this->getPos().x),
-                         (i32)(this->getPos().y + this->getSize().y / 2.f + this->fStringHeight / 2.f));
+            g->translate((f32)(i32)(this->getPos().x),
+                         (f32)(i32)(this->getPos().y + this->getSize().y / 2.f + this->fStringHeight / 2.f));
 
             const f32 outline_scale = Osu::getUIScale();
             const TextFX icon_fx{.col_text = this->textColor,
