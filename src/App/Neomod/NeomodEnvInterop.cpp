@@ -200,7 +200,8 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
 }
 
 namespace {
-bool is_multi_instance_desired(int argc, char *argv[]) {
+// not used on WASM
+[[maybe_unused]] bool is_multi_instance_desired(int argc, char *argv[]) {
     if(argc <= 1) return false;
     for(int i = 1; i < argc; ++i) {
         if(!argv[i]) continue;
@@ -618,8 +619,6 @@ void cleanup_ipc_socket_atexit() {
         g_ipc_socket_path = nullptr;
     }
 }
-#else
-[[maybe_unused]] void cleanup_ipc_socket_atexit() {}
 #endif
 
 struct IpcAddr {
@@ -719,10 +718,10 @@ void handleExistingWindow(int argc, char *argv[]) {
 
     switch(try_bind(sock_fd, a)) {
         case BindOutcome::Owner: {
-            if constexpr(!USING_ABSTRACT_SOCKETS) {
-                g_ipc_socket_path = strdup(&a.addr.sun_path[0]);
-                std::atexit(cleanup_ipc_socket_atexit);
-            }
+#ifndef MCENGINE_PLATFORM_LINUX
+            g_ipc_socket_path = strdup(&a.addr.sun_path[0]);
+            std::atexit(cleanup_ipc_socket_atexit);
+#endif
             if(listen(sock_fd, 5) < 0) {
                 debugLog("IPC: socket listen failed: {}", strerror(errno));
                 close(sock_fd);
