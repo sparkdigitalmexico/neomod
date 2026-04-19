@@ -23,6 +23,8 @@
     <string>6.0</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.games</string>
+    <key>LSSupportsGameMode</key>
+    <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key>
@@ -33,5 +35,7 @@
     <array>
         <string>MacOSX</string>
     </array>
+    <key>MTLDevicePreference</key>
+    <string>HighPerformance</string>
 </dict>
 </plist>

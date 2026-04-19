@@ -56,7 +56,7 @@ struct UniformCache {
     bool needsConfigUpdate{true};  // for convar-based uniforms
 };
 
-UniformCache s_uniformCache;
+static constinit UniformCache s_uniformCache{};
 
 // helper function to update color uniforms (after ->enable-ing the shader)
 void updateColorUniforms(Color borderColor, Color bodyColor);

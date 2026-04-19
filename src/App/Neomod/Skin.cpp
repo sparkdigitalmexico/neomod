@@ -904,7 +904,7 @@ bool Skin::parseSkinINI(std::string filepath) {
     }
 
     for(std::string *prefix_ref : {&this->combo_prefix, &this->score_prefix, &this->hitcircle_prefix}) {
-        this->fixupPrefix(*prefix_ref, this->skin_dir);
+        Skin::fixupPrefix(*prefix_ref, this->skin_dir);
     }
 
     return true;
@@ -936,7 +936,7 @@ void Skin::parseFallbackPrefixes(const std::string &iniPath) {
 
     for(std::string *prefix_ref :
         {&this->fallback_combo_prefix, &this->fallback_score_prefix, &this->fallback_hitcircle_prefix}) {
-        this->fixupPrefix(*prefix_ref, this->fallback_dir);
+        Skin::fixupPrefix(*prefix_ref, this->fallback_dir);
     }
 }
 

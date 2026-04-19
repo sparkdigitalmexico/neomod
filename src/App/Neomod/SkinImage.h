@@ -99,7 +99,6 @@ class SkinImage final {
 
     [[nodiscard]] f32 getScale(bool animated = true) const;
     [[nodiscard]] f32 getImageScale(bool animated = true) const;
-    void drawBrightQuad(VertexArrayObject* vao, f32 brightness) const;  // helper
 
     struct SkinImageImpl;
     StaticPImpl<SkinImageImpl, sizeof(void*) == 8 ? 80 : 60, alignof(void*)> m_impl;

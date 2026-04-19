@@ -24,6 +24,7 @@
 
 #include <atomic>
 #include <memory>
+#include <span>
 
 namespace cv {
 extern ConVar debug_pp;
@@ -47,7 +48,7 @@ struct ScoreResult {
 
 struct internal {
     static void collect_outdated_db_diffs(const Sync::stop_token& stoken, std::vector<BeatmapDifficulty*>& outdiffs);
-    static void flush_score_results(std::vector<ScoreResult>& pending);
+    static void flush_score_results(std::span<const ScoreResult> pending);
 };
 
 void internal::collect_outdated_db_diffs(const Sync::stop_token& stoken, std::vector<BeatmapDifficulty*>& outdiffs) {
@@ -618,12 +619,12 @@ void coordinator(const Sync::stop_token& stoken) {
 
 }  // namespace
 
-void internal::flush_score_results(std::vector<ScoreResult>& pending) {
+void internal::flush_score_results(std::span<const ScoreResult> pending) {
     bool any_updated = false;
 
     Sync::unique_lock lk(db->scores_mtx);
     auto& db_scores = db->getScoresMutable();
-    for(auto& res : pending) {
+    for(const auto& res : pending) {
         const auto& it = db_scores.find(res.score.beatmap_hash);
         if(it == db_scores.end()) continue;
 

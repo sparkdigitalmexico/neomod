@@ -226,7 +226,12 @@ void SkinImage::destroy(bool everything) {
     m_impl->bHasNonAnimatedImage = false;
 }
 
-void SkinImage::drawBrightQuad(VertexArrayObject* vao, float brightness) const {
+namespace {
+
+// buffer
+static constinit VertexArrayObject quadVAO{DrawPrimitive::QUADS};
+
+void draw_bright_quad(Graphics* g, VertexArrayObject* vao, float brightness) {
     // it is assumed that the vao is already set up as a quad with the right texcoords/vertices
     const bool oldBlending = g->getBlending();
     const auto oldBlendMode = g->getBlendMode();
@@ -243,6 +248,8 @@ void SkinImage::drawBrightQuad(VertexArrayObject* vao, float brightness) const {
     g->setBlendMode(oldBlendMode);
     g->setBlending(oldBlending);
 }
+
+}  // namespace
 
 void SkinImage::draw(vec2 pos, float scale, float brightness, bool animated) const {
     if(m_impl->images.size() < 1) return;
@@ -268,26 +275,26 @@ void SkinImage::draw(vec2 pos, float scale, float brightness, bool animated) con
             const float x = -realWidth / 2.f;
             const float y = -realHeight / 2.f;
 
-            VertexArrayObject vao(DrawPrimitive::QUADS);
+            quadVAO.clear();
 
-            vao.addVertex(x, y);
-            vao.addTexcoord(0, 0);
+            quadVAO.addVertex(x, y);
+            quadVAO.addTexcoord(0, 0);
 
-            vao.addVertex(x, (y + height));
-            vao.addTexcoord(0, 1);
+            quadVAO.addVertex(x, (y + height));
+            quadVAO.addTexcoord(0, 1);
 
-            vao.addVertex((x + width), (y + height));
-            vao.addTexcoord(m_impl->fDrawClipWidthPercent, 1);
+            quadVAO.addVertex((x + width), (y + height));
+            quadVAO.addTexcoord(m_impl->fDrawClipWidthPercent, 1);
 
-            vao.addVertex((x + width), y);
-            vao.addTexcoord(m_impl->fDrawClipWidthPercent, 0);
+            quadVAO.addVertex((x + width), y);
+            quadVAO.addTexcoord(m_impl->fDrawClipWidthPercent, 0);
 
             img->bind();
             {
-                g->drawVAO(&vao);
+                g->drawVAO(&quadVAO);
 
                 if(brightness > 0.f) {
-                    this->drawBrightQuad(&vao, brightness);
+                    draw_bright_quad(g.get(), &quadVAO, brightness);
                 }
             }
             img->unbind();
@@ -320,26 +327,26 @@ void SkinImage::drawRaw(vec2 pos, float scale, AnchorPoint anchor, float brightn
             const float x = -realWidth / 2.f;
             const float y = -realHeight / 2.f;
 
-            VertexArrayObject vao(DrawPrimitive::QUADS);
+            quadVAO.clear();
 
-            vao.addVertex(x, y);
-            vao.addTexcoord(0, 0);
+            quadVAO.addVertex(x, y);
+            quadVAO.addTexcoord(0, 0);
 
-            vao.addVertex(x, (y + height));
-            vao.addTexcoord(0, 1);
+            quadVAO.addVertex(x, (y + height));
+            quadVAO.addTexcoord(0, 1);
 
-            vao.addVertex((x + width), (y + height));
-            vao.addTexcoord(m_impl->fDrawClipWidthPercent, 1);
+            quadVAO.addVertex((x + width), (y + height));
+            quadVAO.addTexcoord(m_impl->fDrawClipWidthPercent, 1);
 
-            vao.addVertex((x + width), y);
-            vao.addTexcoord(m_impl->fDrawClipWidthPercent, 0);
+            quadVAO.addVertex((x + width), y);
+            quadVAO.addTexcoord(m_impl->fDrawClipWidthPercent, 0);
 
             img->bind();
             {
-                g->drawVAO(&vao);
+                g->drawVAO(&quadVAO);
 
                 if(brightness > 0.f) {
-                    this->drawBrightQuad(&vao, brightness);
+                    draw_bright_quad(g.get(), &quadVAO, brightness);
                 }
             }
             img->unbind();
