@@ -960,9 +960,9 @@ void SDLMain::shutdown(SDL_AppResult result) {
 bool SDLMain::resizeCallback(void *userdata, SDL_Event *event) {
     assert(userdata && event);
 
-    SDLMain *main_ptr;
+    SDLMain *main_ptr = static_cast<SDLMain *>(userdata);
     if(event->type != SDL_EVENT_WINDOW_EXPOSED || event->window.data1 != 1 /* live resize event */ ||
-       (main_ptr = static_cast<SDLMain *>(userdata))->winMinimized() || main_ptr->m_bRestoreFullscreen) {
+       main_ptr->winMinimized() || main_ptr->m_bRestoreFullscreen) {
         return false;  // return value is ignored from AddEventWatch
     }
     assert(main_ptr->m_engine);

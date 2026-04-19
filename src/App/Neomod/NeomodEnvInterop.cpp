@@ -17,6 +17,7 @@
 #include "UI.h"
 #include "score.h"
 #include "Logging.h"
+#include "SString.h"
 
 struct NeomodEnvInterop : public Environment::Interop {
     NOCOPY_NOMOVE(NeomodEnvInterop)
@@ -198,10 +199,22 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
     return true;
 }
 
+namespace {
+bool is_multi_instance_desired(int argc, char *argv[]) {
+    if(argc <= 1) return false;
+    for(int i = 1; i < argc; ++i) {
+        if(!argv[i]) continue;
+        if(SString::to_lower(std::string_view{argv[i]}) == "-multi"sv) {
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace
+
 #ifdef MCENGINE_PLATFORM_WINDOWS
 
 #include "Engine.h"
-#include "SString.h"
 #include "UniString.h"
 #include "Timing.h"
 
@@ -495,6 +508,10 @@ void neomod::handleExistingWindow(int argc, char *argv[]) {
     // if a neomod instance is already running, send it a message then quit
     HWND existing_window = FindWindow(TEXT(PACKAGE_NAME), nullptr);
     if(existing_window) {
+        if(is_multi_instance_desired(argc, argv)) {
+            // return early (this instance was started with the -multi argument)
+            return;
+        }
         // send even if we only have the exe name as args, just use it as a request to focus the existing window
         size_t total_size = 0;
         for(int i = 0; i < argc; i++) {
@@ -575,7 +592,6 @@ void neomod::handleExistingWindow(int argc, char *argv[]) {
 #elif defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
 
 #include "NetworkHandler.h"
-#include "SString.h"
 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -583,14 +599,98 @@ void neomod::handleExistingWindow(int argc, char *argv[]) {
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 
 namespace {
-// stored globally so it can be passed to NetworkHandler after it's created
-int g_ipc_socket_fd = -1;
+constexpr bool USING_ABSTRACT_SOCKETS{Env::cfg(OS::LINUX)};
 
-// abstract socket name (leading null byte)
-constexpr char IPC_SOCKET_NAME[] = "\0" PACKAGE_NAME "-instance";
-constexpr size_t IPC_SOCKET_NAME_LEN = sizeof(IPC_SOCKET_NAME) - 1;  // exclude trailing null from sizeof
+// stored globally so it can be passed to NetworkHandler after it's created
+int g_ipc_socket_fd{-1};
+
+#ifndef MCENGINE_PLATFORM_LINUX
+// pathname socket needs explicit cleanup on exit; linux abstract sockets clean up on close
+char *g_ipc_socket_path{nullptr};
+
+void cleanup_ipc_socket_atexit() {
+    if(g_ipc_socket_path) {
+        unlink(g_ipc_socket_path);
+        free(g_ipc_socket_path);
+        g_ipc_socket_path = nullptr;
+    }
+}
+#else
+[[maybe_unused]] void cleanup_ipc_socket_atexit() {}
+#endif
+
+struct IpcAddr {
+    sockaddr_un addr{};
+    socklen_t len{0};
+};
+
+// linux: abstract socket (leading null in sun_path).
+// macos/bsd: pathname socket under $TMPDIR (or /tmp), per-uid.
+IpcAddr build_ipc_addr() {
+    IpcAddr a{};
+    a.addr.sun_family = AF_UNIX;
+
+    if constexpr(USING_ABSTRACT_SOCKETS) {
+        constexpr char NAME[] = "\0" PACKAGE_NAME "-instance";
+        constexpr size_t NAME_LEN = sizeof(NAME) - 1;  // exclude trailing null from sizeof
+        static_assert(NAME_LEN <= sizeof(a.addr.sun_path));
+        memcpy(&a.addr.sun_path[0], &NAME[0], NAME_LEN);
+        a.len = offsetof(sockaddr_un, sun_path) + NAME_LEN;
+    } else {
+        const char *tmpdir = std::getenv("TMPDIR");
+        if(!tmpdir || !*tmpdir) tmpdir = "/tmp";
+
+        // strip trailing slashes so we can concat cleanly
+        size_t tmplen = strlen(tmpdir);
+        while(tmplen > 1 && tmpdir[tmplen - 1] == '/') --tmplen;
+
+        // include uid so the /tmp fallback can't collide between users on the same machine
+        const std::string path = fmt::format("{}/" PACKAGE_NAME "-{}.sock", std::string_view{tmpdir, tmplen}, getuid());
+
+        if(path.size() + 1 > sizeof(a.addr.sun_path)) {
+            debugLog("IPC: socket path too long: {}", path);
+            return {};
+        }
+        memcpy(&a.addr.sun_path[0], path.data(), path.size() + 1);  // include null terminator
+        a.len = offsetof(sockaddr_un, sun_path) + path.size() + 1;
+    }
+
+    return a;
+}
+
+enum class BindOutcome : u8 { Owner, AnotherAlive, HardError };
+
+// try to bind sock_fd. on EADDRINUSE, probe with a separate fd to tell apart
+// a live owner from a stale socket file; if stale, unlink and retry.
+//
+// note: there's a tiny race window between unlink and rebind where two concurrent
+// launchers can both end up bound to fresh files (one orphaned). closing it would
+// require a separate flock lockfile. probably will never happen, so not handling it
+BindOutcome try_bind(int sock_fd, const IpcAddr &a) {
+    const auto *sa = reinterpret_cast<const sockaddr *>(&a.addr);
+
+    if(bind(sock_fd, sa, a.len) == 0) return BindOutcome::Owner;
+    if(errno != EADDRINUSE) return BindOutcome::HardError;
+
+    // someone has the address. probe with a throwaway fd to see if they're alive.
+    const int probe_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if(probe_fd < 0) return BindOutcome::AnotherAlive;
+    const bool probe_alive = connect(probe_fd, sa, a.len) == 0;
+    close(probe_fd);
+
+    if(probe_alive) return BindOutcome::AnotherAlive;
+
+    // stale socket file, remove it
+    if constexpr(!USING_ABSTRACT_SOCKETS) {
+        unlink(&a.addr.sun_path[0]);
+    }
+
+    if(bind(sock_fd, sa, a.len) == 0) return BindOutcome::Owner;
+    return BindOutcome::AnotherAlive;  // lost a race
+}
 }  // namespace
 
 void NeomodEnvInterop::setup_system_integrations() {
@@ -605,37 +705,52 @@ void NeomodEnvInterop::setup_system_integrations() {
 
 namespace neomod {
 void handleExistingWindow(int argc, char *argv[]) {
-    // create abstract unix socket for instance detection
     int sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(sock_fd < 0) {
         debugLog("IPC: failed to create socket: {}", strerror(errno));
         return;
     }
 
-    sockaddr_un addr{};
-    addr.sun_family = AF_UNIX;
-    memcpy(addr.sun_path, IPC_SOCKET_NAME, IPC_SOCKET_NAME_LEN);
+    const IpcAddr a = build_ipc_addr();
+    if(a.len == 0) {
+        close(sock_fd);
+        return;
+    }
 
-    // try to bind, if it fails with EADDRINUSE, another instance is running
-    socklen_t addr_len = offsetof(sockaddr_un, sun_path) + IPC_SOCKET_NAME_LEN;
-    if(bind(sock_fd, reinterpret_cast<sockaddr *>(&addr), addr_len) < 0) {
-        if(errno == EADDRINUSE) {
-            // another instance is running, connect to it and send our args
-            if(connect(sock_fd, reinterpret_cast<sockaddr *>(&addr), addr_len) == 0) {
-                // calculate total size of args
+    switch(try_bind(sock_fd, a)) {
+        case BindOutcome::Owner: {
+            if constexpr(!USING_ABSTRACT_SOCKETS) {
+                g_ipc_socket_path = strdup(&a.addr.sun_path[0]);
+                std::atexit(cleanup_ipc_socket_atexit);
+            }
+            if(listen(sock_fd, 5) < 0) {
+                debugLog("IPC: socket listen failed: {}", strerror(errno));
+                close(sock_fd);
+                return;
+            }
+            // hand off ownership of sock_fd; NetworkHandler will close it on shutdown
+            g_ipc_socket_fd = sock_fd;
+            return;
+        }
+
+        case BindOutcome::AnotherAlive: {
+            // return early (this instance was started with the -multi argument)
+            if(is_multi_instance_desired(argc, argv)) {
+                close(sock_fd);
+                return;
+            }
+
+            const auto *sa = reinterpret_cast<const sockaddr *>(&a.addr);
+            if(connect(sock_fd, sa, a.len) == 0) {
                 u32 total_size = 0;
                 for(int i = 0; i < argc; i++) {
                     total_size += strlen(argv[i]) + 1;
                 }
 
                 if(total_size > 0 && total_size < 4096) {
-                    // send size header
                     send(sock_fd, &total_size, sizeof(total_size), 0);
-
-                    // send null-separated arguments
                     for(int i = 0; i < argc; i++) {
-                        size_t len = strlen(argv[i]) + 1;
-                        send(sock_fd, argv[i], len, 0);
+                        send(sock_fd, argv[i], strlen(argv[i]) + 1, 0);
                     }
 
                     // wait for acknowledgment (with timeout via select)
@@ -643,29 +758,23 @@ void handleExistingWindow(int argc, char *argv[]) {
                     FD_ZERO(&fds);
                     FD_SET(sock_fd, &fds);
                     timeval tv{.tv_sec = 5, .tv_usec = 0};
-
                     if(select(sock_fd + 1, &fds, nullptr, nullptr, &tv) > 0) {
                         char ack = 0;
                         recv(sock_fd, &ack, 1, 0);
                     }
                 }
             }
+
             close(sock_fd);
             std::exit(0);
-        } else {
+        }
+
+        case BindOutcome::HardError: {
+            debugLog("IPC: bind error: {}", strerror(errno));
             close(sock_fd);
             return;
         }
     }
-
-    // bind succeeded. we're the first instance, so start listening
-    if(listen(sock_fd, 5) < 0) {
-        close(sock_fd);
-        return;
-    }
-
-    // store for later use by setup_system_integrations
-    g_ipc_socket_fd = sock_fd;
 }
 }  // namespace neomod
 
