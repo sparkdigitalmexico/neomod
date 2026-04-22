@@ -19,6 +19,8 @@
 #include "Logging.h"
 #include "SString.h"
 
+namespace neomod {
+namespace {
 struct NeomodEnvInterop : public Environment::Interop {
     NOCOPY_NOMOVE(NeomodEnvInterop)
    public:
@@ -29,8 +31,8 @@ struct NeomodEnvInterop : public Environment::Interop {
     bool handle_cmdline_args(const std::vector<std::string> &args) override;
     void setup_system_integrations() override;
 };
+}  // namespace
 
-namespace neomod {
 void *createInterop(void *void_envptr) {
     assert(void_envptr);
     auto *envptr = static_cast<Environment *>(void_envptr);
@@ -104,7 +106,6 @@ const BeatmapSet *handle_osz(std::string_view osz_path) {
 
     return set;
 }
-}  // namespace neomod
 
 bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args) {
     if(!osu || !db) return false;
@@ -212,6 +213,7 @@ namespace {
     return false;
 }
 }  // namespace
+}  // namespace neomod
 
 #ifdef MCENGINE_PLATFORM_WINDOWS
 
@@ -227,6 +229,8 @@ namespace {
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_keycode.h>
+
+namespace neomod {
 
 #define NEOMOD_CMDLINE_WINDOW_MSG_ID TEXT("NEOMOD_CMDLINE")
 namespace {  // static
@@ -505,7 +509,7 @@ void NeomodEnvInterop::setup_system_integrations() {
     RegCloseKey(osz_key);
 }
 
-void neomod::handleExistingWindow(int argc, char *argv[]) {
+void handleExistingWindow(int argc, char *argv[]) {
     // if a neomod instance is already running, send it a message then quit
     HWND existing_window = FindWindow(TEXT(PACKAGE_NAME), nullptr);
     if(existing_window) {
@@ -589,6 +593,7 @@ void neomod::handleExistingWindow(int argc, char *argv[]) {
         std::exit(0);
     }
 }
+}  // namespace neomod
 
 #elif defined(MCENGINE_PLATFORM_LINUX) || defined(MCENGINE_PLATFORM_MACOS)
 
@@ -602,6 +607,7 @@ void neomod::handleExistingWindow(int argc, char *argv[]) {
 #include <cstdlib>
 #include <cstring>
 
+namespace neomod {
 namespace {
 constexpr bool USING_ABSTRACT_SOCKETS{Env::cfg(OS::LINUX)};
 
@@ -702,7 +708,6 @@ void NeomodEnvInterop::setup_system_integrations() {
     });
 }
 
-namespace neomod {
 void handleExistingWindow(int argc, char *argv[]) {
     int sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(sock_fd < 0) {
@@ -778,10 +783,10 @@ void handleExistingWindow(int argc, char *argv[]) {
 }  // namespace neomod
 
 #else  // other platforms - not implemented
+namespace neomod {
 
 void NeomodEnvInterop::setup_system_integrations() { return; }
 
-namespace neomod {
 void handleExistingWindow(int /*argc*/, char * /*argv*/[]) {}
 }  // namespace neomod
 
