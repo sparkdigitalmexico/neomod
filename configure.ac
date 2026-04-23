@@ -482,7 +482,7 @@ AS_IF([test "x$use_dx11" = "xyes" ], [
     use_dx11=no
 ])
 
-AS_IF([test "x$use_sdlgpu" = "xyes" ], [
+AS_IF([test "x$use_sdlgpu" = "xyes"], [
     AC_PROG_GLSLC
     AS_CASE(["$host_os"], [darwin*], [], [
         AS_IF([test -z "$GLSLC"], [
@@ -805,10 +805,6 @@ __EOF__
     SYSNAME="macos"
     DLLEXT=".dylib"
     LIBPREFIX="lib"
-    # BSD cp doesn't support -u (update); prefer gcp (GNU coreutils) if available
-    AS_IF([command -v gcp >/dev/null 2>&1],
-        [CP_INSTALL="gcp -Pu"],
-        [CP_INSTALL="cp -P"])
 
     AC_DEFINE([MCENGINE_PLATFORM_MACOS], [1], [Define if compiling for macOS.])
 ], [*], [ # Windows/mingw32
@@ -943,8 +939,8 @@ AS_IF([test "$host_os" = "mingw32"], [
     ])
     AC_SUBST([WINPTHREAD_LDFLAGS])
 
-    # building on linux
-    AS_IF([test "$build_os" = "linux-gnu" || test "$build_os" = "linux-musl"], [
+    # building on linux/bsd-ish
+    AS_CASE(["$build_os"], [linux*|darwin*|*bsd*], [
         AC_SUBST([PKG_CONFIG_SYSTEM_LIBRARY_PATH])
         AC_SUBST([PKG_CONFIG_SYSTEM_INCLUDE_PATH])
         AC_SUBST([PKG_CONFIG_LIBDIR])
@@ -982,7 +978,7 @@ __EOF__
         chmod +x "$PWD/build/pkg-config"
 
         CMAKE_GEN="Ninja"
-    ], [
+    ], [*], [
         # WIP: building in msys2
         cat > "$PWD/build/pkg-config" <<__EOF__
 #!/usr/bin/env bash
@@ -1011,6 +1007,14 @@ AC_SUBST([CMAKE_GEN])
 AC_SUBST([SYSNAME])
 AC_SUBST([DLLEXT])
 AC_SUBST([LIBPREFIX])
+
+# BSD cp (macOS/*BSD default) doesn't support -u, so prefer GNU coreutils cp (gcp) if available.
+AS_CASE(["$build_os"],
+    [darwin*|*bsd*], [
+        AS_IF([command -v gcp >/dev/null 2>&1],
+            [: "${CP_INSTALL:=gcp -Pu}"],
+            [: "${CP_INSTALL:=cp -P}"])
+    ])
 : "${CP_INSTALL:=cp -Pu}"
 AC_SUBST([CP_INSTALL])
 

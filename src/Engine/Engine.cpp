@@ -430,7 +430,10 @@ void Engine::onUpdate() {
     }
 
     // update discord presence
-    DiscRPC::tick();
+    {
+        VPROF_BUDGET("DiscRPC::tick", VPROF_BUDGETGROUP_UPDATE);
+        DiscRPC::tick();
+    }
 
     // update environment (after app, at the end here)
     {

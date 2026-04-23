@@ -149,10 +149,6 @@ class SCEDMBuilder final {
    public:
     void reset() { m_allPoints.clear(); }
 
-    void addRawPoints(std::span<const vec2> points) {
-        m_allPoints.insert(m_allPoints.end(), points.begin(), points.end());
-    }
-
     void addBezierSegment(const vec2 *controlPoints, u32 count) { generateBezierPoints(controlPoints, count); }
 
     void addCatmullSegment(const std::array<vec2, 4> &initPoints) {
@@ -179,6 +175,7 @@ class SCEDMBuilder final {
     }
 
     [[nodiscard]] bool hasPoints() const { return !m_allPoints.empty(); }
+    auto &getPoints() { return m_allPoints; }
 
     void build(std::vector<vec2> &curvePointsOut, f32 &startAngleOut, f32 &endAngleOut, u32 nCurve, f32 pixelLength);
 };
@@ -500,7 +497,8 @@ void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 cur
                 : std::max(2, (i32)std::ceil(naturalArcAngle /
                                              (2.0 * std::acos(1.0 - (f64)CIRC_ARC_TOLERANCE / (f64)radius))));
 
-        std::vector<vec2> arcPoints;
+        g_curveBuilder.reset();
+        auto &arcPoints = g_curveBuilder.getPoints();
         arcPoints.reserve(amountPoints);
         for(i32 i = 0; i < amountPoints; ++i) {
             const f64 fract = (f64)i / (f64)(amountPoints - 1);
@@ -529,9 +527,7 @@ void SliderCurve::constructCircular(std::span<const vec2> controlPoints, f32 cur
         m_NCurve =
             std::min((u32)(m_pixelLength / std::clamp<f32>(curvePointsSeparation, 1.0f, 100.0f)), (u32)maxPoints);
 
-        g_curveBuilder.reset();
-        g_curveBuilder.addRawPoints(arcPoints);
-        if(g_curveBuilder.hasPoints()) {
+        if(!arcPoints.empty()) {
             g_curveBuilder.build(m_curvePoints, m_startAngle, m_endAngle, m_NCurve, m_pixelLength);
         }
     } else {
