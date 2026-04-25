@@ -90,12 +90,15 @@ void setcwdexe(const std::string &exePathStr) noexcept {
 // Init/Iterate/Event
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     if(!appstate || result == SDL_APP_FAILURE) {
-        auto err_msg = SDL_GetError();
-        debugLog("Force exiting now, a fatal error occurred. (SDL error: {})", err_msg);
+        // NOTE: SDL error may not be relevant here but display it anyways
+        const std::string err_msg = fmt::format("Exiting now, a fatal error occurred. (SDL error: {})", SDL_GetError());
+        debugLog(err_msg);
 
 #ifdef MCENGINE_PLATFORM_WASM
         // Display the error to the user (as opposed to a black screen)
-        js_fatal_error(err_msg);
+        js_fatal_error(err_msg.c_str());
+#else
+        Environment::showDialog("Fatal Error", err_msg.c_str());
 #endif
 
         std::exit(-1);
