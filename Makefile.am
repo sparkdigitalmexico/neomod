@@ -347,7 +347,7 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-windowsi686.source: $(DEPS_CACHE)/curl-$
 	rm -rf windowsi686 && \
 	$(MKDIR_P) windowsi686 && $(TAR) xf curl-windowsi686.tar.xz -C windowsi686 --strip-components=1 --wildcards --no-anchored \
 		include lib/'*'.a lib/pkgconfig/'*'ssl'*' lib/pkgconfig/'*'crypto'*' && \
-	rm -rf windowsi686/lib/*zlib*.a windowsx86_64/lib/*libz.*a windowsi686/lib/*brotli*.a
+	rm -rf windowsi686/lib/*zlib*.a windowsi686/lib/*libz.*a windowsi686/lib/*brotli*.a
 	touch $@
 
 $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-windowsx86_64.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsx86_64.tar.xz
