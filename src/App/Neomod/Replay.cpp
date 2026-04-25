@@ -220,7 +220,6 @@ Mods Mods::from_cvars() {
     ADDIFCV(mod_perfect, Perfect);
     ADDIFCV(mod_nightmare, Nightmare);
     ADDIFCV(nightcore_enjoyer, NoPitchCorrection);
-    ADDIFCV(mod_touchdevice, TouchDevice);
     ADDIFCV(mod_spunout, SpunOut);
     ADDIFCV(mod_scorev2, ScoreV2);
     ADDIFCV(mod_fposu, FPoSu);
@@ -306,7 +305,6 @@ void Mods::use(const Mods &mods) {
     CVFROMFLAG(mod_perfect, Perfect);
     CVFROMFLAG(mod_nightmare, Nightmare);
     CVFROMFLAG(nightcore_enjoyer, NoPitchCorrection);
-    CVFROMFLAG(mod_touchdevice, TouchDevice);
     CVFROMFLAG(mod_spunout, SpunOut);
     CVFROMFLAG(mod_scorev2, ScoreV2);
     CVFROMFLAG(mod_fposu, FPoSu);

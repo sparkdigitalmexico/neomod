@@ -62,6 +62,7 @@
 #include "SoundEngine.h"
 #include "SpectatorScreen.h"
 #include "TooltipOverlay.h"
+#include "Touch.h"
 #include "UI.h"
 #include "UIContextMenu.h"
 #include "UIModSelectorModButton.h"
@@ -173,6 +174,11 @@ Osu::Osu()
 
     engine->getConsoleBox()->setRequireShiftToActivate(true);
     mouse->addListener(this);
+
+    for(int i = 0; i < 4; i++) {
+        this->fingerMappings[i] = 0;
+    }
+    touch->addListener(this);
 
     // set default fullscreen/letterboxed/windowed resolutions to match reality
     {
@@ -444,6 +450,8 @@ Osu::~Osu() {
         mouse->setOffset({0.f, 0.f});
         mouse->setScale({1.f, 1.f});
     }
+
+    touch->removeListener(this);
 
     // remove soundengine callbacks (so it doesnt try to call them after we are destroyed)
     soundEngine->setDeviceChangeBeforeCallback({});
@@ -1185,6 +1193,66 @@ void Osu::onButtonChange(ButtonEvent ev) {
     }
 
     this->onGameplayKey(isLeft ? GameplayKeys::M1 : GameplayKeys::M2, ev.down, ev.timestamp, true);
+}
+
+void Osu::onFingerPressed(Finger finger) {
+    if(touch->getFingers().size() == 1) {
+        this->mainFingerID = finger.id;
+        this->onFingerMoved(finger);
+        mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, true});
+    }
+
+    const bool inGameplay = this->isInPlayMode() && !this->map_iface->isPaused();
+    if(cv::disable_mousebuttons.getBool() || !inGameplay) return;
+
+    // To allow "true" TD gameplay, we switch the main finger when tapping a hitcircle,
+    // even when the previous main finger hasn't been released yet.
+    if(this->mainFingerID != finger.id && this->map_iface->clickableHitobjectAt(finger.pos)) {
+        this->mainFingerID = finger.id;
+        this->onFingerMoved(finger);
+        mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, true});
+    }
+
+    GameplayKeys keys[4] = {GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
+    for(int i = 0; i < 4; i++) {
+        if(this->fingerMappings[i] == 0) {
+            this->fingerMappings[i] = finger.id;
+            this->onGameplayKey(keys[i], true, finger.last_event_ns, true);
+            break;
+        }
+    }
+
+    this->getScore()->setTouchDevice();
+}
+
+void Osu::onFingerReleased(Finger finger) {
+    const auto &fingers = touch->getFingers();
+
+    if(finger.id == this->mainFingerID) {
+        this->mainFingerID = 0;
+        if(fingers.empty()) {
+            mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, false});
+        } else {
+            this->mainFingerID = fingers[0].id;
+        }
+    }
+
+    const bool inGameplay = this->isInPlayMode() && !this->map_iface->isPaused();
+    if(cv::disable_mousebuttons.getBool() || !inGameplay) return;
+
+    GameplayKeys keys[4] = {GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
+    for(int i = 0; i < 4; i++) {
+        if(this->fingerMappings[i] == finger.id) {
+            this->fingerMappings[i] = 0;
+            this->onGameplayKey(keys[i], false, finger.last_event_ns, true);
+            break;
+        }
+    }
+}
+
+void Osu::onFingerMoved(Finger finger) {
+    if(finger.id != mainFingerID) return;
+    mouse->onPosChange(finger.pos);
 }
 
 Sound *Osu::getSound(ActionSound action) const {
@@ -2134,9 +2202,7 @@ bool Osu::getModEZ() const { return flags::has<ModFlags::Easy>(this->score->mods
 bool Osu::getModSD() const { return flags::has<ModFlags::SuddenDeath>(this->score->mods.flags); }
 bool Osu::getModSS() const { return flags::has<ModFlags::Perfect>(this->score->mods.flags); }
 bool Osu::getModNightmare() const { return flags::has<ModFlags::Nightmare>(this->score->mods.flags); }
-bool Osu::getModTD() const {
-    return flags::has<ModFlags::TouchDevice>(this->score->mods.flags) || cv::mod_touchdevice_always.getBool();
-}
+bool Osu::getModTD() const { return flags::has<ModFlags::TouchDevice>(this->score->mods.flags); }
 bool Osu::getModTraceable() const { return flags::has<ModFlags::Traceable>(this->score->mods.flags); }
 bool Osu::getModFreezeFrame() const { return flags::has<ModFlags::FreezeFrame>(this->score->mods.flags); }
 bool Osu::getModDT() const { return this->score->mods.speed == 1.5f; }

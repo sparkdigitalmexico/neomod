@@ -2,6 +2,7 @@
 // Copyright (c) 2015, PG, All rights reserved.
 #include "App.h"
 #include "MouseListener.h"
+#include "Touch.h"
 #include "Rect.h"
 
 #include "OsuConfig.h"
@@ -41,7 +42,7 @@ enum class CvarEditor : uint8_t;
 struct UI;
 extern UI *ui;
 
-class Osu final : public App, public MouseListener {
+class Osu final : public App, public MouseListener, public TouchListener {
     NOCOPY_NOMOVE(Osu)
    public:
     Osu();
@@ -92,6 +93,10 @@ class Osu final : public App, public MouseListener {
     void stealFocus() override;
 
     void onButtonChange(ButtonEvent ev) override;
+
+    void onFingerPressed(Finger finger) override;
+    void onFingerReleased(Finger finger) override;
+    void onFingerMoved(Finger finger) override;
 
     forceinline void onResolutionChanged(vec2 newResolution) override {
         doResolutionChange(newResolution, ResolutionRequestFlags::R_ENGINE);
@@ -315,6 +320,9 @@ class Osu final : public App, public MouseListener {
     Skin *skinScheduledToLoad{nullptr};
 
    private:
+    u64 mainFingerID{0};
+    std::array<u64, 4> fingerMappings;
+
     bool bF1{false};
     bool bUIToggleCheck{false};
     bool bScoreboardToggleCheck{false};

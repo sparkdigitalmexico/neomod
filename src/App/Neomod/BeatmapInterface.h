@@ -50,6 +50,8 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     void update();
     void update2();  // Used to be Playfield::update()
 
+    bool clickableHitobjectAt(vec2 cursor_pos);
+
     // this should make all the necessary internal updates to hitobjects when legacy osu mods or static mods change
     // live (but also on start)
     void onModUpdate(bool rebuildSliderVertexBuffers = true, bool recomputeDrainRate = true);

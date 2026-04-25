@@ -394,8 +394,6 @@ CONVAR(mod_hardrock, false, CLIENT | SERVER | GAMEPLAY);
 CONVAR(mod_easy, false, CLIENT | SERVER | GAMEPLAY);
 CONVAR(mod_suddendeath, false, CLIENT | SERVER | GAMEPLAY);
 CONVAR(mod_perfect, false, CLIENT | SERVER | GAMEPLAY);
-CONVAR(mod_touchdevice, false, CLIENT | SERVER | GAMEPLAY);
-CONVAR(mod_touchdevice_always, false, CLIENT | SERVER | GAMEPLAY, "always enable touchdevice mod");
 // speed_override: Even though it isn't PROTECTED, only (0.75, 1.0, 1.5) are allowed on bancho servers.
 CONVAR(speed_override, -1.0f, CLIENT | SERVER | GAMEPLAY);
 // mod_*time_dummy: These don't affect gameplay, but edit speed_override.

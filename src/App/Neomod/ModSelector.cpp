@@ -354,10 +354,6 @@ void ModSelector::updateButtons(bool initial) {
     setGridModbtn(this->getGridButton(FL_POS), 1, initial && cv::mod_actual_flashlight.getBool(),
                   &cv::mod_actual_flashlight, "afl", "Actual flashlight.", MKIMGGETR(i_modselect_fl));
 
-    this->modButtonTD =
-        setGridModbtn(this->getGridButton(TD_POS), 0, initial && osu->getModTD(), &cv::mod_touchdevice, "nerftd",
-                      "Simulate pp nerf for touch devices.\nOnly affects pp calculation.", MKIMGGETR(i_modselect_td));
-
     this->modButtonRX = setGridModbtn(
         this->getGridButton(RX_POS), 0, initial && osu->getModRelax(), &cv::mod_relax, "relax",
         "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **",
@@ -379,9 +375,6 @@ void ModSelector::updateButtons(bool initial) {
     this->modButtonSV2 =
         setGridModbtn(this->getGridButton(SV2_POS), 0, initial && osu->getModScorev2(), &cv::mod_scorev2, "v2",
                       "Try the future scoring system.\n** UNRANKED **", MKIMGGETR(i_modselect_sv2));
-
-    // Only enable this if mod_touchdevice_always is enabled
-    this->modButtonTD->setAvailable(!cv::mod_touchdevice_always.getBool());
 
     const bool isMulti = BanchoState::is_in_a_multi_room();
     const bool isHostEquivalent = !isMulti || BanchoState::room.is_host();
@@ -1209,7 +1202,6 @@ void ModSelector::enableModsFromFlags(LegacyFlags flags) {
 
     this->modButtonNF->setOn(flags::has<LegacyFlags::NoFail>(flags), true);
     this->modButtonEZ->setOn(flags::has<LegacyFlags::Easy>(flags), true);
-    this->modButtonTD->setOn(flags::has<LegacyFlags::TouchDevice>(flags), true);
     this->modButtonHD->setOn(flags::has<LegacyFlags::Hidden>(flags), true);
     this->modButtonHR->setOn(flags::has<LegacyFlags::HardRock>(flags), true);
     this->modButtonRX->setOn(flags::has<LegacyFlags::Relax>(flags), true);

@@ -27,6 +27,7 @@
 #include "SString.h"
 #include "UniString.h"
 #include "Parsing.h"
+#include "Touch.h"
 
 #ifdef MCENGINE_PLATFORM_WASM
 #include <emscripten/em_js.h>
@@ -532,6 +533,18 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
             m_vCurrentAbsPenPos = vec2{event->pmotion.x, event->pmotion.y};
             break;
 
+        // touch events
+        // tracked separately from mouse events so we can tell which finger is pressing
+        case SDL_EVENT_FINGER_DOWN:
+            touch->onFingerDown(&event->tfinger);
+            break;
+        case SDL_EVENT_FINGER_MOTION:
+            touch->onFingerMove(&event->tfinger);
+            break;
+        case SDL_EVENT_FINGER_UP:
+            touch->onFingerUp(&event->tfinger);
+            break;
+
         default:
             if(m_bEnvDebug) debugLog("DEBUG: unhandled SDL event {}", event->type);
             break;
@@ -891,9 +904,6 @@ void SDLMain::configureEvents() {
         [](float on) -> void { SDL_SetEventEnabled(SDL_EVENT_PEN_MOTION, !!static_cast<int>(on)); });
 
     // touch
-    SDL_SetEventEnabled(SDL_EVENT_FINGER_DOWN, false);
-    SDL_SetEventEnabled(SDL_EVENT_FINGER_UP, false);
-    SDL_SetEventEnabled(SDL_EVENT_FINGER_MOTION, false);
     SDL_SetEventEnabled(SDL_EVENT_FINGER_CANCELED, false);
 
     // IME input

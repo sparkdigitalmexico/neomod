@@ -227,6 +227,7 @@ class Circle final : public HitObject {
     void draw2() override;
     void update(i32 curPosMS, f64 frameTimeMS) override;
 
+    bool isClickableFrom(i32 music_pos, vec2 cursor_pos) const;
     void updateStackPosition(f32 stackOffset) override;
     void miss(i32 curPosMS) override;
 
@@ -285,6 +286,7 @@ class Slider final : public HitObject {
 
     void updateStackPosition(f32 stackOffset) override;
     void miss(i32 curPosMS) override;
+    bool isClickableFrom(i32 music_pos, vec2 cursor_pos) const;
     // [[nodiscard]] constexpr forceinline i32 getCombo() const override {
     //     return 2 + std::max((iRepeat - 1), 0) + (std::max((iRepeat - 1), 0) + 1) * ticks.size();
     // }

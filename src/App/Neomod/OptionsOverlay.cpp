@@ -892,9 +892,6 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         &cv::user_include_relax_and_autopilot_for_stats);
     this->addCheckbox("Always show pp instead of score in scorebrowser", "Ignore score sorting type entirely.",
                       &cv::scores_always_display_pp);
-    this->addCheckbox("Always enable touch device pp nerf mod",
-                      "Keep touch device pp nerf mod active even when resetting all mods.",
-                      &cv::mod_touchdevice_always);
 
     this->addSubSection("Songbrowser");
     // Fallback font support is currently implemented for these platforms

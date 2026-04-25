@@ -239,6 +239,7 @@ class LiveScore final {
 
     [[nodiscard]] inline bool isUnranked() const { return this->bIsUnranked; }
     void setCheated() { this->bIsUnranked = true; }
+    void setTouchDevice();
 
     static double getHealthIncrease(AbstractBeatmapInterface *beatmap, LiveHitResult hit);
     static double getHealthIncrease(LiveHitResult hit, double HP = 5.0f, double hpMultiplierNormal = 1.0f,

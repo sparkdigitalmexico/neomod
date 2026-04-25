@@ -28,6 +28,7 @@ class Keyboard;
 class McFont;
 class InputDevice;
 class SoundEngine;
+class Touch;
 
 namespace Mc::Net {
 class NetworkHandler;
@@ -176,6 +177,7 @@ class Engine final : public KeyboardListener {
 };
 
 extern std::unique_ptr<Mouse> mouse;
+extern std::unique_ptr<Touch> touch;
 extern std::unique_ptr<Keyboard> keyboard;
 extern std::unique_ptr<App> app;
 extern std::unique_ptr<Graphics> g;

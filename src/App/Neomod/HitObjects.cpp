@@ -936,6 +936,17 @@ void Circle::miss(i32 curPosMS) {
     onHit(LiveHitResult::HIT_MISS, deltaMS);
 }
 
+bool Circle::isClickableFrom(i32 music_pos, vec2 cursor_pos) const {
+    if(m_finished || m_blocked) return false;
+    if(m_pi->getHitResult(music_pos - m_clickTimeMS) == LiveHitResult::HIT_NULL) return false;
+
+    const vec2 pos = m_pi->osuCoords2Pixels(m_rawPos);
+    const f32 cursorDelta = vec::length(cursor_pos - pos);
+    if(cursorDelta >= m_pi->fHitcircleDiameter / 2.0f) return false;
+
+    return true;
+}
+
 void Circle::onClickEvent(std::vector<Click> &clicks) {
     if(m_finished) return;
 
@@ -1946,6 +1957,17 @@ f32 Slider::getT(i32 posMS, bool raw) const {
         auto floorVal = (f32)std::floor(t);
         return ((i32)floorVal % 2 == 0) ? t - floorVal : floorVal + 1 - t;
     }
+}
+
+bool Slider::isClickableFrom(i32 music_pos, vec2 cursor_pos) const {
+    if(m_ctrlPoints.size() == 0 || m_startFinished || m_blocked) return false;
+    if(m_pi->getHitResult(music_pos - m_clickTimeMS) == LiveHitResult::HIT_NULL) return false;
+
+    const vec2 pos = m_pi->osuCoords2Pixels(curvePointAt(0.0f));
+    const f32 cursorDelta = vec::length(cursor_pos - pos);
+    if(cursorDelta >= m_pi->fHitcircleDiameter / 2.0f) return false;
+
+    return true;
 }
 
 void Slider::onClickEvent(std::vector<Click> &clicks) {

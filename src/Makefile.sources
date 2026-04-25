@@ -222,6 +222,7 @@ neomod_SOURCES = \
 	src/Engine/Input/KeyBindings.cpp \
 	src/Engine/Input/Keyboard.cpp \
 	src/Engine/Input/Mouse.cpp \
+	src/Engine/Input/Touch.cpp \
 	src/Engine/Logging.cpp \
 	src/Engine/NetworkHandler.cpp \
 	src/Engine/NetworkHandler_wasm.cpp \

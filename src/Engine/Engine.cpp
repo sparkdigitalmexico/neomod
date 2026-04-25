@@ -27,6 +27,7 @@
 #include "Profiler.h"
 #include "ResourceManager.h"
 #include "SoundEngine.h"
+#include "Touch.h"
 #include "Timing.h"
 #include "Logging.h"
 #include "VisualProfiler.h"
@@ -44,6 +45,7 @@
 Image *MISSING_TEXTURE{nullptr};
 
 std::unique_ptr<Mouse> mouse{nullptr};
+std::unique_ptr<Touch> touch{nullptr};
 std::unique_ptr<Keyboard> keyboard{nullptr};
 std::unique_ptr<App> app{nullptr};
 std::unique_ptr<Graphics> g{nullptr};
@@ -110,6 +112,9 @@ Engine::Engine() {
         this->runtime_assert(!!mouse, "Mouse failed to initialize!");
         this->inputDevices.push_back(mouse.get());
         this->mice.push_back(mouse.get());
+
+        touch = std::make_unique<Touch>();
+        this->runtime_assert(!!touch, "Mouse failed to initialize!");
 
         keyboard = std::make_unique<Keyboard>();
         this->runtime_assert(!!keyboard, "Keyboard failed to initialize!");

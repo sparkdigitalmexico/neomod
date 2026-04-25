@@ -12,6 +12,7 @@
 #include "HitObjects.h"
 #include "LegacyReplay.h"
 #include "Osu.h"
+#include "ModFlags.h"
 #include "RoomScreen.h"
 #include "AsyncPPCalculator.h"
 #include "Logging.h"
@@ -306,6 +307,11 @@ void LiveScore::setDead(bool dead) {
     if(this->bDead) this->bDied = true;
 
     this->onScoreChange();
+}
+
+void LiveScore::setTouchDevice() {
+    using namespace flags::operators;
+    this->mods.flags |= ModFlags::TouchDevice;
 }
 
 void LiveScore::addKeyCount(GameplayKeys key_flag) {
