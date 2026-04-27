@@ -43,6 +43,7 @@ Changelog::Changelog() : ScreenBackable() {
         R"(- Fixed beatmaps with "manually lengthened" sliders (e.g. https://osu.ppy.sh/s/755651))",
         R"(- Fixed online functionality for users with spaces in username)",
         R"(- Replays are now saved in .osr file format)",
+        R"(- Removed hit300 elements from default skin)",
         R"(- Improved appearance of online beatmaps screen (text outlines + difficulty icon colors))",
     };
     changelogs.push_back(v43_09);
