@@ -1203,7 +1203,10 @@ void Osu::onFingerPressed(Finger finger) {
     }
 
     const bool inGameplay = this->isInPlayMode() && !this->map_iface->isPaused();
-    if(cv::disable_mousebuttons.getBool() || !inGameplay) return;
+    if(cv::disable_mousebuttons.getBool() || !inGameplay) {
+        this->fingerMappings.fill(0);
+        return;
+    }
 
     // To allow "true" TD gameplay, we switch the main finger when tapping a hitcircle,
     // even when the previous main finger hasn't been released yet.
@@ -1238,7 +1241,10 @@ void Osu::onFingerReleased(Finger finger) {
     }
 
     const bool inGameplay = this->isInPlayMode() && !this->map_iface->isPaused();
-    if(cv::disable_mousebuttons.getBool() || !inGameplay) return;
+    if(cv::disable_mousebuttons.getBool() || !inGameplay) {
+        this->fingerMappings.fill(0);
+        return;
+    }
 
     GameplayKeys keys[4] = {GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
     for(int i = 0; i < 4; i++) {
