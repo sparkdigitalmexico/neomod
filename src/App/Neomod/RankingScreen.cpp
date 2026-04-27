@@ -465,8 +465,8 @@ void RankingScreen::setScore(const FinishedScore &newscore) {
     if(flags::has<Minimize>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_minimize);
     if(flags::has<FadingCursor>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_fadingcursor);
     if(flags::has<FPS>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_fps);
-    if(flags::has<Jigsaw1>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_jigsaw1);
-    if(flags::has<Jigsaw2>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_jigsaw2);
+    if(flags::has<StrictClicks>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_jigsaw1);
+    if(flags::has<PreciseSliders>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_jigsaw2);
     if(flags::has<FullAlternate>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_fullalternate);
     if(flags::has<ReverseSliders>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_reverse_sliders);
     if(flags::has<No50s>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_no50s);

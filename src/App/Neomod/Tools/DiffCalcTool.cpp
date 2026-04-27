@@ -145,7 +145,6 @@ std::string modsStringFromMods(ModFlags mods, float speed) {
     if(pf) modsString.append("PF,");
     if(flags::has<ScoreV2>(mods)) modsString.append("v2,");
     if(flags::has<Target>(mods)) modsString.append("Target,");
-    if(flags::has<Nightmare>(mods)) modsString.append("Nightmare,");
     if(flags::any<MirrorHorizontal | MirrorVertical>(mods)) modsString.append("Mirror,");
     if(flags::has<FPoSu>(mods)) modsString.append("FPoSu,");
     if(flags::has<Singletap>(mods)) modsString.append("1K,");

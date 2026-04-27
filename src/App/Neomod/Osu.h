@@ -195,7 +195,6 @@ class Osu final : public App, public MouseListener, public TouchListener {
     [[nodiscard]] bool getModEZ() const;
     [[nodiscard]] bool getModSD() const;
     [[nodiscard]] bool getModSS() const;
-    [[nodiscard]] bool getModNightmare() const;
     [[nodiscard]] bool getModTD() const;
     [[nodiscard]] bool getModDT() const;
     [[nodiscard]] bool getModNC() const;

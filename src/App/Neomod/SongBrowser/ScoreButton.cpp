@@ -816,8 +816,8 @@ void ScoreButton::setScore(const FinishedScore &newscore, const DatabaseBeatmap 
     if(flags::has<FPoSu_Strafing>(sc.mods.flags)) this->tooltipLines.emplace_back("+ FPoSu strafing");
     if(flags::has<FPS>(sc.mods.flags)) this->tooltipLines.emplace_back("+ FPS");
     if(flags::has<HalfWindow>(sc.mods.flags)) this->tooltipLines.emplace_back("+ half window");
-    if(flags::has<Jigsaw1>(sc.mods.flags)) this->tooltipLines.emplace_back("+ jigsaw1");
-    if(flags::has<Jigsaw2>(sc.mods.flags)) this->tooltipLines.emplace_back("+ jigsaw2");
+    if(flags::has<StrictClicks>(sc.mods.flags)) this->tooltipLines.emplace_back("+ strict clicks");
+    if(flags::has<PreciseSliders>(sc.mods.flags)) this->tooltipLines.emplace_back("+ precise sliders");
     if(flags::has<Mafham>(sc.mods.flags)) this->tooltipLines.emplace_back("+ mafham");
     if(flags::has<Millhioref>(sc.mods.flags)) this->tooltipLines.emplace_back("+ millhioref");
     if(flags::has<Minimize>(sc.mods.flags)) this->tooltipLines.emplace_back("+ minimize");
@@ -891,7 +891,6 @@ std::string ScoreButton::getModsStringForDisplay(const Replay::Mods &mods) {
     if(pf) modsString.append("PF,");
     if(flags::has<ScoreV2>(mods.flags)) modsString.append("v2,");
     if(flags::has<Target>(mods.flags)) modsString.append("Target,");
-    if(flags::has<Nightmare>(mods.flags)) modsString.append("Nightmare,");
     if(flags::any<MirrorHorizontal | MirrorVertical>(mods.flags)) modsString.append("Mirror,");
     if(flags::has<FPoSu>(mods.flags)) modsString.append("FPoSu,");
     if(flags::has<Singletap>(mods.flags)) modsString.append("1K,");

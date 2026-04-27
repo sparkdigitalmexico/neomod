@@ -2220,8 +2220,8 @@ void Database::loadOldMcNeomodScores(std::string_view dbPath) {
                     else if(mod == "osu_mod_minimize") sc.mods.flags |= ModFlags::Minimize;
                     else if(mod == "osu_mod_fadingcursor") sc.mods.flags |= ModFlags::FadingCursor;
                     else if(mod == "osu_mod_fps") sc.mods.flags |= ModFlags::FPS;
-                    else if(mod == "osu_mod_jigsaw1") sc.mods.flags |= ModFlags::Jigsaw1;
-                    else if(mod == "osu_mod_jigsaw2") sc.mods.flags |= ModFlags::Jigsaw2;
+                    else if(mod == "osu_mod_jigsaw1") sc.mods.flags |= ModFlags::StrictClicks;
+                    else if(mod == "osu_mod_jigsaw2") sc.mods.flags |= ModFlags::PreciseSliders;
                     else if(mod == "osu_mod_fullalternate") sc.mods.flags |= ModFlags::FullAlternate;
                     else if(mod == "osu_mod_reverse_sliders") sc.mods.flags |= ModFlags::ReverseSliders;
                     else if(mod == "osu_mod_no50s") sc.mods.flags |= ModFlags::No50s;
@@ -2389,8 +2389,8 @@ void Database::loadOldMcNeomodScores(std::string_view dbPath) {
                         else if(mod == "osu_mod_minimize") sc.mods.flags |= ModFlags::Minimize;
                         else if(mod == "osu_mod_fadingcursor") sc.mods.flags |= ModFlags::FadingCursor;
                         else if(mod == "osu_mod_fps") sc.mods.flags |= ModFlags::FPS;
-                        else if(mod == "osu_mod_jigsaw1") sc.mods.flags |= ModFlags::Jigsaw1;
-                        else if(mod == "osu_mod_jigsaw2") sc.mods.flags |= ModFlags::Jigsaw2;
+                        else if(mod == "osu_mod_jigsaw1") sc.mods.flags |= ModFlags::StrictClicks;
+                        else if(mod == "osu_mod_jigsaw2") sc.mods.flags |= ModFlags::PreciseSliders;
                         else if(mod == "osu_mod_fullalternate") sc.mods.flags |= ModFlags::FullAlternate;
                         else if(mod == "osu_mod_reverse_sliders") sc.mods.flags |= ModFlags::ReverseSliders;
                         else if(mod == "osu_mod_no50s") sc.mods.flags |= ModFlags::No50s;

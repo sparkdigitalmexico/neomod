@@ -44,6 +44,7 @@ Changelog::Changelog() : ScreenBackable() {
         R"(- Fixed online functionality for users with spaces in username)",
         R"(- Replays are now saved in .osr file format)",
         R"(- Removed hit300 elements from default skin)",
+        R"(- Removed scary Jigsaw button from mod menu)",
         R"(- Improved appearance of online beatmaps screen (text outlines + difficulty icon colors))",
     };
     changelogs.push_back(v43_09);

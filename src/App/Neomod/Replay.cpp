@@ -136,7 +136,7 @@ Mods Mods::from_legacy(LegacyFlags legacy_flags) {
     if(flags::has<LegacyFlags::Perfect>(legacy_flags)) neoflags |= ModFlags::Perfect;
     if(flags::has<LegacyFlags::Target>(legacy_flags)) neoflags |= ModFlags::Target;
     if(flags::has<LegacyFlags::ScoreV2>(legacy_flags)) neoflags |= ModFlags::ScoreV2;
-    if(flags::has<LegacyFlags::Nightmare>(legacy_flags)) neoflags |= ModFlags::Nightmare;
+    if(flags::has<LegacyFlags::Nightmare>(legacy_flags)) neoflags |= ModFlags::StrictClicks | ModFlags::PreciseSliders;
     if(flags::has<LegacyFlags::FPoSu>(legacy_flags)) neoflags |= ModFlags::FPoSu;
     if(flags::has<LegacyFlags::Mirror>(legacy_flags)) {
         // NOTE: We don't know whether the original score was only horizontal, only vertical, or both
@@ -218,7 +218,6 @@ Mods Mods::from_cvars() {
     ADDIFCV(mod_flashlight, Flashlight);
     ADDIFCV(mod_suddendeath, SuddenDeath);
     ADDIFCV(mod_perfect, Perfect);
-    ADDIFCV(mod_nightmare, Nightmare);
     ADDIFCV(nightcore_enjoyer, NoPitchCorrection);
     ADDIFCV(mod_spunout, SpunOut);
     ADDIFCV(mod_scorev2, ScoreV2);
@@ -229,8 +228,8 @@ Mods Mods::from_cvars() {
     ADDIFCV(mod_timewarp, Timewarp);
     ADDIFCV(mod_artimewarp, ARTimewarp);
     ADDIFCV(mod_minimize, Minimize);
-    ADDIFCV(mod_jigsaw1, Jigsaw1);
-    ADDIFCV(mod_jigsaw2, Jigsaw2);
+    ADDIFCV(mod_jigsaw1, StrictClicks);
+    ADDIFCV(mod_jigsaw2, PreciseSliders);
     ADDIFCV(mod_wobble, Wobble1);
     ADDIFCV(mod_wobble2, Wobble2);
     ADDIFCV(mod_arwobble, ARWobble);
@@ -303,7 +302,6 @@ void Mods::use(const Mods &mods) {
     CVFROMFLAG(mod_flashlight, Flashlight);
     CVFROMFLAG(mod_suddendeath, SuddenDeath);
     CVFROMFLAG(mod_perfect, Perfect);
-    CVFROMFLAG(mod_nightmare, Nightmare);
     CVFROMFLAG(nightcore_enjoyer, NoPitchCorrection);
     CVFROMFLAG(mod_spunout, SpunOut);
     CVFROMFLAG(mod_scorev2, ScoreV2);
@@ -314,8 +312,10 @@ void Mods::use(const Mods &mods) {
     CVFROMFLAG(mod_timewarp, Timewarp);
     CVFROMFLAG(mod_artimewarp, ARTimewarp);
     CVFROMFLAG(mod_minimize, Minimize);
-    CVFROMFLAG(mod_jigsaw1, Jigsaw1);
-    CVFROMFLAG(mod_jigsaw2, Jigsaw2);
+    CVFROMFLAG(mod_jigsaw1, Nightmare);
+    CVFROMFLAG(mod_jigsaw2, Nightmare);
+    CVFROMFLAG(mod_jigsaw1, StrictClicks);
+    CVFROMFLAG(mod_jigsaw2, PreciseSliders);
     CVFROMFLAG(mod_wobble, Wobble1);
     CVFROMFLAG(mod_wobble2, Wobble2);
     CVFROMFLAG(mod_arwobble, ARWobble);
@@ -420,7 +420,7 @@ Mods Mods::unpack(R &reader) {
         mods.wobble_frequency = reader.template read<f32>();
         mods.wobble_rotation_speed = reader.template read<f32>();
     }
-    if(flags::any<Jigsaw1 | Jigsaw2>(mods.flags)) {
+    if(flags::any<StrictClicks | PreciseSliders>(mods.flags)) {
         mods.jigsaw_followcircle_radius_factor = reader.template read<f32>();
     }
     if(flags::has<Shirone>(mods.flags)) {
@@ -463,7 +463,7 @@ void Mods::pack_and_write(W &writer, const Mods &mods) {
         writer.template write<f32>(mods.wobble_frequency);
         writer.template write<f32>(mods.wobble_rotation_speed);
     }
-    if(flags::any<Jigsaw1 | Jigsaw2>(mods.flags)) {
+    if(flags::any<StrictClicks | PreciseSliders>(mods.flags)) {
         writer.template write<f32>(mods.jigsaw_followcircle_radius_factor);
     }
     if(flags::has<Shirone>(mods.flags)) {

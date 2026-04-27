@@ -18,7 +18,7 @@ enum class ModFlags : u64 {
     Flashlight = 1ULL << 6,
     SuddenDeath = 1ULL << 7,
     Perfect = SuddenDeath | (1ULL << 8),
-    Nightmare = 1ULL << 9,
+    Nightmare = 1ULL << 9,  // deprecated, use (StrictClicks | PreciseSliders) instead
 
     // Special mods
     NoPitchCorrection = 1ULL << 10,  // should rename to Nightcore?
@@ -34,8 +34,8 @@ enum class ModFlags : u64 {
     Timewarp = 1ULL << 18,
     ARTimewarp = 1ULL << 19,
     Minimize = 1ULL << 20,
-    Jigsaw1 = 1ULL << 21,
-    Jigsaw2 = 1ULL << 22,
+    StrictClicks = 1ULL << 21,
+    PreciseSliders = 1ULL << 22,
     Wobble1 = 1ULL << 23,
     Wobble2 = 1ULL << 24,
     ARWobble = 1ULL << 25,

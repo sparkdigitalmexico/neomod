@@ -462,7 +462,6 @@ void Skin::load() {
     this->createSkinImage(this->i_modselect_ap, "selection-mod-relax2", vec2(68, 66), 38);
     this->createSkinImage(this->i_modselect_so, "selection-mod-spunout", vec2(68, 66), 38);
     this->createSkinImage(this->i_modselect_auto, "selection-mod-autoplay", vec2(68, 66), 38);
-    this->createSkinImage(this->i_modselect_nightmare, "selection-mod-nightmare", vec2(68, 66), 38);
     this->createSkinImage(this->i_modselect_target, "selection-mod-target", vec2(68, 66), 38);
     this->createSkinImage(this->i_modselect_sv2, "selection-mod-scorev2", vec2(68, 66), 38);
     this->createSkinImage(this->i_modselect_td, "selection-mod-touchdevice", vec2(68, 66), 38);
@@ -1229,7 +1228,6 @@ void Skin::getModImagesForMods(std::vector<SkinImage Skin::*> &outVec, const Rep
     if(flags::has<Autopilot>(mods.flags)) outVec.push_back(&Skin::i_modselect_ap);
     if(modSS) outVec.push_back(&Skin::i_modselect_pf);
     if(flags::has<Target>(mods.flags)) outVec.push_back(&Skin::i_modselect_target);
-    if(flags::has<Nightmare>(mods.flags)) outVec.push_back(&Skin::i_modselect_nightmare);
     if(flags::has<ScoreV2>(mods.flags)) outVec.push_back(&Skin::i_modselect_sv2);
 
     return;

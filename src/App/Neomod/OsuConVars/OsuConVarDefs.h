@@ -446,8 +446,8 @@ CONVAR(mod_hd_circle_fadein_end_percent, 0.6f, CLIENT | SERVER | PROTECTED | GAM
        "hiddenFadeInEndTime = circleTime - approachTime * mod_hd_circle_fadein_end_percent");
 CONVAR(mod_hd_circle_fadein_start_percent, 1.0f, CLIENT | SERVER | PROTECTED | GAMEPLAY,
        "hiddenFadeInStartTime = circleTime - approachTime * mod_hd_circle_fadein_start_percent");
-CONVAR(mod_jigsaw1, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
-CONVAR(mod_jigsaw2, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
+CONVAR(mod_jigsaw1, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);  // strict clicks
+CONVAR(mod_jigsaw2, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);  // precise sliders
 CONVAR(mod_jigsaw_followcircle_radius_factor, 0.0f, CLIENT | SERVER | GAMEPLAY);
 CONVAR(mod_mafham, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_mafham_ignore_hittable_dim, true, CLIENT | SERVER | GAMEPLAY,
@@ -466,7 +466,6 @@ CONVAR(mod_minimize_multiplier, 0.5f, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_no_keylock, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_no100s, false, CLIENT | SERVER | GAMEPLAY);
 CONVAR(mod_no50s, false, CLIENT | SERVER | GAMEPLAY);
-CONVAR(mod_nightmare, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_reverse_sliders, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_shirone, false, CLIENT | SERVER | PROTECTED | GAMEPLAY);
 CONVAR(mod_shirone_combo, 20.0f, CLIENT | SERVER | PROTECTED | GAMEPLAY);

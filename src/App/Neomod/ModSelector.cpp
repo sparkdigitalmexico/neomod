@@ -237,8 +237,8 @@ ModSelector::ModSelector() : UIScreen() {
     this->addExperimentalCheckbox("Fading Cursor", "The cursor fades the higher the combo, becoming invisible at 50.",
                                   &cv::mod_fadingcursor);
     this->addExperimentalCheckbox("First Person", "Centered cursor.", &cv::mod_fps);
-    this->addExperimentalCheckbox("Jigsaw 1", "Unnecessary clicks count as misses.", &cv::mod_jigsaw1);
-    this->addExperimentalCheckbox("Jigsaw 2", "Massively reduced slider follow circle radius.", &cv::mod_jigsaw2);
+    this->addExperimentalCheckbox("Precise sliders", "Massively reduced slider follow circle radius.",
+                                  &cv::mod_jigsaw2);
     this->addExperimentalCheckbox("Reverse Sliders",
                                   "Reverses the direction of all sliders. (Reload beatmap to apply!)",
                                   &cv::mod_reverse_sliders);
@@ -253,6 +253,7 @@ ModSelector::ModSelector() : UIScreen() {
         "Approach rate is set to negative infinity. See the entire beatmap at once.\nUses very "
         "aggressive optimizations to keep the framerate high, you have been warned!",
         &cv::mod_mafham);
+    this->addExperimentalCheckbox("Strict clicks", "Unnecessary clicks count as misses.", &cv::mod_jigsaw1);
     this->addExperimentalCheckbox(
         "Strict Tracking", "Leaving sliders in any way counts as a miss and combo break. (Reload beatmap to apply!)",
         &cv::mod_strict_tracking);
@@ -312,10 +313,6 @@ void ModSelector::updateButtons(bool initial) {
                       "You can't fail. No matter what.\nNOTE: To disable drain completely:\nOptions > Gameplay > "
                       "Mechanics > \"Disable HP Drain\".",
                       MKIMGGETR(i_modselect_nf));
-    this->modButtonNM = setGridModbtn(
-        this->getGridButton(NM_POS), 0, initial && osu->getModNightmare(), &cv::mod_nightmare, "nightmare",
-        "Unnecessary clicks count as misses.\nMassively reduced slider follow circle radius.",
-        MKIMGGETR(i_modselect_nightmare));
 
     this->modButtonHR = setGridModbtn(this->getGridButton(HR_POS), 0, initial && osu->getModHR(), &cv::mod_hardrock,
                                       "hr", "Everything just got a bit harder...", MKIMGGETR(i_modselect_hr));
@@ -386,7 +383,6 @@ void ModSelector::updateButtons(bool initial) {
 
     // Only enable these in singleplayer
     this->modButtonSV2->setAvailable(!isMulti);  // we use win condition instead in multi
-    this->modButtonNM->setAvailable(!isMulti);
     this->modButtonAUTO->setAvailable(!isMulti);
 
 #undef MKIMGGETR

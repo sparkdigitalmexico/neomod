@@ -3192,7 +3192,7 @@ void BeatmapInterface::update2() {
         // all remaining clicks which have not been consumed by any hitobjects can safely be deleted
         if(this->clicks.size() > 0) {
             // nightmare mod: extra clicks = sliderbreak
-            bool break_on_extra_click = (osu->getModNightmare() || cv::mod_jigsaw1.getBool());
+            bool break_on_extra_click = cv::mod_jigsaw1.getBool();
             break_on_extra_click &= !this->bIsInSkippableSection && !this->bInBreak && !spinner_active;
             break_on_extra_click &= this->iCurrentHitObjectIndex > 0;
             if(break_on_extra_click) {
@@ -4233,10 +4233,10 @@ void BeatmapInterface::updateHitobjectMetrics() {
 
     const f32 followcircle_size_multiplier = 2.4f;
     const f32 sliderFollowCircleDiameterMultiplier =
-        (osu->getModNightmare() || cv::mod_jigsaw2.getBool()
-             ? (1.0f * (1.0f - cv::mod_jigsaw_followcircle_radius_factor.getFloat()) +
-                cv::mod_jigsaw_followcircle_radius_factor.getFloat() * followcircle_size_multiplier)
-             : followcircle_size_multiplier);
+        cv::mod_jigsaw2.getBool()
+            ? (1.0f * (1.0f - cv::mod_jigsaw_followcircle_radius_factor.getFloat()) +
+               cv::mod_jigsaw_followcircle_radius_factor.getFloat() * followcircle_size_multiplier)
+            : followcircle_size_multiplier;
     this->fSliderFollowCircleDiameter = this->fHitcircleDiameter * sliderFollowCircleDiameterMultiplier;
 }
 

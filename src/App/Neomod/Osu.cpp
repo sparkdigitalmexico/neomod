@@ -2201,7 +2201,6 @@ bool Osu::getModHR() const { return flags::has<ModFlags::HardRock>(this->score->
 bool Osu::getModEZ() const { return flags::has<ModFlags::Easy>(this->score->mods.flags); }
 bool Osu::getModSD() const { return flags::has<ModFlags::SuddenDeath>(this->score->mods.flags); }
 bool Osu::getModSS() const { return flags::has<ModFlags::Perfect>(this->score->mods.flags); }
-bool Osu::getModNightmare() const { return flags::has<ModFlags::Nightmare>(this->score->mods.flags); }
 bool Osu::getModTD() const { return flags::has<ModFlags::TouchDevice>(this->score->mods.flags); }
 bool Osu::getModTraceable() const { return flags::has<ModFlags::Traceable>(this->score->mods.flags); }
 bool Osu::getModFreezeFrame() const { return flags::has<ModFlags::FreezeFrame>(this->score->mods.flags); }
