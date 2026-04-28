@@ -70,6 +70,7 @@ class HitObject {
 
     virtual void updateStackPosition(f32 /*stackOffset*/) {}  // unused by spinners
     virtual void miss(i32 /*curPos*/) {}                      // only used by notelock
+    [[nodiscard]] virtual bool isClickableFrom(i32 /*music_pos*/, vec2 /*cursor_pos*/) const { return false; }
 
     // [[nodiscard]] virtual constexpr forceinline i32 getCombo() const {
     //     return 1;
@@ -227,9 +228,9 @@ class Circle final : public HitObject {
     void draw2() override;
     void update(i32 curPosMS, f64 frameTimeMS) override;
 
-    bool isClickableFrom(i32 music_pos, vec2 cursor_pos) const;
     void updateStackPosition(f32 stackOffset) override;
     void miss(i32 curPosMS) override;
+    [[nodiscard]] bool isClickableFrom(i32 music_pos, vec2 cursor_pos) const override;
 
     [[nodiscard]] vec2 getRawPosAt(i32 /*pos*/) const override { return m_rawPos; }
     [[nodiscard]] vec2 getOriginalRawPosAt(i32 /*pos*/) const override { return m_originalRawPos; }
@@ -286,7 +287,7 @@ class Slider final : public HitObject {
 
     void updateStackPosition(f32 stackOffset) override;
     void miss(i32 curPosMS) override;
-    bool isClickableFrom(i32 music_pos, vec2 cursor_pos) const;
+    [[nodiscard]] bool isClickableFrom(i32 music_pos, vec2 cursor_pos) const override;
     // [[nodiscard]] constexpr forceinline i32 getCombo() const override {
     //     return 2 + std::max((iRepeat - 1), 0) + (std::max((iRepeat - 1), 0) + 1) * ticks.size();
     // }

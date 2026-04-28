@@ -3413,26 +3413,11 @@ void BeatmapInterface::update2() {
     }
 }
 
-bool BeatmapInterface::clickableHitobjectAt(vec2 cursor_pos) {
-    for(const auto &hobjptr : this->hitobjects) {
-        HitObject *curHobj = hobjptr.get();
-
-        switch(curHobj->getType()) {
-            case HitObjectType::CIRCLE: {
-                const Circle *circle = static_cast<Circle *>(curHobj);
-                if(circle->isClickableFrom(this->iCurMusicPosWithOffsets, cursor_pos)) return true;
-                break;
-            }
-
-            case HitObjectType::SLIDER: {
-                const Slider *slider = static_cast<Slider *>(curHobj);
-                if(slider->isClickableFrom(this->iCurMusicPosWithOffsets, cursor_pos)) return true;
-                break;
-            }
-
-            case HitObjectType::SPINNER:
-                break;
-        }
+bool BeatmapInterface::clickableHitobjectAt(vec2 cursor_pos) const {
+    // FIXME: this doesn't use PVS and iterates over every hit object
+    for(const auto &h : this->hitobjects) {
+        if(!h->isClickableFrom(this->iCurrentHitObjectIndex, cursor_pos)) continue;
+        return true;
     }
 
     return false;

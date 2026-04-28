@@ -1216,7 +1216,7 @@ void Osu::onFingerPressed(Finger finger) {
         mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, true});
     }
 
-    GameplayKeys keys[4] = {GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
+    static constexpr GameplayKeys keys[4]{GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
     for(int i = 0; i < 4; i++) {
         if(this->fingerMappings[i] == 0) {
             this->fingerMappings[i] = finger.id;
@@ -1225,7 +1225,7 @@ void Osu::onFingerPressed(Finger finger) {
         }
     }
 
-    this->getScore()->setTouchDevice();
+    this->score->setTouchDevice();
 }
 
 void Osu::onFingerReleased(Finger finger) {
@@ -1246,7 +1246,7 @@ void Osu::onFingerReleased(Finger finger) {
         return;
     }
 
-    GameplayKeys keys[4] = {GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
+    static constexpr GameplayKeys keys[4]{GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
     for(int i = 0; i < 4; i++) {
         if(this->fingerMappings[i] == finger.id) {
             this->fingerMappings[i] = 0;
@@ -1257,7 +1257,7 @@ void Osu::onFingerReleased(Finger finger) {
 }
 
 void Osu::onFingerMoved(Finger finger) {
-    if(finger.id != mainFingerID) return;
+    if(finger.id != this->mainFingerID) return;
     mouse->onPosChange(finger.pos);
 }
 

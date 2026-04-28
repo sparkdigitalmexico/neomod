@@ -19,7 +19,13 @@ struct Finger final {
 
 class TouchListener {
    public:
+    TouchListener() = default;
     virtual ~TouchListener() = default;
+
+    TouchListener(const TouchListener&) = default;
+    TouchListener& operator=(const TouchListener&) = default;
+    TouchListener(TouchListener&&) = default;
+    TouchListener& operator=(TouchListener&&) = default;
 
     virtual void onFingerPressed(Finger /*finger*/) {}
     virtual void onFingerReleased(Finger /*finger*/) {}
@@ -33,9 +39,9 @@ class Touch final {
 
    public:
     Touch();
-    ~Touch() = default;
+    ~Touch();
 
-    std::vector<Finger> getFingers() { return this->fingers; }
+    [[nodiscard]] const auto& getFingers() const { return this->fingers; }
 
     // event handling
     void addListener(TouchListener* listener, bool insertOnTop = false);

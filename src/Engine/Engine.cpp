@@ -201,6 +201,9 @@ Engine::~Engine() {
         delete device;
     }
 
+    // TODO: make touch an input device
+    touch.reset();
+
     this->inputDevices.clear();
     this->mice.clear();
     this->keyboards.clear();
