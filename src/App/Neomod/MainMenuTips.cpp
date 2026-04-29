@@ -4,8 +4,10 @@
 #include "CBaseUILabel.h"
 #include "ConVar.h"
 #include "Environment.h"
-#include "OsuKeyBinds.h"
 #include "Font.h"
+
+#include "OsuKeyBinds.h"
+#include "Bancho.h"
 
 #include "fmt/format.h"
 
@@ -44,6 +46,12 @@ static std::array s_tips{
     Tip{
         [&b = binds::TOGGLE_MODSELECT]() -> std::string
         { return fmt::format(R"(Press {:s} during gameplay to change mods in realtime.)", env->scanCodeToString(b.get())); }
+    },
+    Tip{
+        [&ch = binds::TOGGLE_CHAT, &exch = binds::TOGGLE_EXTENDED_CHAT]() -> std::string {
+            if(!BanchoState::is_online()) return "";
+            return fmt::format(R"(Press {:s} or {:s} anywhere to open chat.)", env->scanCodeToString(ch.get()), env->scanCodeToString(exch.get()));
+        }
     },
 #if !defined(MCENGINE_PLATFORM_WASM) // irrelevant for web
 #if defined(MCENGINE_FEATURE_BASS) && defined(MCENGINE_FEATURE_SOLOUD)
