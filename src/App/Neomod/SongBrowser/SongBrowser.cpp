@@ -969,7 +969,6 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
 
     // update and focus handling
     this->topbarRight->update(c);
-    if(this->localBestButton) this->localBestButton->update(c);
     this->scoreBrowser->update(c);
     this->topbarLeft->update(c);
 
@@ -2218,11 +2217,11 @@ void SongBrowser::updateScoreBrowserLayout() {
     if(this->localBestContainer->isVisible()) {
         this->localBestContainer->setPos(this->scoreBrowser->getPos().x,
                                          this->scoreBrowser->getPos().y + this->scoreBrowser->getSize().y);
-        this->localBestContainer->setSize(this->scoreBrowser->getPos().x, local_best_size);
-        this->localBestLabel->setRelPos(this->scoreBrowser->getPos().x, 0);
+        this->localBestContainer->setSize(this->scoreBrowser->getSize().x, local_best_size);
+        this->localBestLabel->setRelPos(0, 0);
         this->localBestLabel->setSize(this->scoreBrowser->getSize().x, 40);
         if(this->localBestButton) {
-            this->localBestButton->setRelPos(this->scoreBrowser->getPos().x, 40);
+            this->localBestButton->setRelPos(0, 40);
             this->localBestButton->setSize(this->scoreBrowser->getSize().x, scoreHeight);
         }
     }
@@ -2272,6 +2271,7 @@ void SongBrowser::rebuildScoreButtons() {
     this->scoreBrowser->invalidate();
     this->localBestContainer->invalidate();
     this->localBestContainer->setVisible(false);
+    SAFE_DELETE(this->localBestButton);
 
     auto *map = osu->getMapInterface()->getBeatmap();
     const bool validBeatmap = !!map;
