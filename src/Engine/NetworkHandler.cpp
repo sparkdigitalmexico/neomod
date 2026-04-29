@@ -46,9 +46,6 @@ std::string urlEncode(std::string_view unencodedString) noexcept {
     return result;
 }
 
-// handle cleanup is managed by the network thread (Request owns the CurlEasy)
-WSInstance::~WSInstance() = default;
-
 void WSInstance::write(std::span<const u8> data) {
     {
         Sync::scoped_lock lock{this->io_mutex};
@@ -560,31 +557,29 @@ void NetworkImpl::Request::setupCurlHandle() {
 
 size_t NetworkImpl::writeCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     auto* request = static_cast<Request*>(userp);
-    size_t real_size = size * nmemb;
+    const size_t real_size = size * nmemb;
 
-    if(request->websocket) {
+    auto& ws = request->websocket;
+    const struct curl_ws_frame* meta = nullptr;
+    if(ws && !!(meta = curl_ws_meta(request->easy_handle))) {  // is websocket and has metadata
         // websocket frame data arrives here via curl_multi_perform
-        auto& ws = request->websocket;
-        const auto* meta = curl_ws_meta(request->easy_handle);
-
-        if(meta && real_size > 0 && (meta->flags & CURLWS_BINARY)) {
+        if(real_size > 0 && (meta->flags & CURLWS_BINARY)) {
             ws->in_partial.insert(ws->in_partial.end(), static_cast<u8*>(contents),
                                   static_cast<u8*>(contents) + real_size);
         }
-        if(!ws->in_partial.empty() && meta && meta->bytesleft == 0) {
+        if(!ws->in_partial.empty() && meta->bytesleft == 0) {
             Sync::scoped_lock lock{ws->io_mutex};
             Mc::append_range(ws->in, std::move(ws->in_partial));
             ws->in_partial.clear();
         }
-        if(meta && (meta->flags & CURLWS_CLOSE)) {
+        if(meta->flags & CURLWS_CLOSE) {
             debugLog("Websocket connection closed.");
             ws->status.store(WSStatus::DISCONNECTED, std::memory_order_relaxed);
         }
-
-        return real_size;
+    } else if(!ws) {  // non-websocket path
+        request->response.body.append(static_cast<char*>(contents), real_size);
     }
 
-    request->response.body.append(static_cast<char*>(contents), real_size);
     return real_size;
 }
 

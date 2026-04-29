@@ -1393,12 +1393,12 @@ $(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_HLSL
 # the depfile lists them, so make needs to know how to "build" them
 $(SDLGPU_SHADER_DIR)/%.shdpk: $(SDLGPU_SHADER_MANIFEST) ;
 
-else !USE_SDLGPU
+else # !USE_SDLGPU
 
 SDLGPU_EMBED_DEPS :=
 SDLGPU_EMBED_MANIFEST_FLAG :=
 
-endif !USE_SDLGPU
+endif # !USE_SDLGPU
 
 # content-based stamp: only updates (and triggers re-embed) when the manifest list actually changes
 EMBED_CONFIG_STAMP := $(builddir)/gen/.embed_config

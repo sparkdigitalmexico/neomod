@@ -29,14 +29,12 @@ static inline vec2 event_to_abs_touch(SDL_TouchFingerEvent* ev) {
 void Touch::onFingerDown(SDL_TouchFingerEvent* ev) {
     assert(ev->type == SDL_EVENT_FINGER_DOWN);
 
-    Finger finger{
+    auto& finger = this->fingers.emplace_back(Finger{
         .id = ev->fingerID,
         .pos = event_to_abs_touch(ev),
         .pressed_since_ns = ev->timestamp,
         .last_event_ns = ev->timestamp,
-    };
-
-    this->fingers.push_back(finger);
+    });
 
     for(auto* listener : this->listeners) {
         listener->onFingerPressed(finger);
