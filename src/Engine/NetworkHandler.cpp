@@ -46,6 +46,8 @@ std::string urlEncode(std::string_view unencodedString) noexcept {
     return result;
 }
 
+WSInstance::~WSInstance() = default;
+
 void WSInstance::write(std::span<const u8> data) {
     {
         Sync::scoped_lock lock{this->io_mutex};

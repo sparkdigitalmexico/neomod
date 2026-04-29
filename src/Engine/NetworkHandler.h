@@ -56,7 +56,7 @@ struct WSInstance {
    public:
     WSInstance() = default;
     // handle cleanup is managed by the network thread (Request owns the CurlEasy)
-    ~WSInstance() = default;
+    ~WSInstance();
 
     std::atomic<WSStatus> status{WSStatus::CONNECTING};
     f64 time_created{0.f};
