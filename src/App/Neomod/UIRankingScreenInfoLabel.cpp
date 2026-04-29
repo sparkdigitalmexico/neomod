@@ -34,7 +34,7 @@ UIRankingScreenInfoLabel::UIRankingScreenInfoLabel(f32 xPos, f32 yPos, f32 xSize
 
 void UIRankingScreenInfoLabel::draw() {
     // build strings
-    const std::string titleText{fmt::format("{} - {} [{}]", this->sArtist, this->sTitle, this->sDiff)};
+    const std::string titleText{fmt::format("{:s} - {:s} [{:s}]", this->sArtist, this->sTitle, this->sDiff)};
     const std::string subTitleText{fmt::format("Beatmap by {}", this->sMapper)};
     const std::string playerText{this->buildPlayerString()};
 

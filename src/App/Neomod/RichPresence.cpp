@@ -36,34 +36,36 @@ enum class MusicDependentCallback : u8 {
 };
 MusicDependentCallback last_callback{};
 
-void crop_to(const std::string& str, std::array<char, 128>& output, int max_len) {
-    if(str.length() < max_len) {
+template <size_t N = 128>
+std::array<char, N> crop_string_to_n(const std::string& str) {
+    std::array<char, N> output{};
+    if(str.length() < N) {
         strcpy(output.data(), str.c_str());
     } else {
-        strncpy(output.data(), str.c_str(), max_len - 4);
-        output[max_len - 4] = '.';
-        output[max_len - 3] = '.';
-        output[max_len - 2] = '.';
-        output[max_len - 1] = '\0';
+        strncpy(output.data(), str.c_str(), N - 4);
+        output[N - 4] = '.';
+        output[N - 3] = '.';
+        output[N - 2] = '.';
+        output[N - 1] = '\0';
     }
+    return output;
 }
 
-void mapstr(const DatabaseBeatmap* map, std::array<char, 128>& output, bool include_difficulty) {
-    if(map == nullptr) {
-        output = {"No map selected"};
-        return;
-    }
+std::array<char, 128> beatmap_desc_str(const DatabaseBeatmap* map, bool include_difficulty) {
+    std::array<char, 128> ret{"No map selected"};
+    if(!map) return ret;
 
-    std::string playingInfo = fmt::format("{} - {}", map->getArtist(), map->getTitle());
+    std::string playingInfo = fmt::format("{:s} - {:s}", map->getArtist(), map->getTitle());
 
     if(include_difficulty) {
-        std::string diffStr = fmt::format(" [{}]", map->getDifficultyName());
+        std::string diffStr = fmt::format(" [{:s}]", map->getDifficultyName());
         if(playingInfo.length() + diffStr.length() < 128) {
             playingInfo.append(diffStr);
         }
     }
 
-    crop_to(playingInfo, output, 128);
+    ret = crop_string_to_n(playingInfo);
+    return ret;
 }
 
 void set_activity_with_image(DiscordActivity& to_set) {
@@ -187,7 +189,7 @@ void onMainMenu() {
     auto music = osu->getMapInterface()->getMusic();
     bool listening = map != nullptr && music != nullptr && music->isPlaying();
     if(listening) {
-        mapstr(map, activity.details, false);
+        activity.details = beatmap_desc_str(map, false);
     }
 
     activity.state = {"Main menu"};
@@ -234,7 +236,7 @@ void onPlayStart() {
     activity.timestamps.start = tms;
     activity.timestamps.end = 0;
 
-    mapstr(map, activity.details, true);
+    activity.details = beatmap_desc_str(map, true);
 
     if(BanchoState::is_in_a_multi_room()) {
         setBanchoStatus(activity.details.data(), Action::MULTIPLAYER);
@@ -297,8 +299,8 @@ void onPlayEnd(bool quit) {
 void onMultiplayerLobby() {
     auto activity = DiscRPC::create_base_activity();
 
-    crop_to(BanchoState::endpoint, activity.state, 128);
-    crop_to(BanchoState::room.name, activity.details, 128);
+    activity.state = crop_string_to_n(BanchoState::endpoint);
+    activity.details = crop_string_to_n(BanchoState::room.name);
     activity.party.size.current_size = BanchoState::room.nb_players;
     activity.party.size.max_size = BanchoState::room.nb_open_slots;
 

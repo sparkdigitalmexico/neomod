@@ -596,7 +596,7 @@ void RoomScreen::on_map_change() {
                                           beatmap->getCS(), beatmap->getHP(), beatmap->getOD());
             this->map_attributes->setText(attributes);
             this->map_attributes->setSizeToContent(0, 0);
-            auto attributes2 = fmt::format("Length: {} seconds, BPM: {} ({} - {})", beatmap->getLengthMS() / 1000,
+            auto attributes2 = fmt::format("Length: {:d} seconds, BPM: {:d} ({:d} - {:d})", beatmap->getLengthMS() / 1000,
                                            beatmap->getMostCommonBPM(), beatmap->getMinBPM(), beatmap->getMaxBPM());
             this->map_attributes2->setText(attributes2);
             this->map_attributes2->setSizeToContent(0, 0);

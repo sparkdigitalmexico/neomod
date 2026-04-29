@@ -229,7 +229,7 @@ class DiffLabel final : public UIIcon {
 }  // namespace
 
 void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
-    this->full_title = fmt::format("{} - {}", this->meta.artist, this->meta.title);
+    this->full_title = fmt::format("{:s} - {:s}", this->meta.artist, this->meta.title);
     this->creator_width = this->font->getStringWidth(this->meta.creator);
 
     const f32 scale = Osu::getUIScale();

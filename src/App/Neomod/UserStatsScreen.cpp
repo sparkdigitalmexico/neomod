@@ -27,16 +27,16 @@
 #include <ranges>
 
 UserStatsScreen::UserStatsScreen() : ScreenBackable() {
-    this->m_userCard = new UserCard(0);
-    this->addBaseUIElement(this->m_userCard);
+    m_userCard = new UserCard(0);
+    this->addBaseUIElement(m_userCard);
 
-    this->m_contextMenu = std::make_unique<UIContextMenu>();
-    this->m_contextMenu->setVisible(true);
+    m_contextMenu = std::make_unique<UIContextMenu>();
+    m_contextMenu->setVisible(true);
 
-    this->m_scores = new CBaseUIScrollView();
-    this->m_scores->setBackgroundColor(0xff222222);
-    this->m_scores->setHorizontalScrolling(false);
-    this->m_scores->setVerticalScrolling(true);
+    m_scores = new CBaseUIScrollView();
+    m_scores->setBackgroundColor(0xff222222);
+    m_scores->setHorizontalScrolling(false);
+    m_scores->setVerticalScrolling(true);
     this->addBaseUIElement(m_scores);
 }
 
@@ -79,8 +79,8 @@ void UserStatsScreen::rebuildScoreButtons() {
     m_scores->container.freeElements();
     m_scoreButtons.clear();
 
-    this->m_userCard->setID(BanchoState::get_uid());
-    this->m_userCard->updateUserStats();
+    m_userCard->setID(BanchoState::get_uid());
+    m_userCard->updateUserStats();
 
     i32 n = 0;
     const std::vector<FinishedScore *> &scores = db->getPlayerPPScores(BanchoState::get_username()).ppScores;
@@ -93,10 +93,10 @@ void UserStatsScreen::rebuildScoreButtons() {
         DatabaseBeatmap *map = db->getBeatmapDifficulty(score->beatmap_hash);
         if(!map) continue;
 
-        std::string title{map ? fmt::format("{} - {} [{}]", map->getArtist(), map->getTitle(), map->getDifficultyName())
-                              : "..."};
+        std::string title{
+            fmt::format("{:s} - {:s} [{:s}]", map->getArtist(), map->getTitle(), map->getDifficultyName())};
 
-        auto *button = new ScoreButton(this->m_contextMenu.get(), 0, 0, 300, 100, ScoreButton::STYLE::TOP_RANKS);
+        auto *button = new ScoreButton(m_contextMenu.get(), 0, 0, 300, 100, ScoreButton::STYLE::TOP_RANKS);
         button->setScore(*score, map, n, std::move(title), weight);
         button->setClickCallback(SA::MakeDelegate([](ScoreButton *button) -> void {
             const FinishedScore &btnsc = button->getScore();
@@ -140,7 +140,7 @@ void UserStatsScreen::updateLayout() {
     m_scores->setScrollSizeToContent();
 
     const int userButtonHeight = m_scores->getPos().y * 0.6f;
-    this->m_userCard->setSize(userButtonHeight * 3.5f, userButtonHeight);
-    this->m_userCard->setPos(osu->getVirtScreenWidth() / 2 - this->m_userCard->getSize().x / 2,
-                             m_scores->getPos().y / 2 - this->m_userCard->getSize().y / 2);
+    m_userCard->setSize(userButtonHeight * 3.5f, userButtonHeight);
+    m_userCard->setPos(osu->getVirtScreenWidth() / 2 - m_userCard->getSize().x / 2,
+                       m_scores->getPos().y / 2 - m_userCard->getSize().y / 2);
 }
