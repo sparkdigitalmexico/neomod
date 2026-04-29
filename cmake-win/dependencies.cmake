@@ -58,9 +58,9 @@ set(BZIP2_URL "https://github.com/libarchive/bzip2/archive/${BZIP2_VERSION}.tar.
 set(BZIP2_HASH "SHA512=a1aae1e884f85a225e2a1ddf610f11dda672bc242d4e8d0cda3534efb438b3a0306ec1d130eec378d46abb48f6875687d6b20dcc18a6037a4455f531c22d50f6")
 set_download_name("bzip2" "${BZIP2_VERSION}" "${BZIP2_URL}")
 
-set(FMT_VERSION "eeff8680ed900933c28df7c618ca3e11d6a766ec")
+set(FMT_VERSION "0e078f6ed0624be8babc43bd145371d9f3a08aab")
 set(FMT_URL "https://github.com/fmtlib/fmt/archive/${FMT_VERSION}.tar.gz")
-set(FMT_HASH "SHA512=8730a935c845c1e8a0ba0db0f36f37d39d0878222e7dc6e7f4fb488a05402d017671e52b47da73e311b83d352250b967b2e29ca0842e9c77befc25f5f3350f55")
+set(FMT_HASH "SHA512=df87cbd340ddb6ea272fd8f7eff7f8bb7d9d0e75cb5d1fbda4cdb7f05222478c47a1e8bc72fcb58bb6810d370a71c967232f72b3db3644eba3f56f770a44abbc")
 set_download_name("fmt" "${FMT_VERSION}" "${FMT_URL}")
 
 set(SPDLOG_VERSION "1.17.0")
