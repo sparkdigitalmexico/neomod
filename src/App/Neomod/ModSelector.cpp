@@ -324,22 +324,22 @@ void ModSelector::updateButtons(bool initial) {
     {
         const bool nce = cv::nightcore_enjoyer.getBool();
         // clang-format off
-        std::string_view HTTooltip          = nce ? "A E S T H E T I C" : "Less zoom.";
-        std::string HTName             = nce ? "dc"                : "ht";
+        std::string_view HTTooltip     = nce ? "A E S T H E T I C" : "Less zoom.";
+        std::string_view HTName        = nce ? "dc"                : "ht";
         const SkinImageGetter HTMember = nce ?
                                          MKIMGGETR(i_modselect_dc) :
                                          MKIMGGETR(i_modselect_ht);
 
-        std::string_view DTTooltip          = nce ? "uguuuuuuuu"     : "Zoooooooooom.";
-        std::string DTName             = nce ? "nc"             : "dt";
+        std::string_view DTTooltip     = nce ? "uguuuuuuuu"     : "Zoooooooooom.";
+        std::string_view DTName        = nce ? "nc"             : "dt";
         const SkinImageGetter DTMember = nce ?
                                          MKIMGGETR(i_modselect_nc) :
                                          MKIMGGETR(i_modselect_dt);
         // clang-format on
         this->modButtonHT = setGridModbtn(this->getGridButton(HT_POS), 0, initial && cv::mod_halftime_dummy.getBool(),
-                                          &cv::mod_halftime_dummy, std::move(HTName), HTTooltip, HTMember);
+                                          &cv::mod_halftime_dummy, std::string{HTName}, HTTooltip, HTMember);
         this->modButtonDT = setGridModbtn(this->getGridButton(DT_POS), 0, initial && cv::mod_doubletime_dummy.getBool(),
-                                          &cv::mod_doubletime_dummy, std::move(DTName), DTTooltip, DTMember);
+                                          &cv::mod_doubletime_dummy, std::string{DTName}, DTTooltip, DTMember);
     }
 
     this->modButtonHD = setGridModbtn(this->getGridButton(HD_POS), 0, initial && osu->getModHD(), &cv::mod_hidden, "hd",

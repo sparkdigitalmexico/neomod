@@ -36,11 +36,11 @@ enum class MusicDependentCallback : u8 {
 };
 MusicDependentCallback last_callback{};
 
-void crop_to(const std::string& str, char* output, int max_len) {
+void crop_to(const std::string& str, std::array<char, 128>& output, int max_len) {
     if(str.length() < max_len) {
-        strcpy(output, str.c_str());
+        strcpy(output.data(), str.c_str());
     } else {
-        strncpy(output, str.c_str(), max_len - 4);
+        strncpy(output.data(), str.c_str(), max_len - 4);
         output[max_len - 4] = '.';
         output[max_len - 3] = '.';
         output[max_len - 2] = '.';
@@ -48,24 +48,25 @@ void crop_to(const std::string& str, char* output, int max_len) {
     }
 }
 
-// output is assumed to be a char[128] string
-void mapstr(const DatabaseBeatmap* map, char* output, bool /*include_difficulty*/) {
+void mapstr(const DatabaseBeatmap* map, std::array<char, 128>& output, bool include_difficulty) {
     if(map == nullptr) {
-        strcpy(output, "No map selected");
+        output = {"No map selected"};
         return;
     }
 
     std::string playingInfo = fmt::format("{} - {}", map->getArtist(), map->getTitle());
 
-    std::string diffStr = fmt::format(" [{}]", map->getDifficultyName());
-    if(playingInfo.length() + diffStr.length() < 128) {
-        playingInfo.append(diffStr);
+    if(include_difficulty) {
+        std::string diffStr = fmt::format(" [{}]", map->getDifficultyName());
+        if(playingInfo.length() + diffStr.length() < 128) {
+            playingInfo.append(diffStr);
+        }
     }
 
-    crop_to(playingInfo.c_str(), output, 128);
+    crop_to(playingInfo, output, 128);
 }
 
-void set_activity_with_image(struct DiscordActivity* to_set) {
+void set_activity_with_image(DiscordActivity& to_set) {
 #ifdef MCENGINE_FEATURE_DISCORD
     const auto map = osu->getMapInterface()->getBeatmap();
     const auto music = osu->getMapInterface()->getMusic();
@@ -73,28 +74,25 @@ void set_activity_with_image(struct DiscordActivity* to_set) {
     const bool playing = !!map && osu->isInPlayMode();
     const bool bg_visible = !!map && map->draw_background && cv::rich_presence_map_backgrounds.getBool();
 
-    strcpy(&to_set->assets.large_image[0], PACKAGE_NAME "_icon");
-    to_set->assets.small_image[0] = '\0';
-    to_set->assets.small_text[0] = '\0';
-
-    std::string endpoint{"ppy.sh"};
-    std::string server_icon_url{""};
-    if(BanchoState::is_online()) {
-        endpoint = BanchoState::endpoint;
-        server_icon_url = BanchoState::server_icon_url;
-    }
+    to_set.assets.large_image = {PACKAGE_NAME "_icon"};
+    to_set.assets.small_image = {};
+    to_set.assets.small_text = {};
 
     if(bg_visible && (listening || playing)) {
-        auto scheme = cv::use_https.getBool() ? "https://" : "http://";
-        auto url = fmt::format("{}b.{}/thumb/{}l.jpg", scheme, endpoint, map->getSetID());
-        strncpy(&to_set->assets.large_image[0], url.c_str(), 127);
+        const bool online = BanchoState::is_online();
+        const std::string endpoint = online ? BanchoState::endpoint : "ppy.sh";
+        const std::string server_icon_url = online ? BanchoState::server_icon_url : "";
+
+        const char* scheme = cv::use_https.getBool() ? "https://" : "http://";
+        const std::string url = fmt::format("{:s}b.{:s}/thumb/{:d}l.jpg", scheme, endpoint, map->getSetID());
+        strncpy(&to_set.assets.large_image[0], url.c_str(), 127);
 
         if(server_icon_url.length() > 0 && cv::main_menu_use_server_logo.getBool()) {
-            strncpy(&to_set->assets.small_image[0], server_icon_url.c_str(), 127);
-            strncpy(&to_set->assets.small_text[0], endpoint.c_str(), 127);
+            strncpy(&to_set.assets.small_image[0], server_icon_url.c_str(), 127);
+            strncpy(&to_set.assets.small_text[0], endpoint.c_str(), 127);
         } else {
-            strcpy(&to_set->assets.small_image[0], PACKAGE_NAME "_icon");
-            to_set->assets.small_text[0] = '\0';
+            to_set.assets.small_image = {PACKAGE_NAME "_icon"};
+            to_set.assets.small_text = {};
         }
     }
 
@@ -125,18 +123,17 @@ void setBanchoStatus(const char* info_text, Action action) {
     MD5Hash map_md5;
     i32 map_id = 0;
 
-    auto map = osu->getMapInterface()->getBeatmap();
-    if(map != nullptr) {
+    if(const auto* map = osu->getMapInterface()->getBeatmap(); map != nullptr) {
         map_md5 = map->getMD5();
         map_id = map->getID();
     }
 
-    char fancy_text[1024] = {0};
-    snprintf(fancy_text, 1023, "\n%s", info_text);
+    std::string fancy_text{fmt::format("\n{:s}", info_text)};
+    if(fancy_text.length() > 1023) fancy_text.resize(1023);
 
     // Don't send status update if it's the same as our current status
     // (prevents situations like spamming main menu updates if song fails to loop)
-    if(last_status == std::string(fancy_text) && last_action == action) return;
+    if(last_status == fancy_text && last_action == action) return;
 
     last_status = fancy_text;
     last_action = action;
@@ -193,36 +190,36 @@ void onMainMenu() {
         mapstr(map, activity.details, false);
     }
 
-    strcpy(activity.state, "Main menu");
-    set_activity_with_image(&activity);
+    activity.state = {"Main menu"};
+    set_activity_with_image(activity);
 }
 
 void onSongBrowser() {
     last_callback = MusicDependentCallback::ON_SONGBROWSER;
     auto activity = DiscRPC::create_base_activity();
 
-    strcpy(activity.details, "Picking a map");
+    activity.details = {"Picking a map"};
 
     if(ui->getRoom()->isVisible()) {
         setBanchoStatus("Picking a map", Action::MULTIPLAYER);
 
-        strcpy(activity.state, "Multiplayer");
+        activity.state = {"Multiplayer"};
         activity.party.size.current_size = BanchoState::room.nb_players;
         activity.party.size.max_size = BanchoState::room.nb_open_slots;
     } else {
         setBanchoStatus("Song selection", Action::IDLE);
 
-        strcpy(activity.state, "Singleplayer");
+        activity.state = {"Singleplayer"};
         activity.party.size.current_size = 0;
         activity.party.size.max_size = 0;
     }
 
-    set_activity_with_image(&activity);
+    set_activity_with_image(activity);
     env->setWindowTitle(PACKAGE_NAME);
 }
 
 void onPlayStart() {
-    auto map = osu->getMapInterface()->getBeatmap();
+    const auto* map = osu->getMapInterface()->getBeatmap();
 
     static const DatabaseBeatmap* last_diff = nullptr;
     static int64_t tms = 0;
@@ -240,35 +237,34 @@ void onPlayStart() {
     mapstr(map, activity.details, true);
 
     if(BanchoState::is_in_a_multi_room()) {
-        setBanchoStatus(activity.details, Action::MULTIPLAYER);
+        setBanchoStatus(activity.details.data(), Action::MULTIPLAYER);
 
-        strcpy(activity.state, "Playing in a lobby");
+        activity.state = {"Playing in a lobby"};
         activity.party.size.current_size = BanchoState::room.nb_players;
         activity.party.size.max_size = BanchoState::room.nb_open_slots;
     } else if(BanchoState::spectating) {
-        setBanchoStatus(activity.details, Action::WATCHING);
+        setBanchoStatus(activity.details.data(), Action::WATCHING);
         activity.party.size.current_size = 0;
         activity.party.size.max_size = 0;
 
         const auto* user = BANCHO::User::get_user_info(BanchoState::spectated_player_id, true);
         if(user->has_presence) {
-            snprintf(activity.state, 128, "Spectating %s", user->name.c_str());
+            snprintf(activity.state.data(), 128, "Spectating %s", user->name.c_str());
         } else {
-            strcpy(activity.state, "Spectating");
+            activity.state = {"Spectating"};
         }
     } else {
-        setBanchoStatus(activity.details, Action::PLAYING);
+        setBanchoStatus(activity.details.data(), Action::PLAYING);
 
-        strcpy(activity.state, "Playing Solo");
+        activity.state = {"Playing Solo"};
         activity.party.size.current_size = 0;
         activity.party.size.max_size = 0;
     }
 
-    // also update window title
-    auto windowTitle = fmt::format(PACKAGE_NAME " - {}", activity.details);
-    env->setWindowTitle(windowTitle);
+    set_activity_with_image(activity);
 
-    set_activity_with_image(&activity);
+    // also update window title
+    env->setWindowTitle(fmt::format(PACKAGE_NAME " - {:s}", std::string_view{&activity.details[0]}));
 }
 
 void onPlayEnd(bool quit) {
@@ -301,12 +297,12 @@ void onPlayEnd(bool quit) {
 void onMultiplayerLobby() {
     auto activity = DiscRPC::create_base_activity();
 
-    crop_to(BanchoState::endpoint.c_str(), activity.state, 128);
-    crop_to(BanchoState::room.name.c_str(), activity.details, 128);
+    crop_to(BanchoState::endpoint, activity.state, 128);
+    crop_to(BanchoState::room.name, activity.details, 128);
     activity.party.size.current_size = BanchoState::room.nb_players;
     activity.party.size.max_size = BanchoState::room.nb_open_slots;
 
-    set_activity_with_image(&activity);
+    set_activity_with_image(activity);
 }
 
 }  // namespace RichPresence

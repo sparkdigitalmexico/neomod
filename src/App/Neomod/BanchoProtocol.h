@@ -212,9 +212,6 @@ struct Slot {
     [[nodiscard]] inline bool is_player_playing() const { return (this->status & 0b00100000); }
     [[nodiscard]] inline bool has_finished_playing() const { return (this->status & 0b01000000); }
 
-    // no_map
-    [[nodiscard]] inline bool is_missing_beatmap() const { return (this->status & 0b00010000); }
-
     // quit
     [[nodiscard]] inline bool has_quit() const { return (this->status & 0b10000000); }
 

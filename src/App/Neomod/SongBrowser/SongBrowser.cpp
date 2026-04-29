@@ -2352,7 +2352,7 @@ void SongBrowser::rebuildScoreButtons() {
 
     const int numScores = scores.size();
 
-    if(numScores > 0) {
+    if(numScores > 1) {
         // sort
         Database::sortScoresInPlace(scores);
     }
@@ -2808,8 +2808,8 @@ void SongBrowser::onSortScoresClicked(CBaseUIButton *button) {
 
 void SongBrowser::onFilterScoresChange(std::string_view text, int id) {
     std::string text_to_set{text};
-    const auto &type_cv = &cv::songbrowser_scores_filteringtype;
-    const auto &manual_type_cv = &cv::songbrowser_scores_filteringtype_manual;
+    auto *type_cv = &cv::songbrowser_scores_filteringtype;
+    auto *manual_type_cv = &cv::songbrowser_scores_filteringtype_manual;
 
     // abusing "id" to determine whether it was a click callback or due to login
     if(id != LOGIN_STATE_FILTER_ID) {

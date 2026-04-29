@@ -8,8 +8,8 @@ void deinit() {}
 void tick() {}
 void destroy() {}
 void clear_activity() {}
-void set_activity(struct DiscordActivity* /*activity*/) {}
-struct DiscordActivity create_base_activity() { return DiscordActivity{}; }
+void set_activity(const DiscordActivity & /*activity*/) {}
+DiscordActivity create_base_activity() { return DiscordActivity{}; }
 }  // namespace DiscRPC
 
 #else
@@ -92,45 +92,50 @@ void clear_activity() {
     Discord_ClearPresence();
 }
 
-struct DiscordActivity create_base_activity() {
-    struct DiscordActivity activity{};
-    strcpy(&activity.assets.large_image[0], PACKAGE_NAME "_icon");
-    strcpy(&activity.assets.small_image[0], "None");
+DiscordActivity create_base_activity() {
+    DiscordActivity activity{};
+    activity.assets.large_image = {PACKAGE_NAME "_icon"};
+    activity.assets.small_image = {"None"};
     return activity;
 }
 
-void set_activity(struct DiscordActivity* activity) {
+void set_activity(const DiscordActivity& activity) {
     if(!initialized) return;
     if(!cv::rich_presence.getBool()) return;
 
     if(cv::debug_discord_rpc.getBool()) {
-        std::string dbgstr{fmt::format("DISCORD PRESENCE\n")};
-        dbgstr.append(fmt::format("state: {:s}\n", std::string_view{&activity->state[0]}));
-        dbgstr.append(fmt::format("details: {:s}\n", std::string_view{&activity->details[0]}));
-        dbgstr.append(fmt::format("timestamps: {{ start: {:d}, end: {:d} }}\n", activity->timestamps.start,
-                                  activity->timestamps.end));
-        dbgstr.append(fmt::format(
-            "assets: {{ large_image: {:s}, large_text: {:s}, small_image: {:s}, small_text: {:s} }}",
-            std::string_view{&activity->assets.large_image[0]}, std::string_view{&activity->assets.large_text[0]},
-            std::string_view{&activity->assets.small_image[0]}, std::string_view{&activity->assets.small_text[0]}));
-        dbgstr.append(fmt::format("\nparty: {{ id: {:s}, size: {{ current_size: {:d}, max_size: {:d} }} }}",
-                                  std::string_view{&activity->party.id[0]}, activity->party.size.current_size,
-                                  activity->party.size.max_size));
-        logRaw(dbgstr);
+        logRaw(R"(DISCORD PRESENCE
+state: {:s}
+details: {:s}
+timestamps: {{ start: {:d}, end: {:d} }}
+assets: {{ large_image: {:s}, large_text: {:s}, small_image: {:s}, small_text: {:s} }}
+party: {{ id: {:s}, size: {{ current_size: {:d}, max_size: {:d} }} }})",
+               std::string_view{&activity.state[0]},               //
+               std::string_view{&activity.details[0]},             //
+               activity.timestamps.start,                          //
+               activity.timestamps.end,                            //
+               std::string_view{&activity.assets.large_image[0]},  //
+               std::string_view{&activity.assets.large_text[0]},   //
+               std::string_view{&activity.assets.small_image[0]},  //
+               std::string_view{&activity.assets.small_text[0]},   //
+               std::string_view{&activity.party.id[0]},            //
+               activity.party.size.current_size,                   //
+               activity.party.size.max_size                        //
+        );
     }
 
     DiscordRichPresence presence{};
-    presence.state = &activity->state[0];
-    presence.details = &activity->details[0];
-    presence.startTimestamp = activity->timestamps.start;
-    presence.endTimestamp = activity->timestamps.end;
-    presence.largeImageKey = &activity->assets.large_image[0];
-    presence.largeImageText = &activity->assets.large_text[0];
-    presence.smallImageKey = &activity->assets.small_image[0];
-    presence.smallImageText = &activity->assets.small_text[0];
-    presence.partyId = &activity->party.id[0];
-    presence.partySize = activity->party.size.current_size;
-    presence.partyMax = activity->party.size.max_size;
+    presence.state = &activity.state[0];
+    presence.details = &activity.details[0];
+    presence.startTimestamp = activity.timestamps.start;
+    presence.endTimestamp = activity.timestamps.end;
+    presence.largeImageKey = &activity.assets.large_image[0];
+    presence.largeImageText = &activity.assets.large_text[0];
+    presence.smallImageKey = &activity.assets.small_image[0];
+    presence.smallImageText = &activity.assets.small_text[0];
+    presence.partyId = &activity.party.id[0];
+    presence.partySize = activity.party.size.current_size;
+    presence.partyMax = activity.party.size.max_size;
 
     Discord_UpdatePresence(&presence);
 }
