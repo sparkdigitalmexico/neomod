@@ -134,6 +134,16 @@ $(DEPS_CACHE)/SoundTouch-$(SOUNDTOUCH_VERSION).tar.gz:
 	$(MKDIR_P) $(DEPS_CACHE)
 	$(CURLCOMMAND) "https://codeberg.org/soundtouch/soundtouch/archive/$(SOUNDTOUCH_VERSION).tar.gz" || { rm -f $@; exit 1; }
 
+# --with-discord
+$(DEPS_CACHE)/discord-rpc-$(DISCORDRPC_COMMIT).tar.gz:
+	$(MKDIR_P) $(DEPS_CACHE)
+	$(CURLCOMMAND) "https://github.com/harmonytf/discord-rpc/archive/$(DISCORDRPC_COMMIT).tar.gz" || { rm -f $@; exit 1; }
+
+# rapidjson required for discord-rpc (header-only lib copied into discord-rpc's thirdparty folder)
+$(DEPS_CACHE)/rapidjson-$(RAPIDJSON_COMMIT).tar.gz:
+	$(MKDIR_P) $(DEPS_CACHE)
+	$(CURLCOMMAND) "https://github.com/Tencent/rapidjson/archive/$(RAPIDJSON_COMMIT).tar.gz" || { rm -f $@; exit 1; }
+
 # --with-ffmpeg
 # if changing build params, to invalidate .built stamps (without updating version)
 FFMPEG_EPOCH := 5
@@ -280,33 +290,6 @@ $(DEPS_CACHE)/bass-$(BASS_VERSION)-linux.source: $(DEPS_CACHE)/bass-$(BASS_VERSI
 	$(MKDIR_P) bassloud/include/ && $(UNZIP) -qjo bassloud24.zip c/bassloud.h -d bassloud/include/ && \
 	$(MKDIR_P) bassloud/lib/linux/i686 && $(UNZIP) -qjo bassloud24-linux.zip libs/x86/libbassloud.so -d bassloud/lib/linux/i686 && \
 	$(MKDIR_P) bassloud/lib/linux/x86_64 && $(UNZIP) -qjo bassloud24-linux.zip libs/x86_64/libbassloud.so -d bassloud/lib/linux/x86_64
-	touch $@
-
-$(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)/discordsdk.zip:
-	$(MKDIR_P) $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION) && \
-	$(CURLCOMMAND) "https://web.archive.org/web/20250505113314/https://dl-game-sdk.discordapp.net/$(DISCORDSDK_VERSION)/discord_game_sdk.zip" || \
-			$(CURLCOMMAND) "https://dl-game-sdk.discordapp.net/$(DISCORDSDK_VERSION)/discord_game_sdk.zip" || { rm -f $@; exit 1; }
-
-# architecture-specific extraction targets (discord SDK only supports win32, win64, linux64)
-$(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)-windowsi686.source: $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)/discordsdk.zip
-	cd $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION) && \
-	$(MKDIR_P) include/ && $(UNZIP) -qjo discordsdk.zip c/discord_game_sdk.h -d include/ && \
-	$(MKDIR_P) lib/windows/i686 && $(UNZIP) -qjo discordsdk.zip lib/x86/discord_game_sdk.dll -d lib/windows/i686/ && \
-	$(UNZIP) -qjo discordsdk.zip lib/x86/discord_game_sdk.dll.lib -d lib/windows/i686/
-	touch $@
-
-$(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)-windowsx86_64.source: $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)/discordsdk.zip
-	cd $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION) && \
-	$(MKDIR_P) include/ && $(UNZIP) -qjo discordsdk.zip c/discord_game_sdk.h -d include/ && \
-	$(MKDIR_P) lib/windows/x86_64 && $(UNZIP) -qjo discordsdk.zip lib/x86_64/discord_game_sdk.dll -d lib/windows/x86_64/ && \
-	$(UNZIP) -qjo discordsdk.zip lib/x86_64/discord_game_sdk.dll.lib -d lib/windows/x86_64/
-	touch $@
-
-$(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)-linuxx86_64.source: $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)/discordsdk.zip
-	cd $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION) && \
-	$(MKDIR_P) include/ && $(UNZIP) -qjo discordsdk.zip c/discord_game_sdk.h -d include/ && \
-	$(MKDIR_P) lib/linux/x86_64 && $(UNZIP) -qjo discordsdk.zip lib/x86_64/discord_game_sdk.so -d lib/linux/x86_64/ && \
-	mv lib/linux/x86_64/discord_game_sdk.so lib/linux/x86_64/libdiscord_game_sdk.so
 	touch $@
 
 # NOTE: curl 8.18.0 is the last version that supported windows XP, so we use that for windows 32bit compat builds
@@ -709,19 +692,51 @@ $(DEPS_PREFIX)/SoundTouch-$(SOUNDTOUCH_VERSION).built:
 	$(MKDIR_P) $(DEPS_PREFIX) && touch $@
 endif # USE_SOLOUD
 
-if USE_DISCORDSDK
-DISCORDSDK_CFLAGS := -I$(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)/include
-DISCORDSDK_INSTALL_LIBS := $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)/lib/$(SYSNAME)/$(host_cpu)/$(LIBPREFIX)discord_game_sdk$(DLLEXT)
+if USE_DISCORDRPC
+DISCORDRPC_CFLAGS := -I$(DEPS_PREFIX)/include
+DISCORDRPC_LIBS := -L$(DEPS_PREFIX)/lib -ldiscord-rpc
+if MACOS_PLATFORM
+DISCORDRPC_LIBS += -framework AppKit
+endif
+if WIN_PLATFORM
+DISCORDRPC_LIBS += -lpsapi -ladvapi32
+endif
 
-$(DEPS_PREFIX)/discordsdk-$(DISCORDSDK_VERSION).built: $(DEPS_CACHE)/discordsdk-$(DISCORDSDK_VERSION)-$(SYSNAME)$(host_cpu).source
-	$(MKDIR_P) $(DEPS_PREFIX)
+$(DEPS_PREFIX)/discord-rpc-$(DISCORDRPC_COMMIT).built: $(DEPS_CACHE)/discord-rpc-$(DISCORDRPC_COMMIT).tar.gz $(DEPS_CACHE)/rapidjson-$(RAPIDJSON_COMMIT).tar.gz
+	rm -rf $(DEPS_PREFIX)/discord-rpc
+	$(MKDIR_P) $(DEPS_PREFIX)/discord-rpc/build
+	$(TAR) xf $(DEPS_CACHE)/discord-rpc-$(DISCORDRPC_COMMIT).tar.gz -C $(DEPS_PREFIX)/discord-rpc --strip-components=1 && \
+	$(TAR) xf $(DEPS_CACHE)/rapidjson-$(RAPIDJSON_COMMIT).tar.gz -C $(DEPS_PREFIX)/discord-rpc/thirdparty/rapidjson --strip-components=1 && \
+	$(CMAKE) -DSRC=$(DEPS_PREFIX)/discord-rpc -P $(BUILD_MISCDIR)/discord-rpc-fixes.cmake && \
+	cd $(DEPS_PREFIX)/discord-rpc && \
+	PKG_CONFIG="$(PKG_CONFIG)" CC="$(CC)" CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" \
+	$(CMAKE_CONF_PFX) $(CMAKE) -S . -B build -G "$(CMAKE_GEN)" \
+		-D CMAKE_BUILD_TYPE="$(if $(ENABLE_DEBUG),Debug,Release)" \
+		-D CMAKE_INSTALL_PREFIX="$(DEPS_PREFIX)" \
+		-D CMAKE_SYSTEM_NAME="$(CMAKE_SYSTEM_NAME)" \
+		-D CMAKE_SYSTEM_PROCESSOR="$(host_cpu)" \
+		-D CMAKE_C_COMPILER="$(CC)" \
+		-D CMAKE_CXX_COMPILER="$(CXX)" \
+		-D CMAKE_C_FLAGS_RELEASE="$(CFLAGS)" \
+		-D CMAKE_C_FLAGS_DEBUG="$(CFLAGS)" \
+		-D CMAKE_CXX_FLAGS_RELEASE="$(CXXFLAGS)" \
+		-D CMAKE_CXX_FLAGS_DEBUG="$(CXXFLAGS)" \
+		$(CMAKERCOPT) $(CMAKEIDOPT) \
+		$(CMAKE_AR_RANLIB_FLAGS) \
+		-D BUILD_SHARED_LIBS="$(if $(STATICBUILD),OFF,ON)" \
+		-D BUILD_EXAMPLES=OFF \
+		-D ENABLE_IO_THREAD=ON \
+		-D WARNINGS_AS_ERRORS=OFF && \
+	$(CMAKE) --build build "$(CMAKEPAROPT)" && \
+	$(CMAKE) --install build
+	test -f $(DEPS_PREFIX)/include/discord_rpc.h
 	touch $@
-INSTALL_LIB_DEPS += $(DEPS_PREFIX)/discordsdk-$(DISCORDSDK_VERSION).built
+INSTALL_LIB_DEPS += $(DEPS_PREFIX)/discord-rpc-$(DISCORDRPC_COMMIT).built
 else
-$(DEPS_PREFIX)/discordsdk-$(DISCORDSDK_VERSION).built:
+$(DEPS_PREFIX)/discord-rpc-$(DISCORDRPC_COMMIT).built:
 	$(MKDIR_P) $(DEPS_PREFIX)
 	touch $@
-endif # USE_DISCORDSDK
+endif # USE_DISCORDRPC
 
 if USE_BASS
 AUDIO_CFLAGS += -I$(DEPS_CACHE)/bass-$(BASS_VERSION)/bass/include -I$(DEPS_CACHE)/bass-$(BASS_VERSION)/bassfx/include -I$(DEPS_CACHE)/bass-$(BASS_VERSION)/bassmix/include \
@@ -1446,7 +1461,7 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built \
 	$(DEPS_PREFIX)/SoundTouch-$(SOUNDTOUCH_VERSION).built \
 	$(DEPS_PREFIX)/mpg123-$(MPG123_VERSION).built \
-	$(DEPS_PREFIX)/discordsdk-$(DISCORDSDK_VERSION).built \
+	$(DEPS_PREFIX)/discord-rpc-$(DISCORDRPC_COMMIT).built \
 	$(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built \
 	$(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built \
 	$(DEPS_PREFIX)/simdutf-$(SIMDUTF_VERSION).built \
@@ -1537,7 +1552,7 @@ neomod_CXXFLAGS := \
 	$(LZMA_CFLAGS) \
 	$(SIMDUTF_CFLAGS) \
 	$(CTRE_CFLAGS) \
-	$(DISCORDSDK_CFLAGS) \
+	$(DISCORDRPC_CFLAGS) \
 	$(NEOMOD_CXXFLAGS) \
 	$(CXXFLAGS_EXTRA)
 
@@ -1573,6 +1588,7 @@ neomod_LDFLAGS := \
 	$(LZMA_LIBS) \
 	$(NSYNC_LIBS) \
 	$(SIMDUTF_LIBS) \
+	$(DISCORDRPC_LIBS) \
 	$(END_GROUP_FLAGS) \
 	$(NEOMOD_LDFLAGS) \
 	$(EXTRA_WIN_LDFLAGS) \
@@ -1727,8 +1743,8 @@ INSTALL_STAMPS += stamp-install-assets
 
 # --- shared libraries ---
 stamp-install-sharedlibs: $(INSTALL_LIB_DEPS) | install-dirs
-if USE_DISCORDSDK
-	@$(CP_INSTALL) $(DISCORDSDK_INSTALL_LIBS) "$(DESTDIR)$(bindir)/$(LIBDEST)"
+if USE_DISCORDRPC
+	$(if $(STATICBUILD),,@find $(DEPS_PREFIX) '(' -iname '*discord-rpc*'$(DLLEXT) -o -iname '*discord-rpc*''.so.*' ')' -a -not -iname '*.dll.a' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';')
 endif
 if BUILD_MIMALLOC
 if WIN_PLATFORM

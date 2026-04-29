@@ -120,12 +120,18 @@ set(CURL_HASH "SHA512=745572f0cb9096ff88f737392d1ac25052fc8cff6c35bd09f970301e5e
 set_download_name("curl" "${CURL_VERSION}" "${CURL_URL}")
 unset(_curl_ver_temp)
 
-# BINARY DEPENDENCIES
+set(DISCORDRPC_COMMIT "deedb52ce511728458641783cb6d80c7bbdde38c")
+set(DISCORDRPC_URL "https://github.com/harmonytf/discord-rpc/archive/${DISCORDRPC_COMMIT}.tar.gz")
+set(DISCORDRPC_HASH "SHA512=35e807a8901458cdaaac89e0464785ec326df219268bc8bbd08876ff40bc9f0d01b6edfabfe3e333dc367c04f6fa74d1004ca301bae95582308cbd1a0aa8eb5e")
+set_download_name("discordrpc" "${DISCORDRPC_COMMIT}" "${DISCORDRPC_URL}")
 
-set(DISCORDSDK_VERSION "2.5.6")
-set(DISCORDSDK_URL "https://web.archive.org/web/20250505113314/https://dl-game-sdk.discordapp.net/${DISCORDSDK_VERSION}/discord_game_sdk.zip")
-set(DISCORDSDK_HASH "SHA512=4c8f72c7bdf92bc969fb86b96ea0d835e01b9bab1a2cc27ae00bdac1b9733a1303ceadfe138c24a7609b76d61d49999a335dd596cf3f335d894702e2aa23406f")
-set_download_name("discordsdk" "${DISCORDSDK_VERSION}" "${DISCORDSDK_URL}")
+# discord-rpc bundles rapidjson via submodule, but we pre-stage it ourselves to avoid the cmake-time download
+set(RAPIDJSON_COMMIT "8261c1ddf43f10de00fd8c9a67811d1486b2c784")
+set(RAPIDJSON_URL "https://github.com/Tencent/rapidjson/archive/${RAPIDJSON_COMMIT}.tar.gz")
+set(RAPIDJSON_HASH "SHA512=462dd6fad8eed048cc1fef57337742f483ac7df7742cb3ab772cc943cc0a8ff279c38d3078af36b0283c40b75cf7667a166d7af6af2fb93eb0df8127ca879025")
+set_download_name("rapidjson" "${RAPIDJSON_COMMIT}" "${RAPIDJSON_URL}")
+
+# BINARY DEPENDENCIES
 
 # BASS BINARIES
 set(BASS_VERSION "20260208_202602")

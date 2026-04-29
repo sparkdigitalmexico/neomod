@@ -184,10 +184,7 @@ void onMainMenu() {
         BanchoState::spectating || (ui->getChat()->isVisible() && ui->getChat()->user_list->isVisible());
     setBanchoStatus("Main Menu", force_not_afk ? Action::IDLE : Action::AFK);
 
-    // NOTE: As much as I would like to show "Listening to", the Discord SDK ignores the activity 'type'
     auto activity = DiscRPC::create_base_activity();
-
-    activity.type = DiscordActivityType_Listening;
 
     auto map = osu->getMapInterface()->getBeatmap();
     auto music = osu->getMapInterface()->getMusic();
@@ -204,7 +201,6 @@ void onSongBrowser() {
     last_callback = MusicDependentCallback::ON_SONGBROWSER;
     auto activity = DiscRPC::create_base_activity();
 
-    activity.type = DiscordActivityType_Playing;
     strcpy(activity.details, "Picking a map");
 
     if(ui->getRoom()->isVisible()) {
@@ -238,7 +234,6 @@ void onPlayStart() {
 
     auto activity = DiscRPC::create_base_activity();
 
-    activity.type = DiscordActivityType_Playing;
     activity.timestamps.start = tms;
     activity.timestamps.end = 0;
 
@@ -305,8 +300,6 @@ void onPlayEnd(bool quit) {
 
 void onMultiplayerLobby() {
     auto activity = DiscRPC::create_base_activity();
-
-    activity.type = DiscordActivityType_Playing;
 
     crop_to(BanchoState::endpoint.c_str(), activity.state, 128);
     crop_to(BanchoState::room.name.c_str(), activity.details, 128);

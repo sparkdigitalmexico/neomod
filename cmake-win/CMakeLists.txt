@@ -346,6 +346,8 @@ endif()
 add_external_project(simdutf
     CMAKE_ARGS
         ${EXTERNAL_PROJECT_CMAKE_ARGS}
+        -DCMAKE_CXX_STANDARD=23
+        -DSIMDUTF_CXX_STANDARD=23
         -DSIMDUTF_TESTS=OFF
         -DSIMDUTF_ATOMIC_BASE64_TESTS=OFF
         -DSIMDUTF_BENCHMARKS=OFF
@@ -368,19 +370,30 @@ add_external_project(ctre
     BUILD_COMMAND cmake --build <BINARY_DIR> --config ${CMAKE_BUILD_TYPE} --parallel ${CPU_COUNT}
 )
 
-# Discord SDK (pre-built binary)
-add_external_project(discordsdk
+# rapidjson is required by discord-rpc but only as a header-only dep
+add_external_project(rapidjson
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -E echo "Skipping configure"
     BUILD_COMMAND ${CMAKE_COMMAND} -E echo "Skipping build"
-    INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E make_directory ${DEPS_INSTALL_DIR}/include
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_INSTALL_DIR}/lib/x86
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_INSTALL_DIR}/lib/x86_64
-        COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/c/discord_game_sdk.h ${DEPS_INSTALL_DIR}/include/
-        COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/lib/x86/discord_game_sdk.dll ${DEPS_INSTALL_DIR}/lib/x86/
-        COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/lib/x86/discord_game_sdk.dll.lib ${DEPS_INSTALL_DIR}/lib/x86/
-        COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/lib/x86_64/discord_game_sdk.dll ${DEPS_INSTALL_DIR}/lib/x86_64/
-        COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/lib/x86_64/discord_game_sdk.dll.lib ${DEPS_INSTALL_DIR}/lib/x86_64/
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E echo "Skipping install"
+)
+
+# discord-rpc (open-source rich presence library, harmonytf fork)
+add_external_project(discordrpc
+    DEPENDS rapidjson_external
+    #  discord-rpc's CMake expects rapidjson at thirdparty/rapidjson/; the fork ships an empty stub
+    # that we overwrite by copying our pre-staged rapidjson source tree on top of it.
+    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_directory
+        <SOURCE_DIR>/../../../rapidjson_external-prefix/src/rapidjson_external
+        <SOURCE_DIR>/thirdparty/rapidjson
+    COMMAND ${CMAKE_COMMAND} -DSRC=<SOURCE_DIR> -P ${CMAKE_SOURCE_DIR}/../build-aux/misc/discord-rpc-fixes.cmake
+    CMAKE_ARGS
+        ${EXTERNAL_PROJECT_CMAKE_ARGS}
+        -DRAPIDJSONTEST:PATH=<SOURCE_DIR>/thirdparty/rapidjson
+        -DRAPIDJSON:PATH=<SOURCE_DIR>/thirdparty/rapidjson
+        -DBUILD_EXAMPLES=OFF
+        -DENABLE_IO_THREAD=ON
+        -DWARNINGS_AS_ERRORS=OFF
+    BUILD_COMMAND cmake --build <BINARY_DIR> --config ${CMAKE_BUILD_TYPE} --parallel ${CPU_COUNT}
 )
 
 # BASS audio libraries (pre-built binaries)
@@ -510,7 +523,8 @@ ExternalProject_Add(neomod_main
         nsync_external
         simdutf_external
         ctre_external
-        discordsdk_external
+        rapidjson_external
+        discordrpc_external
         bass_header_external
         bass_external
         bassfx_external

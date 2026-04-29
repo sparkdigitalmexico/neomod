@@ -312,6 +312,9 @@ target_link_libraries(neomod PRIVATE
     ${DEPS_INSTALL_DIR}/lib/bz2_static.lib # cool awesome
     ${LIBARCHIVE_STATIC_LIBRARIES}
     ${PC_BROTLIDEC_STATIC_LIBRARIES}
+    ${DEPS_INSTALL_DIR}/lib/discord-rpc.lib
+    psapi
+    advapi32
     comctl32
 )
 
@@ -338,12 +341,6 @@ install(FILES
     "${BASS_CACHE_DIR}/bassasio/lib/windows/x86_64/bassasio.dll"
     "${BASS_CACHE_DIR}/basswasapi/lib/windows/x86_64/basswasapi.dll"
     "${BASS_CACHE_DIR}/bassflac/lib/windows/x86_64/bassflac.dll"
-    DESTINATION bin
-)
-
-# Install Discord SDK DLL
-install(FILES
-    "${DEPS_INSTALL_DIR}/lib/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x86_64,x86>/discord_game_sdk.dll"
     DESTINATION bin
 )
 
