@@ -3971,9 +3971,11 @@ FinishedScore BeatmapInterface::saveAndSubmitScore(bool quit) {
     score.ppv2_aim_stars = this->fAimStars;
     score.ppv2_speed_stars = this->fSpeedStars;
 
-    if(!isCheated) {
+    if(isComplete) {
         RichPresence::onPlayEnd(quit);
+    }
 
+    if(!isCheated) {
         if(BanchoState::can_submit_scores() && !isZero && this->is_submittable) {
             score.server = BanchoState::endpoint;
             BANCHO::Net::submit_score(score);
