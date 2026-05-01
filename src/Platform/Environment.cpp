@@ -217,22 +217,30 @@ std::unique_ptr<Graphics> Environment::createRenderer() {
     if(usingDX11())  // only if specified on the command line, for now
         return std::make_unique<DirectX11Interface>(Env::cfg(OS::WINDOWS) ? getHwnd()
                                                                           : reinterpret_cast<HWND>(m_window));
-#endif
-#ifdef MCENGINE_FEATURE_SDLGPU
-    if(usingSDLGPU())
-        return std::make_unique<SDLGPUInterface>(m_window);
     else {
 #endif
+#ifdef MCENGINE_FEATURE_SDLGPU
+        if(usingSDLGPU())
+            return std::make_unique<SDLGPUInterface>(m_window);
+        else {
+#endif
 #ifdef MCENGINE_FEATURE_OPENGL
-        return std::make_unique<OpenGLInterface>(m_window);
+            return std::make_unique<OpenGLInterface>(m_window);
 #endif
 #ifdef MCENGINE_FEATURE_GLES32
-        return std::make_unique<OpenGLES32Interface>(m_window);
+            return std::make_unique<OpenGLES32Interface>(m_window);
 #endif
 
 #ifdef MCENGINE_FEATURE_SDLGPU
-        // unreachable, but compiler complains
-        return std::make_unique<SDLGPUInterface>(m_window);
+            // unreachable, but compiler complains
+            return std::make_unique<SDLGPUInterface>(m_window);
+        }
+#endif
+
+#ifdef MCENGINE_FEATURE_DIRECTX11
+        // same, but for dx11 only
+        return std::make_unique<DirectX11Interface>(Env::cfg(OS::WINDOWS) ? getHwnd()
+                                                                          : reinterpret_cast<HWND>(m_window));
     }
 #endif
 }
