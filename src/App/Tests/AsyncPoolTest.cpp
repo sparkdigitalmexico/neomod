@@ -331,9 +331,9 @@ void AsyncPoolTest::runSyncTests() {
 
     TEST_SECTION("when_all vector");
     {
-        std::vector<Async::Future<int>> futures;
+        std::vector<Async::Future<int>> futures(4);
         for(int i = 0; i < 4; i++) {
-            futures.push_back(Async::submit([i] { return i * 10; }));
+            futures[i] = Async::submit([i] { return i * 10; });
         }
         auto all = Async::when_all(std::move(futures));
         all.wait();
@@ -349,9 +349,9 @@ void AsyncPoolTest::runSyncTests() {
     TEST_SECTION("when_all vector void");
     {
         std::atomic<int> count{0};
-        std::vector<Async::Future<void>> futures;
+        std::vector<Async::Future<void>> futures(4);
         for(int i = 0; i < 4; i++) {
-            futures.push_back(Async::submit([&count] { count.fetch_add(1, std::memory_order_relaxed); }));
+            futures[i] = Async::submit([&count] { count.fetch_add(1, std::memory_order_relaxed); });
         }
         auto all = Async::when_all(std::move(futures));
         all.wait();
@@ -382,9 +382,9 @@ void AsyncPoolTest::runSyncTests() {
 
     TEST_SECTION("wait_all vector");
     {
-        std::vector<Async::Future<int>> futures;
+        std::vector<Async::Future<int>> futures(4);
         for(int i = 0; i < 4; i++) {
-            futures.push_back(Async::submit([i] { return i; }));
+            futures[i] = Async::submit([i] { return i; });
         }
         Async::wait_all(futures);
         bool allReady = true;

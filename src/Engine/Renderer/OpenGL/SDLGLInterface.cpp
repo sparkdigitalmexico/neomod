@@ -299,7 +299,7 @@ void SDLGLInterface::setGLLog(bool on) {
 #ifdef MCENGINE_FEATURE_GLES32
     // GLES 3.2 has debug functions as core, always available
 #else
-    if(!glDebugMessageCallbackARB) return;
+    if(!(!!glDebugMessageCallbackARB || !!glDebugMessageCallback)) return;
 #endif
     if(on) {
         glEnable(GL_DEBUG_OUTPUT);

@@ -66,9 +66,10 @@ bool OpenGLInterface::init() {
     glFrontFace(GL_CCW);
 
     // debugging
-    if(glDebugMessageCallbackARB) {
+    auto glDebugFunc = glDebugMessageCallback ? glDebugMessageCallback : (glDebugMessageCallbackARB ? glDebugMessageCallbackARB : nullptr);
+    if(glDebugFunc) {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-        glDebugMessageCallbackARB(SDLGLInterface::glDebugCB, nullptr);
+        glDebugFunc(SDLGLInterface::glDebugCB, nullptr);
     }
 
     // initialize the state cache

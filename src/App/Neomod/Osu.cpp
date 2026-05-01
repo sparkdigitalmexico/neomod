@@ -1008,17 +1008,12 @@ void Osu::onKeyDown(KeyboardEvent &key) {
                         key.consume();
                     }
                 } else {
-                    if(BanchoState::is_playing_a_multi_map()) {
-                        cv::draw_scoreboard_mp.setValue(!cv::draw_scoreboard_mp.getBool());
-                        ui->getNotificationOverlay()->addNotification(
-                            cv::draw_scoreboard_mp.getBool() ? "Scoreboard is shown." : "Scoreboard is hidden.",
-                            0xffffffff, false, 0.1f);
-                    } else {
-                        cv::draw_scoreboard.setValue(!cv::draw_scoreboard.getBool());
-                        ui->getNotificationOverlay()->addNotification(
-                            cv::draw_scoreboard.getBool() ? "Scoreboard is shown." : "Scoreboard is hidden.",
-                            0xffffffff, false, 0.1f);
-                    }
+                    auto *scoreboardCvar =
+                        BanchoState::is_playing_a_multi_map() ? &cv::draw_scoreboard_mp : &cv::draw_scoreboard;
+                    const bool postToggledState = !scoreboardCvar->getBool();
+                    scoreboardCvar->setValue(postToggledState);
+                    ui->getNotificationOverlay()->addNotification(
+                        postToggledState ? "Scoreboard is shown." : "Scoreboard is hidden.", 0xffffffff, false, 0.1f);
 
                     key.consume();
                 }
@@ -1082,7 +1077,7 @@ void Osu::onKeyDown(KeyboardEvent &key) {
 
     // special handling, after subsystems, if still not consumed, if playing
     bool handle = !key.isConsumed() && this->isInPlayMode();
-    while(handle) {
+    while(handle) {  // this is only to avoid some levels of nesting
         handle = false;
         // toggle pause menu
         // ignore repeat events when key is held down
