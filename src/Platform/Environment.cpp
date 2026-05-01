@@ -219,13 +219,21 @@ std::unique_ptr<Graphics> Environment::createRenderer() {
                                                                           : reinterpret_cast<HWND>(m_window));
 #endif
 #ifdef MCENGINE_FEATURE_SDLGPU
-    if(usingSDLGPU()) return std::make_unique<SDLGPUInterface>(m_window);
+    if(usingSDLGPU())
+        return std::make_unique<SDLGPUInterface>(m_window);
+    else {
 #endif
 #ifdef MCENGINE_FEATURE_OPENGL
-    return std::make_unique<OpenGLInterface>(m_window);
+        return std::make_unique<OpenGLInterface>(m_window);
 #endif
 #ifdef MCENGINE_FEATURE_GLES32
-    return std::make_unique<OpenGLES32Interface>(m_window);
+        return std::make_unique<OpenGLES32Interface>(m_window);
+#endif
+
+#ifdef MCENGINE_FEATURE_SDLGPU
+        // unreachable, but compiler complains
+        return std::make_unique<SDLGPUInterface>(m_window);
+    }
 #endif
 }
 
