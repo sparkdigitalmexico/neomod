@@ -355,8 +355,8 @@ MainMenu::MainMenu() : UIScreen() {
     this->discordButton->setClickCallback([]() { env->openURLInDefaultBrowser("https://" NEOMOD_DOMAIN "/discord"); });
     this->addBaseUIElement(this->discordButton);
 
-    this->twitterButton = new UIButtonWithIcon("x.com/neomodnet", Icons::TWITTER);
-    this->twitterButton->setClickCallback([]() { env->openURLInDefaultBrowser("https://x.com/neomodnet"); });
+    this->twitterButton = new UIButtonWithIcon("@PlayNeomod", Icons::TWITTER);
+    this->twitterButton->setClickCallback([]() { env->openURLInDefaultBrowser("https://x.com/PlayNeomod"); });
     this->addBaseUIElement(this->twitterButton);
     cv::adblock.setCallback(SA::MakeDelegate<&MainMenu::onAdblockChangeCallback>(this));
 
