@@ -409,6 +409,7 @@ AS_IF([test "$host_os" = "linux-gnu"], [
 
 AS_CASE(["$host_os"], [darwin*], [
     AC_PROG_INSTALL_NAME_TOOL # only need this for macos
+    AC_CHECK_PROG([DSYMUTIL], [dsymutil], [dsymutil])
 ])
 
 AS_IF([test "$host_os" = "mingw32"], [
@@ -1172,6 +1173,10 @@ AS_IF([test "$host_os" = "mingw32" && { test -n "$SRCREMAP" || test "x$enable_cl
     ])
 ])
 
+# macOS atos (used by TSan/ASan/lldb) has a DWARFv5 parser bug that drops file:line info
+# from clang output, so default to v4 there. v5 elsewhere (smaller, faster).
+AS_IF([test "$SYSNAME" = "macos"], [_gdwarf_version="-gdwarf-4"], [_gdwarf_version="-gdwarf-5"])
+
 AS_IF([test "x$enable_debug" = "xyes"], [
     AS_IF([test "x$with_mimalloc" != "xyes"], [with_mimalloc=no])
     AS_IF([test "$host_os" = "mingw32"],[
@@ -1185,14 +1190,14 @@ AS_IF([test "x$enable_debug" = "xyes"], [
             NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -mconsole"
             NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -mconsole -Wl,--subsystem,console:${win_subsystem_ver}"
 
-            CXXFLAGS="$CXXFLAGS -g3 -ggdb3 -gdwarf-5 -Og"
-            CFLAGS="$CFLAGS -g3 -ggdb3 -gdwarf-5 -Og"
+            CXXFLAGS="$CXXFLAGS -g3 -ggdb3 $_gdwarf_version -Og"
+            CFLAGS="$CFLAGS -g3 -ggdb3 $_gdwarf_version -Og"
         ])
     ], [
         # don't remap paths, the source should correspond to the real source location on linux
         # non-mingw
-        CXXFLAGS="$CXXFLAGS -g3 -ggdb3 -gdwarf-5 -Og"
-        CFLAGS="$CFLAGS -g3 -ggdb3 -gdwarf-5 -Og"
+        CXXFLAGS="$CXXFLAGS -g3 -ggdb3 $_gdwarf_version -Og"
+        CFLAGS="$CFLAGS -g3 -ggdb3 $_gdwarf_version -Og"
     ])
     AS_IF([test -n "$WASM_CC"], [
         CXXFLAGS="$CXXFLAGS -gsource-map"
@@ -1236,8 +1241,8 @@ AS_IF([test "x$enable_debug" = "xyes"], [
     ], [
         AS_IF([test -z "$WASM_CC"],[
             # add minimal debug info
-            CXXFLAGS="-g $CXXFLAGS"
-            CFLAGS="-g $CFLAGS"
+            CXXFLAGS="-g $_gdwarf_version $CXXFLAGS"
+            CFLAGS="-g $_gdwarf_version $CFLAGS"
         ])
     ])
     AS_IF([test "$host_os" = "mingw32"], [
@@ -1836,6 +1841,11 @@ AM_CONDITIONAL([WASM_PLATFORM], [test -n "$WASM_CC"])
 AM_CONDITIONAL([CLANG_BUILD], [test "$CLANG" = "yes"])
 
 AM_CONDITIONAL([STRIPBINS], [test "x$enable_strip" != "xno" && ! { test "$SYSNAME" = "windows" && test "$host_cpu" = "i686" ; } ])
+
+# generate .dSYM bundles on macOS when there's debug info to capture
+# (debug build, or non-debug build with --disable-strip). must run before strip,
+# since strip removes the debug map dsymutil reads.
+AM_CONDITIONAL([RUN_DSYMUTIL], [test "$SYSNAME" = "macos" && test -n "$DSYMUTIL" && { test "x$enable_debug" = "xyes" || test "x$enable_strip" = "xno" ; } ])
 
 # to avoid building pch files redundantly in CI (not really worth it)
 AS_IF([test "$CI" = "true" || test x"$enable_pch" = "xno"], [using_pch=no], [using_pch=yes])

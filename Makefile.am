@@ -1848,9 +1848,26 @@ INSTALL_RPATH_STAMP += stamp-install-rpath
 INSTALL_STAMPS += stamp-install-rpath
 endif
 
+# --- generate .dSYM bundle (macos only, when debug info is present) ---
+# without this, sanitizer/lldb/atos backtraces only show binary offsets,
+# since debug info on mach-o stays in the .o files until dsymutil collects it.
+if RUN_DSYMUTIL
+stamp-install-dsym: stamp-install-sharedlibs $(INSTALL_RPATH_STAMP) $(bin_PROGRAMS)
+	$(DSYMUTIL) "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
+	@touch $@
+
+INSTALL_STAMPS += stamp-install-dsym
+endif
+
 # --- strip binaries (must run after rpath to avoid racing on the same files) ---
 if STRIPBINS
-stamp-install-strip: stamp-install-sharedlibs $(INSTALL_RPATH_STAMP) $(bin_PROGRAMS)
+# strip removes the debug map, so dsymutil must run first when both are enabled
+if RUN_DSYMUTIL
+DSYM_PRE_STRIP_DEP = stamp-install-dsym
+else
+DSYM_PRE_STRIP_DEP =
+endif
+stamp-install-strip: stamp-install-sharedlibs $(INSTALL_RPATH_STAMP) $(bin_PROGRAMS) $(DSYM_PRE_STRIP_DEP)
 	-find "$(DESTDIR)$(bindir)" -name '*'$(DLLEXT)'*' -execdir $(STRIP) $(STRIP_ALL_FLAGS) '{''}' '+'
 	-$(STRIP) $(STRIP_ALL_FLAGS) "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
 	@touch $@
