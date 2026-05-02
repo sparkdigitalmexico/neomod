@@ -196,7 +196,6 @@ bool init_internal() {
 #define FUNCSETDEF(libname, ver) \
     FFmpegFuncset { .bare_libname = #libname, .libhandle_ref = &ld_ctx().libname##_handle, .libversion = (ver) }
     // Versions of FFmpeg libraries which expose an API that's compatible with what we actually need (tested working)
-    // (NOTE: outdated comment from neoloud, don't know what we'll need yet)
     // clang-format off
     const std::array<std::array<FFmpegFuncset, 4>, 2> supported_ffmpeg_version_sets{
         {{ // FFmpeg 7.1

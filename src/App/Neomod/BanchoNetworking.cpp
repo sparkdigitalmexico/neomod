@@ -444,9 +444,8 @@ void BanchoState::disconnect(bool shutdown) {
     ui->getSongBrowser()->onFilterScoresChange("Local", SongBrowser::LOGIN_STATE_FILTER_ID);
 
     // Exit out of any online-only screens
-    if(UIScreen *s = ui->getActiveScreen();
-       (s == (UIScreen *)ui->getSpectatorScreen()) || (s == (UIScreen *)ui->getLobby()) ||
-       (s == (UIScreen *)ui->getOsuDirectScreen()) || (s == (UIScreen *)ui->getRoom())) {
+    if(UIScreen *s = ui->getActiveScreen(); (s == ui->getSpectatorScreenBase()) || (s == ui->getLobbyBase()) ||
+                                            (s == ui->getOsuDirectScreenBase()) || (s == ui->getRoomBase())) {
         ui->setScreen(ui->getMainMenu());
     }
 
