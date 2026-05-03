@@ -34,8 +34,15 @@ Changelog::Changelog() : ScreenBackable() {
 
     std::vector<CHANGELOG> changelogs;
 
+    CHANGELOG v43_10;
+    v43_10.title = "43.10 (" CHANGELOG_TIMESTAMP ")";
+    v43_10.changes = {
+        R"()",
+    };
+    changelogs.push_back(v43_10);
+
     CHANGELOG v43_09;
-    v43_09.title = "43.09 (" CHANGELOG_TIMESTAMP ")";
+    v43_09.title = "43.09 (2026-05-02)";
     v43_09.changes = {
         R"(- Added support for touchscreen devices)",
         R"(  - Includes lazer-style multi-touch tapping (with up to 4 fingers))",
