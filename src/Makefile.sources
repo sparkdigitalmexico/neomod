@@ -205,6 +205,7 @@ neomod_SOURCES = \
 	src/App/Neomod/UserCard2.cpp \
 	src/App/Neomod/UserStatsScreen.cpp \
 	src/App/Neomod/VolumeOverlay.cpp \
+	src/App/Neomod/Wasm.cpp \
 	src/App/Neomod/score.cpp \
 	src/Engine/AnimationHandler.cpp \
 	src/Engine/Async/AsyncPool.cpp \
@@ -250,6 +251,7 @@ neomod_SOURCES = \
 	src/Engine/SysMon.cpp \
 	src/Engine/Thread.cpp \
 	src/Engine/Timing.cpp \
+	src/Engine/URLHistory.cpp \
 	src/GUI/CBaseUIButton.cpp \
 	src/GUI/CBaseUICheckbox.cpp \
 	src/GUI/CBaseUIContainer.cpp \

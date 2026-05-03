@@ -37,7 +37,7 @@ Changelog::Changelog() : ScreenBackable() {
     CHANGELOG v43_10;
     v43_10.title = "43.10 (" CHANGELOG_TIMESTAMP ")";
     v43_10.changes = {
-        R"()",
+        R"(- (Web) URL now updates to match current page)",
     };
     changelogs.push_back(v43_10);
 

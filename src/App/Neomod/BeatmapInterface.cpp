@@ -54,6 +54,7 @@
 #include "Matrices.h"
 #include "UIModSelectorModButton.h"
 #include "Graphics.h"
+#include "Wasm.h"
 
 using namespace flags::operators;
 using namespace neomod;
@@ -502,6 +503,8 @@ bool BeatmapInterface::watch(const FinishedScore &score, u32 start_ms) {
 
     this->sim = std::make_unique<SimulatedBeatmapInterface>(this->beatmap, score.mods);
     this->sim->spectated_replay = score.replay;
+
+    Wasm::update_url();
 
     return true;
 }
@@ -966,6 +969,8 @@ void BeatmapInterface::stop(bool quit) {
     }
 
     osu->setShouldPauseBGThreads(false);
+
+    Wasm::update_url();
 }
 
 void BeatmapInterface::fail(bool force_death) {

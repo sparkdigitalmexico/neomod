@@ -25,6 +25,7 @@ class RankingScreen final : public ScreenBackable {
     void onWatchClicked();
 
     void setScore(const FinishedScore &score);
+    const FinishedScore &getScore();
 
    private:
     void updateLayout() override;

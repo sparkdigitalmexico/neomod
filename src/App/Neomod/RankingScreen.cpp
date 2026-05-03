@@ -42,6 +42,7 @@
 #include "UIBackButton.h"
 #include "UIRankingScreenInfoLabel.h"
 #include "UIRankingScreenRankingPanel.h"
+#include "Wasm.h"
 #include "score.h"
 
 namespace {
@@ -384,6 +385,8 @@ CBaseUIContainer *RankingScreen::setVisible(bool visible) {
         soundEngine->stop(osu->getSkin()->s_applause);
     }
 
+    Wasm::update_url();
+
     return this;
 }
 
@@ -486,6 +489,8 @@ void RankingScreen::setScore(const FinishedScore &newscore) {
     if(flags::has<NoHP>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::drain_disabled);
     if(flags::has<DKS>(sc.mods.flags)) m_impl->extraMods.push_back(&cv::mod_dks);
 }
+
+const FinishedScore &RankingScreen::getScore() { return m_impl->storedScore; }
 
 void RankingScreen::updateLayout() {
     ScreenBackable::updateLayout();
