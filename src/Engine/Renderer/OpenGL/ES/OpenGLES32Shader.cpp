@@ -205,15 +205,6 @@ bool OpenGLES32Shader::compile(const std::string &vertexShader, const std::strin
         return false;
     }
 
-    // validate
-    ret = GL_FALSE;
-    glValidateProgram(m_iProgram);
-    glGetProgramiv(m_iProgram, GL_VALIDATE_STATUS, &ret);
-    if(ret == GL_FALSE) {
-        engine->showMessageError("OpenGLES32Shader Error", "Couldn't glValidateProgram()");
-        return false;
-    }
-
     return true;
 }
 

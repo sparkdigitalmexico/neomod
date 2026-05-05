@@ -63,7 +63,12 @@ OpenGLShader::OpenGLShader(std::string vertexShader, std::string fragmentShader,
     this->iProgramBackup = 0;
 }
 
-void OpenGLShader::init() { this->setReady(this->compile(this->sVsh, this->sFsh, this->bSource)); }
+void OpenGLShader::init() {
+    this->setReady(this->compile(this->sVsh, this->sFsh, this->bSource));
+    if(!this->isReady()) {
+        debugLog("name: {:s}\nVSH:\n{:s}\nFSH:\n{:s}", this->sName, this->sFsh, this->sVsh);
+    }
+}
 
 void OpenGLShader::initAsync() { this->setAsyncReady(true); }
 
@@ -208,15 +213,6 @@ bool OpenGLShader::compile(const std::string &vertexShader, const std::string &f
     MCglGetObjectParameteriv(this->iProgram, GL_OBJECT_LINK_STATUS_ARB, &returnValue);
     if(returnValue == GL_FALSE) {
         engine->showMessageError("OpenGLShader Error", "Couldn't glLinkProgramARB()");
-        return false;
-    }
-
-    // validate
-    MCglValidateProgram(this->iProgram);
-    returnValue = GL_TRUE;
-    MCglGetObjectParameteriv(this->iProgram, GL_OBJECT_VALIDATE_STATUS_ARB, &returnValue);
-    if(returnValue == GL_FALSE) {
-        engine->showMessageError("OpenGLShader Error", "Couldn't glValidateProgramARB()");
         return false;
     }
 
