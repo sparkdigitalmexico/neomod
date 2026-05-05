@@ -11,6 +11,7 @@
 #include "Engine.h"
 #include "Logging.h"
 #include "Matrices.h"
+#include "File.h"
 
 #include <fstream>
 
@@ -227,8 +228,7 @@ int OpenGLShader::createShaderFromString(std::string shaderSource, int shaderTyp
         return 0;
     }
 
-    size_t pos = shaderSource.find("{RUNTIME_VERSION}"sv);
-    if(pos != std::string::npos) {
+    if(size_t pos = shaderSource.find("{RUNTIME_VERSION}"sv); pos != std::string::npos) {
         shaderSource.replace(pos, "{RUNTIME_VERSION}"sv.length(), "110");
     }
 
@@ -263,23 +263,12 @@ int OpenGLShader::createShaderFromString(std::string shaderSource, int shaderTyp
 
 int OpenGLShader::createShaderFromFile(const std::string &fileName, int shaderType) {
     // load file
-    std::ifstream inFile(fileName);
-    if(!inFile) {
+    File inFile(fileName);
+    if(!inFile.canRead()) {
         engine->showMessageError("OpenGLShader Error", fileName.c_str());
         return 0;
     }
-    std::string line;
-    std::string shaderSource;
-    // int linecount = 0;
-    while(inFile.good()) {
-        std::getline(inFile, line);
-        shaderSource += line + "\n\0";
-        // linecount++;
-    }
-    shaderSource += "\n\0";
-    inFile.close();
-
-    return createShaderFromString(shaderSource.c_str(), shaderType);
+    return createShaderFromString(inFile.readToString(), shaderType);
 }
 
 #endif

@@ -16,6 +16,15 @@
 
 namespace SString {
 
+// strcmp accepting string_views
+bool str_comp(std::string_view a, std::string_view b);
+
+// strcasecmp accepting string_views
+bool strcase_comp(std::string_view a, std::string_view b);
+
+// alphanumeric string comparator that ignores special characters at the start of strings
+bool alnum_comp(std::string_view a, std::string_view b);
+
 template <typename S = char>
 using split_join_enabled_t =
     std::enable_if_t<std::is_same_v<std::decay_t<S>, char> || std::is_same_v<std::decay_t<S>, const char*> ||
@@ -50,9 +59,6 @@ void split_newlines(std::vector<R>& ret, std::string_view s);
 // join a vector of std::strings
 template <typename S = char, split_join_enabled_t<S> = true>
 std::string join(const std::vector<std::string>& strings, S delim = ' ');
-
-// alphanumeric string comparator that ignores special characters at the start of strings
-bool alnum_comp(std::string_view a, std::string_view b);
 
 // in-place whitespace/newline trimming (both sides)
 inline void trim_inplace(std::string& str) {

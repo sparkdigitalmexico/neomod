@@ -658,8 +658,8 @@ bool SDLMain::createWindow() {
             debugLog("NOTICE: Couldn't get primary display: {}", SDL_GetError());
         }
         int dispCount = 0;
+        std::unique_ptr<SDL_DisplayID[], decltype(&SDL_free)> ids{SDL_GetDisplays(&dispCount), &SDL_free};
         float maxHz = 0;
-        SDL_DisplayID *ids = SDL_GetDisplays(&dispCount);
         for(int i = 0; i < dispCount; i++) {
             const SDL_DisplayMode *currentDisplayMode = SDL_GetCurrentDisplayMode(ids[i]);
             if(currentDisplayMode && currentDisplayMode->refresh_rate >= maxHz) {
@@ -669,7 +669,6 @@ bool SDLMain::createWindow() {
                 windowCreateHeight = currentDisplayMode->h;
             }
         }
-        SDL_free(ids);
     } else {
         const SDL_DisplayMode *dm = SDL_GetDesktopDisplayMode(initDisplayID);
         if(dm) {

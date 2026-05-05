@@ -2,6 +2,7 @@
 #include "SongButton.h"
 
 #include "Font.h"
+#include "SString.h"
 #include "ScoreButton.h"
 #include "SongBrowser.h"
 #include "SongDifficultyButton.h"
@@ -370,9 +371,7 @@ void SongButton::onContextMenu(std::string_view text, int id) {
             auto sorted_collections = Collections::get_loaded();
 
             // sort by name
-            std::ranges::stable_sort(
-                sorted_collections, [](const char *s1, const char *s2) -> bool { return strcasecmp(s1, s2) < 0; },
-                [](const auto &col) -> const char * { return col.get_name().c_str(); });
+            std::ranges::stable_sort(sorted_collections, SString::strcase_comp, &Collections::Collection::get_name);
 
             for(const auto &collection : sorted_collections) {
                 if(!collection.get_maps().empty()) {

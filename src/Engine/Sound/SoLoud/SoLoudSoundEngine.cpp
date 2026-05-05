@@ -636,9 +636,8 @@ void SoLoudSoundEngine::updateOutputDevices(bool printInfo) {
     if(res == SO_NO_ERROR) {
         // sort to keep them in the same order for each query
         std::vector<DeviceInfo> devices{devicearray, devicearray + deviceCount};
-        std::ranges::stable_sort(
-            devices, [](const char *a, const char *b) -> bool { return strcasecmp(a, b) < 0; },
-            [](const DeviceInfo &di) -> const char * { return &di.name[0]; });
+        std::ranges::stable_sort(devices, SString::strcase_comp,
+                                 [](const DeviceInfo &di) -> std::string_view { return {&di.name[0]}; });
 
         for(int d = 0; d < devices.size(); d++) {
             if(printInfo) {

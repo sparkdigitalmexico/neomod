@@ -203,9 +203,7 @@ void ConVarHandler::ConVarBuiltins::find(std::string_view args) {
     }
 
     if(matchingConVars.size() > 0) {
-        std::ranges::sort(
-            matchingConVars, [](const char *s1, const char *s2) -> bool { return strcmp(s1, s2) < 0; },
-            [](const ConVar *v) { return v->getName(); });
+        std::ranges::sort(matchingConVars, SString::str_comp, &ConVar::getName);
     }
 
     if(matchingConVars.size() < 1) {
@@ -281,9 +279,7 @@ void ConVarHandler::ConVarBuiltins::listcommands(void) {
     logRaw("----------------------------------------------");
     {
         std::vector<ConVar *> convars = cvars().getConVarArray();
-        std::ranges::sort(
-            convars, [](const char *s1, const char *s2) -> bool { return strcmp(s1, s2) < 0; },
-            [](const ConVar *v) { return v->getName(); });
+        std::ranges::sort(convars, SString::str_comp, &ConVar::getName);
 
         for(auto &convar : convars) {
             if(convar->isFlagSet(cv::HIDDEN)) continue;
@@ -319,9 +315,7 @@ void ConVarHandler::ConVarBuiltins::dumpcommands(void) {
     std::string html_template{ALL_BINMAP.at("convar_template")};
 
     std::vector<ConVar *> convars = cvars().getConVarArray();
-    std::ranges::sort(
-        convars, [](const char *s1, const char *s2) -> bool { return strcmp(s1, s2) < 0; },
-        [](const ConVar *v) { return v->getName(); });
+    std::ranges::sort(convars, SString::str_comp, &ConVar::getName);
 
     std::string html = R"(<section class="variables">)";
     for(auto var : convars) {

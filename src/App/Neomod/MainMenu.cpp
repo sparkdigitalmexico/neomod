@@ -900,10 +900,6 @@ void MainMenu::draw() {
 
     // draw background
     if(cv::draw_menu_background.getBool()) {
-        // background_shader->enable();
-        // background_shader->setUniform1f("time", engine->getTime());
-        // background_shader->setUniform2f("resolution", osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
-
         auto *bgih = osu->getBackgroundImageHandler();
         assert(bgih);
         if(this->lastMap && this->lastMap != this->currentMap) {
@@ -912,8 +908,6 @@ void MainMenu::draw() {
         if(this->currentMap) {
             bgih->draw(bgih->getLoadBackgroundImage(this->currentMap, true), this->mapFadeAnim);
         }
-
-        // background_shader->disable();
     }
 
     // draw notification arrow for changelog (version button)
@@ -1078,53 +1072,49 @@ void MainMenu::update(CBaseUIEventCtx &c) {
     }
 
     // handle update checker and status text
-    {
-        const auto status = osu->getUpdateHandler()->getStatus();
+    switch(osu->getUpdateHandler()->getStatus()) {
+        using enum UpdateHandler::STATUS;
+        case STATUS_IDLE:
+            if(this->updateAvailableButton->isVisible()) {
+                this->updateAvailableButton->setVisible(false);
+            }
+            break;
+        case STATUS_CHECKING_FOR_UPDATE:
+            this->updateAvailableButton->setText("Checking for updates ...");
+            this->updateAvailableButton->setColor(0x2200d900);
+            this->updateAvailableButton->setVisible(true);
+            break;
+        case STATUS_DOWNLOADING_UPDATE:
+            this->updateAvailableButton->setText("Downloading ...");
+            this->updateAvailableButton->setColor(0x2200d900);
+            this->updateAvailableButton->setVisible(true);
+            break;
+        case STATUS_DOWNLOAD_COMPLETE:
+            if(engine->getTime() > this->updateButtonTextTime && this->updateButtonAnim.animating() &&
+               this->updateButtonAnim > 0.175f) {
+                this->updateButtonTextTime = this->updateButtonAnimTime;
 
-        switch(status) {
-            using enum UpdateHandler::STATUS;
-            case STATUS_IDLE:
-                if(this->updateAvailableButton->isVisible()) {
-                    this->updateAvailableButton->setVisible(false);
-                }
-                break;
-            case STATUS_CHECKING_FOR_UPDATE:
-                this->updateAvailableButton->setText("Checking for updates ...");
-                this->updateAvailableButton->setColor(0x2200d900);
-                this->updateAvailableButton->setVisible(true);
-                break;
-            case STATUS_DOWNLOADING_UPDATE:
-                this->updateAvailableButton->setText("Downloading ...");
-                this->updateAvailableButton->setColor(0x2200d900);
-                this->updateAvailableButton->setVisible(true);
-                break;
-            case STATUS_DOWNLOAD_COMPLETE:
-                if(engine->getTime() > this->updateButtonTextTime && this->updateButtonAnim.animating() &&
-                   this->updateButtonAnim > 0.175f) {
-                    this->updateButtonTextTime = this->updateButtonAnimTime;
-
-                    this->updateAvailableButton->setColor(rgb(0, 130, 200));
-                    this->updateAvailableButton->setTextColor(0xffffffff);
-                    this->updateAvailableButton->setVisible(true);
-
-                    if(this->updateAvailableButton->getText().find("ready") != std::string::npos)
-                        this->updateAvailableButton->setText("Click here to install the update!");
-                    else
-                        this->updateAvailableButton->setText("A new version of " PACKAGE_NAME " is ready!");
-                }
-                if(engine->getTime() > this->updateButtonAnimTime) {
-                    this->updateButtonAnimTime = engine->getTime() + 3.0f;
-                    this->updateButtonAnim = 0.0f;
-                    this->updateButtonAnim.set(1.0f, 0.5f, anim::QuadInOut);
-                }
-                break;
-            case STATUS_ERROR:
-                this->updateAvailableButton->setText("Update Error! Click to retry ...");
-                this->updateAvailableButton->setColor(rgb(220, 0, 0));
+                this->updateAvailableButton->setColor(rgb(0, 130, 200));
                 this->updateAvailableButton->setTextColor(0xffffffff);
                 this->updateAvailableButton->setVisible(true);
-                break;
-        }
+
+                if(this->updateAvailableButton->getText().find("ready") != std::string::npos)
+                    this->updateAvailableButton->setText("Click here to install the update!");
+                else
+                    this->updateAvailableButton->setText("A new version of " PACKAGE_NAME " is ready!");
+            }
+            if(engine->getTime() > this->updateButtonAnimTime) {
+                this->updateButtonAnimTime = engine->getTime() + 3.0f;
+                this->updateButtonAnim = 0.0f;
+                this->updateButtonAnim.set(1.0f, 0.5f, anim::QuadInOut);
+            }
+            break;
+        case STATUS_ERROR:
+            this->updateAvailableButton->setText("Update Error! Click to retry ...");
+            this->updateAvailableButton->setColor(rgb(220, 0, 0));
+            this->updateAvailableButton->setTextColor(0xffffffff);
+            this->updateAvailableButton->setVisible(true);
+            break;
     }
 
     // Update pause button and shuffle songs

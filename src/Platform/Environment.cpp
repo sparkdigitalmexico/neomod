@@ -294,9 +294,8 @@ std::string_view Environment::getUsername() const noexcept {
     std::string user = getEnvVariable("USER");
     if(!user.empty()) m_sUsername = {user};
 #ifndef MCENGINE_PLATFORM_WASM
-    else {
-        struct passwd *pwd = getpwuid(getuid());
-        if(pwd != nullptr) m_sUsername = std::string{pwd->pw_name};
+    else if(struct passwd *pwd = getpwuid(getuid())) {
+        m_sUsername = std::string{pwd->pw_name};
     }
 #endif
 #endif
@@ -311,9 +310,8 @@ const std::string &Environment::getUserDataPath() const noexcept {
 
     m_sAppDataPath = MCENGINE_DATA_DIR;  // set it to non-empty to avoid endlessly failing if SDL_GetPrefPath fails once
 
-    if(char *path = SDL_GetPrefPath("", "")) {
-        m_sAppDataPath = path;
-        SDL_free(path);
+    if(std::unique_ptr<char[], decltype(&SDL_free)> path{SDL_GetPrefPath("", ""), &SDL_free}) {
+        m_sAppDataPath = path.get();
 
         // since this is kind of an abuse of SDL_GetPrefPath, we remove the extra slashes at the end
         File::normalizeSlashes(m_sAppDataPath, '\\', '/');
@@ -326,9 +324,8 @@ const std::string &Environment::getUserDataPath() const noexcept {
 const std::string &Environment::getLocalDataPath() const noexcept {
     if(!m_sProgDataPath.empty()) return m_sProgDataPath;
 
-    if(char *path = SDL_GetPrefPath("McEngine", PACKAGE_NAME)) {
-        m_sProgDataPath = path;
-        SDL_free(path);
+    if(std::unique_ptr<char[], decltype(&SDL_free)> path{SDL_GetPrefPath("McEngine", PACKAGE_NAME), &SDL_free}) {
+        m_sProgDataPath = path.get();
     }
 
     if(m_sProgDataPath.empty())  // fallback to exe dir
@@ -586,10 +583,12 @@ const std::string &Environment::getPathToSelf(const char *argv0) {
     std::error_code ec;
     fs::path exe_path{};
 
-    if constexpr(Env::cfg(OS::LINUX))
+    if constexpr(Env::cfg(OS::LINUX)) {
         exe_path = fs::canonical("/proc/self/exe", ec);
-    else {
+    } else if constexpr(Env::cfg(OS::WINDOWS)) {
         exe_path = fs::canonical(UniString::to_wide(std::string_view{argv0}), ec);
+    } else {
+        exe_path = fs::canonical(std::string_view{argv0}, ec);
     }
 
     if(!ec && !exe_path.empty())  // canonical path found
@@ -691,11 +690,10 @@ std::string Environment::filesystemPathToURI(const std::filesystem::path &path) 
 }
 
 std::string_view Environment::getClipBoardText() {
-    if(char *newClip = SDL_GetClipboardText()) {
-        m_sCurrClipboardText = newClip;
-        SDL_free(newClip);
+    if(std::unique_ptr<char[], decltype(&SDL_free)> newClip{SDL_GetClipboardText(), &SDL_free};
+       newClip && newClip[0] != '\0') {
+        m_sCurrClipboardText = newClip.get();
     }
-
     return m_sCurrClipboardText;
 }
 
@@ -715,8 +713,9 @@ struct ClipboardImageState final {
     static void cleanupData(void *userdata) { delete static_cast<ClipboardImageState *>(userdata); }
 
     static const void *getData(void *userdata, const char *mime_type, size_t *size) {
+        assert(userdata);
         auto *self = static_cast<ClipboardImageState *>(userdata);
-        if(mime_type && std::string_view{mime_type} == imageMimeTypes[0] && !self->data.empty()) {
+        if(mime_type && std::string_view{mime_type} == std::string_view{imageMimeTypes[0]} && !self->data.empty()) {
             *size = self->data.size();
             return self->data.data();
         }
@@ -734,7 +733,7 @@ struct ClipboardImageState final {
             getData,  //
             // cleanup callback
             cleanupData,  //
-            clipState, &imageMimeTypes[0], 1);
+            clipState, &imageMimeTypes[0], SDL_arraysize(imageMimeTypes));
         if(!success) {
             delete clipState;
             debugLog("setting clipboard data failed: {:s}", SDL_GetError());
@@ -1560,8 +1559,7 @@ void Environment::initMonitors(bool force) const {
                                     // iterating through actual monitor rects)
 
     int count = -1;
-    std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays_ptr{SDL_GetDisplays(&count), &SDL_free};
-    auto *displays = displays_ptr.get();
+    std::unique_ptr<SDL_DisplayID[], decltype(&SDL_free)> displays{SDL_GetDisplays(&count), &SDL_free};
 
     for(int i = 0; i < count; i++) {
         const SDL_DisplayID di = displays[i];

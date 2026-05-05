@@ -1862,7 +1862,7 @@ endif
 # since debug info on mach-o stays in the .o files until dsymutil collects it.
 if RUN_DSYMUTIL
 stamp-install-dsym: stamp-install-sharedlibs $(INSTALL_RPATH_STAMP) $(bin_PROGRAMS)
-	$(DSYMUTIL) "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
+	$(DSYMUTIL) -j $(CPU_COUNT) --linker parallel "$(DESTDIR)$(bindir)/$(bin_PROGRAMS)"
 	@touch $@
 
 INSTALL_STAMPS += stamp-install-dsym

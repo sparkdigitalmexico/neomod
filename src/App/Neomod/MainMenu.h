@@ -16,7 +16,6 @@ class Image;
 class DatabaseBeatmap;
 typedef DatabaseBeatmap BeatmapDifficulty;
 typedef DatabaseBeatmap BeatmapSet;
-//class Shader;
 
 namespace neomod::mainmenu {
 class WrappedText;
@@ -158,7 +157,6 @@ class MainMenu final : public UIScreen, public MouseListener {
 
     const DatabaseBeatmap *currentMap{nullptr};
     const DatabaseBeatmap *lastMap{nullptr};
-    //Shader *background_shader = nullptr;
     AnimFloat mapFadeAnim{1.f};
     std::vector<std::unique_ptr<BeatmapSet>> preloadedMaps;
 

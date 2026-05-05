@@ -16,6 +16,17 @@
 #endif
 
 namespace SString {
+
+bool str_comp(std::string_view a, std::string_view b) {
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+    return strncmp(a.data(), b.data(), std::min<size_t>(a.length(), b.length())) < 0;
+}
+
+bool strcase_comp(std::string_view a, std::string_view b) {
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+    return strncasecmp(a.data(), b.data(), std::min<size_t>(a.length(), b.length())) < 0;
+}
+
 // alphanumeric string comparator that ignores special characters at the start of strings
 bool alnum_comp(std::string_view a, std::string_view b) {
     int i = 0;

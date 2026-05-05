@@ -2986,9 +2986,7 @@ void OptionsOverlayImpl::onSkinSelectOpened() {
                 std::ranges::sort(skinFolders, SString::alnum_comp);
             } else {
                 // more stable-like sorting (i.e. "-     Cookiezi" comes before "Cookiezi")
-                std::ranges::sort(skinFolders, [](const std::string &s1, const std::string &s2) {
-                    return strcasecmp(s1.c_str(), s2.c_str()) < 0;
-                });
+                std::ranges::sort(skinFolders, SString::strcase_comp);
             }
             return skinFolders;
         },

@@ -1250,7 +1250,7 @@ void Slider::draw() {
         auto &anim = m_clickAnimations[i];
         ++i;
 
-        if(do_starthit_animations && anim.type & HitAnim::HEAD) {
+        if(do_starthit_animations && (anim.type & HitAnim::HEAD)) {
             const f32 alpha = 1.0f - anim.percent;
             const f32 number_alpha = alpha;
 
@@ -1284,7 +1284,7 @@ void Slider::draw() {
             }
             g->popTransform();
         }
-        if(do_endhit_animations && anim.type & HitAnim::TAIL) {
+        if(do_endhit_animations && (anim.type & HitAnim::TAIL)) {
             const f32 alpha = 1.0f - anim.percent;
 
             f32 scale = anim.percent;

@@ -3301,12 +3301,8 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
                     (*it)->setCollectionName(collection_name);
 
                     // resort collection buttons
-                    std::ranges::stable_sort(
-                        this->collectionButtons,
-                        [](const std::string &s1, const std::string &s2) -> bool {
-                            return strcasecmp(s1.c_str(), s2.c_str()) < 0;
-                        },
-                        &CollectionButton::getCollectionName);
+                    std::ranges::stable_sort(this->collectionButtons, SString::strcase_comp,
+                                             &CollectionButton::getCollectionName);
                 }
 
                 // update UI
@@ -3384,13 +3380,14 @@ void SongBrowser::selectRandomBeatmap() {
 
     if(songButtons.size() < 1) return;
 
-    // remember previous
-    if(osu->getMapInterface()->getBeatmap() != nullptr && !osu->getMapInterface()->getBeatmap()->do_not_store) {
-        this->previousRandomBeatmaps.push_back(osu->getMapInterface()->getBeatmap());
+    if(songButtons.size() > 1) {
+        // remember previous
+        if(auto *beatmap = osu->getMapInterface()->getBeatmap(); beatmap != nullptr && !beatmap->do_not_store) {
+            this->previousRandomBeatmaps.push_back(beatmap);
+        }
     }
 
     size_t randomIndex = songButtons.size() == 1 ? 0 : (prand() % (songButtons.size() - 1));
-
     auto *songButton = songButtons[randomIndex]->as<SongButton>();
     this->selectSongButton(songButton);
 }
@@ -3521,9 +3518,7 @@ void SongBrowser::recreateCollectionsButtons() {
     }
 
     // sort buttons by name
-    std::ranges::stable_sort(
-        this->collectionButtons, [](const char *s1, const char *s2) -> bool { return strcasecmp(s1, s2) < 0; },
-        [](const auto &colBtn) -> const char * { return colBtn->getCollectionName().c_str(); });
+    std::ranges::stable_sort(this->collectionButtons, SString::strcase_comp, &CollectionButton::getCollectionName);
 
     t.update();
     debugLog("recreateCollectionsButtons(): {:f} seconds", t.getElapsedTime());
