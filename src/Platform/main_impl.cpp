@@ -521,12 +521,12 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
             break;
 
         case SDL_EVENT_MOUSE_WHEEL:
-            if(event->wheel.x != 0)
-                mouse->onWheelHorizontal(event->wheel.x > 0 ? 120 * std::abs(static_cast<int>(event->wheel.x))
-                                                            : -120 * std::abs(static_cast<int>(event->wheel.x)));
-            if(event->wheel.y != 0)
-                mouse->onWheelVertical(event->wheel.y > 0 ? 120 * std::abs(static_cast<int>(event->wheel.y))
-                                                          : -120 * std::abs(static_cast<int>(event->wheel.y)));
+            if(float wx = event->wheel.x; wx != 0.f)
+                mouse->onWheelHorizontal(
+                    static_cast<int>(120.f * (std::abs(wx) < 1.f ? (std::signbit(wx) ? -1.f : 1.f) : wx)));
+            if(float wy = event->wheel.y; wy != 0.f)
+                mouse->onWheelVertical(
+                    static_cast<int>(120.f * (std::abs(wy) < 1.f ? (std::signbit(wy) ? -1.f : 1.f) : wy)));
             break;
 
         case SDL_EVENT_PEN_MOTION:

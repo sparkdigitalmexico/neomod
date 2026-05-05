@@ -185,12 +185,13 @@ void VolumeOverlay::update(CBaseUIEventCtx &c) {
     }
 
     // scroll wheel events (should be separate from update(), but... oh well...)
-    const int wheelDelta = mouse->getWheelDeltaVertical() / 120;
-    if(wheelDelta != 0 && this->canChangeVolume()) {
-        if(wheelDelta > 0) {
-            this->volumeUp(wheelDelta);
-        } else {
-            this->volumeDown(-wheelDelta);
+    if(this->canChangeVolume()) {
+        if(const int wheelDelta = mouse->getWheelDeltaVertical() / 120; wheelDelta != 0) {
+            if(wheelDelta > 0) {
+                this->volumeUp(wheelDelta);
+            } else {
+                this->volumeDown(-wheelDelta);
+            }
         }
     }
 }
