@@ -219,8 +219,15 @@ std::vector<Set_Slider_Hit> play(BeatmapInterface *pf, DBHitSample info, f32 pan
         pan *= cv::sound_panning_multiplier.getFloat();
     }
 
+    int brk = 0;
     f32 pitch = 0.f;
-    if(cv::snd_pitch_hitsounds.getBool()) {
+    while(cv::snd_pitch_hitsounds.getBool() && !brk++) {
+        if(cv::snd_pitch_hitsounds_ignore_300s.getBool() &&
+           ((f32)std::abs(delta) < (std::floor(pf->getHitWindow300()) - 0.5f))) {
+            // don't change pitch for 300s if delta is within 300 hitwindow
+            // (see AbstractBeatmapInterface.cpp for weird math justification)
+            break;
+        }
         f32 range = pf->getHitWindow100();
         pitch = (f32)delta / range * cv::snd_pitch_hitsounds_factor.getFloat();
     }
