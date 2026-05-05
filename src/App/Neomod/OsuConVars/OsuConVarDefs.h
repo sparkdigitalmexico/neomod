@@ -67,6 +67,7 @@ CONVAR(snd_boost_hitsound_volume, false, CLIENT | SKINS | SERVER, "slightly incr
 // Audio (mods)
 CONVAR(snd_pitch_hitsounds, false, CLIENT | SKINS | SERVER, "change hitsound pitch based on accuracy");
 CONVAR(snd_pitch_hitsounds_factor, -0.5f, CLIENT | SKINS | SERVER, "how much to change the pitch");
+CONVAR(snd_pitch_hitsounds_ignore_300s, -0.5f, CLIENT | SKINS | SERVER, "don't change pitch for 300s if snd_pitch_hitsounds is used");
 
 // Debug
 CONVAR(debug_osu, false, CLIENT);
