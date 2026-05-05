@@ -311,8 +311,7 @@ const std::string &Environment::getUserDataPath() const noexcept {
 
     m_sAppDataPath = MCENGINE_DATA_DIR;  // set it to non-empty to avoid endlessly failing if SDL_GetPrefPath fails once
 
-    char *path = SDL_GetPrefPath("", "");
-    if(path != nullptr) {
+    if(char *path = SDL_GetPrefPath("", "")) {
         m_sAppDataPath = path;
         SDL_free(path);
 
@@ -327,10 +326,10 @@ const std::string &Environment::getUserDataPath() const noexcept {
 const std::string &Environment::getLocalDataPath() const noexcept {
     if(!m_sProgDataPath.empty()) return m_sProgDataPath;
 
-    char *path = SDL_GetPrefPath("McEngine", PACKAGE_NAME);
-    if(path != nullptr) m_sProgDataPath = path;
-
-    SDL_free(path);
+    if(char *path = SDL_GetPrefPath("McEngine", PACKAGE_NAME)) {
+        m_sProgDataPath = path;
+        SDL_free(path);
+    }
 
     if(m_sProgDataPath.empty())  // fallback to exe dir
         m_sProgDataPath = getExeFolder();
@@ -343,17 +342,13 @@ const std::string &Environment::getCacheDir() const noexcept {
 
     if constexpr(Env::cfg(OS::LINUX) || Env::cfg(OS::MAC)) {
         // $XDG_CACHE_HOME/neomod
-        const std::string xdg_cache_home = Environment::getEnvVariable("XDG_CACHE_HOME");
-        if(!xdg_cache_home.empty()) {
-            m_sCacheDir = xdg_cache_home + "/" PACKAGE_NAME;
-            return m_sCacheDir;
+        if(const std::string xdg_cache_home = Environment::getEnvVariable("XDG_CACHE_HOME"); !xdg_cache_home.empty()) {
+            return (m_sCacheDir = xdg_cache_home + "/" PACKAGE_NAME);
         }
 
         // $HOME/.cache/neomod
-        const std::string home = Environment::getEnvVariable("HOME");
-        if(!home.empty()) {
-            m_sCacheDir = home + "/.cache/" PACKAGE_NAME;
-            return m_sCacheDir;
+        if(const std::string home = Environment::getEnvVariable("HOME"); !home.empty()) {
+            return (m_sCacheDir = home + "/.cache/" PACKAGE_NAME);
         }
     }
 
@@ -696,10 +691,10 @@ std::string Environment::filesystemPathToURI(const std::filesystem::path &path) 
 }
 
 std::string_view Environment::getClipBoardText() {
-    char *newClip = SDL_GetClipboardText();
-    if(newClip) m_sCurrClipboardText = newClip;
-
-    SDL_free(newClip);
+    if(char *newClip = SDL_GetClipboardText()) {
+        m_sCurrClipboardText = newClip;
+        SDL_free(newClip);
+    }
 
     return m_sCurrClipboardText;
 }
@@ -711,7 +706,7 @@ void Environment::setClipBoardText(std::string text) {
 
 namespace {
 struct ClipboardImageState final {
-    static inline constinit const char *imageMimeTypes[]{"image/png"};
+    static constexpr const char *const imageMimeTypes[]{"image/png"};
     std::vector<u8> data;
 
     static void *operator new(size_t sz) noexcept { return SDL_malloc(sz); }
@@ -1561,11 +1556,13 @@ void Environment::initMonitors(bool force) const {
     else if(force)  // refresh
         m_mMonitors.clear();
 
-    int count = -1;
-    SDL_DisplayID *displays = SDL_GetDisplays(&count);
-
     m_fullDesktopBoundingBox = {};  // the min/max coordinates, for "valid point" lookups (checked first before
                                     // iterating through actual monitor rects)
+
+    int count = -1;
+    std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays_ptr{SDL_GetDisplays(&count), &SDL_free};
+    auto *displays = displays_ptr.get();
+
     for(int i = 0; i < count; i++) {
         const SDL_DisplayID di = displays[i];
 
@@ -1580,15 +1577,19 @@ void Environment::initMonitors(bool force) const {
 
         if(!SDL_GetDisplayBounds(di, &sdlDisplayRect)) {
             // fallback
-            size = vec2{static_cast<float>(SDL_GetDesktopDisplayMode(di)->w),
-                        static_cast<float>(SDL_GetDesktopDisplayMode(di)->h)};
-            displayRect = McRect{{}, size};
-            // expand the display bounds, we just have to assume that the displays are placed left-to-right, with Y
-            // coordinates at 0 (in this fallback path)
-            if(size.y > m_fullDesktopBoundingBox.getHeight()) {
-                m_fullDesktopBoundingBox.setHeight(size.y);
+            if(const SDL_DisplayMode *dm = SDL_GetDesktopDisplayMode(di)) {
+                size = vec2{static_cast<float>(dm->w), static_cast<float>(dm->h)};
+                displayRect = McRect{{}, size};
+                // expand the display bounds, we just have to assume that the displays are placed left-to-right, with Y
+                // coordinates at 0 (in this fallback path)
+                if(size.y > m_fullDesktopBoundingBox.getHeight()) {
+                    m_fullDesktopBoundingBox.setHeight(size.y);
+                }
+                m_fullDesktopBoundingBox.setWidth(m_fullDesktopBoundingBox.getWidth() + size.x);
+            } else {
+                // couldn't get anything?
+                continue;
             }
-            m_fullDesktopBoundingBox.setWidth(m_fullDesktopBoundingBox.getWidth() + size.x);
         } else {
             displayRect = SDLRectToMcRect(sdlDisplayRect);
             size = displayRect.getSize();
@@ -1608,8 +1609,6 @@ void Environment::initMonitors(bool force) const {
     if(m_fullDesktopBoundingBox.getSize() == vec2{0, 0}) {
         m_fullDesktopBoundingBox = getWindowRect();
     }
-
-    SDL_free(displays);
 }
 
 // TODO: filter?

@@ -85,8 +85,8 @@ static constexpr auto SOUND_METHODS =  //
           A_{
               &Skin::s_normal_sliderslide,    //
               &Skin::s_normal_sliderwhistle,  //
-              (Sound *Skin::*)nullptr,        // SET-sliderfinish and SET-sliderclap aren't actually valid
-              (Sound *Skin::*)nullptr         //
+              (Sound * Skin::*)nullptr,       // SET-sliderfinish and SET-sliderclap aren't actually valid
+              (Sound * Skin::*)nullptr        //
           }},
        // SampleSetType::SOFT
        A_{//
@@ -101,8 +101,8 @@ static constexpr auto SOUND_METHODS =  //
           A_{
               &Skin::s_soft_sliderslide,    //
               &Skin::s_soft_sliderwhistle,  //
-              (Sound *Skin::*)nullptr,      //
-              (Sound *Skin::*)nullptr       //
+              (Sound * Skin::*)nullptr,     //
+              (Sound * Skin::*)nullptr      //
           }},                               //
        // SampleSetType::DRUM
        A_{//
@@ -117,8 +117,8 @@ static constexpr auto SOUND_METHODS =  //
           A_{
               &Skin::s_drum_sliderslide,    //
               &Skin::s_drum_sliderwhistle,  //
-              (Sound *Skin::*)nullptr,      //
-              (Sound *Skin::*)nullptr       //
+              (Sound * Skin::*)nullptr,     //
+              (Sound * Skin::*)nullptr      //
           }}};  //
 #undef A_
 

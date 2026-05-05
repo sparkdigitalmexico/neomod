@@ -1599,16 +1599,16 @@ void Osu::doResolutionChange(vec2 newResolution, ResolutionRequestFlags src) {
     // update dpi specific engine globals
     cv::ui_scrollview_scrollbarwidth.setValue(15.0f * Osu::getUIScale());  // not happy with this as a convar
 
+    // skip rebuilding rendertargets if we didn't change resolution
+    if(resolution_changed) {
+        this->rebuildRenderTargets();
+    }
+
     // always call onResolutionChange, since DPI changes cause layout changes
     ui->onResolutionChange(this->getVirtScreenSize());
 
     // update fposu projection matrix
     this->fposu->onResolutionChange(this->getVirtScreenSize());
-
-    // skip rebuilding rendertargets if we didn't change resolution
-    if(resolution_changed) {
-        this->rebuildRenderTargets();
-    }
 
     // mouse scale/offset
     this->updateMouseSettings();

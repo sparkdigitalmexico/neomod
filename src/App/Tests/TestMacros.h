@@ -7,18 +7,20 @@
 #include <optional>
 #include <string>
 
+namespace Mc::Tests {
 // retrieve a -testarg:<name> value from launch args
 // usage: auto path = getTestArg("skin_tier1");
 //   launched with: -testarg:skin_tier1 "/path/to/skin"
 inline std::optional<std::string> getTestArg(std::string_view name) {
     std::string key = "-testarg:";
     key.append(name);
-    auto &args = env->getLaunchArgs();
+    const auto &args = env->getLaunchArgs();
     if(auto it = args.find(key); it != args.end() && it->second.has_value()) {
         return it->second;
     }
     return std::nullopt;
 }
+}  // namespace Mc::Tests
 
 // test result counters; declare as member variables in your test app class
 // e.g. int m_passes = 0; int m_failures = 0;
