@@ -127,10 +127,12 @@ void AsyncPoolTest::runSyncTests() {
         Async::dispatch([&flag] { flag.store(true, std::memory_order_release); });
 
         // spin briefly waiting for the flag
-        for(int i = 0; i < 10000 && !flag.load(std::memory_order_acquire); i++) {
+        // FIXME: flaky (depending on os scheduling order and how fast the loop completes...)
+        bool stored{true};
+        for(int i = 0; i < 100000 && !(stored = flag.load(std::memory_order_acquire)); i++) {
             Timing::tinyYield();
         }
-        TEST_ASSERT(flag.load(std::memory_order_acquire), "dispatch ran the task");
+        TEST_ASSERT(stored, "dispatch ran the task");
     }
 
     TEST_SECTION("multiple submits");

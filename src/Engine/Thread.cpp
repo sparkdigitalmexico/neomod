@@ -86,7 +86,7 @@ void on_thread_init() noexcept {
 #endif
 // arm64
 #if defined(_ARM64_) || defined(__aarch64__) || defined(__arm64__)
-    uint64_t fpcr;
+    uint64_t fpcr;  // NOLINT
     __asm__ __volatile__("mrs %0, fpcr" : "=r"(fpcr));
     fpcr |= (1ULL << 24);  // FZ
     __asm__ __volatile__("msr fpcr, %0" : : "r"(fpcr));
