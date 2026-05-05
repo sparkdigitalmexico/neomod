@@ -104,7 +104,7 @@ endif
 neomod_SOURCES = \
 	libraries/MD5.cpp \
 	libraries/base64.cpp \
-	libraries/demoji.cpp \
+	libraries/demoji.c \
 	libraries/sha256.cpp \
 	src/App/AppRegistry.cpp \
 	src/App/AppRunner.cpp \

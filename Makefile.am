@@ -1519,11 +1519,10 @@ NEOMOD_INCLUDE_FLAGS := $(shell find $(srcdir)/src -not -path '*/.*' -type d -pr
 
 neomod_CPPFLAGS := $(NEOMOD_CPPFLAGS)
 
-neomod_CXXFLAGS := \
+NEOMOD_SHARED_SOURCE_FLAGS := \
 	-I$(builddir) \
 	-I$(builddir)/src \
 	-I$(builddir)/gen \
-	$(PCH_FLAGS) \
 	-I$(DEPS_PREFIX)/include \
 	$(BUNDLED_INCLUDES) \
 	$(NEOMOD_INCLUDE_FLAGS) \
@@ -1551,9 +1550,19 @@ neomod_CXXFLAGS := \
 	$(LZMA_CFLAGS) \
 	$(SIMDUTF_CFLAGS) \
 	$(CTRE_CFLAGS) \
-	$(DISCORDRPC_CFLAGS) \
+	$(DISCORDRPC_CFLAGS)
+
+# pch only used for C++ sources
+neomod_CXXFLAGS := \
+	$(PCH_FLAGS) \
+	$(NEOMOD_SHARED_SOURCE_FLAGS) \
 	$(NEOMOD_CXXFLAGS) \
 	$(CXXFLAGS_EXTRA)
+
+neomod_CFLAGS := \
+	$(NEOMOD_SHARED_SOURCE_FLAGS) \
+	$(NEOMOD_CFLAGS) \
+	$(CFLAGS_EXTRA)
 
 # TODO: check for -Wl,--start-group in configure instead of hardcoding macos here
 if MACOS_PLATFORM
@@ -1569,8 +1578,8 @@ endif
 # WASM_PRELOAD_FLAGS and NATIVE_LDFLAGS come from configure (empty when not applicable)
 neomod_LDFLAGS := \
 	$(WASM_PRELOAD_FLAGS) \
-	$(NATIVE_LDFLAGS) \
 	$(MIMALLOC_OBJ) \
+	$(NATIVE_LDFLAGS) \
 	$(MIMALLOC_DYNAMIC_LIBS) \
 	$(START_GROUP_FLAGS) \
 	$(CURL_LIBS) \

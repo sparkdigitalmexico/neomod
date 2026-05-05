@@ -414,7 +414,7 @@ AS_CASE(["$host_os"], [darwin*], [
 
 AS_IF([test "$host_os" = "mingw32"], [
     NEOMOD_CPPFLAGS="$NEOMOD_CPPFLAGS -D_UNICODE -DUNICODE=1"
-    NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -D_UNICODE -DUNICODE=1 -municode"
+    NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -D_UNICODE -DUNICODE=1 -municode"
     NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -municode"
     AS_IF([test "x$enable_clang" = "xyes"], [
         LLVMMINGW=1
@@ -685,7 +685,7 @@ AS_CASE(["$host_os"],
     emscripten_flags="$emscripten_flags -sEXPORTED_RUNTIME_METHODS=callMain,ENV,FS -sINCOMING_MODULE_JS_API=locateFile,onAbort,onRuntimeInitialized,noInitialRun,print"
 
     NEOMOD_CPPFLAGS="$NEOMOD_CPPFLAGS -U__linux__ -D__EMSCRIPTEN__"
-    NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS $emscripten_flags"
+    NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS $emscripten_flags"
     # --emrun for support for running the .html with emrun (useful for offline testing)
     NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS $emscripten_flags -lwebsocket.js -lidbfs.js -lnodefs.js --pre-js $WASM_POLYFILL_DEP --emrun"
 
@@ -737,7 +737,7 @@ EOF
         ])
         # ld complains about libcrypto.a(libcrypto-lib-cast-586.o): warning: relocation against `CAST_S_table1' in read-only section `.text'
         # TODO: rebuild curl/openssl with -fPIE maybe?
-        NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -fno-PIE -no-pie"
+        NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -fno-PIE -no-pie"
         NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -no-pie"
         AC_SUBST([NASMOBJ],[elf32])
     ],[
@@ -1055,10 +1055,26 @@ AC_SUBST([CXXFLAGS])
 AC_SUBST([CFLAGS])
 AC_SUBST([LDFLAGS])
 AC_SUBST([CXXFLAGS_EXTRA]) # appended to neomod build flags only
+AC_SUBST([CFLAGS_EXTRA]) # appended to neomod build flags only
+
+AC_LANG_PUSH([C])
+
+# use c23
+AX_CHECK_COMPILE_FLAG([-std=gnu23], [
+    CFLAGS="$CFLAGS -std=gnu23"
+], [
+    AX_CHECK_COMPILE_FLAG([-std=gnu2x], [
+        CFLAGS="$CFLAGS -std=gnu2x"
+    ], [
+        AC_MSG_ERROR([Compiler does not support gnu23])
+    ])
+])
+
+AC_LANG_POP([C])
 
 AC_LANG_PUSH([C++])
 
-# use c/c++23 because we can
+# use c++23
 AX_CHECK_COMPILE_FLAG([-std=gnu++23], [
     CXXFLAGS="$CXXFLAGS -std=gnu++23"
 ], [
@@ -1187,7 +1203,7 @@ AS_IF([test "x$enable_debug" = "xyes"], [
             CXXFLAGS="$CXXFLAGS -g3 -Og"
             CFLAGS="$CFLAGS -g3 -Og"
         ], [
-            NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -mconsole"
+            NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -mconsole"
             NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -mconsole -Wl,--subsystem,console:${win_subsystem_ver}"
 
             CXXFLAGS="$CXXFLAGS -g3 -ggdb3 $_gdwarf_version -Og"
@@ -1208,14 +1224,14 @@ AS_IF([test "x$enable_debug" = "xyes"], [
     ENABLE_DEBUG=$enable_debug
     NEOMOD_CPPFLAGS="$NEOMOD_CPPFLAGS -D_DEBUG"
     AS_IF([test -z "$CLANG" && test -z "$WASM_CC"], [
-        NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -Wcast-align -Wpacked-not-aligned"
+        NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -Wcast-align -Wpacked-not-aligned"
         # CPPFLAGS="$CPPFLAGS -D_GLIBCXX_DEBUG"
         # CXXFLAGS="$CXXFLAGS -D_GLIBCXX_DEBUG"
     ])
     # assertions breaks in a couple places due to calling malloc/free in the soloud mixer (inside SoundTouch)
     # hopefully it's not fatal to ignore...
     # AS_IF([test -n "$WASM_CC"], [
-    #     NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -sASSERTIONS"
+    #     NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -sASSERTIONS"
     #     NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -sASSERTIONS"
     # ])
     AC_SUBST([ENABLE_DEBUG])
@@ -1249,7 +1265,7 @@ AS_IF([test "x$enable_debug" = "xyes"], [
         AS_IF([test "x$enable_clang" = "xyes"], [
             NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,--subsystem,windows:${win_subsystem_ver}"
         ], [
-            NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -mwindows"
+            NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -mwindows"
             NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -mwindows -Wl,--subsystem,windows:${win_subsystem_ver}"
         ])
     ])
@@ -1261,9 +1277,9 @@ AS_IF([test "x$enable_strip" != "xno"], [
 
 AS_IF([test "x$enable_omp" = "xyes"], [
     AS_IF([test "x$enable_clang" = "xyes"], [
-        NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -fopenmp-optimistic-collapse"
+        NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -fopenmp-optimistic-collapse"
     ])
-    NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -fopenmp"
+    NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -fopenmp"
     AC_SUBST([OPENMP], [1])
 ])
 
@@ -1310,14 +1326,14 @@ AS_IF([test "x$enable_lto" != "xno"], [
     # this is hilariously slow, don't use it
     AS_IF([test "x$enable_lto" = "xultra"], [
         AX_CHECK_LINK_FLAG([-flto-partition=one], [
-            NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -flto-partition=one"
+            NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -flto-partition=one"
             NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -flto-partition=one"
         ])
     ])
 ])
 
 # AX_CHECK_COMPILE_FLAG([-Wexit-time-destructors -Wglobal-constructors -Wpessimizing-move -Wrange-loop-construct], [
-#     NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -Wexit-time-destructors -Wglobal-constructors -Wpessimizing-move -Wrange-loop-construct"
+#     NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -Wexit-time-destructors -Wglobal-constructors -Wpessimizing-move -Wrange-loop-construct"
 # ])
 
 # check for -Wl,--build-id (makes some debugging tools work better)
@@ -1373,41 +1389,45 @@ AS_IF([test "x$enable_harden" != "xno"], [
     ])
 ])
 
-# common flags
-NEOMOD_CPPFLAGS="$NEOMOD_CPPFLAGS"
-NEOMOD_CXXFLAGS="$NEOMOD_CXXFLAGS -Wall -Wextra -Wno-sign-compare -Wunused-parameter -Wdeprecated-declarations -Wno-error=deprecated-declarations"
-NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS"
-AC_SUBST([NEOMOD_CPPFLAGS])
-AC_SUBST([NEOMOD_CXXFLAGS])
-AC_SUBST([NEOMOD_LDFLAGS])
-
 # dont error out on some false positive warnings during LTO
 AS_IF([test "x$enable_werror" != "xno"], [
-    werror_flags_temp="-Werror"
+    _tmp_werror_flags="-Werror"
     AX_CHECK_COMPILE_FLAG([-Wno-error=stringop-overflow -Wno-error=stringop-overread -Wno-error=maybe-uninitialized], [
-        werror_flags_temp="$werror_flags_temp -Wno-error=stringop-overflow -Wno-error=stringop-overread -Wno-error=maybe-uninitialized"
+        _tmp_werror_flags="$_tmp_werror_flags -Wno-error=stringop-overflow -Wno-error=stringop-overread -Wno-error=maybe-uninitialized"
     ])
     AX_CHECK_COMPILE_FLAG([-Wno-error=alloc-size-larger-than=], [
-        werror_flags_temp="$werror_flags_temp -Wno-error=alloc-size-larger-than="
+        _tmp_werror_flags="$_tmp_werror_flags -Wno-error=alloc-size-larger-than="
     ])
     AX_CHECK_COMPILE_FLAG([-Wno-error=format-y2k], [
-        werror_flags_temp="$werror_flags_temp -Wno-error=format-y2k"
+        _tmp_werror_flags="$_tmp_werror_flags -Wno-error=format-y2k"
     ])
     AX_CHECK_COMPILE_FLAG([-Wno-error=cast-function-type-mismatch], [
-        werror_flags_temp="$werror_flags_temp -Wno-error=cast-function-type-mismatch"
+        _tmp_werror_flags="$_tmp_werror_flags -Wno-error=cast-function-type-mismatch"
     ])
     # zlib-ng errors on some visibility attribute on 32-bit mingw builds with LTO, silence it (harmless)
     AX_CHECK_COMPILE_FLAG([-Wno-attributes], [
-        werror_flags_temp="$werror_flags_temp -Wno-attributes"
+        _tmp_werror_flags="$_tmp_werror_flags -Wno-attributes"
     ])
     AS_IF([test -n "$WASM_CC"], [
         # not exactly sure why the above tests pass but then the actual compilation fails due to -Werror=unknown-warning-option
         AX_CHECK_COMPILE_FLAG([-Wno-unknown-warning-option], [
-            werror_flags_temp="$werror_flags_temp -Wno-unknown-warning-option"
+            _tmp_werror_flags="$_tmp_werror_flags -Wno-unknown-warning-option"
         ])
     ])
-    NEOMOD_CXXFLAGS="$werror_flags_temp $NEOMOD_CXXFLAGS"
+    NEOMOD_COMPFLAGS="$_tmp_werror_flags $NEOMOD_COMPFLAGS"
 ])
+
+# common flags
+NEOMOD_COMPFLAGS="$NEOMOD_COMPFLAGS -Wall -Wextra -Wno-sign-compare -Wunused-parameter -Wdeprecated-declarations -Wno-error=deprecated-declarations"
+
+NEOMOD_CXXFLAGS="$NEOMOD_COMPFLAGS $NEOMOD_CXXFLAGS"
+NEOMOD_CFLAGS="$NEOMOD_COMPFLAGS $NEOMOD_CFLAGS"
+NEOMOD_CPPFLAGS="$NEOMOD_CPPFLAGS"
+NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS"
+AC_SUBST([NEOMOD_CPPFLAGS])
+AC_SUBST([NEOMOD_CFLAGS])
+AC_SUBST([NEOMOD_CXXFLAGS])
+AC_SUBST([NEOMOD_LDFLAGS])
 
 # sanity check for pre-bundled assets and required files before checking for external dependencies
 AC_MSG_CHECKING([for src/Makefile.sources])
