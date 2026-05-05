@@ -434,32 +434,33 @@ void BanchoState::handle_packet(Packet &packet) {
 
                 if(osu->isInPlayMode()) {
                     switch(action) {
-                        case LiveReplayAction::NEW_SONG: {
+                        using enum LiveReplayAction;
+                        case NEW_SONG: {
                             map_iface->restart(true);
                             map_iface->update();
                         } break;
-                        case LiveReplayAction::SKIP: {
+                        case SKIP: {
                             map_iface->skipEmptySection();
                         } break;
-                        case LiveReplayAction::FAIL: {
+                        case FAIL: {
                             map_iface->fail(true);
                         } break;
-                        case LiveReplayAction::PAUSE: {
+                        case PAUSE: {
                             map_iface->spectate_pause = true;
                         } break;
-                        case LiveReplayAction::UNPAUSE: {
+                        case UNPAUSE: {
                             map_iface->spectate_pause = false;
                         } break;
-                        case LiveReplayAction::SONG_SELECT: {
+                        case SONG_SELECT: {
                             info->map_id = 0;
                             info->map_md5 = MD5Hash();
                             map_iface->stop(true);
                         } break;
                         // nothing
-                        case LiveReplayAction::NONE:
-                        case LiveReplayAction::COMPLETION:
-                        case LiveReplayAction::WATCHING_OTHER:
-                        case LiveReplayAction::MAX_ACTION:
+                        case NONE:
+                        case COMPLETION:
+                        case WATCHING_OTHER:
+                        case MAX_ACTION:
                             break;
                     }
                 }

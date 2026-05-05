@@ -7,6 +7,8 @@
 #include "Engine.h"
 #include "Timing.h"
 #include "Logging.h"
+#include "AsyncPool.h"
+#include "AsyncFuture.h"
 
 #include <algorithm>
 #include <utility>
@@ -19,7 +21,7 @@ std::vector<Collection> s_collections;
 
 }  // namespace
 
-const std::vector<Collection> &get_loaded() { return s_collections; }
+const std::vector<Collection>& get_loaded() { return s_collections; }
 
 bool delete_collection(std::string_view collection_name) {
     if(collection_name.empty() || s_collections.empty()) return false;
@@ -207,29 +209,23 @@ void unload_all() {
     s_collections.clear();
 }
 
-bool save_collections() {
+bool save_collections(std::span<const Collection> collections, std::string_view save_path) {
     debugLog("Osu: Saving collections ...");
-    if(!s_collections_loaded) {
-        debugLog("Cannot save collections since they weren't loaded properly first!");
-        return false;
-    }
 
     const double startTime = Timing::getTimeReal();
 
-    const auto neomod_collections_db = Database::getDBPath(Database::DatabaseType::MCNEOMOD_COLLECTIONS);
-
-    ByteBufferedFile::Writer dbw(neomod_collections_db);
+    ByteBufferedFile::Writer dbw(save_path);
     if(!dbw.good()) {
-        debugLog("Cannot save collections to {}: {}", neomod_collections_db, dbw.error());
+        debugLog("Cannot save collections to {}: {}", save_path, dbw.error());
         return false;
     }
 
     dbw.write<u32>(COLLECTIONS_DB_VERSION);
 
-    u32 nb_collections = s_collections.size();
+    u32 nb_collections = collections.size();
     dbw.write<u32>(nb_collections);
 
-    for(const auto& collection : s_collections) {
+    for(const auto& collection : collections) {
         dbw.write_string(collection.name);
 
         u32 nb_deleted = collection.deleted_maps.size();
@@ -248,4 +244,49 @@ bool save_collections() {
     debugLog("collections.db: saving took {:f} seconds", (Timing::getTimeReal() - startTime));
     return true;
 }
+
+namespace {
+// shutdown wrapper (ugly, should probably go in Database)
+// TODO: not sure if this is even necessary, given that we save collections non-async on shutdown in Database destructor?
+
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
+struct AsyncSaveHandle : public Async::Future<void> {
+    using Future::Future;
+    using Future::operator=;
+
+    ~AsyncSaveHandle() {
+        if(valid()) wait();
+    }
+} save_handle;
+
+}  // namespace
+
+bool save_collections() {
+    if(!s_collections_loaded) {
+        debugLog("Cannot save collections since they weren't loaded properly first!");
+        return false;
+    }
+
+    // wait for async save
+    if(save_handle.valid()) save_handle.wait();
+
+    const auto neomod_collections_db = Database::getDBPath(Database::DatabaseType::MCNEOMOD_COLLECTIONS);
+    return save_collections(s_collections, neomod_collections_db);
+}
+
+void save_collections_async() {
+    if(!s_collections_loaded) {
+        debugLog("Cannot save collections since they weren't loaded properly first!");
+        return;
+    }
+
+    // one at a time
+    if(save_handle.valid()) save_handle.wait();
+
+    save_handle = Async::submit(
+        [collections = s_collections, path = Database::getDBPath(Database::DatabaseType::MCNEOMOD_COLLECTIONS)]()
+            -> void { save_collections(collections, path); },
+        Lane::Background);
+}
+
 }  // namespace Collections

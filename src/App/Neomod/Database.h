@@ -11,14 +11,19 @@
 
 #include <atomic>
 #include <set>
+#include <span>
 
 namespace Timing {
 class Timer;
 }
 namespace Collections {
+class Collection;
+
 extern bool load_peppy(std::string_view peppy_collections_path);
 extern bool load_mcneomod(std::string_view neomod_collections_path);
 extern bool save_collections();
+extern bool save_collections(std::span<const Collection> collections, std::string_view save_path);
+extern void save_collections_async();
 }  // namespace Collections
 namespace LegacyReplay {
 extern bool load_from_disk(FinishedScore &score, bool update_db);
@@ -103,7 +108,8 @@ class Database final {
     void cancel();
     void save();
 
-    const BeatmapSet *addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override = -1, bool is_peppy = false);
+    const BeatmapSet *addBeatmapSet(const std::string &beatmapFolderPath, i32 set_id_override = -1,
+                                    bool is_peppy = false);
 
     // returns true if adding succeeded
     bool addScore(const FinishedScore &score);
@@ -171,6 +177,9 @@ class Database final {
     friend bool Collections::load_peppy(std::string_view peppy_collections_path);
     friend bool Collections::load_mcneomod(std::string_view neomod_collections_path);
     friend bool Collections::save_collections();
+    friend bool Collections::save_collections(std::span<const Collections::Collection> collections,
+                                              std::string_view save_path);
+    friend void Collections::save_collections_async();
     friend class DatabaseBeatmap;
 
     void scheduleLoadRaw();

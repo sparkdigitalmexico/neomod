@@ -5,6 +5,7 @@
 #include "Hashing.h"
 
 #include <vector>
+#include <span>
 
 #define COLLECTIONS_DB_VERSION 20240429
 namespace Collections {
@@ -22,6 +23,8 @@ bool load_peppy(std::string_view peppy_collections_path);
 bool load_mcneomod(std::string_view neomod_collections_path);
 void unload_all();
 bool save_collections();
+bool save_collections(std::span<const Collection> collections, std::string_view save_path);
+void save_collections_async(); // fire-and-forget
 
 class Collection {
     std::string name;
@@ -39,6 +42,7 @@ class Collection {
     friend bool load_mcneomod(std::string_view neomod_collections_path);
     friend void unload_all();
     friend bool save_collections();
+    friend bool save_collections(std::span<const Collection> collections, std::string_view save_path);
 
    public:
     [[nodiscard]] inline const std::string &get_name() const { return this->name; }

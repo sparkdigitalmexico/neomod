@@ -3162,7 +3162,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
             // add diff to collection
             auto &collection = Collections::get_or_create_collection(text);
             collection.add_map(songButton->getDatabaseBeatmap()->getMD5());
-            Collections::save_collections();
+            Collections::save_collections_async();
             updateUI = true;
         } else if(id == 2) {
             // add set to collection
@@ -3172,7 +3172,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
             for(const auto &hash : beatmapSetHashes) {
                 collection.add_map(hash);
             }
-            Collections::save_collections();
+            Collections::save_collections_async();
             updateUI = true;
         } else if(id == 3) {
             // remove diff from collection
@@ -3190,7 +3190,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
 
             auto &collection = Collections::get_or_create_collection(collectionName);
             collection.remove_map(songButton->getDatabaseBeatmap()->getMD5());
-            Collections::save_collections();
+            Collections::save_collections_async();
             updateUI = true;
         } else if(id == 4) {
             // remove entire set from collection
@@ -3212,7 +3212,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
             for(const auto &hash : beatmapSetHashes) {
                 collection.remove_map(hash);
             }
-            Collections::save_collections();
+            Collections::save_collections_async();
             updateUI = true;
         } else if(id == -2 || id == -4) {
             // add beatmap(set) to new collection
@@ -3232,7 +3232,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
                 updateUI = true;
             }
 
-            Collections::save_collections();
+            Collections::save_collections_async();
         } else if(id == 5) {  // export beatmapset
             assert(songButton->getDatabaseBeatmap());
             std::string folder{songButton->getDatabaseBeatmap()->getFolder()};
@@ -3274,7 +3274,7 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
         if(const auto &it =
                std::ranges::find(this->collectionButtons, collection_name, &CollectionButton::getCollectionName);
            it != this->collectionButtons.end() && Collections::delete_collection(collection_name)) {
-            Collections::save_collections();
+            Collections::save_collections_async();
 
             // delete UI
             this->collectionButtons.erase(it);
@@ -3292,7 +3292,7 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
             auto &existingCollection = Collections::get_or_create_collection(currentButtonName);
 
             if(existingCollection.rename_to(collection_name)) {
-                Collections::save_collections();
+                Collections::save_collections_async();
 
                 // rename button
                 if(const auto &it = std::ranges::find(this->collectionButtons, collectionButton,

@@ -1,6 +1,7 @@
 #include "OsuDirectScreen.h"
 
 #include "AnimationHandler.h"
+#include "Parsing.h"
 #include "ThumbnailManager.h"
 #include "BackgroundImageHandler.h"
 #include "BanchoApi.h"
@@ -82,7 +83,6 @@ class OnlineMapListing : public CBaseUIContainer {
     bool download_failed{false};
 };
 
-// "b.{}/thumb/{:d}.jpg";
 OnlineMapListing::OnlineMapListing(OsuDirectScreen* parent, Downloader::BeatmapSetMetadata meta)
     : directScreen(parent),
       font(engine->getDefaultFont()),
@@ -445,7 +445,7 @@ CBaseUIContainer* OsuDirectScreen::setVisible(bool visible) {
     if(visible) {
         if(!db->isFinished() || db->isCancelled()) {
             // Ensure database is loaded (same as Lobby screen)
-            ui->getSongBrowser()->refreshBeatmaps(this);
+            ui->getSongBrowser()->refreshBeatmaps(/*next_screen=*/this);
             return this;
         }
     }
@@ -456,7 +456,7 @@ CBaseUIContainer* OsuDirectScreen::setVisible(bool visible) {
         this->onResolutionChange(osu->getVirtScreenSize());
 
         // clear previous search results
-        // we do this now instead of on setVisible(false), because this deletes map listings
+        // HACKHACK: we do this now instead of on setVisible(false), because this deletes map listings
         // ...and we can call setScreen() from inside of a map listing update loop
         // ...which deletes map listings WHILE we are iterating map listings
         this->reset();
@@ -563,12 +563,12 @@ void OsuDirectScreen::onResolutionChange(vec2 newResolution) {
     {
         const f32 LISTING_MARGIN = 10.f * scale;
 
-        f32 y = LISTING_MARGIN;
+        f32 y2 = LISTING_MARGIN;
         // We only put OnlineMapListings into the container of this->results
         for(auto* listing : this->results->container.getElementsAs<OnlineMapListing>()) {
-            listing->setRelPos(LISTING_MARGIN, y);
+            listing->setRelPos(LISTING_MARGIN, y2);
             listing->setSize(results_width - 2 * LISTING_MARGIN, 75.f * scale);
-            y += listing->getSize().y + LISTING_MARGIN;
+            y2 += listing->getSize().y + LISTING_MARGIN;
 
             // Update font stuff
             listing->onResolutionChange(newResolution);
@@ -634,10 +634,8 @@ void OsuDirectScreen::search(std::string_view query) {
                 const auto set_lines = SString::split_newlines(response.body);
 
                 i32 nb_results{0};
-                auto [ptr, ec] =
-                    std::from_chars(set_lines[0].data(), set_lines[0].data() + set_lines[0].size(), nb_results);
-
-                if(nb_results <= 0 || ec != std::errc()) {
+                const bool success = Parsing::strto_s(set_lines[0], nb_results);
+                if(!success || nb_results <= 0) {
                     // HACK: reached end of results (or errored), prevent further requests
                     this->last_search_time = 9999999.9;
 
