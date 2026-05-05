@@ -54,7 +54,7 @@
 #include "Matrices.h"
 #include "UIModSelectorModButton.h"
 #include "Graphics.h"
-#include "Wasm.h"
+#include "URLHistory.h"
 
 using namespace flags::operators;
 using namespace neomod;
@@ -504,7 +504,12 @@ bool BeatmapInterface::watch(const FinishedScore &score, u32 start_ms) {
     this->sim = std::make_unique<SimulatedBeatmapInterface>(this->beatmap, score.mods);
     this->sim->spectated_replay = score.replay;
 
-    Wasm::update_url();
+    // update url history
+    if(i64 score_id = score.bancho_score_id; score_id != 0) {
+        Mc::URLHistory::replaceState(fmt::format("/scores/{:d}", score_id).c_str());
+    } else {
+        Mc::URLHistory::replaceState(Osu::isBleedingEdge() ? "/online/bleedingedge/" : "/online/");
+    }
 
     return true;
 }
@@ -970,7 +975,8 @@ void BeatmapInterface::stop(bool quit) {
 
     osu->setShouldPauseBGThreads(false);
 
-    Wasm::update_url();
+    // reset url to default
+    Mc::URLHistory::replaceState(Osu::isBleedingEdge() ? "/online/bleedingedge/" : "/online/");
 }
 
 void BeatmapInterface::fail(bool force_death) {

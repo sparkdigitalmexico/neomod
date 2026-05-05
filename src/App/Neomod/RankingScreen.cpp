@@ -42,7 +42,7 @@
 #include "UIBackButton.h"
 #include "UIRankingScreenInfoLabel.h"
 #include "UIRankingScreenRankingPanel.h"
-#include "Wasm.h"
+#include "URLHistory.h"
 #include "score.h"
 
 namespace {
@@ -385,7 +385,12 @@ CBaseUIContainer *RankingScreen::setVisible(bool visible) {
         soundEngine->stop(osu->getSkin()->s_applause);
     }
 
-    Wasm::update_url();
+    // update url history
+    if(i64 score_id = m_impl->storedScore.bancho_score_id; visible && score_id != 0) {
+        Mc::URLHistory::replaceState(fmt::format("/scores/{:d}", score_id).c_str());
+    } else {
+        Mc::URLHistory::replaceState(Osu::isBleedingEdge() ? "/online/bleedingedge/" : "/online/");
+    }
 
     return this;
 }

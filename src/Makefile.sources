@@ -205,7 +205,6 @@ neomod_SOURCES = \
 	src/App/Neomod/UserCard2.cpp \
 	src/App/Neomod/UserStatsScreen.cpp \
 	src/App/Neomod/VolumeOverlay.cpp \
-	src/App/Neomod/Wasm.cpp \
 	src/App/Neomod/score.cpp \
 	src/Engine/AnimationHandler.cpp \
 	src/Engine/Async/AsyncPool.cpp \
