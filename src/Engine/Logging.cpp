@@ -6,7 +6,6 @@
 #include "Thread.h"
 #include "Environment.h"
 
-
 // for SDL_CleanupTLS
 #include <SDL3/SDL_thread.h>
 
@@ -56,9 +55,9 @@
 // e.g. ./logs/
 #define LOGFILE_LOCATION MCENGINE_DATA_DIR "logs/"
 // e.g. ./logs/neomod-linux-x64-dev-40.03.log
-#define LOGFILE_NAME LOGFILE_LOCATION PACKAGE_NAME "-" OS_NAME "-" RELEASE_IDENTIFIER "-" PACKAGE_VERSION ".log"
-#define LOGFILE_NAME_NETWORK \
-    LOGFILE_LOCATION PACKAGE_NAME "-" OS_NAME "-" RELEASE_IDENTIFIER "-" PACKAGE_VERSION "-network.log"
+#define _LOGFILE_BASENAME LOGFILE_LOCATION PACKAGE_NAME "-" OS_NAME "-" RELEASE_IDENTIFIER "-" PACKAGE_VERSION
+#define LOGFILE_NAME _LOGFILE_BASENAME ".log"
+#define LOGFILE_NAME_NETWORK _LOGFILE_BASENAME "-network.log"
 
 namespace Logger {
 namespace {  // static

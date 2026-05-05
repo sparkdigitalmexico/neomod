@@ -1773,7 +1773,7 @@ DatabaseBeatmap::LOAD_GAMEPLAY_RESULT DatabaseBeatmap::loadGameplay(BeatmapDiffi
         }
     }
 
-    debugLog("DatabaseBeatmap::loadGameplay() loaded {:d} hitobjects", result.hitobjects.size());
+    debugLog("loaded {:d} hitobjects", result.hitobjects.size());
 
     return result;
 }

@@ -619,23 +619,25 @@ void Osu::update() {
         this->backgroundImageHandler->scheduleFreezeCache();
 
         // skip button clicking
-        bool can_skip = this->map_iface->isInSkippableSection() && !this->bClickedSkipButton;
-        can_skip &= !this->map_iface->isPaused() && !ui->getVolumeOverlay()->isBusy();
-        if(can_skip) {
-            const bool isAnyKeyDown = (this->map_iface->isClickHeld() || mouse->isLeftDown());
-            if(isAnyKeyDown) {
-                if(ui->getHUD()->getSkipClickRect().contains(mouse->getPos())) {
-                    if(!this->bSkipScheduled) {
-                        this->bSkipScheduled = true;
-                        this->bClickedSkipButton = true;
+        if(
+            // skipping is not already scheduled
+            (!this->bSkipScheduled && !this->bClickedSkipButton) &&
+            // skipping is possible, and
+            (this->map_iface->isInSkippableSection() && !this->map_iface->isPaused() &&
+             !ui->getVolumeOverlay()->isBusy()) &&
+            // any gameplay-relevant key is down, and
+            (this->map_iface->isClickHeld() || mouse->isLeftDown()) &&
+            // mouse is inside skip click rect
+            (ui->getHUD()->getSkipClickRect().contains(mouse->getPos()))  //
+        ) {
+            // schedule skip
+            this->bSkipScheduled = true;
+            this->bClickedSkipButton = true;
 
-                        if(BanchoState::is_playing_a_multi_map()) {
-                            Packet packet;
-                            packet.id = OUTP_MATCH_SKIP_REQUEST;
-                            BANCHO::Net::send_packet(packet);
-                        }
-                    }
-                }
+            if(BanchoState::is_playing_a_multi_map()) {
+                Packet packet;
+                packet.id = OUTP_MATCH_SKIP_REQUEST;
+                BANCHO::Net::send_packet(packet);
             }
         }
 
@@ -860,13 +862,10 @@ void Osu::onKeyDown(KeyboardEvent &key) {
 
     // disable mouse buttons hotkey
     if(key == binds::DISABLE_MOUSE_BUTTONS) {
-        if(cv::disable_mousebuttons.getBool()) {
-            cv::disable_mousebuttons.setValue(0.0f);
-            ui->getNotificationOverlay()->addNotification("Mouse buttons are enabled.");
-        } else {
-            cv::disable_mousebuttons.setValue(1.0f);
-            ui->getNotificationOverlay()->addNotification("Mouse buttons are disabled.");
-        }
+        const bool postToggledState = !cv::disable_mousebuttons.getBool();
+        cv::disable_mousebuttons.setValue(postToggledState);
+        ui->getNotificationOverlay()->addNotification(postToggledState ? "Mouse buttons are disabled."
+                                                                       : "Mouse buttons are enabled.");
     }
 
     if(key == binds::TOGGLE_MAP_BACKGROUND) {
@@ -884,39 +883,41 @@ void Osu::onKeyDown(KeyboardEvent &key) {
 
     // F8 toggle chat
     if(key == binds::TOGGLE_CHAT) {
+        auto *chat = ui->getChat();
         if(!BanchoState::is_online()) {
             ui->getNotificationOverlay()->addNotification("You must log in to chat!");
             ui->getOptionsOverlay()->askForLoginDetails();
         } else if(ui->getOptionsOverlay()->isVisible()) {
             // When options menu is open, instead of toggling chat, always open chat
             ui->getOptionsOverlay()->setVisible(false);
-            ui->getChat()->user_wants_chat = true;
-            ui->getChat()->updateVisibility();
+            chat->user_wants_chat = true;
+            chat->updateVisibility();
         } else {
-            ui->getChat()->user_wants_chat = !ui->getChat()->user_wants_chat;
-            ui->getChat()->updateVisibility();
+            chat->user_wants_chat = !chat->user_wants_chat;
+            chat->updateVisibility();
         }
     }
 
     // F9 toggle extended chat
     if(key == binds::TOGGLE_EXTENDED_CHAT) {
+        auto *chat = ui->getChat();
         if(!BanchoState::is_online()) {
             ui->getNotificationOverlay()->addNotification("You must log in to chat!");
             ui->getOptionsOverlay()->askForLoginDetails();
         } else if(ui->getOptionsOverlay()->isVisible()) {
             // When options menu is open, instead of toggling extended chat, always enable it
             ui->getOptionsOverlay()->setVisible(false);
-            ui->getChat()->user_wants_chat = true;
-            ui->getChat()->user_list->setVisible(true);
-            ui->getChat()->updateVisibility();
+            chat->user_wants_chat = true;
+            chat->user_list->setVisible(true);
+            chat->updateVisibility();
         } else {
-            if(ui->getChat()->user_wants_chat) {
-                ui->getChat()->user_list->setVisible(!ui->getChat()->user_list->isVisible());
-                ui->getChat()->updateVisibility();
+            if(chat->user_wants_chat) {
+                chat->user_list->setVisible(!chat->user_list->isVisible());
+                chat->updateVisibility();
             } else {
-                ui->getChat()->user_wants_chat = true;
-                ui->getChat()->user_list->setVisible(true);
-                ui->getChat()->updateVisibility();
+                chat->user_wants_chat = true;
+                chat->user_list->setVisible(true);
+                chat->updateVisibility();
             }
         }
     }
@@ -942,24 +943,22 @@ void Osu::onKeyDown(KeyboardEvent &key) {
     // while playing (and not in options)
     if(this->isInPlayMode() && !ui->getOptionsOverlay()->isVisible() && !ui->getChat()->isVisible()) {
         // instant replay
-        if((this->map_iface->isPaused() || this->map_iface->hasFailed())) {
-            if(!key.isConsumed() && key == binds::INSTANT_REPLAY) {
-                if(!this->map_iface->is_watching && !BanchoState::spectating) {
-                    FinishedScore score;
-                    score.replay = this->map_iface->live_replay;
-                    score.beatmap_hash = this->map_iface->getBeatmap()->getMD5();
-                    score.mods = this->score->mods;
+        if((this->map_iface->isPaused() || this->map_iface->hasFailed()) &&  //
+           (!key.isConsumed() && key == binds::INSTANT_REPLAY) &&            //
+           (!this->map_iface->is_watching && !BanchoState::spectating)) {
+            FinishedScore score;
+            score.replay = this->map_iface->live_replay;
+            score.beatmap_hash = this->map_iface->getBeatmap()->getMD5();
+            score.mods = this->score->mods;
 
-                    score.playerName = BanchoState::get_username();
-                    score.player_id = std::max(0, BanchoState::get_uid());
+            score.playerName = BanchoState::get_username();
+            score.player_id = std::max(0, BanchoState::get_uid());
 
-                    f64 pos_seconds = this->map_iface->getTime() - cv::instant_replay_duration.getFloat();
-                    u32 pos_ms = (u32)(std::max(0.0, pos_seconds) * 1000.0);
-                    this->map_iface->cancelFailing();
-                    this->map_iface->watch(score, pos_ms);
-                    return;
-                }
-            }
+            f64 pos_seconds = this->map_iface->getTime() - cv::instant_replay_duration.getFloat();
+            u32 pos_ms = (u32)(std::max(0.0, pos_seconds) * 1000.0);
+            this->map_iface->cancelFailing();
+            this->map_iface->watch(score, pos_ms);
+            return;
         }
 
         // while playing and not paused
@@ -999,8 +998,9 @@ void Osu::onKeyDown(KeyboardEvent &key) {
                 if(keyboard->isShiftDown()) {
                     if(!this->bUIToggleCheck) {
                         this->bUIToggleCheck = true;
-                        cv::draw_hud.setValue(!cv::draw_hud.getBool());
-                        ui->getNotificationOverlay()->addNotification(cv::draw_hud.getBool()
+                        const bool postToggledState = !cv::draw_hud.getBool();
+                        cv::draw_hud.setValue(postToggledState);
+                        ui->getNotificationOverlay()->addNotification(postToggledState
                                                                           ? "In-game interface has been enabled."
                                                                           : "In-game interface has been disabled.",
                                                                       0xffffffff, false, 0.1f);

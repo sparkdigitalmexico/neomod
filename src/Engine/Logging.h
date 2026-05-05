@@ -78,8 +78,9 @@ namespace _detail {
 // copied from spdlog, don't want to include it here
 // (since we are using spdlog header-only, to lower compile time, only including spdlog things in 1 translation unit)
 namespace log_level {
+// NOLINTNEXTLINE(performance-enum-size)
 enum level_enum : int { trace = 0, debug = 1, info = 2, warn = 3, err = 4, critical = 5, off = 6, n_levels };
-}
+}  // namespace log_level
 
 void log_int(uint8_t log_channel, std::source_location loc, log_level::level_enum lvl, std::string_view str) noexcept;
 void logRaw_int(uint8_t log_channel, log_level::level_enum lvl, std::string_view str) noexcept;
