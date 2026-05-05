@@ -13,6 +13,11 @@
 #include "Environment.h"
 #include "ConVar.h"
 
+namespace cv {
+static ConVar debug_opengl_v("debug_opengl_v", false, CLIENT | HIDDEN,
+                             [](float val) -> void { SDLGLInterface::setGLLog(!!static_cast<int>(val)); });
+}  // namespace cv
+
 #ifndef MCENGINE_PLATFORM_WASM
 #ifdef MCENGINE_FEATURE_GLES32
 #include "glad/glad_egl.h"
@@ -65,6 +70,10 @@ void SDLGLInterface::load() {
        argMap.contains("-printinfo")) {
         dumpGLContextInfo();
     }
+
+    if(argMap.contains("-debugctx")) {
+        cv::debug_opengl_v.setValue(true);
+    }
 }
 
 #ifdef MCENGINE_PLATFORM_WASM
@@ -105,6 +114,7 @@ bool SDLGLInterface::init() {
         true;
 #endif  // MCENGINE_PLATFORM_WASM
     this->syncobj = std::make_unique<OpenGLSync>();
+
     return success;
 }
 
@@ -318,10 +328,5 @@ void GLAPIENTRY SDLGLInterface::glDebugCB(GLenum source, GLenum type, GLuint id,
     logRaw("    type: {}", glDebugTypeString(type));
     logRaw("    severity: {}", glDebugSeverityString(severity));
 }
-
-namespace cv {
-static ConVar debug_opengl_v("debug_opengl_v", false, CLIENT | HIDDEN,
-                             [](float val) -> void { SDLGLInterface::setGLLog(!!static_cast<int>(val)); });
-}  // namespace cv
 
 #endif

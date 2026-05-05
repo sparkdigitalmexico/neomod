@@ -39,8 +39,8 @@ class OpenGLShader final : public Shader {
     std::string sFsh;
 
     bool bSource;
-    int iVertexShader;
-    int iFragmentShader;
+    unsigned int iVertexShader;
+    unsigned int iFragmentShader;
     unsigned int iProgram;
 
     unsigned int iProgramBackup;

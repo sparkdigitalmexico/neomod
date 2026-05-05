@@ -243,14 +243,14 @@ SDL_AppResult SDLMain::initialize() {
 static_assert(SDL_EVENT_WINDOW_FIRST == SDL_EVENT_WINDOW_SHOWN);
 static_assert(SDL_EVENT_WINDOW_LAST == SDL_EVENT_WINDOW_HDR_STATE_CHANGED);
 
+static constinit std::array<char, 512> logBuf{};
+
 SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
     using namespace flags::operators;
-
     if(m_bEnvDebug) {
-        static std::array<char, 512> logBuf{};
-        size_t logsz =
-            std::min(logBuf.size(), static_cast<size_t>(SDL_GetEventDescription(event, logBuf.data(), logBuf.size())));
-        if(logsz > 0) {
+        if(size_t logsz = std::min(logBuf.size(),
+                                   static_cast<size_t>(SDL_GetEventDescription(event, logBuf.data(), logBuf.size())));
+           logsz > 0) {
             logRaw("[handleEvent] frame: {}; event: {}"_cf, m_engine->getFrameCount(),
                    std::string_view{logBuf.data(), logsz});
         }
@@ -601,6 +601,8 @@ static constexpr auto WINDOW_HEIGHT_MIN = 240;
 bool SDLMain::createWindow() {
     // pre window-creation settings
     if(usingGL()) {  // these are only for opengl
+        const bool isWine = Env::cfg(OS::WINDOWS) && (RuntimePlatform::current() & RuntimePlatform::WIN_WINE);
+
         SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
         SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
         SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
@@ -609,7 +611,7 @@ bool SDLMain::createWindow() {
         // due to driver/external bugs and issues, only do this IF:
         // NOT windows (makes the game overly dark for some reason with some drivers)
         // OR running under wine (it does not find a suitable pixel format with xwayland+EGL otherwise! wine/driver bug)
-        if(!Env::cfg(OS::WINDOWS) || (RuntimePlatform::current() & RuntimePlatform::WIN_WINE)) {
+        if(!Env::cfg(OS::WINDOWS) || isWine) {
             SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 0);
         }
 
@@ -634,7 +636,7 @@ bool SDLMain::createWindow() {
         if(m_mArgMap.contains("-debugctx")) {
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
             SDL_SetLogPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_TRACE);
-        } else {
+        } else if(!isWine) {  // avoid wine bugs with disabled gl error context
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_NO_ERROR, 1);
         }
     }

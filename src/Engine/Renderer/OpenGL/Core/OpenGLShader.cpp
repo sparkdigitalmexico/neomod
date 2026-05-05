@@ -7,23 +7,29 @@
 #include "OpenGLHeaders.h"
 #include "OpenGLStateCache.h"
 
-#ifdef MCENGINE_PLATFORM_MACOS
-// macOS only supports core profile OpenGL (no ARB)
-// keep them around for compatibility though outside macOS
-static inline void _macOS_glDeleteObject(GLuint obj) {
+#include "ConVar.h"
+#include "Engine.h"
+#include "Logging.h"
+#include "Matrices.h"
+
+#include <fstream>
+
+static inline void glDeleteObject_wrapper(GLuint obj) {
     if(glIsProgram(obj))
         glDeleteProgram(obj);
     else
         glDeleteShader(obj);
 }
-#define MCglDeleteObject _macOS_glDeleteObject
-static inline void _macOS_glGetObjectParameteriv(GLuint obj, GLenum pname, GLint *params) {
+
+static inline void glGetObjectParameteriv_wrapper(GLuint obj, GLenum pname, GLint *params) {
     if(glIsProgram(obj))
         glGetProgramiv(obj, pname, params);
     else
         glGetShaderiv(obj, pname, params);
 }
-#define MCglGetObjectParameteriv _macOS_glGetObjectParameteriv
+
+#define MCglDeleteObject glDeleteObject_wrapper
+#define MCglGetObjectParameteriv glGetObjectParameteriv_wrapper
 
 #define MCglCreateProgramObject glCreateProgram
 #define MCglCreateShaderObject glCreateShader
@@ -47,42 +53,6 @@ static inline void _macOS_glGetObjectParameteriv(GLuint obj, GLenum pname, GLint
 #define MCglUniform3fv glUniform3fv
 #define MCglUniform4f glUniform4f
 #define MCglUniformMatrix4fv glUniformMatrix4fv
-
-#else
-
-#define MCglDeleteObject glDeleteObjectARB
-#define MCglGetObjectParameteriv glGetObjectParameterivARB
-
-#define MCglCreateProgramObject glCreateProgramObjectARB
-#define MCglCreateShaderObject glCreateShaderObjectARB
-#define MCglShaderSource glShaderSourceARB
-#define MCglCompileShader glCompileShaderARB
-#define MCglAttachObject glAttachObjectARB
-#define MCglLinkProgram glLinkProgramARB
-#define MCglValidateProgram glValidateProgramARB
-#define MCglUseProgramObject glUseProgramObjectARB
-#define MCglGetUniformLocation glGetUniformLocationARB
-#define MCglGetAttribLocation glGetAttribLocationARB
-#define MCglGetInfoLog glGetInfoLogARB
-
-#define MCglUniform1f glUniform1fARB
-#define MCglUniform1fv glUniform1fvARB
-#define MCglUniform1i glUniform1iARB
-#define MCglUniform2f glUniform2fARB
-#define MCglUniform2fv glUniform2fvARB
-#define MCglUniform3f glUniform3fARB
-#define MCglUniform3fv glUniform3fvARB
-#define MCglUniform4f glUniform4fARB
-#define MCglUniformMatrix4fv glUniformMatrix4fvARB
-
-#endif  // MCENGINE_PLATFORM_MACOS
-
-#include "ConVar.h"
-#include "Engine.h"
-#include "Logging.h"
-#include "Matrices.h"
-
-#include <fstream>
 
 OpenGLShader::OpenGLShader(std::string vertexShader, std::string fragmentShader, bool source)
     : Shader(), sVsh(std::move(vertexShader)), sFsh(std::move(fragmentShader)), bSource(source) {
