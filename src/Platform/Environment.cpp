@@ -26,7 +26,7 @@
 #include "SDLGPUInterface.h"
 #endif
 
-#ifdef MCENGINE_PLATFORM_WASM
+#if defined(MCENGINE_PLATFORM_WASM) || defined(MCENGINE_PLATFORM_MACOS)
 #include "NullGraphics.h"
 #endif
 
@@ -145,7 +145,7 @@ Environment::Environment(const Mc::AppDescriptor &appDesc,
     m_bWinKeyDisabled = m_bRawKB ? SDL_GetHintBoolean(SDL_HINT_WINDOWS_RAW_KEYBOARD_EXCLUDE_HOTKEYS, false) : false;
 
     // this is the only platform/configuration where NullGraphics is used currently
-    if(Env::cfg(OS::WASM) && m_bHeadless) {
+    if(Env::cfg(OS::WASM | OS::MAC) && m_bHeadless) {
         m_renderer = RuntimeRenderer::NULLGRAPHICS;
     } else {
         // use directx if:
@@ -210,7 +210,7 @@ void Environment::update() {
 }
 
 std::unique_ptr<Graphics> Environment::createRenderer() {
-#ifdef MCENGINE_PLATFORM_WASM
+#if defined(MCENGINE_PLATFORM_WASM) || defined(MCENGINE_PLATFORM_MACOS)
     if(m_bHeadless) return std::make_unique<NullGraphics>();
 #endif
 #ifdef MCENGINE_FEATURE_DIRECTX11

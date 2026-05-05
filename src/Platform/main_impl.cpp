@@ -153,8 +153,8 @@ void SDLMain::fps_max_background_callback(float newVal) {
 SDL_AppResult SDLMain::initialize() {
     setupLogging();
 
-    // WASM headless (Node.js): no window, no GL, no events, just engine + app
-    if constexpr(Env::cfg(OS::WASM)) {
+    // WASM/macOS: no window, no GL, no events, just engine + app
+    if constexpr(Env::cfg(OS::WASM | OS::MAC)) {
         if(isHeadless()) {
             m_engine = std::make_unique<Engine>();
             if(!m_engine || m_engine->isShuttingDown()) return SDL_APP_FAILURE;

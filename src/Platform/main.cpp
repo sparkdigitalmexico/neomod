@@ -325,7 +325,8 @@ MAIN_FUNC /* int argc, char *argv[] */
 
     if(headless) {
         // use a video driver that doesn't need a real display
-        if constexpr(Env::cfg(OS::WASM)) {
+        // (also used for macOS since the offscreen GL driver doesn't work there)
+        if constexpr(Env::cfg(OS::WASM | OS::MAC)) {
             SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
             SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
         } else {
