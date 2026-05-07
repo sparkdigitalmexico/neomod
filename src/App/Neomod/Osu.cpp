@@ -174,10 +174,6 @@ Osu::Osu()
 
     engine->getConsoleBox()->setRequireShiftToActivate(true);
     mouse->addListener(this);
-
-    for(int i = 0; i < 4; i++) {
-        this->fingerMappings[i] = 0;
-    }
     touch->addListener(this);
 
     // set default fullscreen/letterboxed/windowed resolutions to match reality

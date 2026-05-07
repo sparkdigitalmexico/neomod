@@ -42,7 +42,6 @@ enum class WSStatus : u8 {
 struct WSOptions {
     Hash::unstable_stringmap<std::string> headers;
     std::string user_agent;
-    long timeout{5};
     long connect_timeout{5};
     u64 max_recv{10ULL * 1024 * 1024};  // limit "in" buffer to 10Mb
 };

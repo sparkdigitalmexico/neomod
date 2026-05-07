@@ -2869,13 +2869,8 @@ void OptionsOverlayImpl::updateFposuCMper360() {
 void OptionsOverlayImpl::updateSkinNameLabel() {
     if(this->skinLabel == nullptr) return;
 
-    const auto &fallback = cv::skin_fallback.getString();
-    if(!fallback.empty()) {
-        std::string label = cv::skin.getString();
-        label.append(" (+");
-        label.append(fallback);
-        label.append(")");
-        this->skinLabel->setText(std::move(label));
+    if(const auto &fallback = cv::skin_fallback.getString(); !fallback.empty()) {
+        this->skinLabel->setText(fmt::format("{:s} (+{:s})", cv::skin.getString(), fallback));
     } else {
         this->skinLabel->setText(cv::skin.getString());
     }
@@ -3063,11 +3058,10 @@ void OptionsOverlayImpl::onSkinSelect2(std::string_view skinName, int /*id*/) {
             cv::skin_fallback.setValue(skinName);
 
         osu->reloadSkin();
-        this->updateSkinNameLabel();
     } else {
         cv::skin.setValue(skinName);
-        this->updateSkinNameLabel();
     }
+    this->updateSkinNameLabel();
 }
 
 void OptionsOverlayImpl::onResolutionSelect() {
@@ -3084,9 +3078,8 @@ void OptionsOverlayImpl::onResolutionSelect() {
         File customres(MCENGINE_CFG_PATH "/customres.cfg");
         for(auto line = customres.readLine(); !line.empty() || customres.canRead(); line = customres.readLine()) {
             if(SString::is_comment(line, "#") || SString::is_comment(line, "//")) continue;  // ignore comments
-            auto parsed = Parsing::parse_resolution(line);
-            if(parsed.has_value()) {
-                customResolutions.emplace_back(parsed->x, parsed->y);
+            if(auto parsed = Parsing::parse_resolution(line); parsed.has_value()) {
+                customResolutions.emplace_back(*parsed);
             }
         }
     }
@@ -3097,7 +3090,7 @@ void OptionsOverlayImpl::onResolutionSelect() {
 
     // build context menu
     this->contextMenu->begin();
-    for(const auto &i : resolutions) {
+    for(const auto i : resolutions) {
         if(i.x > nativeResolution.x || i.y > nativeResolution.y) continue;
 
         std::string resolution{fmt::format("{}x{}", i.x, i.y)};
@@ -3105,7 +3098,7 @@ void OptionsOverlayImpl::onResolutionSelect() {
         if(this->resolutionLabel != nullptr && resolution == this->resolutionLabel->getText())
             button->setTextBrightColor(0xff00ff00);
     }
-    for(auto &customResolution : customResolutions) {
+    for(const auto customResolution : customResolutions) {
         this->contextMenu->addButton(fmt::format("{}x{}", customResolution.x, customResolution.y));
     }
     this->contextMenu->end(false, false);
@@ -4310,11 +4303,7 @@ bool OptionsOverlayImpl::should_use_oauth_login() const {
 
     // Addresses for which we should use OAuth login instead of username:password login
     static constexpr const auto oauth_servers = std::array{
-        "neosu.local"sv,
-        "neosu.net"sv,
-        PACKAGE_NAME ".localhost"sv,
-        PACKAGE_NAME ".local"sv,
-        PACKAGE_NAME ".net"sv,
+        "neosu.local"sv, "neosu.net"sv, PACKAGE_NAME ".localhost"sv, PACKAGE_NAME ".local"sv, PACKAGE_NAME ".net"sv,
     };
 
     const std::string server_endpoint{this->serverTextbox->getText()};

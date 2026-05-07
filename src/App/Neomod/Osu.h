@@ -320,7 +320,7 @@ class Osu final : public App, public MouseListener, public TouchListener {
 
    private:
     u64 mainFingerID{0};
-    std::array<u64, 4> fingerMappings;
+    std::array<u64, 4> fingerMappings{};
 
     bool bF1{false};
     bool bUIToggleCheck{false};

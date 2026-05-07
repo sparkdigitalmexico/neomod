@@ -1621,7 +1621,7 @@ if MACOS_PLATFORM
 compile_commands.json: mostlyclean-compile
 	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
 	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) 'CFLAGS=$(CFLAGS) -MJ$$@.compdb' 'CXXFLAGS=$(CXXFLAGS) -MJ$$@.compdb' $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \
-	$(PYTHON) $(abs_top_srcdir)/tools/gen_compdb.py --strip-pch --delete -o $@ .
+	$(PYTHON) $(srcdir)/build-aux/gen_binary_embed.py --strip-pch --delete -o $@ .
 else
 bear-check-version:
 	@$(BEAR) --version || { echo bear is unavailable to generate a compile_commands.json, install bear && exit 1; }
