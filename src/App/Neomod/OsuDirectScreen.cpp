@@ -121,9 +121,9 @@ void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
             auto* installer = osu->getBeatmapInstaller();
             const auto state = installer->get_state(this->meta.set_id);
             // toggle: if already in flight (and not yet terminal), cancel; otherwise (re)enqueue
-            if(state.stage == BeatmapInstaller::Stage::Queued ||
-               state.stage == BeatmapInstaller::Stage::Downloading ||
-               state.stage == BeatmapInstaller::Stage::Installing) {
+            using enum MapInstallStage;
+            using namespace flags::operators;
+            if(!!(state.stage & (Queued | Downloading | Installing))) {
                 installer->cancel(this->meta.set_id);
             } else {
                 installer->enqueue(this->meta.set_id, /*auto_select=*/true);
@@ -275,8 +275,6 @@ void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
 }
 
 void OnlineMapListing::draw() {
-    // XXX: laggy/slow
-
     CBaseUIContainer::draw();
 
     // use a 4:3 aspect ratio
@@ -307,10 +305,12 @@ void OnlineMapListing::draw() {
 
     const bool installed = db->getBeatmapSet(this->meta.set_id) != nullptr;
     const auto install_state = osu->getBeatmapInstaller()->get_state(this->meta.set_id);
-    const bool downloading = install_state.stage == BeatmapInstaller::Stage::Queued ||
-                             install_state.stage == BeatmapInstaller::Stage::Downloading ||
-                             install_state.stage == BeatmapInstaller::Stage::Installing;
-    const bool failed = install_state.stage == BeatmapInstaller::Stage::Failed;
+    const bool failed = !installed && install_state.stage == MapInstallStage::Failed;
+    const bool downloading = !installed && !failed && [stg = install_state.stage]() -> bool {
+        using enum MapInstallStage;
+        using namespace flags::operators;
+        return !!(stg & (Queued | Downloading | Installing));
+    }();
 
     // To show we're downloading, always draw at least 5%
     const f32 download_progress = downloading ? std::max(0.05f, install_state.progress) : 0.f;

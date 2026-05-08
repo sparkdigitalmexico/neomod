@@ -19,7 +19,7 @@ void BeatmapInstaller::enqueue(i32 set_id, bool auto_select) {
     auto [it, inserted] = this->entries.try_emplace(set_id);
     Entry& e = it->second;
     if(inserted) {
-        e.stage = Stage::Queued;
+        e.stage = MapInstallStage::Queued;
         e.auto_select = auto_select;
         return;
     }
@@ -28,11 +28,11 @@ void BeatmapInstaller::enqueue(i32 set_id, bool auto_select) {
     if(auto_select) e.auto_select = true;
 
     // if a previous attempt failed, allow retry
-    if(e.stage == Stage::Failed) {
+    if(e.stage == MapInstallStage::Failed) {
         e.dl_handle.reset();
         e.progress = 0.f;
         e.finished_time = 0.0;
-        e.stage = Stage::Queued;
+        e.stage = MapInstallStage::Queued;
     }
 }
 
@@ -62,57 +62,56 @@ void BeatmapInstaller::update() {
         Entry& e = it->second;
 
         switch(e.stage) {
-            case Stage::Queued:
-            case Stage::Downloading: {
+            using enum MapInstallStage;
+            case Queued:
+            case Downloading: {
                 // download_beatmapset lazily creates the handle on first call (when e.dl_handle is null),
                 // then on each subsequent call polls completion and performs extraction once bytes arrive.
                 const bool ready = Downloader::download_beatmapset(static_cast<u32>(set_id), e.dl_handle);
                 if(ready) {
                     // either freshly extracted, or the directory already existed on disk
                     e.progress = 1.f;
-                    e.stage = Stage::Installing;
+                    e.stage = Installing;
                 } else if(e.dl_handle.failed()) {
-                    e.stage = Stage::Failed;
+                    e.stage = Failed;
                     e.finished_time = now;
                     this->on_failed(set_id);
                 } else {
                     e.progress = e.dl_handle.progress();
-                    e.stage = Stage::Downloading;
+                    e.stage = Downloading;
                 }
                 break;
             }
 
-            case Stage::Installing: {
+            case Installing: {
                 // defensive: only import while db isn't being rebuilt. db->isFinished() flips back to <1
                 // during a refresh, and addBeatmapSet would race the loader.
                 if(!db->isFinished() || db->isCancelled()) break;
 
-                std::string mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
-                const DatabaseBeatmap* set = db->addBeatmapSet(mapset_path, set_id);
+                const std::string mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
+                const BeatmapSet* set = db->addBeatmapSet(mapset_path, set_id);
                 if(set == nullptr) {
-                    e.stage = Stage::Failed;
+                    e.stage = Failed;
                     e.finished_time = now;
                     this->on_failed(set_id);
                 } else {
-                    e.stage = Stage::Done;
+                    e.stage = Done;
                     e.finished_time = now;
                     this->on_done(set_id, e, set);
                 }
                 break;
             }
 
-            case Stage::Done:
-            case Stage::Failed:
-            case Stage::None:
+            case Done:
+            case Failed:
+            case None:
                 break;
         }
 
         // housekeeping: drop Done entries (db is now authoritative; listings query db->getBeatmapSet directly),
         // and expire Failed entries after a TTL so retries are possible without manual reset.
-        const bool erase = (e.stage == Stage::Done) ||
-                           (e.stage == Stage::Failed && (now - e.finished_time) > FAILED_ENTRY_TTL_S);
-
-        if(erase) {
+        if((e.stage == MapInstallStage::Done) ||
+           (e.stage == MapInstallStage::Failed && (now - e.finished_time) > FAILED_ENTRY_TTL_S)) {
             it = this->entries.erase(it);
         } else {
             ++it;
@@ -120,14 +119,14 @@ void BeatmapInstaller::update() {
     }
 }
 
-void BeatmapInstaller::on_done(i32 set_id, const Entry& e, const DatabaseBeatmap* set) {
+void BeatmapInstaller::on_done(i32 set_id, const Entry& e, const BeatmapSet* set) {
     debugLog("Finished installing beatmapset {:d}", set_id);
 
     ui->getNotificationOverlay()->addToast(fmt::format("Downloaded beatmapset #{:d}", set_id), SUCCESS_TOAST);
 
     if(e.auto_select) {
         const auto& diffs = set->getDifficulties();
-        if(diffs.empty()) return;
+        assert(!diffs.empty());  // if we successfully added it, we must have difficulties!
         ui->getSongBrowser()->onDifficultySelected(diffs[0].get(), false);
     }
 }
