@@ -101,11 +101,10 @@ class CBaseUIButton : public CBaseUIElement {
    protected:
     virtual void onClicked(bool left = true, bool right = false);
 
-    virtual void drawText();
-
     virtual void drawBackground();
     virtual void drawFrame();
     virtual void drawHoverRect(int distance, bool isClickHeld);
+    virtual void drawText();
 
     void updateStringMetrics();
 

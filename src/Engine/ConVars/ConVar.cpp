@@ -88,6 +88,20 @@ void ConVar::execDouble(double args) {
     if(auto *cb = std::get_if<DoubleCB>(&this->callback)) (*cb)(args);
 }
 
+CvarEditor ConVar::getMaster() const {
+    if(this->isFlagSet(cv::SERVER) && this->hasServerValue.load(std::memory_order_acquire)) {
+        return CvarEditor::SERVER;
+    } else if(this->isProtected() &&
+              (likely(!!ConVar::onGetValueProtectedCallback) && !ConVar::onGetValueProtectedCallback(this->sName))) {
+        // (only for multiplayer rooms, see note on invalidateAllProtectedCaches below)
+        return CvarEditor::SERVER;
+    } else if(this->isFlagSet(cv::SKINS) && this->hasSkinValue.load(std::memory_order_acquire)) {
+        return CvarEditor::SKIN;
+    } else {
+        return CvarEditor::CLIENT;
+    }
+}
+
 double ConVar::getDoubleInt() const {
     if(this->isFlagSet(cv::SERVER) && this->hasServerValue.load(std::memory_order_acquire)) {
         this->dCachedReturnedDouble.store(this->dServerValue.load(std::memory_order_acquire),

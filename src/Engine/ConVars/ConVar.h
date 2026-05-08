@@ -304,6 +304,7 @@ class ConVar {
     [[nodiscard]] forceinline CONVAR_TYPE getType() const { return this->type; }
     [[nodiscard]] forceinline uint8_t getFlags() const { return this->iFlags; }
 
+    [[nodiscard]] CvarEditor getMaster() const;
     [[nodiscard]] forceinline bool canHaveValue() const { return this->bCanHaveValue; }
 
     [[nodiscard]] inline bool hasAnyCallbacks() const {

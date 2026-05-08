@@ -203,11 +203,13 @@ struct OptionsOverlayImpl final {
     CBaseUILabel *addSection(const std::string &text);
     CBaseUILabel *addSubSection(const std::string &text, const std::string &searchTags = {});
     CBaseUILabel *addLabel(const std::string &text);
-    UIButton *addButton(const std::string &text);
-    OptionsElement *addButton(const std::string &text, const std::string &labelText, bool withResetButton = false);
-    OptionsElement *addButtonButton(const std::string &text1, const std::string &text2);
+    UIButton *addButton(const std::string &text, ConVar *cvar = nullptr);
+    OptionsElement *addButton(const std::string &text, const std::string &labelText, bool withResetButton = false,
+                              ConVar *cvar = nullptr);
+    OptionsElement *addButtonButton(const std::string &text1, const std::string &text2, ConVar *cvar = nullptr);
     OptionsElement *addButtonButtonLabel(const std::string &text1, const std::string &text2,
-                                         const std::string &labelText, bool withResetButton = false);
+                                         const std::string &labelText, bool withResetButton = false,
+                                         ConVar *cvar = nullptr);
     KeyBindButton *addKeyBindButton(const std::string &text, OsuKeyBinds::Bind *bind);
     CBaseUICheckbox *addCheckbox(const std::string &text, ConVar *cvar);
     CBaseUICheckbox *addCheckbox(const std::string &text, const std::string &tooltipText = {}, ConVar *cvar = nullptr);
@@ -385,8 +387,11 @@ class ResetButton final : public CBaseUIButton {
 
     ~ResetButton() override = default;
 
+    bool isAvailable();
+
     void draw() override {
         if(!this->bVisible || this->fAnim <= 0.0f) return;
+        if(!this->isAvailable()) return;
 
         const int fullColorBlockSize = 4 * Osu::getUIScale();
 
@@ -404,7 +409,7 @@ class ResetButton final : public CBaseUIButton {
         if(!this->bVisible || !this->bEnabled) return;
         CBaseUIButton::update(c);
 
-        if(this->isMouseInside()) {
+        if(this->isMouseInside() && this->isAvailable()) {
             ui->getTooltipOverlay()->begin();
             {
                 ui->getTooltipOverlay()->addLine("Reset");
@@ -416,6 +421,10 @@ class ResetButton final : public CBaseUIButton {
     OptionsElement *elemContainer;
 
    private:
+    void onClicked(bool left = true, bool right = false) override {
+        if(this->isAvailable()) CBaseUIButton::onClicked(left, right);
+    }
+
     void onEnabled() override {
         CBaseUIButton::onEnabled();
         this->fAnim.set(1.0f, (1.0f - this->fAnim) * 0.15f, anim::QuadOut);
@@ -447,6 +456,11 @@ struct OptionsElement {
     bool allowOverscale{false};
     bool allowUnderscale{false};
 };
+
+bool ResetButton::isAvailable() {
+    if(!this->elemContainer->cvar) return true;
+    return this->elemContainer->cvar->getMaster() == CvarEditor::CLIENT;
+}
 
 class SkinPreviewElement final : public CBaseUIElement {
    public:
@@ -982,7 +996,8 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
 
     this->addSubSection("Layout");
     OptionsElement *resolutionSelect = this->addButton(
-        "Select Resolution", fmt::format("{}x{}", osu->getVirtScreenWidth(), osu->getVirtScreenHeight()));
+        "Select Resolution", fmt::format("{}x{}", osu->getVirtScreenWidth(), osu->getVirtScreenHeight()), false,
+        &cv::resolution);
     this->resolutionSelectButton = (CBaseUIButton *)resolutionSelect->baseElems[0].get();
     this->resolutionSelectButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResolutionSelect>(this));
     this->resolutionLabel = (CBaseUILabel *)resolutionSelect->baseElems[1].get();
@@ -1061,7 +1076,8 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
 
     this->addSubSection("Devices");
     {
-        OptionsElement *outputDeviceSelect = this->addButton("Select Output Device", "Default", true);
+        OptionsElement *outputDeviceSelect =
+            this->addButton("Select Output Device", "Default", true, &cv::snd_output_device);
         this->outputDeviceResetButton = outputDeviceSelect->resetButton.get();
         this->outputDeviceResetButton->setClickCallback(
             SA::MakeDelegate([]() -> void { soundEngine->setOutputDevice(soundEngine->getDefaultDevice()); }));
@@ -1073,7 +1089,8 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         this->outputDeviceLabel = (CBaseUILabel *)outputDeviceSelect->baseElems[1].get();
 
         {
-            OptionsElement *soloudBackendSelect = this->addButtonButtonLabel("MiniAudio", "SDL", "Backend");
+            OptionsElement *soloudBackendSelect =
+                this->addButtonButtonLabel("MiniAudio", "SDL", "Backend", false, &cv::snd_soloud_backend);
             soloudBackendSelect->cvar = &cv::snd_soloud_backend;
             const auto &MAButton = static_cast<UIButton *>(soloudBackendSelect->baseElems[0].get());
             const auto &SDLButton = static_cast<UIButton *>(soloudBackendSelect->baseElems[1].get());
@@ -1262,7 +1279,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         }
 
         {
-            OptionsElement *skinSelect = this->addButton("Select Skin", "default");
+            OptionsElement *skinSelect = this->addButton("Select Skin", "default", false, &cv::skin);
             this->skinSelectLocalButton = static_cast<UIButton *>(skinSelect->baseElems[0].get());
             this->skinLabel = static_cast<CBaseUILabel *>(skinSelect->baseElems[1].get());
         }
@@ -1276,7 +1293,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
                 ->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::openCurrentSkinFolder>(this));
         }
 
-        OptionsElement *skinReload = this->addButtonButton("Reload Skin", "Random Skin");
+        OptionsElement *skinReload = this->addButtonButton("Reload Skin", "Random Skin", &cv::skin);
         auto *skinReloadBtn = static_cast<UIButton *>(skinReload->baseElems[0].get());
         auto *skinRandomBtn = static_cast<UIButton *>(skinReload->baseElems[1].get());
 
@@ -1497,7 +1514,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->addSpacer();
     this->addLabel("");
 
-    OptionsElement *notelockSelect = this->addButton("Select [Notelock]", "None", true);
+    OptionsElement *notelockSelect = this->addButton("Select [Notelock]", "None", true, &cv::notelock_type);
     ((CBaseUIButton *)notelockSelect->baseElems[0].get())
         ->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onNotelockSelect>(this));
     this->notelockSelectButton = notelockSelect->baseElems[0].get();
@@ -3808,14 +3825,16 @@ CBaseUILabel *OptionsOverlayImpl::addLabel(const std::string &text) {
     return label;
 }
 
-UIButton *OptionsOverlayImpl::addButton(const std::string &text) {
+UIButton *OptionsOverlayImpl::addButton(const std::string &text, ConVar *cvar) {
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, text);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
+    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto e = std::make_unique<OptionsElement>(BTN);
     e->baseElems.emplace_back(button);
+    e->cvar = cvar;
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[button] = last.get();
 
@@ -3823,10 +3842,11 @@ UIButton *OptionsOverlayImpl::addButton(const std::string &text) {
 }
 
 OptionsElement *OptionsOverlayImpl::addButton(const std::string &text, const std::string &labelText,
-                                              bool withResetButton) {
+                                              bool withResetButton, ConVar *cvar) {
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, text);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
+    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 50, labelText, labelText);
@@ -3838,6 +3858,7 @@ OptionsElement *OptionsOverlayImpl::addButton(const std::string &text, const std
     if(withResetButton) {
         e->resetButton = std::make_unique<ResetButton>(e.get(), 0.f, 0.f, 35.f, 50.f, "", "");
     }
+    e->cvar = cvar;
     e->baseElems.emplace_back(button);
     e->baseElems.emplace_back(label);
     const auto &last = this->elemContainers.emplace_back(std::move(e));
@@ -3847,18 +3868,21 @@ OptionsElement *OptionsOverlayImpl::addButton(const std::string &text, const std
     return this->elemContainers.back().get();
 }
 
-OptionsElement *OptionsOverlayImpl::addButtonButton(const std::string &text1, const std::string &text2) {
+OptionsElement *OptionsOverlayImpl::addButtonButton(const std::string &text1, const std::string &text2, ConVar *cvar) {
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, text1);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
+    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, text2);
     button2->setColor(0xff0c7c99);
     button2->setUseDefaultSkin();
+    button2->cvar = cvar;
     this->options->container.addBaseUIElement(button2);
 
     auto e = std::make_unique<OptionsElement>(BTN);
+    e->cvar = cvar;
     e->baseElems.emplace_back(button);
     e->baseElems.emplace_back(button2);
     const auto &last = this->elemContainers.emplace_back(std::move(e));
@@ -3869,15 +3893,18 @@ OptionsElement *OptionsOverlayImpl::addButtonButton(const std::string &text1, co
 }
 
 OptionsElement *OptionsOverlayImpl::addButtonButtonLabel(const std::string &text1, const std::string &text2,
-                                                         const std::string &labelText, bool withResetButton) {
+                                                         const std::string &labelText, bool withResetButton,
+                                                         ConVar *cvar) {
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, text1);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
+    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, text2);
     button2->setColor(0xff0c7c99);
     button2->setUseDefaultSkin();
+    button2->cvar = cvar;
     this->options->container.addBaseUIElement(button2);
 
     auto *label = new UILabel(0, 0, this->options->getSize().x, 50, labelText, labelText);
@@ -3889,6 +3916,7 @@ OptionsElement *OptionsOverlayImpl::addButtonButtonLabel(const std::string &text
     if(withResetButton) {
         e->resetButton = std::make_unique<ResetButton>(e.get(), 0.f, 0.f, 35.f, 50.f, "", "");
     }
+    e->cvar = cvar;
     e->baseElems.emplace_back(button);
     e->baseElems.emplace_back(button2);
     e->baseElems.emplace_back(label);
@@ -3947,6 +3975,7 @@ CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(const std::string &text, const 
     auto *checkbox = new UICheckbox(0, 0, this->options->getSize().x, 50, text, text);
     checkbox->setDrawFrame(false);
     checkbox->setDrawBackground(false);
+    checkbox->cvar = cvar;
 
     if(tooltipText.length() > 0) checkbox->setTooltipText(tooltipText);
 
@@ -4000,6 +4029,7 @@ UISlider *OptionsOverlayImpl::addSlider(const std::string &text, float min, floa
     slider->setLiveUpdate(true);
     slider->setValue(cvar->getFloat(), false);
     slider->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onSliderChange>(this));
+    slider->cvar = cvar;
     this->options->container.addBaseUIElement(slider);
 
     // UILabel vs CBaseUILabel: UILabel allows tooltips

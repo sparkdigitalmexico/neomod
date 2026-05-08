@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "AnimationHandler.h"
+#include "ConVar.h"
 #include "Engine.h"
 #include "Osu.h"
 #include "ResourceManager.h"
@@ -14,6 +15,8 @@
 #include "UI.h"
 #include "SString.h"
 #include "Font.h"
+
+bool UIButton::isAvailable() const { return !this->cvar || this->cvar->getMaster() == CvarEditor::CLIENT; }
 
 void UIButton::draw() {
     if(!this->bVisible || !this->bVisible2) return;
@@ -32,7 +35,7 @@ void UIButton::draw() {
     f32 middleWidth = this->getSize().x - leftWidth - rightWidth;
 
     {
-        auto color = this->is_loading ? rgba(0x33, 0x33, 0x33, 0xff) : this->color;
+        auto color = (this->is_loading || !this->isAvailable()) ? rgba(0x33, 0x33, 0x33, 0xff) : this->color;
 
         f32 brightness = 1.f + (this->fHoverAlpha * 0.2f);
         color = Colors::scale(color, brightness);
@@ -78,15 +81,29 @@ void UIButton::update(CBaseUIEventCtx &c) {
     if(!this->bVisible || !this->bVisible2) return;
     CBaseUIButton::update(c);
 
-    if(this->isMouseInside() && this->tooltipTextLines.size() > 0 && !this->bFocusStolenDelay) {
-        auto *ttoverlay = ui->getTooltipOverlay();
-        ttoverlay->begin();
-        {
-            for(const auto &tooltipTextLine : this->tooltipTextLines) {
-                ttoverlay->addLine(tooltipTextLine);
+    if(this->isMouseInside() && !this->bFocusStolenDelay) {
+        auto lines = this->tooltipTextLines;
+        if(this->cvar) {
+            switch(this->cvar->getMaster()) {
+                case CvarEditor::CLIENT:
+                    break;
+                case CvarEditor::SERVER:
+                    lines = {"This setting is forced by the server."};
+                    break;
+                case CvarEditor::SKIN:
+                    lines = {"This setting is forced by the current skin."};
+                    break;
             }
         }
-        ttoverlay->end();
+
+        if(lines.size() > 0) {
+            auto *ttoverlay = ui->getTooltipOverlay();
+            ttoverlay->begin();
+            for(const auto &line : lines) {
+                ttoverlay->addLine(line);
+            }
+            ttoverlay->end();
+        }
     }
 
     this->bFocusStolenDelay = false;
@@ -109,6 +126,8 @@ void UIButton::onMouseInside() {
 void UIButton::onMouseOutside() { this->fHoverAlpha = 0.f; }
 
 void UIButton::onClicked(bool left, bool right) {
+    if(!this->isAvailable()) return;
+
     CBaseUIButton::onClicked(left, right);
 
     if(this->is_loading) return;

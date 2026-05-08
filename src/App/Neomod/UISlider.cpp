@@ -3,24 +3,32 @@
 
 #include <utility>
 
+#include "ConVar.h"
 #include "Osu.h"
 #include "Skin.h"
 #include "Graphics.h"
 #include "Image.h"
+#include "TooltipOverlay.h"
+#include "UI.h"
 
 UISlider::UISlider(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUISlider(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setBlockSize(20, 20);
 }
 
+bool UISlider::isAvailable() const { return !this->cvar || this->cvar->getMaster() == CvarEditor::CLIENT; }
+
 void UISlider::draw() {
     if(!this->bVisible) return;
 
-    Image *img = osu->getSkin()->i_circle_empty;
+    Image* img = osu->getSkin()->i_circle_empty;
     if(img == nullptr) {
         CBaseUISlider::draw();
         return;
     }
+
+    Color color = this->frameColor;
+    if(!this->isAvailable()) color = Colors::scale(color, 0.5);
 
     int lineAdd = 1;
 
@@ -30,7 +38,7 @@ void UISlider::draw() {
     float line2End = this->getPos().x + this->getSize().x - (this->vBlockSize.x - 1) / 2;
 
     // draw sliding line
-    g->setColor(this->frameColor);
+    g->setColor(color);
     if(line1End > line1Start)
         g->drawLine((int)(line1Start), (int)(this->getPos().y + this->getSize().y / 2.0f + 1), (int)(line1End),
                     (int)(this->getPos().y + this->getSize().y / 2.0f + 1));
@@ -42,7 +50,7 @@ void UISlider::draw() {
     vec2 blockCenter = this->getPos() + this->blockPos() + this->vBlockSize / 2.f;
     vec2 scale = vec2(this->vBlockSize.x / img->getWidth(), this->vBlockSize.y / img->getHeight());
 
-    g->setColor(this->frameColor);
+    g->setColor(color);
     g->pushTransform();
     {
         g->scale(scale.x, scale.y);
@@ -50,4 +58,26 @@ void UISlider::draw() {
         g->drawImage(osu->getSkin()->i_circle_empty);
     }
     g->popTransform();
+}
+
+void UISlider::update(CBaseUIEventCtx& c) {
+    // dirty but really can't be bothered to touch CBaseUISlider code
+    if(this->isAvailable()) CBaseUISlider::update(c);
+
+    if(this->cvar && this->isMouseInside() && !this->isAvailable()) {
+        auto* ttoverlay = ui->getTooltipOverlay();
+        ttoverlay->begin();
+        switch(this->cvar->getMaster()) {
+            case CvarEditor::SERVER:
+                ttoverlay->addLine("This setting is forced by the server.");
+                break;
+            case CvarEditor::SKIN:
+                ttoverlay->addLine("This setting is forced by the current skin.");
+                break;
+            case CvarEditor::CLIENT:
+                ttoverlay->addLine("unreachable");
+                break;
+        }
+        ttoverlay->end();
+    }
 }
