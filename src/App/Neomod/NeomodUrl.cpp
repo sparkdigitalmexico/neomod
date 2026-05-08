@@ -15,9 +15,9 @@
 
 namespace neomod {
 void handle_neomod_url(std::string_view url) {
-    if (url.starts_with(NEOMOD_URL_SCHEME)) {
+    if(url.starts_with(NEOMOD_URL_SCHEME)) {
         url.remove_prefix(NEOMOD_URL_SCHEME ""sv.length());
-    } else if (url.starts_with("neosu://")) {
+    } else if(url.starts_with("neosu://")) {
         url.remove_prefix("neosu://"sv.length());
     } else {
         return;
@@ -41,10 +41,5 @@ void handle_neomod_url(std::string_view url) {
         // TODO @kiwec: user id
         return;
     }
-
-    if(url.starts_with("watch_replay/")) {
-        // TODO @kiwec: replay md5
-        return;
-    }
 }
-}
+}  // namespace neomod

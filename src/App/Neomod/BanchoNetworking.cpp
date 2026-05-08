@@ -222,15 +222,7 @@ void update_networking() {
         BanchoState::poll_login();
     }
 
-    // Set ping timeout
-    if(osu && ui->getLobby()->isVisible()) seconds_between_pings = 1;
-    if(BanchoState::spectating) seconds_between_pings = 1;
-    if(BanchoState::is_in_a_multi_room() && seconds_between_pings > 3) seconds_between_pings = 3;
-    if(use_websockets) seconds_between_pings = 30;
-
     if(!BanchoState::is_online()) return;
-
-    const bool should_ping = Timing::getTicksMS() - last_packet_ms > (u64)(seconds_between_pings * 1000);
 
     // Append missing presence/stats request packets
     // XXX: Rather than every second, this should be done once, and only once
@@ -243,7 +235,20 @@ void update_networking() {
         BANCHO::User::request_stats_batch();
     }
 
-    // Handle login and outgoing packet processing
+    // Set polling interval (depends on how "active" the player is)
+    // This mimics stable, as measured by counting seconds in my head and looking at server logs
+    if(osu && ui->getLobby()->isVisible()) seconds_between_pings = 1;
+    if(BanchoState::spectating) seconds_between_pings = 1;
+    if(BanchoState::is_in_a_multi_room() && seconds_between_pings > 3) seconds_between_pings = 3;
+    if(use_websockets) seconds_between_pings = 30;
+
+    // Send PING packet
+    // - On HTTP, this is used to poll for new data.
+    //   bancho.py accepts empty HTTP bodies, but some other servers require an actual PING packet.
+    // - On Websockets, this is used as a keepalive mechanism.
+    //   If you're implementing a server, make sure to send PONGs when using CloudFlare
+    //   to keep the connection open for longer.
+    const bool should_ping = Timing::getTicksMS() - last_packet_ms > (u64)(seconds_between_pings * 1000);
     if(should_ping && outgoing.pos == 0) {
         pong_expected_before = current_time + 10.0;
 
