@@ -3,8 +3,6 @@
 #include "AnimationHandler.h"
 #include "CBaseUIButton.h"
 
-class ConVar;
-
 class UIButton : public CBaseUIButton {
    public:
     UIButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
@@ -22,7 +20,6 @@ class UIButton : public CBaseUIButton {
         return this;
     }
 
-    bool isAvailable() const;
     UIButton *setTooltipText(std::string_view text);
 
     void onMouseInside() override;
@@ -33,7 +30,6 @@ class UIButton : public CBaseUIButton {
 
     // HACKHACK: enough is enough
     bool bVisible2 = true;
-    ConVar *cvar = nullptr;
 
    private:
     void onClicked(bool left = true, bool right = false) override;

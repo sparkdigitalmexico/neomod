@@ -49,6 +49,8 @@ void CBaseUILabel::drawText() {
 
         // g->pushClipRect(McRect(this->getPos(), this->getSize()));
 
+        const Color effectiveTextColor = this->bEnabled ? this->textColor : Colors::scale(this->textColor, 0.5f);
+
         g->pushTransform();
         {
             g->scale(this->fScale, this->fScale);  // XXX: not sure if scaling respects text justification
@@ -60,9 +62,9 @@ void CBaseUILabel::drawText() {
 
                 g->drawString(
                     this->font, this->sText,
-                    TextFX{.col_text = this->textColor, .col_shadow = this->shadowColor, .offs_px = shadowOffset});
+                    TextFX{.col_text = effectiveTextColor, .col_shadow = this->shadowColor, .offs_px = shadowOffset});
             } else {
-                g->setColor(this->textColor);
+                g->setColor(effectiveTextColor);
                 g->drawString(this->font, this->sText);
             }
         }

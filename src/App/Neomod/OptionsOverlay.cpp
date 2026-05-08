@@ -195,6 +195,10 @@ struct OptionsOverlayImpl final {
     void onResetClicked(ResetButton *button);
     void onResetEverythingClicked(CBaseUIButton *button);
 
+    // server/skin-forced cvar locking
+    void applyForcedCvarLocks();
+    void pushForcedCvarTooltipIfHovered();
+
     // categories
     CategoryButton *addCategory(CBaseUIElement *section, char32_t icon);
 
@@ -455,6 +459,11 @@ struct OptionsElement {
     ElementType type;
     bool allowOverscale{false};
     bool allowUnderscale{false};
+
+    // tracks whether the centralized cvar-lock sweep currently has baseElems forced bEnabled=false
+    // (so we can restore the state set by other code, e.g. the high-quality-sliders toggle, when the lock is released).
+    bool cvarLocked{false};
+    std::vector<bool> enabledBeforeCvarLock;
 };
 
 bool ResetButton::isAvailable() {
@@ -1091,7 +1100,6 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         {
             OptionsElement *soloudBackendSelect =
                 this->addButtonButtonLabel("MiniAudio", "SDL", "Backend", false, &cv::snd_soloud_backend);
-            soloudBackendSelect->cvar = &cv::snd_soloud_backend;
             const auto &MAButton = static_cast<UIButton *>(soloudBackendSelect->baseElems[0].get());
             const auto &SDLButton = static_cast<UIButton *>(soloudBackendSelect->baseElems[1].get());
             static auto MAButton_static = MAButton;
@@ -1984,8 +1992,15 @@ void OptionsOverlayImpl::update(CBaseUIEventCtx &c) {
         parent->backButton->stealFocus();
     }
 
+    // disable widgets bound to a server/skin-forced cvar before their update runs,
+    // so input handlers + their own tooltip code don't fire for forced settings
+    this->applyForcedCvarLocks();
+
     parent->ScreenBackable::update(c);
     if(c.mouse_consumed()) return;
+
+    // and show a single "forced by ..." tooltip when hovering any locked widget
+    this->pushForcedCvarTooltipIfHovered();
 
     if(contextMenuVisible) {
         // eyes are bleeding...
@@ -3714,6 +3729,59 @@ void OptionsOverlayImpl::onResetUpdate(ResetButton *resbtn) {
     }
 }
 
+void OptionsOverlayImpl::applyForcedCvarLocks() {
+    for(auto &e : this->elemContainers) {
+        if(e->cvar == nullptr) continue;
+        const bool nowLocked = (e->cvar->getMaster() != CvarEditor::CLIENT);
+        if(nowLocked == e->cvarLocked) continue;  // no transition
+
+        if(nowLocked) {
+            // save each baseElem's bEnabled so we can restore it later, even if
+            // some unrelated code (e.g. onHighQualitySlidersConVarChange) has it
+            // disabled for its own reasons
+            e->enabledBeforeCvarLock.clear();
+            e->enabledBeforeCvarLock.reserve(e->baseElems.size());
+            for(auto &elem : e->baseElems) {
+                e->enabledBeforeCvarLock.push_back(elem->isEnabled());
+                elem->setEnabled(false);
+            }
+        } else {
+            for(size_t i = 0; i < e->baseElems.size(); i++) {
+                const bool restored = i < e->enabledBeforeCvarLock.size() ? e->enabledBeforeCvarLock[i] : true;
+                e->baseElems[i]->setEnabled(restored);
+            }
+            e->enabledBeforeCvarLock.clear();
+        }
+        e->cvarLocked = nowLocked;
+    }
+}
+
+void OptionsOverlayImpl::pushForcedCvarTooltipIfHovered() {
+    if(!this->options->getRect().contains(mouse->getPos())) return;
+
+    for(const auto &e : this->elemContainers) {
+        if(!e->cvarLocked) continue;
+        for(const auto &elem : e->baseElems) {
+            if(!elem->isVisible() || !elem->getRect().contains(mouse->getPos())) continue;
+
+            auto *ttoverlay = ui->getTooltipOverlay();
+            ttoverlay->begin();
+            switch(e->cvar->getMaster()) {
+                case CvarEditor::SERVER:
+                    ttoverlay->addLine("This setting is forced by the server.");
+                    break;
+                case CvarEditor::SKIN:
+                    ttoverlay->addLine("This setting is forced by the current skin.");
+                    break;
+                case CvarEditor::CLIENT:
+                    break;  // unreachable: cvarLocked implies non-CLIENT master
+            }
+            ttoverlay->end();
+            return;
+        }
+    }
+}
+
 void OptionsOverlayImpl::onResetClicked(ResetButton *resbtn) {
     if(resbtn == nullptr) return;
 
@@ -3829,7 +3897,6 @@ UIButton *OptionsOverlayImpl::addButton(const std::string &text, ConVar *cvar) {
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, text);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
-    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto e = std::make_unique<OptionsElement>(BTN);
@@ -3846,7 +3913,6 @@ OptionsElement *OptionsOverlayImpl::addButton(const std::string &text, const std
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text, text);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
-    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto *label = new CBaseUILabel(0, 0, this->options->getSize().x, 50, labelText, labelText);
@@ -3872,13 +3938,11 @@ OptionsElement *OptionsOverlayImpl::addButtonButton(const std::string &text1, co
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, text1);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
-    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, text2);
     button2->setColor(0xff0c7c99);
     button2->setUseDefaultSkin();
-    button2->cvar = cvar;
     this->options->container.addBaseUIElement(button2);
 
     auto e = std::make_unique<OptionsElement>(BTN);
@@ -3898,13 +3962,11 @@ OptionsElement *OptionsOverlayImpl::addButtonButtonLabel(const std::string &text
     auto *button = new UIButton(0, 0, this->options->getSize().x, 50, text1, text1);
     button->setColor(0xff0c7c99);
     button->setUseDefaultSkin();
-    button->cvar = cvar;
     this->options->container.addBaseUIElement(button);
 
     auto *button2 = new UIButton(0, 0, this->options->getSize().x, 50, text2, text2);
     button2->setColor(0xff0c7c99);
     button2->setUseDefaultSkin();
-    button2->cvar = cvar;
     this->options->container.addBaseUIElement(button2);
 
     auto *label = new UILabel(0, 0, this->options->getSize().x, 50, labelText, labelText);
@@ -3975,7 +4037,6 @@ CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(const std::string &text, const 
     auto *checkbox = new UICheckbox(0, 0, this->options->getSize().x, 50, text, text);
     checkbox->setDrawFrame(false);
     checkbox->setDrawBackground(false);
-    checkbox->cvar = cvar;
 
     if(tooltipText.length() > 0) checkbox->setTooltipText(tooltipText);
 
@@ -4029,7 +4090,6 @@ UISlider *OptionsOverlayImpl::addSlider(const std::string &text, float min, floa
     slider->setLiveUpdate(true);
     slider->setValue(cvar->getFloat(), false);
     slider->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onSliderChange>(this));
-    slider->cvar = cvar;
     this->options->container.addBaseUIElement(slider);
 
     // UILabel vs CBaseUILabel: UILabel allows tooltips
