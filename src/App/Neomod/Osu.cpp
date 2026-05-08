@@ -1,6 +1,7 @@
 // Copyright (c) 2015, PG, All rights reserved.
 #include "Osu.h"
 
+#include "BeatmapInstaller.h"
 #include "ThumbnailManager.h"
 #include "BackgroundImageHandler.h"
 #include "Bancho.h"
@@ -243,6 +244,7 @@ Osu::Osu()
     this->ui_memb = std::make_unique<UI>();
     this->updateHandler = std::make_unique<UpdateHandler>();
     this->thumbnailManager = std::make_unique<ThumbnailManager>();
+    this->beatmapInstaller = std::make_unique<BeatmapInstaller>();
     this->backgroundImageHandler = std::make_unique<BGImageHandler>();
     this->fposu = std::make_unique<ModFPoSu>();
 
@@ -595,6 +597,7 @@ void Osu::update() {
        // XXX: there are too many flags/states to individually check whether or not we're in a "low-latency session" or not
        (!this->isInPlayModeAndNotPaused() || this->map_iface->isInBreak() || this->map_iface->isInSkippableSection())) {
         this->thumbnailManager->update();
+        this->beatmapInstaller->update();
     }
 
     ui->update();

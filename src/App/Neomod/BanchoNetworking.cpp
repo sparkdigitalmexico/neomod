@@ -5,6 +5,7 @@
 #include "Bancho.h"
 #include "BanchoProtocol.h"
 #include "BanchoUsers.h"
+#include "BeatmapInstaller.h"
 #include "BeatmapInterface.h"
 #include "Chat.h"
 #include "OsuConVars.h"
@@ -450,6 +451,7 @@ void BanchoState::disconnect(bool shutdown) {
     }
 
     Downloader::abort_downloads();
+    if(auto *installer = osu->getBeatmapInstaller()) installer->clear();
 }
 
 void BanchoState::reconnect() {

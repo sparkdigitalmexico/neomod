@@ -12,6 +12,7 @@
 #include <array>
 
 class ThumbnailManager;
+class BeatmapInstaller;
 class ConVar;
 class Image;
 class McFont;
@@ -162,6 +163,7 @@ class Osu final : public App, public MouseListener, public TouchListener {
     [[nodiscard]] inline UpdateHandler *getUpdateHandler() const { return this->updateHandler.get(); }
     [[nodiscard]] inline BeatmapInterface *getMapInterface() const { return this->map_iface.get(); }
     [[nodiscard]] inline ThumbnailManager *getThumbnailManager() const { return this->thumbnailManager.get(); }
+    [[nodiscard]] inline BeatmapInstaller *getBeatmapInstaller() const { return this->beatmapInstaller.get(); }
 
     [[nodiscard]] inline RenderTarget *getBackBuffer() const { return this->backBuffer; }
     [[nodiscard]] inline RenderTarget *getPlayfieldBuffer() const { return this->playfieldBuffer; }
@@ -288,6 +290,7 @@ class Osu final : public App, public MouseListener, public TouchListener {
     std::unique_ptr<BeatmapInterface> map_iface{nullptr};
     std::unique_ptr<UpdateHandler> updateHandler{nullptr};
     std::unique_ptr<ThumbnailManager> thumbnailManager{nullptr};
+    std::unique_ptr<BeatmapInstaller> beatmapInstaller{nullptr};
     std::unique_ptr<UserCard> userButton{nullptr};
     std::unique_ptr<BGImageHandler> backgroundImageHandler{nullptr};
     std::unique_ptr<LiveScore> score{nullptr};

@@ -48,9 +48,5 @@ class OsuDirectScreen final : public ScreenBackable {
     uSz request_id{1};
     f64 last_search_time{0.0};
 
-    // Beatmapset to auto-select once download is completed
-    friend class OnlineMapListing;
-    i32 auto_select_set{0};
-
     bool loading{false};
 };

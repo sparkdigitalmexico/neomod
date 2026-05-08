@@ -6,6 +6,7 @@
 #include "BackgroundImageHandler.h"
 #include "BanchoApi.h"
 #include "Bancho.h"
+#include "BeatmapInstaller.h"
 #include "BeatmapInterface.h"
 #include "CBaseUICheckbox.h"
 #include "CBaseUILabel.h"
@@ -44,10 +45,9 @@
 class OnlineMapListing : public CBaseUIContainer {
     NOCOPY_NOMOVE(OnlineMapListing)
    public:
-    OnlineMapListing(OsuDirectScreen* parent, Downloader::BeatmapSetMetadata meta);
+    explicit OnlineMapListing(Downloader::BeatmapSetMetadata meta);
     ~OnlineMapListing() override;
 
-    void update(CBaseUIEventCtx& c) override;
     void draw() override;
 
     // NOT inherited, called manually
@@ -62,7 +62,6 @@ class OnlineMapListing : public CBaseUIContainer {
     void onMouseOutside() override;
 
    private:
-    OsuDirectScreen* directScreen;
     McFont* font;
     Downloader::BeatmapSetMetadata meta;
 
@@ -73,19 +72,12 @@ class OnlineMapListing : public CBaseUIContainer {
     // Cache
     std::string full_title;
     ThumbIdentifier thumb_id;
-    Downloader::DownloadHandle dl_handle;
 
     f32 creator_width{0.f};
-    f32 download_progress{0.f};
-
-    bool installed;
-    bool downloading{false};
-    bool download_failed{false};
 };
 
-OnlineMapListing::OnlineMapListing(OsuDirectScreen* parent, Downloader::BeatmapSetMetadata meta)
-    : directScreen(parent),
-      font(engine->getDefaultFont()),
+OnlineMapListing::OnlineMapListing(Downloader::BeatmapSetMetadata meta)
+    : font(engine->getDefaultFont()),
       meta(std::move(meta)),
       thumb_id(
           {.save_path = fmt::format("{}/thumbs/{}/{}", env->getCacheDir(), BanchoState::endpoint, this->meta.set_id),
@@ -98,7 +90,6 @@ OnlineMapListing::OnlineMapListing(OsuDirectScreen* parent, Downloader::BeatmapS
         std::ranges::sort(this->meta.beatmaps, std::ranges::greater{}, [](const auto& bm) { return bm.star_rating; });
     }
 
-    this->installed = db->getBeatmapSet(this->meta.set_id) != nullptr;
     this->onResolutionChange(osu->getVirtScreenSize());
 
     osu->getThumbnailManager()->request_image(this->thumb_id);
@@ -114,7 +105,8 @@ void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
         this->click_anim = 1.f;
         this->click_anim.set(0.0f, 0.15f, anim::QuadInOut);
 
-        if(this->installed) {
+        const bool installed = db->getBeatmapSet(this->meta.set_id) != nullptr;
+        if(installed) {
             // Select map, or go to song browser if already selected
             if(osu->getMapInterface()->getBeatmap()->getSetID() == this->meta.set_id) {
                 ui->setScreen(ui->getSongBrowser());
@@ -126,9 +118,15 @@ void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
                 ui->getSongBrowser()->onDifficultySelected(diffs[0].get(), false);
             }
         } else {
-            this->downloading = !this->downloading;
-            if(this->downloading) {
-                this->directScreen->auto_select_set = this->meta.set_id;
+            auto* installer = osu->getBeatmapInstaller();
+            const auto state = installer->get_state(this->meta.set_id);
+            // toggle: if already in flight (and not yet terminal), cancel; otherwise (re)enqueue
+            if(state.stage == BeatmapInstaller::Stage::Queued ||
+               state.stage == BeatmapInstaller::Stage::Downloading ||
+               state.stage == BeatmapInstaller::Stage::Installing) {
+                installer->cancel(this->meta.set_id);
+            } else {
+                installer->enqueue(this->meta.set_id, /*auto_select=*/true);
             }
         }
     }
@@ -276,43 +274,6 @@ void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
     }
 }
 
-void OnlineMapListing::update(CBaseUIEventCtx& c) {
-    // TODO:
-    //   - continue downloading even if clipped
-
-    CBaseUIContainer::update(c);
-
-    this->download_progress = 0.f;
-    if(this->downloading) {
-        // TODO: downloads will not finish if player leaves this screen
-        bool ready = Downloader::download_beatmapset(this->meta.set_id, this->dl_handle);
-        if(ready) {
-            this->downloading = false;
-
-            std::string mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", this->meta.set_id);
-            const auto* set = db->addBeatmapSet(mapset_path, this->meta.set_id);
-            if(set) {
-                this->installed = true;
-
-                if(this->directScreen->auto_select_set == this->meta.set_id) {
-                    const auto& diffs = set->getDifficulties();
-                    if(diffs.empty()) return;  // surely unreachable
-                    ui->getSongBrowser()->onDifficultySelected(diffs[0].get(), false);
-                }
-            } else {
-                this->download_failed = true;
-            }
-        } else if(this->dl_handle.failed()) {
-            // TODO: display error toast
-            this->downloading = false;
-            this->download_failed = true;
-        } else {
-            // To show we're downloading, always draw at least 5%
-            this->download_progress = std::max(0.05f, this->dl_handle.progress());
-        }
-    }
-}
-
 void OnlineMapListing::draw() {
     // XXX: laggy/slow
 
@@ -344,19 +305,29 @@ void OnlineMapListing::draw() {
     const vec2 progress_size = {this->getSize().x - map_bg_size.x, this->getSize().y};
     const f32 alpha = std::min(0.25f + this->hover_anim + this->click_anim, 1.f);
 
+    const bool installed = db->getBeatmapSet(this->meta.set_id) != nullptr;
+    const auto install_state = osu->getBeatmapInstaller()->get_state(this->meta.set_id);
+    const bool downloading = install_state.stage == BeatmapInstaller::Stage::Queued ||
+                             install_state.stage == BeatmapInstaller::Stage::Downloading ||
+                             install_state.stage == BeatmapInstaller::Stage::Installing;
+    const bool failed = install_state.stage == BeatmapInstaller::Stage::Failed;
+
+    // To show we're downloading, always draw at least 5%
+    const f32 download_progress = downloading ? std::max(0.05f, install_state.progress) : 0.f;
+
     g->pushClipRect(McRect(pos_counter, progress_size));
     {
         // Download progress
-        const f32 download_width = progress_size.x * this->download_progress;
+        const f32 download_width = progress_size.x * download_progress;
         g->setColor(rgb(150, 255, 150));
         g->setAlpha(alpha);
         g->fillRect(pos_counter, {download_width, progress_size.y});
 
         // Background
         Color color = rgb(255, 255, 255);
-        if(this->installed)
+        if(installed)
             color = rgb(0, 150, 0);
-        else if(this->download_failed)
+        else if(failed)
             color = rgb(200, 0, 0);
 
         color.setA(alpha);
@@ -652,7 +623,7 @@ void OsuDirectScreen::search(std::string_view query) {
                     auto meta = Downloader::parse_beatmapset_metadata(set_lines[i]);
                     if(meta.set_id == 0) continue;
 
-                    this->results->container.addBaseUIElement(new OnlineMapListing(this, std::move(meta)));
+                    this->results->container.addBaseUIElement(new OnlineMapListing(std::move(meta)));
                 }
 
                 this->onResolutionChange(osu->getVirtScreenSize());
