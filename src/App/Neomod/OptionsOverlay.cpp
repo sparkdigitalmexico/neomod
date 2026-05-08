@@ -145,7 +145,6 @@ struct OptionsOverlayImpl final {
     // options
     void onFullscreenChange(CBaseUICheckbox *checkbox);
     void onDPIScalingChange(CBaseUICheckbox *checkbox);
-    void onRawInputToAbsoluteWindowChange(CBaseUICheckbox *checkbox);
     void openCurrentSkinFolder();
     void onSkinSelect2(std::string_view skinName, int id = -1);
     void onResolutionSelect();
@@ -433,7 +432,7 @@ class ResetButton final : public CBaseUIButton {
 struct OptionsElement {
     OptionsElement(ElementType type) : type(type) {}
 
-    Hash::flat::map<CBaseUIElement *, ConVar *> cvars{};
+    ConVar *cvar{nullptr};
     std::vector<std::unique_ptr<CBaseUIElement>> baseElems{};
 
     std::string searchTags;
@@ -841,6 +840,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     {
         enum ELEMS : uint8_t { LOGINBTN = 0, KEEPSIGNEDCBX = 1 };
         OptionsElement *loginElement = this->addButtonCheckbox("Log in", "Keep me logged in");
+        loginElement->cvar = &cv::mp_autologin;
 
         this->logInButton = static_cast<UIButton *>(loginElement->baseElems[LOGINBTN].get());
 
@@ -850,10 +850,8 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         this->logInButton->setTextColor(0xffffffff);
 
         auto *keepCbx = static_cast<UICheckbox *>(loginElement->baseElems[KEEPSIGNEDCBX].get());
-
         keepCbx->setChecked(cv::mp_autologin.getBool());
         keepCbx->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onCheckboxChange>(this));
-        loginElement->cvars[keepCbx] = &cv::mp_autologin;
     }
 
     this->addCheckbox("Use WebSocket connection when available", &cv::prefer_websockets);
@@ -988,7 +986,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->resolutionSelectButton = (CBaseUIButton *)resolutionSelect->baseElems[0].get();
     this->resolutionSelectButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResolutionSelect>(this));
     this->resolutionLabel = (CBaseUILabel *)resolutionSelect->baseElems[1].get();
-    this->fullscreenCheckbox = this->addCheckbox("Fullscreen");
+    this->fullscreenCheckbox = this->addCheckbox("Fullscreen", &cv::fullscreen);
     this->fullscreenCheckbox->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onFullscreenChange>(this));
     this->addCheckbox("Keep Aspect Ratio",
                       "Black borders instead of a stretched image.\nOnly relevant if fullscreen is enabled, and "
@@ -1076,6 +1074,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
 
         {
             OptionsElement *soloudBackendSelect = this->addButtonButtonLabel("MiniAudio", "SDL", "Backend");
+            soloudBackendSelect->cvar = &cv::snd_soloud_backend;
             const auto &MAButton = static_cast<UIButton *>(soloudBackendSelect->baseElems[0].get());
             const auto &SDLButton = static_cast<UIButton *>(soloudBackendSelect->baseElems[1].get());
             static auto MAButton_static = MAButton;
@@ -1087,8 +1086,6 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
             backendLabel->setVisible(true);
             backendLabel->setTooltipText("Pick the one you feel works best,\nthere should be very little difference.");
 
-            soloudBackendSelect->cvars[MAButton] = &cv::snd_soloud_backend;
-            soloudBackendSelect->cvars[SDLButton] = &cv::snd_soloud_backend;
             soloudBackendSelect->render_condition = {[]() -> bool {
                 bool ret =
                     soundEngine ? soundEngine->getOutputDriverType() >= SoundEngine::OutputDriver::SOLOUD_MA : false;
@@ -2320,27 +2317,27 @@ void OptionsOverlayImpl::updateLayout() {
 
     // set all elements to the current convar values, and update the reset button states
     for(const auto &element : this->elemContainers) {
-        for(const auto &[baseElem, cv] : element->cvars) {
-            if(!baseElem || !cv) continue;
+        if(!element->cvar) continue;
+        for(const auto &baseElem : element->baseElems) {
             switch(element->type) {
                 case CBX:
                 case CBX_BTN: {
-                    auto *checkboxPointer = dynamic_cast<CBaseUICheckbox *>(baseElem);
-                    if(checkboxPointer != nullptr) checkboxPointer->setChecked(cv->getBool());
+                    auto *checkboxPointer = dynamic_cast<CBaseUICheckbox *>(baseElem.get());
+                    if(checkboxPointer != nullptr) checkboxPointer->setChecked(element->cvar->getBool());
                 } break;
                 case SLDR:
                     if(element->baseElems.size() == 3) {
                         auto *sliderPointer = dynamic_cast<CBaseUISlider *>(element->baseElems[1].get());
                         if(sliderPointer != nullptr) {
                             // allow users to overscale certain values via the console
-                            if(element->allowOverscale && cv->getFloat() > sliderPointer->getMax())
-                                sliderPointer->setBounds(sliderPointer->getMin(), cv->getFloat());
+                            if(element->allowOverscale && element->cvar->getFloat() > sliderPointer->getMax())
+                                sliderPointer->setBounds(sliderPointer->getMin(), element->cvar->getFloat());
 
                             // allow users to underscale certain values via the console
-                            if(element->allowUnderscale && cv->getFloat() < sliderPointer->getMin())
-                                sliderPointer->setBounds(cv->getFloat(), sliderPointer->getMax());
+                            if(element->allowUnderscale && element->cvar->getFloat() < sliderPointer->getMin())
+                                sliderPointer->setBounds(element->cvar->getFloat(), sliderPointer->getMax());
 
-                            sliderPointer->setValue(cv->getFloat(), false);
+                            sliderPointer->setValue(element->cvar->getFloat(), false);
                             sliderPointer->fireChangeCallback();
                         }
                     }
@@ -2350,15 +2347,15 @@ void OptionsOverlayImpl::updateLayout() {
                         auto *textboxPointer = dynamic_cast<CBaseUITextbox *>(element->baseElems[0].get());
                         if(textboxPointer != nullptr) {
                             // HACKHACK: don't override textbox with mp_password (which gets deleted on login)
-                            std::string textToSet{cv->getString()};
-                            if(cv == &cv::mp_password && cv::mp_password.getString().empty()) {
+                            std::string textToSet{element->cvar->getString()};
+                            if(element->cvar == &cv::mp_password && cv::mp_password.getString().empty()) {
                                 textToSet = cv::mp_password_md5.getString();
                             }
                             textboxPointer->setText(std::move(textToSet));
                         }
                     } else if(element->baseElems.size() == 2) {
                         auto *textboxPointer = dynamic_cast<CBaseUITextbox *>(element->baseElems[1].get());
-                        if(textboxPointer != nullptr) textboxPointer->setText(cv->getString());
+                        if(textboxPointer != nullptr) textboxPointer->setText(element->cvar->getString());
                     }
                     break;
                 default:
@@ -2903,32 +2900,11 @@ void OptionsOverlayImpl::onDPIScalingChange(CBaseUICheckbox *checkbox) {
     if(const auto &it = this->uiToOptElemMap.find(checkbox);
        it != this->uiToOptElemMap.end() && (element = it->second)) {
         const float prevUIScale = Osu::getUIScale();
-
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(checkbox); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(checkbox->isChecked());
-        }
+        cv::ui_scale_to_dpi.setValue(checkbox->isChecked());
 
         this->onResetUpdate(element->resetButton.get());
 
         if(Osu::getUIScale() != prevUIScale) this->bDPIScalingScrollToSliderScheduled = true;
-    }
-}
-
-void OptionsOverlayImpl::onRawInputToAbsoluteWindowChange(CBaseUICheckbox *checkbox) {
-    OptionsElement *element = nullptr;
-    if(const auto &it = this->uiToOptElemMap.find(checkbox);
-       it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(checkbox); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(checkbox->isChecked());
-        }
-
-        this->onResetUpdate(element->resetButton.get());
-
-        // special case: this requires a virtual mouse offset update, but since it is an engine convar we can't
-        // use callbacks
-        osu->updateMouseSettings();
     }
 }
 
@@ -3274,9 +3250,8 @@ void OptionsOverlayImpl::onCheckboxChange(CBaseUICheckbox *checkbox) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(checkbox);
        it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(checkbox); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(checkbox->isChecked());
+        if(element->cvar) {
+            element->cvar->setValue(checkbox->isChecked());
         }
 
         this->onResetUpdate(element->resetButton.get());
@@ -3286,14 +3261,10 @@ void OptionsOverlayImpl::onCheckboxChange(CBaseUICheckbox *checkbox) {
 void OptionsOverlayImpl::onSliderChange(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);  // round to 2 decimal places
-
-            if(element->baseElems.size() == 3) {
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                labelPointer->setText(cv->getString());
-            }
+        element->cvar->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);  // round to 2 decimal places
+        if(element->baseElems.size() == 3) {
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            labelPointer->setText(element->cvar->getString());
         }
 
         this->onResetUpdate(element->resetButton.get());
@@ -3304,22 +3275,20 @@ void OptionsOverlayImpl::onSliderChange(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onFPSSliderChange(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            if(slider->getFloat() < 60.f) {
-                cv->setValue(0.f);
-                if(element->baseElems.size() == 3) {
-                    auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                    labelPointer->setText("∞"s);
-                }
-            } else {
-                cv->setValue(std::round(slider->getFloat()));  // round to int
-                if(element->baseElems.size() == 3) {
-                    auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                    labelPointer->setText(cv->getString());
-                }
+        if(slider->getFloat() < 60.f) {
+            element->cvar->setValue(0.f);
+            if(element->baseElems.size() == 3) {
+                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+                labelPointer->setText("∞"s);
+            }
+        } else {
+            element->cvar->setValue(std::round(slider->getFloat()));  // round to int
+            if(element->baseElems.size() == 3) {
+                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+                labelPointer->setText(element->cvar->getString());
             }
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3328,15 +3297,12 @@ void OptionsOverlayImpl::onFPSSliderChange(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onSliderChangeOneDecimalPlace(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat() * 10.0f) / 10.0f);  // round to 1 decimal place
-
-            if(element->baseElems.size() == 3) {
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                labelPointer->setText(cv->getString());
-            }
+        element->cvar->setValue(std::round(slider->getFloat() * 10.0f) / 10.0f);  // round to 1 decimal place
+        if(element->baseElems.size() == 3) {
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            labelPointer->setText(element->cvar->getString());
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3345,15 +3311,12 @@ void OptionsOverlayImpl::onSliderChangeOneDecimalPlace(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onSliderChangeTwoDecimalPlaces(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);  // round to 2 decimal places
-
-            if(element->baseElems.size() == 3) {
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                labelPointer->setText(cv->getString());
-            }
+        element->cvar->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);  // round to 2 decimal places
+        if(element->baseElems.size() == 3) {
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            labelPointer->setText(element->cvar->getString());
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3362,15 +3325,12 @@ void OptionsOverlayImpl::onSliderChangeTwoDecimalPlaces(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat() * 10.0f) / 10.0f);  // round to 1 decimal place
-
-            if(element->baseElems.size() == 3) {
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                labelPointer->setText(fmt::format("{:.1f} m", cv->getFloat()));
-            }
+        element->cvar->setValue(std::round(slider->getFloat() * 10.0f) / 10.0f);  // round to 1 decimal place
+        if(element->baseElems.size() == 3) {
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            labelPointer->setText(fmt::format("{:.1f} m", element->cvar->getFloat()));
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3379,15 +3339,12 @@ void OptionsOverlayImpl::onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slid
 void OptionsOverlayImpl::onSliderChangeInt(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat()));  // round to int
-
-            if(element->baseElems.size() == 3) {
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                labelPointer->setText(cv->getString());
-            }
+        element->cvar->setValue(std::round(slider->getFloat()));  // round to int
+        if(element->baseElems.size() == 3) {
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            labelPointer->setText(element->cvar->getString());
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3396,17 +3353,14 @@ void OptionsOverlayImpl::onSliderChangeInt(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onSliderChangeIntMS(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat()));  // round to int
-
-            if(element->baseElems.size() == 3) {
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                std::string text = cv->getString();
-                text.append(" ms");
-                labelPointer->setText(std::move(text));
-            }
+        element->cvar->setValue(std::round(slider->getFloat()));  // round to int
+        if(element->baseElems.size() == 3) {
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            std::string text = element->cvar->getString();
+            text.append(" ms");
+            labelPointer->setText(std::move(text));
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3415,17 +3369,14 @@ void OptionsOverlayImpl::onSliderChangeIntMS(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onSliderChangeFloatMS(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(slider->getFloat());
-
-            if(element->baseElems.size() == 3) {
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                std::string text = fmt::format("{}", (int)std::round(cv->getFloat() * 1000.0f));
-                text.append(" ms");
-                labelPointer->setText(std::move(text));
-            }
+        element->cvar->setValue(slider->getFloat());
+        if(element->baseElems.size() == 3) {
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            std::string text = fmt::format("{}", (int)std::round(element->cvar->getFloat() * 1000.0f));
+            text.append(" ms");
+            labelPointer->setText(std::move(text));
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3434,17 +3385,14 @@ void OptionsOverlayImpl::onSliderChangeFloatMS(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onSliderChangePercent(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);
+        element->cvar->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);
+        if(element->baseElems.size() == 3) {
+            int percent = std::round(element->cvar->getFloat() * 100.0f);
 
-            if(element->baseElems.size() == 3) {
-                int percent = std::round(cv->getFloat() * 100.0f);
-
-                auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
-                labelPointer->setText(fmt::format("{}%", percent));
-            }
+            auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
+            labelPointer->setText(fmt::format("{}%", percent));
         }
+
         this->onResetUpdate(element->resetButton.get());
         DO_UPDATE_LAYOUT_CHECK(slider);
     }
@@ -3453,19 +3401,16 @@ void OptionsOverlayImpl::onSliderChangePercent(CBaseUISlider *slider) {
 void OptionsOverlayImpl::onKeyBindingButtonPressed(CBaseUIButton *button) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(button); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(button); cvit != element->cvars.end() && (cv = cvit->second)) {
-            this->waitingKey = cv;
+        this->waitingKey = element->cvar;
 
-            std::string notificationText = "Press new key for ";
-            notificationText.append(button->getText());
-            notificationText.append(":");
+        std::string notificationText = "Press new key for ";
+        notificationText.append(button->getText());
+        notificationText.append(":");
 
-            const bool waitForKey = true;
-            ui->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, waitForKey);
-            ui->getNotificationOverlay()->setDisallowWaitForKeyLeftClick(
-                !(dynamic_cast<KeyBindButton *>(button)->isLeftMouseClickBindingAllowed()));
-        }
+        const bool waitForKey = true;
+        ui->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, waitForKey);
+        ui->getNotificationOverlay()->setDisallowWaitForKeyLeftClick(
+            !(dynamic_cast<KeyBindButton *>(button)->isLeftMouseClickBindingAllowed()));
     }
 }
 
@@ -3474,10 +3419,7 @@ void OptionsOverlayImpl::onKeyUnbindButtonPressed(CBaseUIButton *button) {
 
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(button); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(button); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(0.0f);
-        }
+        element->cvar->setValue(0.0f);
     }
 }
 
@@ -3510,11 +3452,7 @@ void OptionsOverlayImpl::onKeyBindingsResetAllPressed(CBaseUIButton * /*button*/
 void OptionsOverlayImpl::onSliderChangeSliderQuality(CBaseUISlider *slider) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(slider); it != this->uiToOptElemMap.end() && (element = it->second)) {
-        ConVar *cv = nullptr;
-        if(const auto &cvit = element->cvars.find(slider); cvit != element->cvars.end() && (cv = cvit->second)) {
-            cv->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);  // round to 2 decimal places
-        }
-
+        element->cvar->setValue(std::round(slider->getFloat() * 100.0f) / 100.0f);  // round to 2 decimal places
         if(element->baseElems.size() == 3) {
             auto *labelPointer = dynamic_cast<CBaseUILabel *>(element->baseElems[2].get());
 
@@ -3715,14 +3653,9 @@ void OptionsOverlayImpl::onHighQualitySlidersConVarChange(float newValue) {
             }
 
             // reset value if disabled
-            if(!enabled) {
-                for(auto &cvm : element->cvars) {
-                    auto *cv = cvm.second;
-                    if(cv != nullptr) {
-                        this->sliderQualitySlider->setValue(static_cast<float>(cv->getDefaultDouble()), false);
-                        cv->setValue(cv->getDefaultDouble());
-                    }
-                }
+            if(!enabled && element->cvar) {
+                this->sliderQualitySlider->setValue(static_cast<float>(element->cvar->getDefaultDouble()), false);
+                element->cvar->setValue(element->cvar->getDefaultDouble());
             }
 
             this->onResetUpdate(element->resetButton.get());
@@ -3745,25 +3678,22 @@ void OptionsOverlayImpl::onResetUpdate(ResetButton *resbtn) {
     if(resbtn == nullptr) return;
 
     OptionsElement *optelem = resbtn->elemContainer;
-    ConVar *cv = nullptr;
-    if(const auto &cvit = optelem->cvars.find(resbtn); cvit != optelem->cvars.end() && (cv = cvit->second)) {
-        switch(optelem->type) {
-            case CBX:
-                resbtn->setEnabled(cv->getBool() != (bool)cv->getDefaultDouble());
-                break;
-            case SLDR:
-                resbtn->setEnabled(cv->getDouble() != cv->getDefaultDouble());
-                break;
-            case BINDBTN: {
-                const auto binds = OsuKeyBinds::getAll();
-                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
-                    resbtn->setEnabled(!(*it)->isDefault());
-                }
-                break;
+    switch(optelem->type) {
+        case CBX:
+            resbtn->setEnabled(optelem->cvar->getBool() != (bool)optelem->cvar->getDefaultDouble());
+            break;
+        case SLDR:
+            resbtn->setEnabled(optelem->cvar->getDouble() != optelem->cvar->getDefaultDouble());
+            break;
+        case BINDBTN: {
+            const auto binds = OsuKeyBinds::getAll();
+            if(const auto &it = std::ranges::find(binds, optelem->cvar, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
+                resbtn->setEnabled(!(*it)->isDefault());
             }
-            default:
-                break;
+            break;
         }
+        default:
+            break;
     }
 }
 
@@ -3771,33 +3701,30 @@ void OptionsOverlayImpl::onResetClicked(ResetButton *resbtn) {
     if(resbtn == nullptr) return;
 
     OptionsElement *optelem = resbtn->elemContainer;
-    ConVar *cv = nullptr;
-    if(const auto &cvit = optelem->cvars.find(resbtn); cvit != optelem->cvars.end() && (cv = cvit->second)) {
-        switch(optelem->type) {
-            case CBX:
-                for(const auto &e : optelem->baseElems) {
-                    auto *checkboxPointer = dynamic_cast<CBaseUICheckbox *>(e.get());
-                    if(checkboxPointer != nullptr) checkboxPointer->setChecked((bool)cv->getDefaultDouble());
+    switch(optelem->type) {
+        case CBX:
+            for(const auto &e : optelem->baseElems) {
+                auto *checkboxPointer = dynamic_cast<CBaseUICheckbox *>(e.get());
+                if(checkboxPointer != nullptr) checkboxPointer->setChecked((bool)optelem->cvar->getDefaultDouble());
+            }
+            break;
+        case SLDR:
+            if(optelem->baseElems.size() == 3) {
+                auto *sliderPointer = dynamic_cast<CBaseUISlider *>(optelem->baseElems[1].get());
+                if(sliderPointer != nullptr) {
+                    sliderPointer->setValue(static_cast<float>(optelem->cvar->getDefaultDouble()), false);
+                    sliderPointer->fireChangeCallback();
                 }
-                break;
-            case SLDR:
-                if(optelem->baseElems.size() == 3) {
-                    auto *sliderPointer = dynamic_cast<CBaseUISlider *>(optelem->baseElems[1].get());
-                    if(sliderPointer != nullptr) {
-                        sliderPointer->setValue(static_cast<float>(cv->getDefaultDouble()), false);
-                        sliderPointer->fireChangeCallback();
-                    }
-                }
-                break;
-            case BINDBTN: {
-                const auto binds = OsuKeyBinds::getAll();
-                if(const auto &it = std::ranges::find(binds, cv, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
-                    (*it)->reset();
-                }
-            } break;
-            default:
-                break;
-        }
+            }
+            break;
+        case BINDBTN: {
+            const auto binds = OsuKeyBinds::getAll();
+            if(const auto &it = std::ranges::find(binds, optelem->cvar, &OsuKeyBinds::Bind::cvar); it != binds.end()) {
+                (*it)->reset();
+            }
+        } break;
+        default:
+            break;
     }
 
     this->onResetUpdate(resbtn);
@@ -4000,9 +3927,7 @@ KeyBindButton *OptionsOverlayImpl::addKeyBindButton(const std::string &text, Osu
     e->baseElems.emplace_back(unbindButton);
     e->baseElems.emplace_back(bindButton);
     e->baseElems.emplace_back(label);
-    e->cvars[e->resetButton.get()] = bind->cvar;
-    e->cvars[unbindButton] = bind->cvar;
-    e->cvars[bindButton] = bind->cvar;
+    e->cvar = bind->cvar;
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[unbindButton] = last.get();
     this->uiToOptElemMap[bindButton] = last.get();
@@ -4017,27 +3942,24 @@ CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(const std::string &text, ConVar
 
 CBaseUICheckbox *OptionsOverlayImpl::addCheckbox(const std::string &text, const std::string &tooltipText,
                                                  ConVar *cvar) {
+    assert(cvar != nullptr);
+
     auto *checkbox = new UICheckbox(0, 0, this->options->getSize().x, 50, text, text);
     checkbox->setDrawFrame(false);
     checkbox->setDrawBackground(false);
 
     if(tooltipText.length() > 0) checkbox->setTooltipText(tooltipText);
 
-    if(cvar != nullptr) {
-        checkbox->setChecked(cvar->getBool());
-        checkbox->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onCheckboxChange>(this));
-    }
+    checkbox->setChecked(cvar->getBool());
+    checkbox->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onCheckboxChange>(this));
 
     this->options->container.addBaseUIElement(checkbox);
 
     auto e = std::make_unique<OptionsElement>(CBX);
-    if(cvar != nullptr) {
-        e->resetButton = std::make_unique<ResetButton>(e.get(), 0.f, 0.f, 35.f, 50.f, "", "");
-        e->resetButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResetClicked>(this));
-    }
+    e->resetButton = std::make_unique<ResetButton>(e.get(), 0.f, 0.f, 35.f, 50.f, "", "");
+    e->resetButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResetClicked>(this));
     e->baseElems.emplace_back(checkbox);
-    e->cvars[e->resetButton.get()] = cvar;
-    e->cvars[checkbox] = cvar;
+    e->cvar = cvar;
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[checkbox] = last.get();
 
@@ -4070,14 +3992,14 @@ OptionsElement *OptionsOverlayImpl::addButtonCheckbox(const std::string &buttont
 
 UISlider *OptionsOverlayImpl::addSlider(const std::string &text, float min, float max, ConVar *cvar, float label1Width,
                                         bool allowOverscale, bool allowUnderscale) {
+    assert(cvar != nullptr);
+
     auto *slider = new UISlider(0, 0, 100, 50, text);
     slider->setAllowMouseWheel(false);
     slider->setBounds(min, max);
     slider->setLiveUpdate(true);
-    if(cvar != nullptr) {
-        slider->setValue(cvar->getFloat(), false);
-        slider->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onSliderChange>(this));
-    }
+    slider->setValue(cvar->getFloat(), false);
+    slider->setChangeCallback(SA::MakeDelegate<&OptionsOverlayImpl::onSliderChange>(this));
     this->options->container.addBaseUIElement(slider);
 
     // UILabel vs CBaseUILabel: UILabel allows tooltips
@@ -4097,15 +4019,12 @@ UISlider *OptionsOverlayImpl::addSlider(const std::string &text, float min, floa
     this->options->container.addBaseUIElement(label2);
 
     auto e = std::make_unique<OptionsElement>(SLDR);
-    if(cvar != nullptr) {
-        e->resetButton = std::make_unique<ResetButton>(e.get(), 0.f, 0.f, 35.f, 50.f, "", "");
-        e->resetButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResetClicked>(this));
-    }
+    e->resetButton = std::make_unique<ResetButton>(e.get(), 0.f, 0.f, 35.f, 50.f, "", "");
+    e->resetButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onResetClicked>(this));
     e->baseElems.emplace_back(label1);
     e->baseElems.emplace_back(slider);
     e->baseElems.emplace_back(label2);
-    e->cvars[e->resetButton.get()] = cvar;
-    e->cvars[slider] = cvar;
+    e->cvar = cvar;
     e->label1Width = label1Width;
     e->relSizeDPI = label1->getFont()->getDPI();
     e->allowOverscale = allowOverscale;
@@ -4119,13 +4038,15 @@ UISlider *OptionsOverlayImpl::addSlider(const std::string &text, float min, floa
 }
 
 CBaseUITextbox *OptionsOverlayImpl::addTextbox(const std::string &text, ConVar *cvar) {
+    assert(cvar != nullptr);
+
     auto *textbox = new CBaseUITextbox(0, 0, this->options->getSize().x, 40, "");
     textbox->setText(text);
     this->options->container.addBaseUIElement(textbox);
 
     auto e = std::make_unique<OptionsElement>(TBX);
     e->baseElems.emplace_back(textbox);
-    e->cvars[textbox] = cvar;
+    e->cvar = cvar;
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[textbox] = last.get();
 
@@ -4133,6 +4054,8 @@ CBaseUITextbox *OptionsOverlayImpl::addTextbox(const std::string &text, ConVar *
 }
 
 CBaseUITextbox *OptionsOverlayImpl::addTextbox(const std::string &text, const std::string &labelText, ConVar *cvar) {
+    assert(cvar != nullptr);
+
     auto *textbox = new CBaseUITextbox(0, 0, this->options->getSize().x, 40, "");
     textbox->setText(text);
     this->options->container.addBaseUIElement(textbox);
@@ -4148,7 +4071,7 @@ CBaseUITextbox *OptionsOverlayImpl::addTextbox(const std::string &text, const st
     auto e = std::make_unique<OptionsElement>(TBX);
     e->baseElems.emplace_back(label);
     e->baseElems.emplace_back(textbox);
-    e->cvars[textbox] = cvar;
+    e->cvar = cvar;
     const auto &last = this->elemContainers.emplace_back(std::move(e));
     this->uiToOptElemMap[label] = last.get();
     this->uiToOptElemMap[textbox] = last.get();
