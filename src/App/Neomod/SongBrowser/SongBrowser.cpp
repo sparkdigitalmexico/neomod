@@ -31,6 +31,7 @@
 
 #include "Skin.h"
 #include "SkinImage.h"
+#include "BeatmapInstaller.h"
 #include "Database.h"
 #include "DatabaseBeatmap.h"
 #include "Downloader.h"
@@ -853,29 +854,6 @@ bool SongBrowser::selectBeatmapset(const BeatmapSet *set) {
     }
 }
 
-bool SongBrowser::selectBeatmapset(i32 set_id) {
-    if(db->isLoading()) {
-        debugLog("Can't select a beatmapset while database is loading!");
-        return false;
-    }
-
-    const auto *beatmapset = db->getBeatmapSet(set_id);
-    if(beatmapset == nullptr) {
-        // Pasted from Downloader::download_beatmap
-        auto mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{:d}/", set_id);
-        beatmapset = db->addBeatmapSet(mapset_path);
-
-        if(beatmapset == nullptr) {
-            debugLog("Could not load beatmapset! (ID {:d})", set_id);
-            return false;
-        } else {
-            debugLog("Finished loading beatmapset (ID {:d})", set_id);
-        }
-    }
-
-    return this->selectBeatmapset(set_id);
-}
-
 void SongBrowser::update(CBaseUIEventCtx &c) {
     // flush diffcalc results to database
     // do this even if not visible, but not during gameplay
@@ -915,50 +893,49 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
         this->lastDiffSortModIndex = StarPrecalc::active_idx;
     }
 
-    // auto-download
+    // auto-download (delegates to BeatmapInstaller; toasts come from there)
     if(this->map_autodl) {
-        auto beatmap = Downloader::download_beatmap(this->map_autodl, this->set_autodl, this->map_dl);
-        if(this->map_dl.failed()) {
-            auto error_str = fmt::format("Failed to download Beatmap #{:d} :(", this->map_autodl);
-            ui->getNotificationOverlay()->addToast(error_str, ERROR_TOAST);
+        const i32 set_id = Downloader::resolve_beatmapset_id_for(this->map_autodl, this->set_autodl);
+        if(set_id < 0) {
+            ui->getNotificationOverlay()->addToast(fmt::format("Failed to find Beatmap #{:d} :(", this->map_autodl),
+                                                   ERROR_TOAST);
             this->map_autodl = 0;
             this->set_autodl = 0;
-            this->map_dl.reset();
-        } else if(beatmap != nullptr) {
-            this->onDifficultySelected(beatmap, false);
-            this->selectSelectedBeatmapSongButton();
-            this->map_autodl = 0;
-            this->set_autodl = 0;
-            this->map_dl.reset();
-        } else {
-            // TODO @kiwec: this notification format is jank & laggy
-            auto text = fmt::format("Downloading... {:.2f}%", this->map_dl.progress() * 100.f);
-            ui->getNotificationOverlay()->addNotification(text);
-        }
-    } else if(this->set_autodl) {
-        if(this->selectBeatmapset(this->set_autodl)) {
-            this->map_autodl = 0;
-            this->set_autodl = 0;
-            this->set_dl.reset();
-        } else {
-            bool ready = Downloader::download_beatmapset(this->set_autodl, this->set_dl);
-            if(ready) {
-                this->selectBeatmapset(this->set_autodl);
-
+        } else if(set_id > 0) {
+            // already in db? select directly.
+            if(auto *diff = db->getBeatmapDifficulty(this->map_autodl)) {
+                this->onDifficultySelected(diff, false);
+                this->selectSelectedBeatmapSongButton();
                 this->map_autodl = 0;
                 this->set_autodl = 0;
-                this->set_dl.reset();
-            } else if(this->set_dl.failed()) {
-                auto error_str = fmt::format("Failed to download Beatmapset #{:d} :(", this->set_autodl);
-                ui->getNotificationOverlay()->addToast(error_str, ERROR_TOAST);
-                this->map_autodl = 0;
-                this->set_autodl = 0;
-                this->set_dl.reset();
             } else {
-                // TODO @kiwec: this notification format is jank & laggy
-                auto text = fmt::format("Downloading... {:.2f}%", this->set_dl.progress() * 100.f);
-                ui->getNotificationOverlay()->addNotification(text);
+                auto *installer = osu->getBeatmapInstaller();
+                using enum MapInstallStage;
+                const auto state = installer->get_state(set_id);
+                if(state.stage == Failed) {
+                    this->map_autodl = 0;
+                    this->set_autodl = 0;
+                } else if(state.stage == None) {
+                    installer->enqueue(set_id, /*auto_select=*/false);
+                }
+                // else (Queued/Downloading/Installing): still in flight, wait
             }
+        }
+        // else: still resolving (set_id == 0)
+    } else if(this->set_autodl) {
+        if(const auto *set = db->getBeatmapSet(this->set_autodl)) {
+            this->selectBeatmapset(set);
+            this->set_autodl = 0;
+        } else {
+            auto *installer = osu->getBeatmapInstaller();
+            using enum MapInstallStage;
+            const auto state = installer->get_state(this->set_autodl);
+            if(state.stage == Failed) {
+                this->set_autodl = 0;
+            } else if(state.stage == None) {
+                installer->enqueue(this->set_autodl, /*auto_select=*/false);
+            }
+            // else (Queued/Downloading/Installing): still in flight, wait
         }
     }
 

@@ -30,7 +30,11 @@ class SpectatorScreen final : public UIScreen {
     UIButton* stop_btn = nullptr;
     CBaseUILabel* spectating = nullptr;
     CBaseUILabel* status = nullptr;
-    Downloader::DownloadHandle map_dl;
+
+    // pending_map_id: spectated user's map_id we're trying to install (0 = nothing pending).
+    // last_failed_map: dedupes the OUTP_CANT_SPECTATE packet to one per failed map.
+    i32 pending_map_id{0};
+    i32 last_failed_map{0};
 };
 
 namespace Spectating {

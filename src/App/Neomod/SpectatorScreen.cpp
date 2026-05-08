@@ -6,7 +6,9 @@
 #include "Bancho.h"
 #include "BanchoNetworking.h"
 #include "BanchoUsers.h"
+#include "BeatmapInstaller.h"
 #include "BeatmapInterface.h"
+#include "Database.h"
 #include "CBaseUILabel.h"
 #include "Changelog.h"
 #include "OsuConVars.h"
@@ -163,13 +165,28 @@ void SpectatorScreen::update(CBaseUIEventCtx &c) {
             osu->getMapInterface()->stop(true);
         }
     } else if(user_info->mode == GameMode::STANDARD && user_info->map_id != current_map_id) {
-        auto beatmap = Downloader::download_beatmap(user_info->map_id, user_info->map_md5, this->map_dl);
-        if(beatmap != nullptr) {
+        // already on disk? short-circuit straight to spectate.
+        if(auto *diff = db->getBeatmapDifficulty(user_info->map_md5)) {
             current_map_id = user_info->map_id;
-            this->map_dl.reset();
+            this->pending_map_id = 0;
             ui->setScreen(ui->getSpectatorScreen());
-            ui->getSongBrowser()->onDifficultySelected(beatmap, false);
+            ui->getSongBrowser()->onDifficultySelected(diff, false);
             osu->getMapInterface()->spectate();
+        } else {
+            // retarget the install pipeline if the spectated user changed maps under us
+            if(this->pending_map_id != user_info->map_id) {
+                this->pending_map_id = user_info->map_id;
+            }
+            const i32 set_id = Downloader::resolve_beatmapset_id_for(user_info->map_id);
+            if(set_id > 0) {
+                auto *installer = osu->getBeatmapInstaller();
+                using enum MapInstallStage;
+                if(const auto state = installer->get_state(set_id); state.stage == None) {
+                    installer->enqueue(set_id, /*auto_select=*/false);
+                }
+            }
+            // resolution failed (set_id < 0) is handled by the status text below;
+            // we don't clear pending_map_id here since the spectated user may pick a different map next.
         }
     }
 
@@ -197,21 +214,27 @@ void SpectatorScreen::update(CBaseUIEventCtx &c) {
         this->status->setText(fmt::format("{:s} is playing minigames", user_info->name));
     } else if(user_info->map_id != -1 && user_info->map_id != 0) {
         if(user_info->map_id != current_map_id) {
-            if(this->map_dl.failed()) {
-                auto error_str = fmt::format("Failed to download Beatmap #{:d} :(", user_info->map_id);
-                this->status->setText(error_str);
-
-                static i32 last_failed_map = 0;
-                if(user_info->map_id != last_failed_map) {
+            f32 progress = 0.f;
+            bool failed = false;
+            if(this->pending_map_id != 0) {
+                if(const i32 set_id = Downloader::resolve_beatmapset_id_for(this->pending_map_id); set_id > 0) {
+                    const auto state = osu->getBeatmapInstaller()->get_state(set_id);
+                    progress = state.progress;
+                    failed = (state.stage == MapInstallStage::Failed);
+                } else if(set_id < 0) {
+                    failed = true;
+                }
+            }
+            if(failed) {
+                this->status->setText(fmt::format("Failed to download Beatmap #{:d} :(", user_info->map_id));
+                if(user_info->map_id != this->last_failed_map) {
                     Packet packet;
                     packet.id = OUTP_CANT_SPECTATE;
                     BANCHO::Net::send_packet(packet);
-
-                    last_failed_map = user_info->map_id;
+                    this->last_failed_map = user_info->map_id;
                 }
             } else {
-                auto text = fmt::format("Downloading map... {:.2f}%", this->map_dl.progress() * 100.f);
-                this->status->setText(text);
+                this->status->setText(fmt::format("Downloading map... {:.2f}%", progress * 100.f));
             }
         }
     }

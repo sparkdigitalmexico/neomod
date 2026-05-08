@@ -126,5 +126,9 @@ class RoomScreen final : public UIScreen {
     McFont* lfont{nullptr};
 
     time_t last_packet_tms = {0};
-    Downloader::DownloadHandle map_dl;
+
+    // tracks the last map_id we successfully downloaded + applied via on_map_change.
+    // pending_map_id is the in-flight target we're trying to install (0 == nothing pending).
+    i32 current_map_id{-1};
+    i32 pending_map_id{0};
 };

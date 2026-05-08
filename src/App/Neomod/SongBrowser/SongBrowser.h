@@ -138,8 +138,6 @@ class SongBrowser final : public ScreenBackable {
     CBaseUIContainer *setVisible(bool visible) override;
 
     bool selectBeatmapset(const BeatmapSet *set);
-    // NOTE: this also tries to find+add the beatmapset from NEOSU_MAPS_PATH to the database!!
-    bool selectBeatmapset(i32 set_id);
     void selectSelectedBeatmapSongButton();
     void onPlayEnd(bool quit = true);  // called when a beatmap is finished playing (or the player quit)
 
@@ -377,12 +375,10 @@ class SongBrowser final : public ScreenBackable {
     float fBackgroundFadeInTime;
     std::vector<const DatabaseBeatmap *> previousRandomBeatmaps;
 
-    // map auto-download
+    // map auto-download (driven through BeatmapInstaller; these flags just record the intent)
    public:
     i32 map_autodl = 0;
     i32 set_autodl = 0;
-    Downloader::DownloadHandle map_dl;
-    Downloader::DownloadHandle set_dl;
 
    private:
     // search

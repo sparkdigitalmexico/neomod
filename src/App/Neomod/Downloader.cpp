@@ -234,8 +234,11 @@ class DownloadManager {
     }
 };
 
-// helper
+// beatmap_id -> beatmapset_id cache. populated synchronously from set_id hints, or asynchronously
+// from the osu-search-set.php API. value == 0 means "we asked and the lookup failed permanently".
 std::unordered_map<i32, i32> beatmap_to_beatmapset;
+// dedupe in-flight resolution queries: at most one outstanding request at a time.
+i32 queried_map_id = 0;
 
 i32 get_beatmapset_id_from_osu_file(const u8* osu_data, size_t s_osu_data) {
     i32 set_id = -1;
@@ -399,156 +402,43 @@ bool download_beatmapset(u32 set_id, DownloadHandle& handle) {
     return true;
 }
 
-// TODO: deduplicate
-DatabaseBeatmap* download_beatmap(i32 beatmap_id, MD5Hash beatmap_md5, DownloadHandle& handle) {
-    static i32 queried_map_id = 0;
+i32 resolve_beatmapset_id_for(i32 beatmap_id, i32 set_id_hint) {
+    if(beatmap_id <= 0) return -1;
 
-    auto beatmap = db->getBeatmapDifficulty(beatmap_md5);
-    if(beatmap != nullptr) return beatmap;
-
-    // XXX: Currently, we do not try to find the difficulty from unloaded database, or from neomod downloaded maps
-    auto it = beatmap_to_beatmapset.find(beatmap_id);
-    if(it == beatmap_to_beatmapset.end()) {
-        if(queried_map_id == beatmap_id) {
-            // We already queried for the beatmapset ID, and are waiting for the response
-            return nullptr;
-        }
-
-        std::string url = "osu." + BanchoState::endpoint;
-        url.append(fmt::format("/web/osu-search-set.php?b={}", beatmap_id));
-        BANCHO::Api::append_auth_params(url);
-
-        Mc::Net::RequestOptions options{
-            .user_agent = "osu!",
-            .timeout = 5,
-            .connect_timeout = 5,
-        };
-        networkHandler->httpRequestAsync(url, std::move(options), [beatmap_id](const Mc::Net::Response& response) {
-            if(response.success) {
-                auto metadata = parse_beatmapset_metadata(response.body);
-                beatmap_to_beatmapset[beatmap_id] = metadata.set_id;
-            } else {
-                beatmap_to_beatmapset[beatmap_id] = 0;
-            }
-        });
-
-        queried_map_id = beatmap_id;
-        return nullptr;
+    if(auto it = beatmap_to_beatmapset.find(beatmap_id); it != beatmap_to_beatmapset.end()) {
+        return it->second == 0 ? -1 : it->second;
     }
 
-    i32 set_id = it->second;
-    if(set_id == 0) {
-        // Already failed to load the beatmap, make a dummy completed handle
-        if(!handle) {
-            handle = std::make_shared<Request>();
-            handle->completed.store(true, std::memory_order_release);
-        }
-        handle->progress.store(-1.f, std::memory_order_release);
-        return nullptr;
+    if(set_id_hint > 0) {
+        beatmap_to_beatmapset[beatmap_id] = set_id_hint;
+        return set_id_hint;
     }
 
-    if(!download_beatmapset(set_id, handle)) {
-        if(handle.failed()) {
-            // Download failed, don't retry
+    if(queried_map_id == beatmap_id) {
+        // a query is already in flight for this id; wait for the response.
+        return 0;
+    }
+
+    std::string url = "osu." + BanchoState::endpoint;
+    url.append(fmt::format("/web/osu-search-set.php?b={}", beatmap_id));
+    BANCHO::Api::append_auth_params(url);
+
+    Mc::Net::RequestOptions options{
+        .user_agent = "osu!",
+        .timeout = 5,
+        .connect_timeout = 5,
+    };
+    networkHandler->httpRequestAsync(url, std::move(options), [beatmap_id](const Mc::Net::Response& response) {
+        if(response.success) {
+            auto metadata = parse_beatmapset_metadata(response.body);
+            beatmap_to_beatmapset[beatmap_id] = metadata.set_id;
+        } else {
             beatmap_to_beatmapset[beatmap_id] = 0;
         }
-        return nullptr;
-    }
+    });
 
-    std::string mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
-    db->addBeatmapSet(mapset_path, set_id);
-    debugLog("Finished loading beatmapset {:d}.", set_id);
-
-    beatmap = db->getBeatmapDifficulty(beatmap_md5);
-    if(beatmap == nullptr) {
-        beatmap_to_beatmapset[beatmap_id] = 0;
-        // handle is valid here (download_beatmapset succeeded)
-        handle->progress.store(-1.f, std::memory_order_release);
-        return nullptr;
-    }
-
-    // Some beatmaps don't provide beatmap/beatmapset IDs in the .osu files
-    // While we're clueless on the beatmap IDs of the other maps in the set,
-    // we can still make sure at least the one we wanted is correct.
-    beatmap->iID = beatmap_id;
-
-    return beatmap;
-}
-
-DatabaseBeatmap* download_beatmap(i32 beatmap_id, i32 beatmapset_id, DownloadHandle& handle) {
-    static i32 queried_map_id = 0;
-
-    auto beatmap = db->getBeatmapDifficulty(beatmap_id);
-    if(beatmap != nullptr) return beatmap;
-
-    // XXX: Currently, we do not try to find the difficulty from unloaded database, or from neomod downloaded maps
-    auto it = beatmap_to_beatmapset.find(beatmap_id);
-    if(it == beatmap_to_beatmapset.end()) {
-        if(queried_map_id == beatmap_id) {
-            // We already queried for the beatmapset ID, and are waiting for the response
-            return nullptr;
-        }
-
-        // We already have the set ID, skip the API request
-        if(beatmapset_id != 0) {
-            beatmap_to_beatmapset[beatmap_id] = beatmapset_id;
-            return nullptr;
-        }
-
-        std::string url = "osu." + BanchoState::endpoint;
-        url.append(fmt::format("/web/osu-search-set.php?b={}", beatmap_id));
-        BANCHO::Api::append_auth_params(url);
-
-        Mc::Net::RequestOptions options{
-            .user_agent = "osu!",
-            .timeout = 5,
-            .connect_timeout = 5,
-        };
-        networkHandler->httpRequestAsync(url, std::move(options), [beatmap_id](const Mc::Net::Response& response) {
-            if(response.success) {
-                auto metadata = parse_beatmapset_metadata(response.body);
-                beatmap_to_beatmapset[beatmap_id] = metadata.set_id;
-            } else {
-                beatmap_to_beatmapset[beatmap_id] = 0;
-            }
-        });
-
-        queried_map_id = beatmap_id;
-        return nullptr;
-    }
-
-    i32 set_id = it->second;
-    if(set_id == 0) {
-        // Already failed to load the beatmap, make a dummy completed handle
-        if(!handle) {
-            handle = std::make_shared<Request>();
-            handle->completed.store(true, std::memory_order_release);
-        }
-        handle->progress.store(-1.f, std::memory_order_release);
-        return nullptr;
-    }
-
-    if(!download_beatmapset(set_id, handle)) {
-        if(handle.failed()) {
-            // Download failed, don't retry
-            beatmap_to_beatmapset[beatmap_id] = 0;
-        }
-        return nullptr;
-    }
-
-    std::string mapset_path = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
-    db->addBeatmapSet(mapset_path);
-    debugLog("Finished loading beatmapset {:d}.", set_id);
-
-    beatmap = db->getBeatmapDifficulty(beatmap_id);
-    if(beatmap == nullptr) {
-        beatmap_to_beatmapset[beatmap_id] = 0;
-        // handle is valid here (download_beatmapset succeeded)
-        handle->progress.store(-1.f, std::memory_order_release);
-        return nullptr;
-    }
-
-    return beatmap;
+    queried_map_id = beatmap_id;
+    return 0;
 }
 
 BeatmapSetMetadata parse_beatmapset_metadata(std::string_view server_response) {

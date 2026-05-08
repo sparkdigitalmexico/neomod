@@ -52,11 +52,12 @@ DownloadHandle download(std::string_view url);
 // Returns true when files are on disk. Check handle.failed() on failure.
 bool download_beatmapset(u32 set_id, DownloadHandle &handle);
 
-// Downloads given beatmap (unless it already exists).
-// Returns the beatmap when ready, nullptr while in-progress or on failure.
-// Check handle.failed() to distinguish.
-DatabaseBeatmap *download_beatmap(i32 beatmap_id, MD5Hash beatmap_md5, DownloadHandle &handle);
-DatabaseBeatmap *download_beatmap(i32 beatmap_id, i32 beatmapset_id, DownloadHandle &handle);
+// Resolves a beatmap_id to its containing beatmapset_id.
+// - set_id_hint > 0: cache and return immediately, skipping the network lookup.
+// - returns: positive set_id (resolved), 0 (still resolving / in flight), -1 (resolution failed).
+// Main-thread only.
+i32 resolve_beatmapset_id_for(i32 beatmap_id, i32 set_id_hint = 0);
+
 void process_beatmapset_info_response(const Packet &packet);
 
 i32 extract_beatmapset_id(const u8 *data, size_t data_s);

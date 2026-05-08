@@ -16,6 +16,7 @@
 #include "Bancho.h"
 #include "BanchoNetworking.h"
 #include "BanchoUsers.h"
+#include "BeatmapInstaller.h"
 #include "BeatmapInterface.h"
 #include "CBaseUIContainer.h"
 #include "CBaseUILabel.h"
@@ -251,30 +252,32 @@ RoomScreen::~RoomScreen() {
 void RoomScreen::draw() {
     if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
 
-    // TODO: don't download things in draw(), or do any heavy state changing logic like on_map_change
-
-    static i32 current_map_id = -1;
+    // visual state only - the install pipeline is driven from update()
     if(BanchoState::room.map_id == -1 || BanchoState::room.map_id == 0) {
         this->map_title->setText("Host is selecting a map...");
         this->map_title->setSizeToContent(0, 0);
         this->ready_btn->is_loading = true;
-    } else if(BanchoState::room.map_id != current_map_id) {
-        auto beatmap = Downloader::download_beatmap(BanchoState::room.map_id, BanchoState::room.map_md5, this->map_dl);
-        if(this->map_dl.failed()) {
-            std::string error_str = fmt::format("Failed to download Beatmap #{:d} :(", BanchoState::room.map_id);
-            this->map_title->setText(error_str);
-            this->map_title->setSizeToContent(0, 0);
-            this->ready_btn->is_loading = true;
-        } else if(beatmap != nullptr) {
-            current_map_id = BanchoState::room.map_id;
-            this->map_dl.reset();
-            this->on_map_change();
-        } else {
-            std::string text = fmt::format("Downloading... {:.2f}%", this->map_dl.progress() * 100.f);
-            this->map_title->setText(text);
-            this->map_title->setSizeToContent(0, 0);
-            this->ready_btn->is_loading = true;
+    } else if(BanchoState::room.map_id != this->current_map_id) {
+        // install in flight (or about to be enqueued by update())
+        auto *installer = osu->getBeatmapInstaller();
+        f32 progress = 0.f;
+        bool failed = false;
+        if(this->pending_map_id != 0) {
+            if(const i32 set_id = Downloader::resolve_beatmapset_id_for(this->pending_map_id); set_id > 0) {
+                const auto state = installer->get_state(set_id);
+                progress = state.progress;
+                failed = (state.stage == MapInstallStage::Failed);
+            } else if(set_id < 0) {
+                failed = true;
+            }
         }
+        if(failed) {
+            this->map_title->setText(fmt::format("Failed to download Beatmap #{:d} :(", BanchoState::room.map_id));
+        } else {
+            this->map_title->setText(fmt::format("Downloading... {:.2f}%", progress * 100.f));
+        }
+        this->map_title->setSizeToContent(0, 0);
+        this->ready_btn->is_loading = true;
     }
 
     // XXX: Add convar for toggling room backgrounds
@@ -284,6 +287,39 @@ void RoomScreen::draw() {
 
 void RoomScreen::update(CBaseUIEventCtx &c) {
     if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
+
+    // drive the room map install: enqueue once, poll for completion, fire on_map_change exactly once.
+    if(BanchoState::room.map_id > 0 && BanchoState::room.map_id != this->current_map_id) {
+        // host changed the map under us - retarget the pipeline
+        if(this->pending_map_id != BanchoState::room.map_id) {
+            this->pending_map_id = BanchoState::room.map_id;
+        }
+
+        // already on disk? short-circuit.
+        if(db->getBeatmapDifficulty(BanchoState::room.map_md5) != nullptr) {
+            this->current_map_id = BanchoState::room.map_id;
+            this->pending_map_id = 0;
+            this->on_map_change();
+        } else {
+            const i32 set_id = Downloader::resolve_beatmapset_id_for(BanchoState::room.map_id);
+            if(set_id > 0) {
+                auto *installer = osu->getBeatmapInstaller();
+                const auto state = installer->get_state(set_id);
+                using enum MapInstallStage;
+                if(state.stage == None) {
+                    installer->enqueue(set_id, /*auto_select=*/false);
+                } else if(state.stage == Failed) {
+                    // installer already toasted; clear pending so we don't re-enqueue
+                    this->pending_map_id = 0;
+                }
+                // else: still in flight; wait
+            } else if(set_id < 0) {
+                // resolution failed permanently
+                this->pending_map_id = 0;
+            }
+            // else: still resolving (set_id == 0)
+        }
+    }
 
     const bool room_name_changed = this->room_name_ipt->getText() != BanchoState::room.name;
     if(BanchoState::room.is_host() && room_name_changed) {
@@ -596,8 +632,9 @@ void RoomScreen::on_map_change() {
                                           beatmap->getCS(), beatmap->getHP(), beatmap->getOD());
             this->map_attributes->setText(attributes);
             this->map_attributes->setSizeToContent(0, 0);
-            auto attributes2 = fmt::format("Length: {:d} seconds, BPM: {:d} ({:d} - {:d})", beatmap->getLengthMS() / 1000,
-                                           beatmap->getMostCommonBPM(), beatmap->getMinBPM(), beatmap->getMaxBPM());
+            auto attributes2 =
+                fmt::format("Length: {:d} seconds, BPM: {:d} ({:d} - {:d})", beatmap->getLengthMS() / 1000,
+                            beatmap->getMostCommonBPM(), beatmap->getMinBPM(), beatmap->getMaxBPM());
             this->map_attributes2->setText(attributes2);
             this->map_attributes2->setSizeToContent(0, 0);
 
@@ -930,7 +967,7 @@ void RoomScreen::onChangeWinConditionClicked() {
     this->contextMenu->setVisible(true);
 }
 
-void RoomScreen::onWinConditionSelected(std::string_view  /*win_condition_str*/, int win_condition) {
+void RoomScreen::onWinConditionSelected(std::string_view /*win_condition_str*/, int win_condition) {
     assert(win_condition >= 0 && win_condition <= 255);
 
     BanchoState::room.win_condition = (WinCondition)win_condition;

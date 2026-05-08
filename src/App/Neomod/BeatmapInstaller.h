@@ -55,7 +55,7 @@ class BeatmapInstaller final {
         f64 finished_time{0.0};
     };
 
-    void on_done(i32 set_id, const Entry& e, const DatabaseBeatmap* set);
+    void on_done(i32 set_id, const Entry& e, const BeatmapSet* set);
     void on_failed(i32 set_id);
 
     Hash::flat::map<i32, Entry> entries;
