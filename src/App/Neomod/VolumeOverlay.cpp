@@ -284,7 +284,7 @@ bool VolumeOverlay::canChangeVolume() {
             !(ui->getOsuDirectScreenBase()->isVisible()) &&                                                 //
             !(ui->getOptionsOverlayBase()->isVisible() && ui->getOptionsOverlayBase()->isMouseInside()) &&  //
             !(ui->getOptionsOverlay()->getContextMenu()->isVisible()) &&                                    //
-            !(ui->getChangelogBase()->isVisible()) &&                                                       //
+            !(ui->getAboutScreenBase()->isVisible()) &&                                                     //
             !(ui->getRankingScreenBase()->isVisible()) &&                                                   //
             !(ui->getModSelector()->isMouseInScrollView()) &&                                               //
             !(ui->getChatBase()->isMouseInside()) &&                                                        //

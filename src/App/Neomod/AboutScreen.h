@@ -8,11 +8,11 @@ class CBaseUIImage;
 class CBaseUILabel;
 class CBaseUIButton;
 
-class Changelog final : public ScreenBackable {
-    NOCOPY_NOMOVE(Changelog)
+class AboutScreen final : public ScreenBackable {
+    NOCOPY_NOMOVE(AboutScreen)
    public:
-    Changelog();
-    ~Changelog() override;
+    AboutScreen();
+    ~AboutScreen() override;
 
     CBaseUIContainer *setVisible(bool visible) override;
 
@@ -36,5 +36,15 @@ class Changelog final : public ScreenBackable {
 
     CBaseUIScrollView *scrollView;
 
+    // We store headers to be able to jump directly to them with scrollToElement
+    // (unused atm, too lazy to remake the OptionsOverlay sidebar thing)
+
+    CBaseUILabel *changelogHeader;
     std::vector<CHANGELOG_UI> changelogs;
+
+    CBaseUILabel *creditsHeader;
+    std::vector<CBaseUIButton *> creditsLines;
+
+    CBaseUILabel *licensesHeader;
+    std::vector<CBaseUIButton *> licensesLines;
 };

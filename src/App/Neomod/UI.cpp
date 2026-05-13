@@ -16,7 +16,7 @@
 #include "Logging.h"
 #include "SString.h"
 
-#include "Changelog.h"
+#include "AboutScreen.h"
 #include "Chat.h"
 #include "HUD.h"
 #include "Lobby.h"
@@ -97,7 +97,7 @@ void UI::setScreenByName(std::string_view screenGetterNameWithoutGet) {
     } else if(lowerName == "lobby"sv) {
         toSet = this->lobby;
     } else if(lowerName == "changelog"sv) {
-        toSet = this->changelog;
+        toSet = this->aboutScreen;
     } else if(lowerName == "mainmenu"sv) {
         toSet = this->mainMenu;
     } else if(lowerName == "tooltipoverlay"sv) {
@@ -127,7 +127,7 @@ UIScreen *UI::getHUDBase() const { return this->hud; }
 UIScreen *UI::getSongBrowserBase() const { return this->songBrowser; }
 UIScreen *UI::getOsuDirectScreenBase() const { return this->osuDirectScreen; }
 UIScreen *UI::getLobbyBase() const { return this->lobby; }
-UIScreen *UI::getChangelogBase() const { return this->changelog; }
+UIScreen *UI::getAboutScreenBase() const { return this->aboutScreen; }
 UIScreen *UI::getMainMenuBase() const { return this->mainMenu; }
 UIScreen *UI::getTooltipOverlayBase() const { return this->tooltipOverlay; }
 
@@ -172,7 +172,7 @@ bool UI::init() {
     this->screens[screenit++] = this->songBrowser = new SongBrowser();
     this->screens[screenit++] = this->osuDirectScreen = new OsuDirectScreen();
     this->screens[screenit++] = this->lobby = new Lobby();
-    this->screens[screenit++] = this->changelog = new Changelog();
+    this->screens[screenit++] = this->aboutScreen = new AboutScreen();
     this->screens[screenit++] = this->mainMenu = new MainMenu();
     this->screens[screenit++] = this->tooltipOverlay = new TooltipOverlay();
     assert(screenit == NUM_SCREENS);

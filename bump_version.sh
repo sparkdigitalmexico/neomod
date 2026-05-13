@@ -29,7 +29,7 @@ fi
 autoconf
 
 # update previous version
-"${SEDCMD[@]}" "s|(.*\.title = .*)(\" CHANGELOG_TIMESTAMP \")(.*)|\1$LASTDATE\3|" src/App/Neomod/Changelog.cpp
+"${SEDCMD[@]}" "s|(.*\.title = .*)(\" CHANGELOG_TIMESTAMP \")(.*)|\1$LASTDATE\3|" src/App/Neomod/AboutScreen.cpp
 
 "${SEDCMD[@]}" "/std::vector<CHANGELOG> changelogs;/a\\
 \\
@@ -38,4 +38,4 @@ autoconf
     v$VERSION_CL.changes = {\\
         R\"()\",\\
     };\\
-    changelogs.push_back(v$VERSION_CL);" src/App/Neomod/Changelog.cpp
+    changelogs.push_back(v$VERSION_CL);" src/App/Neomod/AboutScreen.cpp

@@ -108,6 +108,7 @@ neomod_SOURCES = \
 	libraries/sha256.cpp \
 	src/App/AppRegistry.cpp \
 	src/App/AppRunner.cpp \
+	src/App/Neomod/AboutScreen.cpp \
 	src/App/Neomod/AbstractBeatmapInterface.cpp \
 	src/App/Neomod/BackgroundImageHandler.cpp \
 	src/App/Neomod/Bancho.cpp \
@@ -121,7 +122,6 @@ neomod_SOURCES = \
 	src/App/Neomod/BanchoUsers.cpp \
 	src/App/Neomod/BeatmapInstaller.cpp \
 	src/App/Neomod/BeatmapInterface.cpp \
-	src/App/Neomod/Changelog.cpp \
 	src/App/Neomod/Chat.cpp \
 	src/App/Neomod/ChatLink.cpp \
 	src/App/Neomod/Collections.cpp \

@@ -18,7 +18,7 @@ class RenderTarget;
 class UIScreen;
 class UIOverlay;
 
-class Changelog;
+class AboutScreen;
 class Chat;
 class HUD;
 class Lobby;
@@ -112,8 +112,8 @@ struct UI final {
     [[nodiscard]] UIScreen* getOsuDirectScreenBase() const;
     [[nodiscard]] inline Lobby* getLobby() const { return this->lobby; }
     [[nodiscard]] UIScreen* getLobbyBase() const;
-    [[nodiscard]] inline Changelog* getChangelog() const { return this->changelog; }
-    [[nodiscard]] UIScreen* getChangelogBase() const;
+    [[nodiscard]] inline AboutScreen* getAboutScreen() const { return this->aboutScreen; }
+    [[nodiscard]] UIScreen* getAboutScreenBase() const;
     [[nodiscard]] inline MainMenu* getMainMenu() const { return this->mainMenu; }
     [[nodiscard]] UIScreen* getMainMenuBase() const;
     [[nodiscard]] inline TooltipOverlay* getTooltipOverlay() const { return this->tooltipOverlay; }
@@ -143,7 +143,7 @@ struct UI final {
     SongBrowser* songBrowser{nullptr};
     OsuDirectScreen* osuDirectScreen{nullptr};
     Lobby* lobby{nullptr};
-    Changelog* changelog{nullptr};
+    AboutScreen* aboutScreen{nullptr};
     MainMenu* mainMenu{nullptr};
     TooltipOverlay* tooltipOverlay{nullptr};
 

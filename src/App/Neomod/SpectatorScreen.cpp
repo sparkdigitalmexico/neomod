@@ -10,7 +10,6 @@
 #include "BeatmapInterface.h"
 #include "Database.h"
 #include "CBaseUILabel.h"
-#include "Changelog.h"
 #include "OsuConVars.h"
 #include "Downloader.h"
 #include "ModSelector.h"

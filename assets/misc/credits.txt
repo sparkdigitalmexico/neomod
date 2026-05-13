@@ -1,0 +1,64 @@
+neomod is an open source game maintained by kiwec & spectator.
+
+It is licensed under GNU GPLv3, license text is included below.
+Full source code is available at https://github.com/neomodnet/neomod
+
+neomod was originally a fork of McEngine+McOsu by McKay:
+- https://github.com/mckay42/mcengine
+- https://github.com/McKay42/McOsu
+
+The default skin is made by:
+- ffffffffffffffffff - "- Jaret - Mish Mosh"
+- irrlux - "Talrava XIV"
+- HazrdMC - "Phaze"
+- Redon - "Aesthetic 1.3"
+- DarkSlayer000 - "xXx_SampleSkin_xXx v1.3"
+- Inori - "Stepmania"
+- taikuta - "Murakumo"
+- Easy - "Burning_Crow V2"
+- Icomoon
+- Freepik
+
+We make use of a lot of open source dependencies:
+
+External libraries (downloaded/built from source):
+- SDL3 (https://github.com/libsdl-org/SDL) - zlib license
+- libjpeg-turbo (https://github.com/libjpeg-turbo/libjpeg-turbo) - IJG & BSD-3-Clause
+- GLM (https://github.com/g-truc/glm) - MIT
+- libpng (https://github.com/pnggroup/libpng) - libpng-2.0 license
+- bzip2 (https://github.com/libarchive/bzip2) - BSD-2-Clause
+- zlib-ng (https://github.com/zlib-ng/zlib-ng) - zlib license
+- fmt (https://github.com/fmtlib/fmt) - MIT
+- spdlog (https://github.com/gabime/spdlog) - MIT
+- freetype (https://github.com/freetype/freetype) - FTL (FreeType License)
+- brotli (https://github.com/google/brotli) - MIT
+- liblzma/xz (https://github.com/tukaani-project/xz) - Public Domain
+- simdutf (https://github.com/simdutf/simdutf) - Apache 2.0 / MIT
+- ctre (https://github.com/hanickadot/compile-time-regular-expressions) - Apache 2.0 / BSL-1.0
+- libarchive (https://github.com/libarchive/libarchive) - BSD-2-Clause
+- nsync (https://github.com/google/nsync) - Apache 2.0
+- mimalloc (https://github.com/microsoft/mimalloc) - MIT
+- SoLoud (neoloud fork) (https://github.com/neomodnet/neoloud) - zlib license
+- mpg123 (https://github.com/madebr/mpg123) - LGPLv2.1+
+- SoundTouch (https://codeberg.org/soundtouch/soundtouch) - LGPLv2.1+
+- FFmpeg (https://ffmpeg.org) - LGPLv2.1+ / GPLv2+
+- discord-rpc (https://github.com/harmonytf/discord-rpc) - MIT
+- rapidjson (https://github.com/Tencent/rapidjson) - MIT
+- curl (https://github.com/curl/curl) - curl license (MIT-like)
+- DirectXShaderCompiler (https://github.com/microsoft/DirectXShaderCompiler) - LLVM Release License & Apache 2.0 with LLVM exceptions
+
+BASS audio library suite (https://www.un4seen.com/) - proprietary (free for non-commercial use):
+- BASS, BASS_FX, BASSFLAC, BASSMIX, BASSLOUD, BASSWASAPI, BASSASIO
+
+Bundled in-tree libraries:
+- stb_image.h (https://github.com/nothings/stb) - Public Domain / MIT
+- glad (https://glad.dav1d.de/) - WTFPL / CC0-1.0 & Apache-2.0
+- boost/sort (https://www.boost.org/) - Boost Software License 1.0
+- unordered_dense (ankerl) (https://github.com/ankerl/unordered_dense) - MIT
+- delegatesv2 (https://github.com/tshware/delegatesv2) - MIT
+- base64 (https://w1.fi/) - BSD license
+- demoji (William Horvath) - MIT
+- MD5.c (RSA Data Security, Inc.) - RSA MD5 license
+- sha256 (https://github.com/LekKit/sha256) - MIT
+
+If you haven't been credited, please contact us!

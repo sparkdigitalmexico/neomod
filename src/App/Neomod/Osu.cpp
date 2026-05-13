@@ -10,7 +10,6 @@
 #include "CBaseUIScrollView.h"
 #include "CBaseUISlider.h"
 #include "CBaseUITextbox.h"
-#include "Changelog.h"
 #include "Chat.h"
 #include "OsuConVars.h"
 #include "ConVarHandler.h"

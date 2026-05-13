@@ -1,6 +1,7 @@
 // Copyright (c) 2015, PG, All rights reserved.
 #include "MainMenu.h"
 
+#include "AboutScreen.h"
 #include "AsyncPool.h"
 #include "AnimationHandler.h"
 #include "AsyncIOHandler.h"
@@ -8,7 +9,6 @@
 #include "Bancho.h"
 #include "BanchoNetworking.h"
 #include "BeatmapInterface.h"
-#include "Changelog.h"
 #include "UIButtonRounded.h"
 #include "CBaseUIContainer.h"
 #include "CBaseUILabel.h"
@@ -88,7 +88,7 @@ class MainMenu::CubeButton final : public CBaseUIButton {
         // more terrible workarounds for lack of Z-ordering
         return CBaseUIButton::isMouseInside() &&
                !(ui->getOptionsOverlay()->isMouseInside() || ui->getChat()->isMouseInside() ||
-                 ui->getChangelog()->isMouseInside());
+                 ui->getAboutScreen()->isMouseInside());
     }
 
    private:
@@ -1669,7 +1669,7 @@ void MainMenu::onUpdatePressed() {
 void MainMenu::onVersionPressed() {
     this->drawVersionNotificationArrow = false;
     this->writeVersionFile();
-    ui->setScreen(ui->getChangelog());
+    ui->setScreen(ui->getAboutScreen());
 }
 
 void MainMenu::onAdblockChangeCallback(float value) {

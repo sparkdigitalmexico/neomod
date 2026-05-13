@@ -1,5 +1,5 @@
 // Copyright (c) 2017, PG & 2023-2025, kiwec, All rights reserved.
-#include "Changelog.h"
+#include "AboutScreen.h"
 
 #include "CBaseUIButton.h"
 #include "CBaseUIContainer.h"
@@ -20,10 +20,12 @@
 #include "UI.h"
 #include "ConVar.h"
 
+#include "binary_embed.h"
 #include "build_timestamp.h"
 
-Changelog::Changelog() : ScreenBackable() {
+AboutScreen::AboutScreen() : ScreenBackable() {
     this->setPos(-1, -1);
+
     this->scrollView = new CBaseUIScrollView(-1, -1, 0, 0, "");
     this->scrollView->setVerticalScrolling(true);
     this->scrollView->setHorizontalScrolling(true);
@@ -32,11 +34,33 @@ Changelog::Changelog() : ScreenBackable() {
     this->scrollView->setScrollResistance(0);
     this->addBaseUIElement(this->scrollView);
 
+    this->changelogHeader = new CBaseUILabel(0, 0, 0, 0, "", "Changelog");
+    this->changelogHeader->setFont(osu->getTitleFont());
+    this->changelogHeader->setSizeToContent(0, 0);
+    this->changelogHeader->setDrawFrame(false);
+    this->changelogHeader->setDrawBackground(false);
+    this->scrollView->container.addBaseUIElement(this->changelogHeader);
+
+    this->creditsHeader = new CBaseUILabel(0, 0, 0, 0, "", "Credits");
+    this->creditsHeader->setFont(osu->getTitleFont());
+    this->creditsHeader->setSizeToContent(0, 0);
+    this->creditsHeader->setDrawFrame(false);
+    this->creditsHeader->setDrawBackground(false);
+    this->scrollView->container.addBaseUIElement(this->creditsHeader);
+
+    this->licensesHeader = new CBaseUILabel(0, 0, 0, 0, "", "Licenses");
+    this->licensesHeader->setFont(osu->getTitleFont());
+    this->licensesHeader->setSizeToContent(0, 0);
+    this->licensesHeader->setDrawFrame(false);
+    this->licensesHeader->setDrawBackground(false);
+    this->scrollView->container.addBaseUIElement(this->licensesHeader);
+
     std::vector<CHANGELOG> changelogs;
 
     CHANGELOG v43_10;
     v43_10.title = "43.10 (" CHANGELOG_TIMESTAMP ")";
     v43_10.changes = {
+        R"(- Added credits and license info below changelog)",
         R"(- Settings forced by a skin or a server are now grayed out in the options menu)",
         R"(- Updated osu! version to b20260412.1)",
         R"(- (Web) URL now updates to match current page)",
@@ -1033,18 +1057,13 @@ Changelog::Changelog() : ScreenBackable() {
         R"(- Added online leaderboards)",
         R"(- Added chat)",
         R"(- Added automatic map downloads for multiplayer rooms)",
-        R"()",
-        R"()",
-        R"()",
-        R"()",
-        R"()",
     };
     changelogs.push_back(v34_00);
 
     this->addAllChangelogs(std::move(changelogs));
 }
 
-Changelog::~Changelog() { this->changelogs.clear(); }
+AboutScreen::~AboutScreen() { this->changelogs.clear(); }
 
 namespace {
 class ChangelogLabel final : public CBaseUIButton {
@@ -1076,7 +1095,7 @@ class ChangelogLabel final : public CBaseUIButton {
     }
 
     bool isMouseInside() override {
-        return CBaseUIButton::isMouseInside() && !ui->getChangelog()->backButton->isMouseInside();
+        return CBaseUIButton::isMouseInside() && !ui->getAboutScreen()->backButton->isMouseInside();
     }
 };
 
@@ -1142,7 +1161,7 @@ class ChangelogTitleLabel final : public CBaseUILabel {
     }
 
     bool isMouseInside() override {
-        return CBaseUILabel::isMouseInside() && !ui->getChangelog()->backButton->isMouseInside();
+        return CBaseUILabel::isMouseInside() && !ui->getAboutScreen()->backButton->isMouseInside();
     }
 
    private:
@@ -1151,7 +1170,7 @@ class ChangelogTitleLabel final : public CBaseUILabel {
 
 }  // namespace
 
-void Changelog::addAllChangelogs(std::vector<CHANGELOG> &&logtexts) {
+void AboutScreen::addAllChangelogs(std::vector<CHANGELOG> &&logtexts) {
     auto changelogs = std::move(logtexts);
     for(int i = 0; i < changelogs.size(); i++) {
         CHANGELOG_UI changelog;
@@ -1173,7 +1192,7 @@ void Changelog::addAllChangelogs(std::vector<CHANGELOG> &&logtexts) {
         // changes
         for(auto &&changeText : changelogs[i].changes) {
             CBaseUIButton *change = new ChangelogLabel(std::move(changeText));
-            change->setClickCallback(SA::MakeDelegate<&Changelog::onChangeClicked>(this));
+            change->setClickCallback(SA::MakeDelegate<&AboutScreen::onChangeClicked>(this));
 
             if(i > 0) change->setTextColor(0xff888888);
 
@@ -1188,9 +1207,35 @@ void Changelog::addAllChangelogs(std::vector<CHANGELOG> &&logtexts) {
 
         this->changelogs.push_back(changelog);
     }
+
+    assert(ALL_BINMAP.contains("credits"));
+    std::vector<std::string> credits_lines;
+    SString::split_newlines(credits_lines, ALL_BINMAP.at("credits"));
+    for(auto &line : credits_lines) {
+        CBaseUIButton *btn = new ChangelogLabel(std::move(line));
+        btn->setClickCallback(SA::MakeDelegate<&AboutScreen::onChangeClicked>(this));
+        btn->setSizeToContent();
+        btn->setDrawBackground(false);
+        btn->setDrawFrame(false);
+        this->creditsLines.push_back(btn);
+        this->scrollView->container.addBaseUIElement(btn);
+    }
+
+    assert(ALL_BINMAP.contains("licenses"));
+    std::vector<std::string> licenses_lines;
+    SString::split_newlines(licenses_lines, ALL_BINMAP.at("licenses"));
+    for(auto &line : licenses_lines) {
+        CBaseUIButton *btn = new ChangelogLabel(std::move(line));
+        btn->setClickCallback(SA::MakeDelegate<&AboutScreen::onChangeClicked>(this));
+        btn->setSizeToContent();
+        btn->setDrawBackground(false);
+        btn->setDrawFrame(false);
+        this->licensesLines.push_back(btn);
+        this->scrollView->container.addBaseUIElement(btn);
+    }
 }
 
-CBaseUIContainer *Changelog::setVisible(bool visible) {
+CBaseUIContainer *AboutScreen::setVisible(bool visible) {
     ScreenBackable::setVisible(visible);
 
     if(this->bVisible) this->updateLayout();
@@ -1198,7 +1243,7 @@ CBaseUIContainer *Changelog::setVisible(bool visible) {
     return this;
 }
 
-void Changelog::updateLayout() {
+void AboutScreen::updateLayout() {
     ScreenBackable::updateLayout();
 
     const float dpiScale = Osu::getUIScale();
@@ -1206,7 +1251,11 @@ void Changelog::updateLayout() {
     this->setSize(osu->getVirtScreenSize() + vec2(2, 2));
     this->scrollView->setSize(osu->getVirtScreenSize() + vec2(2, 2));
 
-    float yCounter = 0;
+    float yCounter = 20 * dpiScale;
+
+    this->changelogHeader->setRelPos(15 * dpiScale, yCounter);
+    yCounter += this->changelogHeader->getSize().y + 20 * dpiScale;
+
     for(const CHANGELOG_UI &changelog : this->changelogs) {
         changelog.title->onResized();  // HACKHACK: framework, setSizeToContent() does not update string metrics
         changelog.title->setSizeToContent();
@@ -1227,19 +1276,45 @@ void Changelog::updateLayout() {
         yCounter += 65 * dpiScale;
     }
 
+    this->creditsHeader->setRelPos(15 * dpiScale, yCounter);
+    yCounter += this->creditsHeader->getSize().y;
+    for(CBaseUIButton *btn : this->creditsLines) {
+        btn->onResized();  // HACKHACK: framework, setSizeToContent() does not update string metrics
+        btn->setSizeToContent();
+        btn->setSizeY(btn->getSize().y * 2.0f);
+        yCounter += btn->getSize().y /* + 13 * dpiScale*/;
+        btn->setRelPos(35 * dpiScale, yCounter);
+    }
+    yCounter += 65 * dpiScale;
+
+    this->licensesHeader->setRelPos(15 * dpiScale, yCounter);
+    yCounter += this->licensesHeader->getSize().y;
+    for(CBaseUIButton *btn : this->licensesLines) {
+        btn->onResized();  // HACKHACK: framework, setSizeToContent() does not update string metrics
+        btn->setSizeToContent();
+        btn->setSizeY(btn->getSize().y * 2.0f);
+        yCounter += btn->getSize().y /* + 13 * dpiScale*/;
+        btn->setRelPos(35 * dpiScale, yCounter);
+    }
+    yCounter += 65 * dpiScale;
+
+    // NOTE: licenses.txt intentionally includes a few blank lines at the end for padding
+    //       so the back button doesn't cover the last lines
+
     this->scrollView->setScrollSizeToContent(15 * dpiScale);
 }
 
-void Changelog::onBack() { ui->setScreen(ui->getMainMenu()); }
+void AboutScreen::onBack() { ui->setScreen(ui->getMainMenu()); }
 
-void Changelog::onChangeClicked(CBaseUIButton *button) {
+void AboutScreen::onChangeClicked(CBaseUIButton *button) {
     const std::string changeTextMaybeContainingClickableURL{button->getText()};
 
     const int maybeURLBeginIndex = changeTextMaybeContainingClickableURL.find("http");
     if(maybeURLBeginIndex != std::string::npos &&
        changeTextMaybeContainingClickableURL.find("://") != std::string::npos) {
         std::string url = changeTextMaybeContainingClickableURL.substr(maybeURLBeginIndex);
-        if(url.length() > 0 && url[url.length() - 1] == ')') url = url.substr(0, url.length() - 1);
+        const auto urlEnd = url.find_first_of(")>");
+        if(urlEnd != std::string::npos) url = url.substr(0, urlEnd);
 
         debugLog("url = {:s}", url);
 

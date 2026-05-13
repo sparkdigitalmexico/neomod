@@ -5,3 +5,5 @@
 
 # misc
 convar_template : assets/misc/convar_template.html
+credits : assets/misc/credits.txt
+licenses : assets/misc/licenses.txt

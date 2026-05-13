@@ -21,7 +21,6 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUILabel.h"
 #include "CBaseUITextbox.h"
-#include "Changelog.h"
 #include "Chat.h"
 #include "OsuConVars.h"
 #include "Database.h"
