@@ -705,6 +705,7 @@ void Environment::setClipBoardText(std::string text) {
 namespace {
 struct ClipboardImageState final {
     static constexpr const char *const imageMimeTypes[]{"image/png"};
+    static constexpr size_t nbImageMimeTypes = sizeof(imageMimeTypes) / sizeof(imageMimeTypes[0]);
     std::vector<u8> data;
 
     static void *operator new(size_t sz) noexcept { return SDL_malloc(sz); }
@@ -733,7 +734,7 @@ struct ClipboardImageState final {
             getData,  //
             // cleanup callback
             cleanupData,  //
-            clipState, &imageMimeTypes[0], SDL_arraysize(imageMimeTypes));
+            clipState, &imageMimeTypes[0], nbImageMimeTypes);
         if(!success) {
             delete clipState;
             debugLog("setting clipboard data failed: {:s}", SDL_GetError());
