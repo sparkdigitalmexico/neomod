@@ -3,6 +3,7 @@
 #include "config.h"
 #endif
 
+#include "BaseEnvironment.h"
 #include "SString.h"
 
 #include <cstring>
