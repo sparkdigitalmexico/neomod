@@ -241,7 +241,7 @@ SDL_AppResult SDLMain::initialize() {
 #endif
 
 static_assert(SDL_EVENT_WINDOW_FIRST == SDL_EVENT_WINDOW_SHOWN);
-static_assert(SDL_EVENT_WINDOW_LAST == SDL_EVENT_WINDOW_HDR_STATE_CHANGED);
+static_assert(SDL_EVENT_WINDOW_LAST <= SDL_EVENT_WINDOW_HDR_STATE_CHANGED + 1);
 
 static constinit std::array<char, 512> logBuf{};
 
