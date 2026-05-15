@@ -311,8 +311,18 @@ void draw(VertexArrayObject *vao, vec4 bounds, std::span<const vec2> alwaysPoint
             const bool useGradientImage = cv::slider_use_gradient_image.getBool();
             preDrawColorSetup(useGradientImage, sliderTimeForRainbow, colorRGBMultiplier, undimmedColor);
 
+            // when smoothsnake's alwaysPoint cone sits between the VAO's last cone and the next one,
+            // over-extend the VAO by a cone so its last cone hides the alwaysPoint and the cap is
+            // formed by a single smooth arc instead of two arcs kinking at the cone intersection
+            const i32 vertsPerCone = (i32)s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().size();
+            f32 effectiveTo = to;
+            if(alwaysPoints.size() > 0 && to < 1.0f && vertsPerCone > 0) {
+                const i32 totalCones = (i32)vao->getNumVertices() / vertsPerCone;
+                if(totalCones > 0) effectiveTo = std::min(1.0f, to + (1.0f / (f32)totalCones));
+            }
+
             // draw curve mesh
-            vao->setDrawPercent(from, to, (i32)s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().size());
+            vao->setDrawPercent(from, effectiveTo, vertsPerCone);
             g->pushTransform();
             {
                 g->scale(scale, scale);
