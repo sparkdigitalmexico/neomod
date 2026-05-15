@@ -2335,13 +2335,12 @@ Slider::HitAnim &Slider::addHitAnim(u8 typeFlags, f32 duration) {
 void Slider::rebuildVertexBuffer(bool useRawCoords) {
     // base mesh (background) (raw unscaled, size in raw osu coordinates centered at (0, 0, 0))
     // this mesh needs to be scaled and translated appropriately since we are not 1:1 with the playfield
-    std::vector<vec2> osuCoordPoints;
-    Mc::assign_range(osuCoordPoints, m_curve.getPoints());
-    for(auto &p : osuCoordPoints) p -= m_stackOffset;
-    if(!useRawCoords) {
-        for(auto &osuCoordPoint : osuCoordPoints) {
-            osuCoordPoint = m_pi->osuCoords2LegacyPixels(osuCoordPoint);
-        }
+    const auto rawPoints = m_curve.getPoints();
+    std::vector<vec2> osuCoordPoints{rawPoints.begin(), rawPoints.end()};
+    if(useRawCoords) {
+        for(auto &p : osuCoordPoints) p -= m_stackOffset;
+    } else {
+        for(auto &p : osuCoordPoints) p = m_pi->osuCoords2LegacyPixels(p - m_stackOffset);
     }
     m_vao = SliderRenderer::generateVAO(osuCoordPoints, m_pi->fRawHitcircleDiameter, /*translation=*/vec3{});
 }

@@ -209,7 +209,7 @@ std::unique_ptr<VertexArrayObject> generateVAO(std::span<const vec2> points, f32
     if(vao->getNumVertices() > 0) {
         resourceManager->loadResource(vao.get());
     } else {
-        debugLog("generateSliderVAO() ERROR: Zero triangles!");
+        debugLog("ERROR: Zero triangles!");
     }
 
     return vao;
