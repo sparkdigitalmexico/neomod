@@ -1033,7 +1033,7 @@ void SDLMain::restart(const std::vector<std::string> &args) {
 #endif
 
     if(!SDL_CreateProcessWithProperties(restartprops)) {
-        logRaw("[restart]: WARNING: couldn't restart!");
+        logRaw("[restart]: SDL_CreateProcessWithProperties failed: {:s}", SDL_GetError());
     }
 
     SDL_DestroyProperties(restartprops);
