@@ -295,6 +295,102 @@ index 56074c96a..b366f7211 100644
 -- 
 2.50.1
 
+From 8eb393a0f15e9cacbaa11d3879cc5915529986c3 Mon Sep 17 00:00:00 2001
+From: William Horvath <william@horvath.blog>
+Date: Sat, 16 May 2026 01:56:54 +0900
+Subject: [PATCH 1/2] Revert "GPU: Clarify VK_KHR_maintenance9 comment"
+
+This reverts commit c8feb297465d6702f293d0941b8e6d3554653a26.
+---
+ src/gpu/vulkan/SDL_gpu_vulkan.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/src/gpu/vulkan/SDL_gpu_vulkan.c b/src/gpu/vulkan/SDL_gpu_vulkan.c
+index b366f7211..4e975a5aa 100644
+--- a/src/gpu/vulkan/SDL_gpu_vulkan.c
++++ b/src/gpu/vulkan/SDL_gpu_vulkan.c
+@@ -2744,10 +2744,8 @@ static void VULKAN_INTERNAL_TextureSubresourceMemoryBarrier(
+     memoryBarrier.subresourceRange.baseArrayLayer = textureSubresource->layer;
+     memoryBarrier.subresourceRange.layerCount = 1;
+ 
+-    // VK_KHR_maintenance9 adds the ability to independently transition arbitrary subsets of slices in a 3D texture
+-    // but otherwise it is not necessarily supported by the driver.
+-    // As a workaround we have to transition the whole texture instead of just the subresource.
+-    // If VK_KHR_maintenance9 becomes widely supported, this can be removed.
++    // VK_KHR_maintenance9 adds the ability to independently transition arbitrary subsets of slices in a 3D texture,
++    // we need to extend the barrier layer count in order to preserve intended behaviour when that extension is enabled.
+     // See https://docs.vulkan.org/features/latest/features/proposals/VK_KHR_maintenance9.html#_barriers_with_2d_array_compatible_3d_images
+     if (textureSubresource->parent->container->header.info.type == SDL_GPU_TEXTURETYPE_3D) {
+         memoryBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+-- 
+2.50.1
+
+From 52cd889c0760ab5665334f181a68186d224def4b Mon Sep 17 00:00:00 2001
+From: William Horvath <william@horvath.blog>
+Date: Sat, 16 May 2026 01:57:00 +0900
+Subject: [PATCH 2/2] Revert "Change 3D texture memory barrier sub-resource
+ range to be maintenance9 compatible."
+
+This reverts commit 5d63a4cad29ba50d04b8136fe8a5a1b87eee7707.
+---
+ src/gpu/vulkan/SDL_gpu_vulkan.c | 24 ++++++++----------------
+ 1 file changed, 8 insertions(+), 16 deletions(-)
+
+diff --git a/src/gpu/vulkan/SDL_gpu_vulkan.c b/src/gpu/vulkan/SDL_gpu_vulkan.c
+index 4e975a5aa..259fbecb0 100644
+--- a/src/gpu/vulkan/SDL_gpu_vulkan.c
++++ b/src/gpu/vulkan/SDL_gpu_vulkan.c
+@@ -2739,17 +2739,10 @@ static void VULKAN_INTERNAL_TextureSubresourceMemoryBarrier(
+     memoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+     memoryBarrier.image = textureSubresource->parent->image;
+     memoryBarrier.subresourceRange.aspectMask = textureSubresource->parent->aspectFlags;
+-    memoryBarrier.subresourceRange.baseMipLevel = textureSubresource->level;
+-    memoryBarrier.subresourceRange.levelCount = 1;
+     memoryBarrier.subresourceRange.baseArrayLayer = textureSubresource->layer;
+     memoryBarrier.subresourceRange.layerCount = 1;
+-
+-    // VK_KHR_maintenance9 adds the ability to independently transition arbitrary subsets of slices in a 3D texture,
+-    // we need to extend the barrier layer count in order to preserve intended behaviour when that extension is enabled.
+-    // See https://docs.vulkan.org/features/latest/features/proposals/VK_KHR_maintenance9.html#_barriers_with_2d_array_compatible_3d_images
+-    if (textureSubresource->parent->container->header.info.type == SDL_GPU_TEXTURETYPE_3D) {
+-        memoryBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+-    }
++    memoryBarrier.subresourceRange.baseMipLevel = textureSubresource->level;
++    memoryBarrier.subresourceRange.levelCount = 1;
+ 
+     if (sourceUsageMode == VULKAN_TEXTURE_USAGE_MODE_UNINITIALIZED) {
+         srcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+@@ -6011,6 +6004,12 @@ static void VULKAN_INTERNAL_CycleActiveTexture(
+         renderer,
+         &container->header.info);
+ 
++    VULKAN_INTERNAL_TextureTransitionToDefaultUsage(
++        renderer,
++        commandBuffer,
++        VULKAN_TEXTURE_USAGE_MODE_UNINITIALIZED,
++        texture);
++
+     if (!texture) {
+         return;
+     }
+@@ -6028,13 +6027,6 @@ static void VULKAN_INTERNAL_CycleActiveTexture(
+     container->textureCount += 1;
+ 
+     container->activeTexture = texture;
+-
+-    // Transition texture after storing it as the memory barrier might need to read the texture's container info
+-    VULKAN_INTERNAL_TextureTransitionToDefaultUsage(
+-        renderer,
+-        commandBuffer,
+-        VULKAN_TEXTURE_USAGE_MODE_UNINITIALIZED,
+-        texture);
+ }
+ 
+ static VulkanBuffer *VULKAN_INTERNAL_PrepareBufferForWrite(
+-- 
+2.50.1
+
+
 From 33452e51e80179a444a435e48aa2465be97ba751 Mon Sep 17 00:00:00 2001
 From: William Horvath <william@horvath.blog>
 Date: Mon, 13 Apr 2026 23:47:50 +0900
