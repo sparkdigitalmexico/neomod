@@ -1305,8 +1305,8 @@ AS_IF([test "x$enable_lto" != "xno"], [
                 AX_CHECK_LINK_FLAG([-Wl,--thinlto-cache-dir=$PWD/.ltocache-clang], [
                     LDFLAGS="$LDFLAGS -Wl,--thinlto-cache-dir=$PWD/.ltocache-clang"
                 ], [
-                    AX_CHECK_LINK_FLAG([-Wl,-cache_path_lto $PWD/.ltocache-clang], [
-                        LDFLAGS="$LDFLAGS -Wl,-cache_path_lto $PWD/.ltocache-clang"
+                    AX_CHECK_LINK_FLAG([-Wl,-cache_path_lto,$PWD/.ltocache-clang], [
+                        LDFLAGS="$LDFLAGS -Wl,-cache_path_lto,$PWD/.ltocache-clang"
                     ])
                 ])
             ])
