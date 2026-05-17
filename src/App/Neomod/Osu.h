@@ -11,6 +11,7 @@
 #include <vector>
 #include <array>
 
+// TODO: refactor everything in src/App/Neomod to be under the neomod namespace
 class ThumbnailManager;
 class BeatmapInstaller;
 class ConVar;

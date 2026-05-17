@@ -11,10 +11,8 @@ static_assert(MultisampleType::X0 == MultisampleType{0});
 
 RenderTarget::RenderTarget(int x, int y, int width, int height, MultisampleType multiSampleType)
     : Resource(RENDERTARGET),
-      vao1(g->createVertexArrayObject(DrawPrimitive::TRIANGLES, DrawUsageType::STATIC,
-                                      false)),
-      vao2(g->createVertexArrayObject(DrawPrimitive::TRIANGLES, DrawUsageType::STATIC,
-                                      false)),
+      vao1(g->createVertexArrayObject(DrawPrimitive::TRIANGLES, DrawUsageType::STATIC, false)),
+      vao2(g->createVertexArrayObject(DrawPrimitive::TRIANGLES, DrawUsageType::STATIC, false)),
       vPos(vec2{x, y}),
       vSize(width, height),
       multiSampleType(multiSampleType) {}
@@ -112,6 +110,8 @@ void RenderTarget::draw(int x, int y, int width, int height) {
     this->unbind();
 }
 
+static constinit VertexArrayObject rectVAO{};
+
 void RenderTarget::drawRect(int x, int y, int width, int height) {
     if(!this->bReady) {
         logIfCV(debug_rt, "WARNING: RenderTarget is not ready!\n");
@@ -127,27 +127,21 @@ void RenderTarget::drawRect(int x, int y, int width, int height) {
 
     this->bind();
     {
-        VertexArrayObject vao;
-        {
-            vao.addTexcoord(texCoordWidth0, texCoordHeight1);
-            vao.addVertex(x, y);
+        rectVAO.setVertices(std::array<vec3, 6>{vec3{x, y, 0.f},
+                                                {x, y + height, 0.f},
+                                                {x + width, y + height, 0.f},
+                                                {x + width, y + height, 0.f},
+                                                {x + width, y, 0.f},
+                                                {x, y, 0.f}});
 
-            vao.addTexcoord(texCoordWidth0, texCoordHeight0);
-            vao.addVertex(x, y + height);
+        rectVAO.setTexcoords(std::array<vec2, 6>{vec2{texCoordWidth0, texCoordHeight1},
+                                                 {texCoordWidth0, texCoordHeight0},
+                                                 {texCoordWidth1, texCoordHeight0},
+                                                 {texCoordWidth1, texCoordHeight0},
+                                                 {texCoordWidth1, texCoordHeight1},
+                                                 {texCoordWidth0, texCoordHeight1}});
 
-            vao.addTexcoord(texCoordWidth1, texCoordHeight0);
-            vao.addVertex(x + width, y + height);
-
-            vao.addTexcoord(texCoordWidth1, texCoordHeight0);
-            vao.addVertex(x + width, y + height);
-
-            vao.addTexcoord(texCoordWidth1, texCoordHeight1);
-            vao.addVertex(x + width, y);
-
-            vao.addTexcoord(texCoordWidth0, texCoordHeight1);
-            vao.addVertex(x, y);
-        }
-        g->drawVAO(&vao);
+        g->drawVAO(&rectVAO);
     }
     this->unbind();
 }

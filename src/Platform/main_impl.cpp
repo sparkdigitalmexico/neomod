@@ -150,6 +150,23 @@ void SDLMain::fps_max_background_callback(float newVal) {
     if(!winFocused()) setBgFPS();
 }
 
+bool SDLMain::resizeCallback(void *userdata, SDL_Event *event) {
+    assert(userdata && event);
+
+    SDLMain *main_ptr = static_cast<SDLMain *>(userdata);
+    if(event->type != SDL_EVENT_WINDOW_EXPOSED || event->window.data1 != 1 /* live resize event */ ||
+       main_ptr->winMinimized() || main_ptr->m_bRestoreFullscreen) {
+        return false;  // return value is ignored from AddEventWatch
+    }
+    assert(main_ptr->m_engine);
+    main_ptr->updateWindowSizeCache();
+
+    main_ptr->m_engine->requestResolutionChange(main_ptr->getWindowSize());
+    main_ptr->iterate();
+
+    return false;
+}
+
 SDL_AppResult SDLMain::initialize() {
     setupLogging();
 
@@ -959,6 +976,16 @@ void SDLMain::setupLogging() {
     SDL_SetLogOutputFunction(SDLLogCB, nullptr);
 }
 
+void SDLMain::onDPIChange() {
+    const float oldDispScale = m_fDisplayScale;
+    const float oldPixelDensity = m_fPixelDensity;
+    m_fDisplayScale = SDL_GetWindowDisplayScale(m_window);
+    m_fPixelDensity = SDL_GetWindowPixelDensity(m_window);
+    if(m_engine && ((oldDispScale != m_fDisplayScale) || (oldPixelDensity != m_fPixelDensity))) {
+        m_engine->onDPIChange();
+    }
+}
+
 void SDLMain::shutdown(SDL_AppResult result) {
     if(result == SDL_APP_FAILURE)  // force quit now
         return;
@@ -966,23 +993,6 @@ void SDLMain::shutdown(SDL_AppResult result) {
         SDL_StopTextInput(m_window);
 
     Environment::shutdown();
-}
-
-bool SDLMain::resizeCallback(void *userdata, SDL_Event *event) {
-    assert(userdata && event);
-
-    SDLMain *main_ptr = static_cast<SDLMain *>(userdata);
-    if(event->type != SDL_EVENT_WINDOW_EXPOSED || event->window.data1 != 1 /* live resize event */ ||
-       main_ptr->winMinimized() || main_ptr->m_bRestoreFullscreen) {
-        return false;  // return value is ignored from AddEventWatch
-    }
-    assert(main_ptr->m_engine);
-    main_ptr->updateWindowSizeCache();
-
-    main_ptr->m_engine->requestResolutionChange(main_ptr->getWindowSize());
-    main_ptr->iterate();
-
-    return false;
 }
 
 #if defined(MCENGINE_PLATFORM_WINDOWS)

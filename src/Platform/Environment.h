@@ -353,7 +353,6 @@ class Environment {
     void updateWindowSizeCache();  // only updates window size (separated out for live resize callback)
 
     std::string windowFlagsDbgStr() const;
-    void onDPIChange();
 
     WinFlags m_winflags{};  // initialized when window is created, updated on new window events in the event loop
 

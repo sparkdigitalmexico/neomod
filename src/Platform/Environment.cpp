@@ -1319,16 +1319,6 @@ void Environment::listenToTextInput(bool listen) {
 //	internal helpers/callbacks  //
 //******************************//
 
-void Environment::onDPIChange() {
-    const float oldDispScale = m_fDisplayScale;
-    const float oldPixelDensity = m_fPixelDensity;
-    m_fDisplayScale = SDL_GetWindowDisplayScale(m_window);
-    m_fPixelDensity = SDL_GetWindowPixelDensity(m_window);
-    if(m_engine && ((oldDispScale != m_fDisplayScale) || (oldPixelDensity != m_fPixelDensity))) {
-        m_engine->onDPIChange();
-    }
-}
-
 void Environment::onDebugDrawHardwareCursorChange(float newValue) {
     const bool enable = !!static_cast<int>(newValue);
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_CURSOR_VISIBLE, enable ? "1" : "0", SDL_HINT_NORMAL);

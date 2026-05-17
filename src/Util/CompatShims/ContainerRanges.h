@@ -33,7 +33,11 @@ template <typename Container, typename R>
     requires ContainerCompatibleRange<R, typename Container::value_type>
 constexpr typename Container::iterator insert_range(Container& c, typename Container::const_iterator pos, R&& rg) {
     if(pos == c.end()) {
-        return append_range(c, std::forward<R>(rg));
+        const auto offset = c.size();
+        append_range(c, std::forward<R>(rg));
+        auto it = c.begin();
+        std::advance(it, static_cast<typename Container::difference_type>(offset));
+        return it;
     } else {
         return c.insert(pos, std::ranges::begin(rg), std::ranges::end(rg));
     }

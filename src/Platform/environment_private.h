@@ -54,6 +54,9 @@ class SDLMain final : public Environment {
     // no way to query refresh rate in WASM so do it by measuring a few frames on startup
     [[maybe_unused]] void calibrateDisplayHzWASM();
 
+    // dpi update callback
+    void onDPIChange();
+
     // for live resizing on windows
     // SDL will call this on the main thread when the window needs to be redrawn
     static bool resizeCallback(void *userdata, SDL_Event *event);

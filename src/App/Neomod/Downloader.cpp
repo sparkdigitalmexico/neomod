@@ -419,8 +419,7 @@ i32 resolve_beatmapset_id_for(i32 beatmap_id, i32 set_id_hint) {
         return 0;
     }
 
-    std::string url = "osu." + BanchoState::endpoint;
-    url.append(fmt::format("/web/osu-search-set.php?b={}", beatmap_id));
+    std::string url = fmt::format("osu.{:s}/web/osu-search-set.php?b={:d}", BanchoState::endpoint, beatmap_id);
     BANCHO::Api::append_auth_params(url);
 
     Mc::Net::RequestOptions options{
@@ -481,7 +480,7 @@ BeatmapSetMetadata parse_beatmapset_metadata(std::string_view server_response) {
         const std::string_view raw_diff = map.substr(0, map.find_last_of('@'));
         const std::string_view mode_str = spl.back();
 
-        if(raw_diff.contains("★")) {
+        if(raw_diff.contains("★"sv)) {
             // Mayflower's Hard★3.60@0
             // used by: catboy.best api
 
@@ -498,7 +497,7 @@ BeatmapSetMetadata parse_beatmapset_metadata(std::string_view server_response) {
             const f32 sr = Parsing::strto<f32>(diff_srs.back());
             meta.beatmaps.push_back(
                 BeatmapMetadata{.diffname = diffname, .star_rating = sr, .mode = Parsing::strto<u8>(mode_str)});
-        } else if(raw_diff.contains("⭐") && raw_diff[0] == '[') {
+        } else if(raw_diff.contains("⭐"sv) && raw_diff[0] == '[') {
             // [3.60⭐] Mayflower's Hard {cs: 3.5 / od: 6.0 / ar: 8.0 / hp: 3.5}@0
             // used by: bancho.py, banchus (akatsuki), osu.direct api
 
