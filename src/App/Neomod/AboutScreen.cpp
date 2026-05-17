@@ -63,7 +63,6 @@ AboutScreen::AboutScreen() : ScreenBackable() {
         R"(- Added credits and license info below changelog)",
         R"(- Settings forced by a skin or a server are now grayed out in the options menu)",
         R"(- Online beatmap downloads now continue in the background even if navigating away from download)",
-        R"(  - In-progress downloads indicator/overlay coming soon)",
         R"(- Fixed broken slider bodies during slider snaking with the SDL_gpu renderer)",
         R"(- Updated osu! version to b20260412.1)",
         R"(- (Web) URL now updates to match current page)",
