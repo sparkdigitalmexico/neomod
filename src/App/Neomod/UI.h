@@ -19,6 +19,7 @@ class UIScreen;
 class UIOverlay;
 
 class AboutScreen;
+class BeatmapInstallOverlay;
 class Chat;
 class HUD;
 class Lobby;
@@ -118,6 +119,8 @@ struct UI final {
     [[nodiscard]] UIScreen* getMainMenuBase() const;
     [[nodiscard]] inline TooltipOverlay* getTooltipOverlay() const { return this->tooltipOverlay; }
     [[nodiscard]] UIScreen* getTooltipOverlayBase() const;
+    [[nodiscard]] inline BeatmapInstallOverlay* getBeatmapInstallOverlay() const { return this->beatmapInstallOverlay; }
+    [[nodiscard]] UIScreen* getBeatmapInstallOverlayBase() const;
 
    private:
     friend UIScreen;
@@ -146,8 +149,9 @@ struct UI final {
     AboutScreen* aboutScreen{nullptr};
     MainMenu* mainMenu{nullptr};
     TooltipOverlay* tooltipOverlay{nullptr};
+    BeatmapInstallOverlay* beatmapInstallOverlay{nullptr};
 
-    static constexpr const size_t NUM_SCREENS{20};  // update this when adding screens
+    static constexpr const size_t NUM_SCREENS{21};  // update this when adding screens
 
     UIScreen* active_screen{nullptr};
 

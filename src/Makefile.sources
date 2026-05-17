@@ -120,6 +120,7 @@ neomod_SOURCES = \
 	src/App/Neomod/BanchoProtocol.cpp \
 	src/App/Neomod/BanchoSubmitter.cpp \
 	src/App/Neomod/BanchoUsers.cpp \
+	src/App/Neomod/BeatmapInstallOverlay.cpp \
 	src/App/Neomod/BeatmapInstaller.cpp \
 	src/App/Neomod/BeatmapInterface.cpp \
 	src/App/Neomod/Chat.cpp \

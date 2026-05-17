@@ -17,6 +17,7 @@
 #include "SString.h"
 
 #include "AboutScreen.h"
+#include "BeatmapInstallOverlay.h"
 #include "Chat.h"
 #include "HUD.h"
 #include "Lobby.h"
@@ -102,6 +103,8 @@ void UI::setScreenByName(std::string_view screenGetterNameWithoutGet) {
         toSet = this->mainMenu;
     } else if(lowerName == "tooltipoverlay"sv) {
         toSet = this->tooltipOverlay;
+    } else if(lowerName == "beatmapinstalloverlay"sv) {
+        toSet = this->beatmapInstallOverlay;
     }
 
     if(toSet) {
@@ -130,6 +133,7 @@ UIScreen *UI::getLobbyBase() const { return this->lobby; }
 UIScreen *UI::getAboutScreenBase() const { return this->aboutScreen; }
 UIScreen *UI::getMainMenuBase() const { return this->mainMenu; }
 UIScreen *UI::getTooltipOverlayBase() const { return this->tooltipOverlay; }
+UIScreen *UI::getBeatmapInstallOverlayBase() const { return this->beatmapInstallOverlay; }
 
 UI *ui{nullptr};
 
@@ -175,6 +179,7 @@ bool UI::init() {
     this->screens[screenit++] = this->aboutScreen = new AboutScreen();
     this->screens[screenit++] = this->mainMenu = new MainMenu();
     this->screens[screenit++] = this->tooltipOverlay = new TooltipOverlay();
+    this->screens[screenit++] = this->beatmapInstallOverlay = new BeatmapInstallOverlay();
     assert(screenit == NUM_SCREENS);
 
     this->notificationOverlay->addKeyListener(this->optionsOverlay);
@@ -303,6 +308,7 @@ void UI::draw() {
         this->userActionsOverlay->draw();
         this->optionsOverlay->draw();
         this->promptOverlay->draw();
+        this->beatmapInstallOverlay->draw();
 
         this->hud->drawFps();
 

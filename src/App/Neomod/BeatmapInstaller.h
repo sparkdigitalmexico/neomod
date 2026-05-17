@@ -6,6 +6,10 @@
 #include "noinclude.h"
 #include "types.h"
 
+#include <string>
+#include <string_view>
+#include <vector>
+
 class DatabaseBeatmap;
 using BeatmapSet = DatabaseBeatmap;
 
@@ -28,14 +32,26 @@ class BeatmapInstaller final {
         f32 progress{0.f};  // 0..1, only meaningful while Downloading
     };
 
+    // snapshot row used by the global install overlay (and any future consumers).
+    // Done entries are erased immediately, so they don't appear; Failed entries linger
+    // for FAILED_ENTRY_TTL_S so listings can render the red state.
+    struct EntryView {
+        i32 set_id{0};
+        MapInstallStage stage{MapInstallStage::None};
+        f32 progress{0.f};
+        std::string display_name;  // empty if caller didn't supply one
+    };
+
     BeatmapInstaller() = default;
     ~BeatmapInstaller() = default;
 
     // main thread; tick from Osu::update()
     void update();
 
-    // idempotent. if the set is already tracked, only the auto_select bit is OR'd in.
-    void enqueue(i32 set_id, bool auto_select);
+    // idempotent. if the set is already tracked, only the auto_select bit is OR'd in
+    // and display_name is filled iff currently empty (so a later caller with a name
+    // upgrades an entry queued earlier without one).
+    void enqueue(i32 set_id, bool auto_select, std::string_view display_name = {});
 
     // best-effort: drops the entry. an in-flight HTTP transfer keeps running and its bytes are discarded.
     // TODO: implement cancellation in NetworkHandler (would also get rid of other TODOs like canceling in-progress logins etc.)
@@ -43,12 +59,16 @@ class BeatmapInstaller final {
 
     [[nodiscard]] State get_state(i32 set_id) const;
 
+    // copy of all current entries (typically <= 5), one row each.
+    [[nodiscard]] std::vector<EntryView> snapshot() const;
+
     // drop everything (e.g. on bancho disconnect)
     void clear();
 
    private:
     struct Entry {
         Downloader::DownloadHandle dl_handle;
+        std::string display_name;
         MapInstallStage stage{MapInstallStage::Queued};
         f32 progress{0.f};
         bool auto_select{false};

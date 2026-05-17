@@ -13,7 +13,7 @@
 #include "SongBrowser/SongBrowser.h"
 #include "UI.h"
 
-void BeatmapInstaller::enqueue(i32 set_id, bool auto_select) {
+void BeatmapInstaller::enqueue(i32 set_id, bool auto_select, std::string_view display_name) {
     if(set_id <= 0) return;
 
     auto [it, inserted] = this->entries.try_emplace(set_id);
@@ -21,11 +21,15 @@ void BeatmapInstaller::enqueue(i32 set_id, bool auto_select) {
     if(inserted) {
         e.stage = MapInstallStage::Queued;
         e.auto_select = auto_select;
+        if(!display_name.empty()) e.display_name.assign(display_name);
         return;
     }
 
     // already tracked: OR in the auto_select intent so re-clicking before completion still navigates on Done
     if(auto_select) e.auto_select = true;
+
+    // upgrade an empty name with whatever the new caller has (don't clobber an existing name)
+    if(e.display_name.empty() && !display_name.empty()) e.display_name.assign(display_name);
 
     // if a previous attempt failed, allow retry
     if(e.stage == MapInstallStage::Failed) {
@@ -48,6 +52,15 @@ BeatmapInstaller::State BeatmapInstaller::get_state(i32 set_id) const {
     auto it = this->entries.find(set_id);
     if(it == this->entries.end()) return {};
     return {it->second.stage, it->second.progress};
+}
+
+std::vector<BeatmapInstaller::EntryView> BeatmapInstaller::snapshot() const {
+    std::vector<EntryView> out;
+    out.reserve(this->entries.size());
+    for(const auto& [set_id, e] : this->entries) {
+        out.push_back({.set_id = set_id, .stage = e.stage, .progress = e.progress, .display_name = e.display_name});
+    }
+    return out;
 }
 
 void BeatmapInstaller::clear() { this->entries.clear(); }

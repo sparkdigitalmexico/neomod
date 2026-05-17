@@ -126,7 +126,8 @@ void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
             if(!!(state.stage & (Queued | Downloading | Installing))) {
                 installer->cancel(this->meta.set_id);
             } else {
-                installer->enqueue(this->meta.set_id, /*auto_select=*/true);
+                installer->enqueue(this->meta.set_id, /*auto_select=*/true,
+                                   fmt::format("{} - {}", this->meta.artist, this->meta.title));
             }
         }
     }

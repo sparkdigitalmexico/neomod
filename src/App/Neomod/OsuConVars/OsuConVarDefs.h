@@ -67,7 +67,8 @@ CONVAR(snd_boost_hitsound_volume, false, CLIENT | SKINS | SERVER, "slightly incr
 // Audio (mods)
 CONVAR(snd_pitch_hitsounds, false, CLIENT | SKINS | SERVER, "change hitsound pitch based on accuracy");
 CONVAR(snd_pitch_hitsounds_factor, -0.5f, CLIENT | SKINS | SERVER, "how much to change the pitch");
-CONVAR(snd_pitch_hitsounds_ignore_300s, false, CLIENT | SKINS | SERVER, "don't change pitch for 300s if snd_pitch_hitsounds is used");
+CONVAR(snd_pitch_hitsounds_ignore_300s, false, CLIENT | SKINS | SERVER,
+       "don't change pitch for 300s if snd_pitch_hitsounds is used");
 
 // Debug
 CONVAR(debug_osu, false, CLIENT);
@@ -193,6 +194,7 @@ CONVAR(background_fade_out_duration, 0.25f, CLIENT | SKINS | SERVER);
 CONVAR(draw_accuracy, true, CLIENT | SKINS | SERVER);
 CONVAR(draw_approach_circles, true, CLIENT | SKINS | SERVER);
 CONVAR(draw_beatmap_background_image, true, CLIENT | SKINS | SERVER);
+CONVAR(draw_beatmap_install_overlay, true, CLIENT | SERVER, "show the global beatmap download progress overlay");
 CONVAR(draw_circles, true, CLIENT | SKINS | SERVER);
 CONVAR(draw_combo, true, CLIENT | SKINS | SERVER);
 CONVAR(draw_continue, true, CLIENT | SKINS | SERVER);
