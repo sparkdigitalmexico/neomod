@@ -54,12 +54,18 @@ BeatmapInstaller::State BeatmapInstaller::get_state(i32 set_id) const {
     return {it->second.stage, it->second.progress};
 }
 
-std::vector<BeatmapInstaller::EntryView> BeatmapInstaller::snapshot() const {
-    std::vector<EntryView> out;
+void BeatmapInstaller::snapshot(std::vector<BeatmapInstaller::EntryView>& out) const {
+    out.clear();
     out.reserve(this->entries.size());
     for(const auto& [set_id, e] : this->entries) {
         out.push_back({.set_id = set_id, .stage = e.stage, .progress = e.progress, .display_name = e.display_name});
     }
+    return;
+}
+
+std::vector<BeatmapInstaller::EntryView> BeatmapInstaller::snapshot() const {
+    std::vector<EntryView> out;
+    snapshot(out);
     return out;
 }
 

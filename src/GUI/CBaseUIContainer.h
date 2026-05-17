@@ -25,7 +25,7 @@ class CBaseUIContainer : public CBaseUIElement {
     CBaseUIContainer *addBaseUIElement(CBaseUIElement *element, vec2 pos);
     CBaseUIContainer *addBaseUIElement(CBaseUIElement *element);
     CBaseUIContainer *addBaseUIElements(const std::vector<CBaseUIElement *> &elements);
-    CBaseUIContainer *addBaseUIElements(std::span<CBaseUIElement *> elements);
+    CBaseUIContainer *addBaseUIElements(std::span<CBaseUIElement *const> elements);
 
     CBaseUIContainer *addBaseUIElementBack(CBaseUIElement *element, float xPos, float yPos);
     CBaseUIContainer *addBaseUIElementBack(CBaseUIElement *element, vec2 pos);

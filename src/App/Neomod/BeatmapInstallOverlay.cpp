@@ -10,6 +10,8 @@
 #include "Osu.h"
 #include "OsuConVars.h"
 
+#include "BeatmapInstaller.h"
+
 namespace {
 
 // virtual-screen pixels at scale=1; everything is multiplied by Osu::getUIScale() at draw/update time
@@ -52,28 +54,31 @@ class InstallRow final : public CBaseUIContainer {
 
     void draw() override;
 
+    // set this InstallRow element to an EntryView's state
+    // maybe TODO: should BeatmapInstallOverlay be more tightly coupled to BeatmapInstaller to avoid the need
+    // to duplicate and reconcile state between them?
     void apply(const BeatmapInstaller::EntryView& v);
 
-    [[nodiscard]] i32 set_id() const { return this->m_set_id; }
+    [[nodiscard]] i32 set_id() const { return this->mapset_id; }
     [[nodiscard]] CBaseUIButton* xButton() const { return this->x_btn; }
 
    private:
-    i32 m_set_id;
-    MapInstallStage m_stage{MapInstallStage::None};
-    f32 m_progress{0.f};
-    std::string m_display_name;
-    std::string m_cached_title;   // "Beatmap #N" or display_name
-    std::string m_cached_status;  // "73%" / "Queued" / "Installing..." / "Failed"
+    i32 mapset_id;
+    MapInstallStage stage{MapInstallStage::None};
+    f32 progress{0.f};
+    std::string display_name;
+    std::string cached_title;   // "Beatmap #N" or display_name
+    std::string cached_status;  // "73%" / "Queued" / "Installing..." / "Failed"
 
     CBaseUIButton* x_btn{nullptr};
     McFont* font;
 
-    void refresh_cached_strings();
+    void update_cached_strings();
 };
 
 InstallRow::InstallRow(i32 set_id)
     : CBaseUIContainer(0, 0, 0, 0, fmt::format("install-row-{}", set_id)),
-      m_set_id(set_id),
+      mapset_id(set_id),
       font(engine->getDefaultFont()) {
     this->x_btn = new CBaseUIButton(0, 0, 0, 0, "x", "✖"s);
     this->x_btn->setDrawFrame(false);
@@ -81,46 +86,46 @@ InstallRow::InstallRow(i32 set_id)
     this->x_btn->setClickCallback([set_id]() { osu->getBeatmapInstaller()->cancel(set_id); });
     this->addBaseUIElement(this->x_btn);
 
-    this->refresh_cached_strings();
+    this->update_cached_strings();
 }
 
 void InstallRow::apply(const BeatmapInstaller::EntryView& v) {
     bool dirty = false;
-    if(v.stage != this->m_stage) {
-        this->m_stage = v.stage;
+    if(v.stage != this->stage) {
+        this->stage = v.stage;
         dirty = true;
     }
-    if(v.progress != this->m_progress) {
-        this->m_progress = v.progress;
+    if(v.progress != this->progress) {
+        this->progress = v.progress;
         dirty = true;
     }
-    if(v.display_name != this->m_display_name) {
-        this->m_display_name = v.display_name;
+    if(v.display_name != this->display_name) {
+        this->display_name = v.display_name;
         dirty = true;
     }
-    if(dirty) this->refresh_cached_strings();
+    if(dirty) this->update_cached_strings();
 }
 
-void InstallRow::refresh_cached_strings() {
-    this->m_cached_title =
-        this->m_display_name.empty() ? fmt::format("Beatmap #{:d}", this->m_set_id) : this->m_display_name;
+void InstallRow::update_cached_strings() {
+    this->cached_title =
+        this->display_name.empty() ? fmt::format("Beatmap #{:d}", this->mapset_id) : this->display_name;
 
     using enum MapInstallStage;
-    switch(this->m_stage) {
+    switch(this->stage) {
         case Failed:
-            this->m_cached_status = "Failed";
+            this->cached_status = "Failed";
             break;
         case Installing:
-            this->m_cached_status = "Installing...";
+            this->cached_status = "Installing...";
             break;
         case Downloading:
-            this->m_cached_status = fmt::format("{:d}%", static_cast<i32>(this->m_progress * 100.f));
+            this->cached_status = fmt::format("{:d}%", static_cast<i32>(this->progress * 100.f));
             break;
         case Queued:
         case Done:
         case None:
         default:
-            this->m_cached_status = "Queued";
+            this->cached_status = "Queued";
             break;
     }
 }
@@ -132,13 +137,13 @@ void InstallRow::draw() {
 
     // progress fill across the bottom (clamp to 5% minimum while in flight, mirrors OsuDirect)
     using enum MapInstallStage;
-    const bool active = (this->m_stage == Queued || this->m_stage == Downloading || this->m_stage == Installing);
-    const f32 raw_p = (this->m_stage == Installing) ? 1.f : this->m_progress;
-    const f32 fill_p = (this->m_stage == Failed) ? 1.f : (active ? std::max(0.05f, raw_p) : raw_p);
+    using namespace flags::operators;
+    const bool active = !!(this->stage & (Queued | Downloading | Installing));
+    const f32 raw_p = (this->stage == Installing) ? 1.f : this->progress;
+    const f32 fill_p = (this->stage == Failed) ? 1.f : (active ? std::max(0.05f, raw_p) : raw_p);
     const f32 bar_h = DEF_PROGRESS_BAR_H * scale;
 
-    g->setColor(color_for_progress(this->m_stage));
-    g->setAlpha(0.85f);
+    g->setColor(color_for_progress(this->stage).setA(0.85f));
     g->fillRect(static_cast<int>(pos.x), static_cast<int>(pos.y + size.y - bar_h), static_cast<int>(size.x * fill_p),
                 static_cast<int>(bar_h));
 
@@ -160,20 +165,24 @@ void InstallRow::draw() {
     // right: status text, right-aligned within a fixed-width zone so digit-count changes
     // don't shift the title's ellipsization budget every frame.
     const f32 status_zone_right = pos.x + size.x - x_btn_zone_w;
-    const f32 status_text_x = status_zone_right - static_cast<f32>(this->font->getStringWidth(this->m_cached_status));
+    const f32 status_text_x = status_zone_right - static_cast<f32>(this->font->getStringWidth(this->cached_status));
     g->pushTransform();
-    g->translate(static_cast<f32>(static_cast<i32>(status_text_x)), static_cast<f32>(static_cast<i32>(text_y)));
-    g->drawString(this->font, this->m_cached_status, fx);
+    {
+        g->translate(static_cast<f32>(static_cast<i32>(status_text_x)), static_cast<f32>(static_cast<i32>(text_y)));
+        g->drawString(this->font, this->cached_status, fx);
+    }
     g->popTransform();
 
     // left: title, ellipsized to whatever space is left before the status zone
     const f32 title_max_w = (status_zone_right - status_zone_w) - (pos.x + pad_x) - gap;
-    const std::string title_disp = (static_cast<f32>(this->font->getStringWidth(this->m_cached_title)) > title_max_w)
-                                       ? this->font->ellipsize(this->m_cached_title, title_max_w)
-                                       : this->m_cached_title;
+    const std::string title_disp = (static_cast<f32>(this->font->getStringWidth(this->cached_title)) > title_max_w)
+                                       ? this->font->ellipsize(this->cached_title, title_max_w)
+                                       : this->cached_title;
     g->pushTransform();
-    g->translate(static_cast<f32>(static_cast<i32>(pos.x + pad_x)), static_cast<f32>(static_cast<i32>(text_y)));
-    g->drawString(this->font, title_disp, fx);
+    {
+        g->translate(static_cast<f32>(static_cast<i32>(pos.x + pad_x)), static_cast<f32>(static_cast<i32>(text_y)));
+        g->drawString(this->font, title_disp, fx);
+    }
     g->popTransform();
 
     CBaseUIContainer::draw();  // X button
@@ -181,12 +190,23 @@ void InstallRow::draw() {
 
 }  // namespace
 
-BeatmapInstallOverlay::BeatmapInstallOverlay() : UIScreen() {}
+struct BeatmapInstallOverlay::BIOImpl {
+    // temporary buffer for in-progress downloads
+    std::vector<BeatmapInstaller::EntryView> entry_cache;
+
+    // cached layout inputs; layout is recomputed only when any of these change
+    uSz last_row_count{0};
+    f32 last_scale{0.f};
+    i32 last_virt_height{0};
+};
+
+BeatmapInstallOverlay::BeatmapInstallOverlay() : UIScreen(), m_impl() {}
+BeatmapInstallOverlay::~BeatmapInstallOverlay() = default;
 
 void BeatmapInstallOverlay::onResolutionChange(vec2 /*newResolution*/) {
     // invalidate cached layout inputs so update() recomputes positions next tick
-    this->last_scale = 0.f;
-    this->last_virt_height = 0;
+    m_impl->last_scale = 0.f;
+    m_impl->last_virt_height = 0;
 }
 
 void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
@@ -199,8 +219,9 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
     }
 
     auto* installer = osu->getBeatmapInstaller();
-    auto snapshot = installer->snapshot();
-    if(snapshot.empty()) {
+
+    installer->snapshot(m_impl->entry_cache);
+    if(m_impl->entry_cache.empty()) {
         this->bVisible = false;
         return;
     }
@@ -214,7 +235,7 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
         std::vector<InstallRow*> stale;
         for(auto* row : this->getElementsAs<InstallRow>()) {
             bool found = false;
-            for(const auto& v : snapshot) {
+            for(const auto& v : m_impl->entry_cache) {
                 if(v.set_id == row->set_id()) {
                     found = true;
                     break;
@@ -228,7 +249,7 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
 
     // add new rows + update existing ones. insertion order preserves "first seen first"
     // so a bottom-anchored vertical layout naturally puts newest at the bottom.
-    for(const auto& v : snapshot) {
+    for(const auto& v : m_impl->entry_cache) {
         InstallRow* row = nullptr;
         for(auto* r : this->getElementsAs<InstallRow>()) {
             if(r->set_id() == v.set_id) {
@@ -244,14 +265,16 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
         row->apply(v);
     }
 
+    m_impl->entry_cache.clear();  // unnecessary to keep this around for now
+
     // layout: bottom-left anchored panel, rows stacked top-to-bottom inside.
     // recompute only when row count, ui scale, or virtual screen height changed.
     const f32 scale = Osu::getUIScale();
     const i32 virt_h = osu->getVirtScreenHeight();
     const auto& rows = this->getElementsAs<InstallRow>();
 
-    if(topology_changed || scale != this->last_scale || virt_h != this->last_virt_height ||
-       rows.size() != this->last_row_count) {
+    if(topology_changed || scale != m_impl->last_scale || virt_h != m_impl->last_virt_height ||
+       rows.size() != m_impl->last_row_count) {
         const f32 row_w = DEF_ROW_WIDTH * scale;
         const f32 row_h = DEF_ROW_HEIGHT * scale;
         const f32 inner_pad = DEF_PANEL_INNER_PAD * scale;
@@ -281,9 +304,9 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
         }
         this->update_pos();
 
-        this->last_scale = scale;
-        this->last_virt_height = virt_h;
-        this->last_row_count = rows.size();
+        m_impl->last_scale = scale;
+        m_impl->last_virt_height = virt_h;
+        m_impl->last_row_count = rows.size();
     }
 
     CBaseUIContainer::update(c);
@@ -296,8 +319,7 @@ void BeatmapInstallOverlay::draw() {
     const vec2 size = this->getSize();
 
     // panel background
-    g->setColor(rgb(15, 15, 15));
-    g->setAlpha(0.85f);
+    g->setColor(rgb(15, 15, 15).setA(0.85f));
     g->fillRect(static_cast<int>(pos.x), static_cast<int>(pos.y), static_cast<int>(size.x), static_cast<int>(size.y));
 
     // panel border (1 ui-pixel)
@@ -315,8 +337,7 @@ void BeatmapInstallOverlay::draw() {
     // dividers between rows
     const auto& rows = this->getElementsAs<InstallRow>();
     if(rows.size() >= 2) {
-        g->setColor(rgb(50, 50, 50));
-        g->setAlpha(0.85f);
+        g->setColor(rgb(50, 50, 50).setA(0.85f));
         for(uSz i = 1; i < rows.size(); ++i) {
             const vec2 rp = rows[i]->getPos();
             g->fillRect(static_cast<int>(rp.x), static_cast<int>(rp.y), static_cast<int>(rows[i]->getSize().x), 1);

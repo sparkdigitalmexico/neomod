@@ -139,13 +139,13 @@ struct alignas(u32) Color {
 	[[nodiscard]] constexpr T Bf() const { return static_cast<T>(static_cast<float>(B_) / 255.0f); }
 
 	template <typename T = Channel>
-	constexpr Color &setA(T a) { A_ = Colors::to_byte(a); return *this; }
+	constexpr Color &setA(T a) { data = (data & 0x00FFFFFFu) | (static_cast<u32>(Colors::to_byte(a)) << 24); return *this; }
 	template <typename T = Channel>
-	constexpr Color &setR(T r) { R_ = Colors::to_byte(r); return *this; }
+	constexpr Color &setR(T r) { data = (data & 0xFF00FFFFu) | (static_cast<u32>(Colors::to_byte(r)) << 16); return *this; }
 	template <typename T = Channel>
-	constexpr Color &setG(T g) { G_ = Colors::to_byte(g); return *this; }
+	constexpr Color &setG(T g) { data = (data & 0xFFFF00FFu) | (static_cast<u32>(Colors::to_byte(g)) << 8); return *this; }
 	template <typename T = Channel>
-	constexpr Color &setB(T b) { B_ = Colors::to_byte(b); return *this; }
+	constexpr Color &setB(T b) { data = (data & 0xFFFFFF00u) | static_cast<u32>(Colors::to_byte(b)); return *this; }
 
     // clang-format on
 #undef A_

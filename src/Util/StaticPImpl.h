@@ -5,7 +5,6 @@
 
 #include <cstddef>
 #include <new>
-#include <utility>
 
 #ifndef really_forceinline
 #if defined(__GNUC__) || defined(__clang__)
@@ -47,11 +46,11 @@ class StaticPImpl {
     [[nodiscard]] really_forceinline const T &operator*() const noexcept { return *ptr(); }
 
     template <typename... Args>
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init, cppcoreguidelines-missing-std-forward)
     [[nodiscard]] really_forceinline explicit StaticPImpl(Args &&...args) {
         static_assert(sizeof(T) <= PMUL_(RealImplSize));
         static_assert(alignof(T) <= BufferAlignment);
-        new(m_buffer) T(std::forward<Args>(args)...);
+        new(m_buffer) T(static_cast<Args&&>(args)...);
     }
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init, hicpp-member-init)

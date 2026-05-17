@@ -1,10 +1,11 @@
 // Copyright (c) 2026, WH, All rights reserved.
 #pragma once
 
+#include "noinclude.h"
+
+#include "types.h"
 #include "DownloadHandle.h"
 #include "Hashing.h"
-#include "noinclude.h"
-#include "types.h"
 
 #include <string>
 #include <string_view>
@@ -60,6 +61,7 @@ class BeatmapInstaller final {
     [[nodiscard]] State get_state(i32 set_id) const;
 
     // copy of all current entries (typically <= 5), one row each.
+    void snapshot(std::vector<EntryView>& out) const;  // "out" is immediately cleared
     [[nodiscard]] std::vector<EntryView> snapshot() const;
 
     // drop everything (e.g. on bancho disconnect)

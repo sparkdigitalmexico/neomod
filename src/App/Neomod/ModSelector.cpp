@@ -1059,7 +1059,8 @@ ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(const std::string &t
 
     if(os.cvar != nullptr) os.slider->setValue(os.cvar->getFloat() + 1.0f, false);
 
-    this->overrideSliderContainer->addBaseUIElements({os.lock, os.desc, os.slider, os.label});
+    this->overrideSliderContainer->addBaseUIElements(
+        std::array<CBaseUIElement *const, 4>{os.lock, os.desc, os.slider, os.label});
     this->overrideSliders.push_back(os);
 
     return os;
