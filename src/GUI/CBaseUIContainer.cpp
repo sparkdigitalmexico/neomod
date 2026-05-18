@@ -28,8 +28,8 @@ void CBaseUIContainer::invalidate() { this->vElements.clear(); }
 CBaseUIContainer *CBaseUIContainer::addBaseUIElement(CBaseUIElement *element, vec2 pos) {
     return this->addBaseUIElement(element, pos.x, pos.y);
 }
-CBaseUIContainer *CBaseUIContainer::addBaseUIElements(std::span<CBaseUIElement *const> elements) {
-    return this->addBaseUIElements(std::vector<CBaseUIElement *>{elements.begin(), elements.end()});
+CBaseUIContainer *CBaseUIContainer::addBaseUIElements(const std::vector<CBaseUIElement *> &elements) {
+    return this->addBaseUIElements(std::span{elements.begin(), elements.end()});
 }
 CBaseUIContainer *CBaseUIContainer::addBaseUIElementBack(CBaseUIElement *element, vec2 pos) {
     return this->addBaseUIElementBack(element, pos.x, pos.y);
@@ -55,7 +55,7 @@ CBaseUIContainer *CBaseUIContainer::addBaseUIElement(CBaseUIElement *element) {
     return this;
 }
 
-CBaseUIContainer *CBaseUIContainer::addBaseUIElements(const std::vector<CBaseUIElement *> &elements) {
+CBaseUIContainer *CBaseUIContainer::addBaseUIElements(std::span<CBaseUIElement *const> elements) {
     if(elements.empty()) return this;
 
     this->vElements.reserve(this->vElements.size() + elements.size());

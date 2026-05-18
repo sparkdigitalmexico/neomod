@@ -55,7 +55,7 @@ Bundled in-tree libraries:
 - glad (https://glad.dav1d.de/) - WTFPL / CC0-1.0 & Apache-2.0
 - boost/sort (https://www.boost.org/) - Boost Software License 1.0
 - unordered_dense (ankerl) (https://github.com/ankerl/unordered_dense) - MIT
-- delegatesv2 (https://github.com/tshware/delegatesv2) - MIT
+- delegatesv2 (https://sakryukov.github.io/publications/2017-02-13.The-Impossibly-Fast-C++Delegates-Fixed.html) - MIT
 - base64 (https://w1.fi/) - BSD license
 - demoji (William Horvath) - MIT
 - MD5.c (RSA Data Security, Inc.) - RSA MD5 license
