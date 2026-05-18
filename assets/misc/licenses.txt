@@ -1748,7 +1748,7 @@ Used by the following dependencies:
 - mimalloc (https://github.com/microsoft/mimalloc)
 - discord-rpc (https://github.com/harmonytf/discord-rpc)
 - rapidjson (https://github.com/Tencent/rapidjson)
-- unordered_dense (https://github.com/ankerl/unordered_dense)
+- unordered_dense (https://github.com/martinus/unordered_dense)
 - delegatesv2 (https://sakryukov.github.io/publications/2017-02-13.The-Impossibly-Fast-C++Delegates-Fixed.html)
 - demoji (William Horvath)
 - sha256 (https://github.com/LekKit/sha256)
