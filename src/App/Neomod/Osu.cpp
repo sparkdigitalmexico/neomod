@@ -580,6 +580,21 @@ void Osu::update() {
         this->doChangeFocus(focused);
     }
 
+    // online beatmap downloads and thumbnails (avatars/beatmap thumbnails) are currently only relevant when online
+    if(BanchoState::is_online()) {
+        // update background beatmap downloads
+        // (gated differently from thumbnails so that we don't auto-select a map while playing)
+        if(!this->isInPlayMode()) {
+            this->beatmapInstaller->update();
+        }
+        // XXX: there are too many flags/states to individually check whether or not we're in a "low-latency session" or not
+        // TODO: offline/local avatars?
+        if(!this->isInPlayModeAndNotPaused() || this->map_iface->isInBreak() ||
+           this->map_iface->isInSkippableSection()) {
+            this->thumbnailManager->update();
+        }
+    }
+
     // does things which needed to wait until loading finished
     this->map_iface->checkHandleAsyncMusicLoadFinish();
 
@@ -589,15 +604,6 @@ void Osu::update() {
     }
 
     this->fposu->update();
-
-    // only update if not playing (and online)
-    // TODO: offline/local avatars?
-    if(BanchoState::is_online() &&
-       // XXX: there are too many flags/states to individually check whether or not we're in a "low-latency session" or not
-       (!this->isInPlayModeAndNotPaused() || this->map_iface->isInBreak() || this->map_iface->isInSkippableSection())) {
-        this->thumbnailManager->update();
-        this->beatmapInstaller->update();
-    }
 
     ui->update();
 
