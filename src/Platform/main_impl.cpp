@@ -1009,8 +1009,10 @@ void SDLMain::restart(const std::vector<std::string> &args) {
     std::vector<const char *> restartArgsChar(args.size() + 1);
 
     restartArgsChar.back() = nullptr;
-
-    for(int i = 0; const auto &arg : args) {
+    // use the fully qualified executable path as the first arg
+    // (since if we were launched with a relative path outside the root dir then the relative path points somewhere else after setcwdexe)
+    restartArgsChar.front() = getPathToSelf().c_str();
+    for(int i = 1; const auto &arg : std::span{args.begin() + 1, args.end()}) {
         restartArgsChar[i] = arg.c_str();
         i++;
     }
