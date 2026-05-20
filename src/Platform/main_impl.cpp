@@ -1012,9 +1012,11 @@ void SDLMain::restart(const std::vector<std::string> &args) {
     // use the fully qualified executable path as the first arg
     // (since if we were launched with a relative path outside the root dir then the relative path points somewhere else after setcwdexe)
     restartArgsChar.front() = getPathToSelf().c_str();
-    for(int i = 1; const auto &arg : std::span{args.begin() + 1, args.end()}) {
-        restartArgsChar[i] = arg.c_str();
-        i++;
+    if(args.size() > 1) {
+        for(int i = 1; const auto &arg : std::span{args.begin() + 1, args.end()}) {
+            restartArgsChar[i] = arg.c_str();
+            i++;
+        }
     }
 
     if(cv::debug_env.getBool()) {
@@ -1023,9 +1025,9 @@ void SDLMain::restart(const std::vector<std::string> &args) {
         for(int i = -1; const auto entry : restartArgsChar) {
             i++;
             if(!entry) continue;
-            logString += fmt::format("({}) {} ", i, entry);
+            logString += fmt::format("({}):\n{}\n", i, entry);
         }
-        logString += ".";
+        logString.pop_back();
         logRaw(logString);
     }
 
