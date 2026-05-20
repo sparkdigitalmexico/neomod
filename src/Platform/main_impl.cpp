@@ -35,6 +35,8 @@
 // EM_ASM_INT doesn't work in CI, if you have too much time feel free to find out why
 EM_JS(int, js_get_canvas_width, (), { return document.getElementById('canvas').width; });
 EM_JS(int, js_get_canvas_height, (), { return document.getElementById('canvas').height; });
+#elif defined(MCENGINE_PLATFORM_MACOS)
+#include <unistd.h>  // execv
 #endif
 
 // for sending keys synthetically from console
@@ -1004,8 +1006,6 @@ extern "C" __declspec(dllimport) char *__stdcall GetCommandLineA(void);
 #endif
 
 void SDLMain::restart(const std::vector<std::string> &args) {
-    SDL_PropertiesID restartprops = SDL_CreateProperties();
-
     std::vector<const char *> restartArgsChar(args.size() + 1);
 
     restartArgsChar.back() = nullptr;
@@ -1031,6 +1031,15 @@ void SDLMain::restart(const std::vector<std::string> &args) {
         logRaw(logString);
     }
 
+#ifdef MCENGINE_PLATFORM_MACOS
+    // fork+exec is bugged with mimalloc on macos
+    execv(restartArgsChar.front(), const_cast<char *const *>(restartArgsChar.data()));
+    perror("restart failed");
+    return;
+#else
+
+    SDL_PropertiesID restartprops = SDL_CreateProperties();
+
     SDL_SetPointerProperty(restartprops, SDL_PROP_PROCESS_CREATE_ARGS_POINTER, (void *)restartArgsChar.data());
     SDL_SetBooleanProperty(restartprops, SDL_PROP_PROCESS_CREATE_BACKGROUND_BOOLEAN, true);
     if(s_sdlenv) {
@@ -1051,4 +1060,5 @@ void SDLMain::restart(const std::vector<std::string> &args) {
     }
 
     SDL_DestroyProperties(restartprops);
+#endif
 }
