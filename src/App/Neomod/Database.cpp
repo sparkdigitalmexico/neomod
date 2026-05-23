@@ -316,6 +316,9 @@ void Database::destroyLoader() {
     BatchDiffCalc::abort_calc();
     AsyncPPC::set_map(nullptr);
     VolNormalization::abort();
+    // queued priority requests hold raw DatabaseBeatmap* pointers; drop them before the
+    // beatmap_difficulties wipe in startLoader makes them dangle.
+    VolNormalization::flush_priority();
 
     directoryWatcher->stop_watching(NEOMOD_MAPS_PATH "/");
     this->db_load_handle.cancel();
@@ -543,6 +546,12 @@ const BeatmapSet *Database::addBeatmapSet(const std::string &beatmapFolderPath, 
     if(this->isFinished()) {
         ui->getSongBrowser()->addBeatmapSet(raw_mapset);
         this->batch_diffcalc_pending = true;  // picked up by SongBrowser::update
+
+        // post-DB-load imports never made it into loudness_to_calc, so kick off priority
+        // requests now so the maps have correct loudness by the time the user previews them.
+        for(const auto &diff : raw_mapset->getDifficulties()) {
+            VolNormalization::request_priority(diff.get());
+        }
     }
 
     if(cv::maps_save_immediately.getBool()) {

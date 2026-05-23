@@ -48,6 +48,7 @@
 #include "SkinImage.h"
 #include "AsyncPPCalculator.h"
 #include "SongBrowser/SongBrowser.h"
+#include "SongBrowser/VolNormalization.h"
 #include "SoundEngine.h"
 #include "SpectatorScreen.h"
 #include "UI.h"
@@ -1588,7 +1589,8 @@ void BeatmapInterface::loadMusic(bool reload, bool async) {
         this->music = resourceManager->getSound("BEATMAP_MUSIC");
     }
 
-    const std::string oldPath = this->music ? this->music->getFilePath() : "";
+    const std::string oldPath =
+        this->music ? this->music->getFilePath() : "";  // NOTE: possibly racy if currently being async (re)loaded
     const std::string &newPath = beatmapSoundPath;
 
     const bool pathChanged = newPath != oldPath;
@@ -1622,6 +1624,14 @@ void BeatmapInterface::loadMusic(bool reload, bool async) {
 
     this->bIsAsyncMusicLoadHandled = false;
 
+    // if normalization is enabled and we don't yet have loudness for this map, kick off a
+    // priority calc in parallel with the audio decode. checkHandleAsyncMusicLoadFinish() will
+    // hold off the music handoff until loudness lands, avoiding an audible volume snap.
+    if(this->beatmap && cv::normalize_loudness.getBool() &&
+       this->beatmap->loudness.load(std::memory_order_acquire) == 0.f) {
+        VolNormalization::request_priority(this->beatmap);
+    }
+
     // load the song (again)
     if(haveExistingMusic) {
         // rebuild with new path
@@ -1644,6 +1654,15 @@ void BeatmapInterface::loadMusic(bool reload, bool async) {
 void BeatmapInterface::checkHandleAsyncMusicLoadFinish() {
     if(this->bIsAsyncMusicLoadHandled || unlikely(!this->music)) return;
     if(resourceManager->isLoadingResource(this->music)) return;
+
+    // hold off until loudness has landed if normalization is currently enabled, so the song
+    // doesn't briefly play at unnormalized volume. fallback_loudness is non-zero, so this
+    // never hangs: process_one() always writes a non-zero value (real or fallback).
+    // re-checked each frame: toggling normalization off while waiting lets playback proceed.
+    if(this->beatmap && cv::normalize_loudness.getBool() &&
+       this->beatmap->loudness.load(std::memory_order_acquire) == 0.f) {
+        return;
+    }
 
     this->bIsAsyncMusicLoadHandled = true;
 

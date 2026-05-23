@@ -58,6 +58,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
 
     // does things which needed to wait until loading finished, even outside of play mode (called by Osu::update)
     void checkHandleAsyncMusicLoadFinish();
+    [[nodiscard]] inline bool isMusicLoadHandled() const { return this->bIsAsyncMusicLoadHandled; }
 
     // HACK: Updates buffering state and pauses/unpauses the music!
     bool isBuffering();

@@ -1121,16 +1121,18 @@ void MainMenu::update(CBaseUIEventCtx &c) {
     this->pauseButton->setPaused(true);
 
     if(soundEngine->isReady()) {
-        auto *music = osu->getMapInterface()->getMusic();
+        auto *map_iface = osu->getMapInterface();
+        auto *music = map_iface->getMusic();
 
-        // try getting existing playing music track, even if osu->getMapInterface()->getMusic() did not have one
+        // try getting existing playing music track, even if map_iface->getMusic() did not have one
         if(!music) {
             music = resourceManager->getSound("BEATMAP_MUSIC");
         }
 
         if(!music) {
             this->selectRandomBeatmap();
-        } else if(!resourceManager->isLoadingResource(music)) {
+        } else if(!resourceManager->isLoadingResource(music) &&
+                  map_iface->isMusicLoadHandled() /* we are still loading */) {
             if(!music->isReady() || music->isFinished()) {
                 this->selectRandomBeatmap();
             } else if(music->isPlaying()) {
@@ -1143,7 +1145,7 @@ void MainMenu::update(CBaseUIEventCtx &c) {
 
                 // load timing points if needed
                 // XXX: file io, don't block main thread
-                auto *map = osu->getMapInterface()->getBeatmapMutable();
+                auto *map = map_iface->getBeatmapMutable();
                 if(map && map->getTimingpoints().empty()) {
                     map->loadMetadata(false);
                 }

@@ -2241,8 +2241,8 @@ bool Osu::isBleedingEdge() {
 
 // part 1 of callback
 void Osu::audioRestartCallbackBefore() {
-    // abort loudness calc
-    VolNormalization::abort();
+    // abort loudness calc (needed especially for BASS since BASS_Free() is global)
+    VolNormalization::shutdown();
 
     Sound *map_music = nullptr;
     if(this->map_iface && (map_music = this->map_iface->getMusic())) {
