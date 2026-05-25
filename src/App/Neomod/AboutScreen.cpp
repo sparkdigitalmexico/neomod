@@ -68,6 +68,7 @@ AboutScreen::AboutScreen() : ScreenBackable() {
         R"(- Fixed broken slider bodies during slider snaking with the SDL_gpu renderer)",
         R"(- Updated osu! version to b20260412.1)",
         R"(- (Web) URL now updates to match current page)",
+        R"(- Fixed restart-after-update sometimes not working on Linux)",
     };
     changelogs.push_back(v43_10);
 
