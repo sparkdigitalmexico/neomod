@@ -120,11 +120,11 @@ struct alignas(u32) Color {
                      (!Colors::all_compatible_v<A, R, G, B>)
     = delete; /* ("parameters should have compatible types"); */
 
-    friend inline bool operator==(Color a, Color b) { return a.data == b.data; }
-    friend inline bool operator==(Color a, u32 b) { return a.data == b; }
-    friend inline bool operator==(u32 a, Color b) { return a == b.data; }
-    friend inline bool operator==(Color a, i32 b) { return a.data == static_cast<u32>(b); }
-    friend inline bool operator==(i32 a, Color b) { return static_cast<u32>(a) == b.data; }
+    friend constexpr inline bool operator==(Color a, Color b) { return a.data == b.data; }
+    friend constexpr inline bool operator==(Color a, u32 b) { return a.data == b; }
+    friend constexpr inline bool operator==(u32 a, Color b) { return a == b.data; }
+    friend constexpr inline bool operator==(Color a, i32 b) { return a.data == static_cast<u32>(b); }
+    friend constexpr inline bool operator==(i32 a, Color b) { return static_cast<u32>(a) == b.data; }
 
     // clang-format off
 

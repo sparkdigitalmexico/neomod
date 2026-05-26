@@ -6,7 +6,14 @@
 #include "BaseEnvironment.h"
 #include "MakeDelegateWrapper.h"
 #include "Hashing.h"
+#include "MD5Hash.h"
 #include "Color.h"
+
+#include "SyncMutex.h"
+#include "SyncCV.h"
+#include "SyncJthread.h"
+#include "SyncOnce.h"
+#include "SyncStoptoken.h"
 
 // glm, header only, template-heavy
 #include "glm/geometric.hpp"
