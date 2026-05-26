@@ -164,7 +164,7 @@ class ProcReader {
     int m_fd;
 };
 
-class ProcStatmReader : public ProcReader {
+class ProcStatmReader final : public ProcReader {
    public:
     NOCOPY_NOMOVE(ProcStatmReader)
    public:
@@ -191,7 +191,7 @@ class ProcStatmReader : public ProcReader {
 };
 
 // Reader for /proc/self/stat (CPU times, thread count, etc.)
-class ProcStatReader : public ProcReader {
+class ProcStatReader final : public ProcReader {
    public:
     NOCOPY_NOMOVE(ProcStatReader)
    public:
@@ -257,7 +257,7 @@ class ProcStatReader : public ProcReader {
 };
 
 // Reader for /proc/self/status (context switches)
-class ProcStatusReader : public ProcReader {
+class ProcStatusReader final : public ProcReader {
    public:
     NOCOPY_NOMOVE(ProcStatusReader)
    public:
@@ -334,7 +334,7 @@ size_t getPeakRSS() {
     return (size_t)(psinfo.pr_rssize * 1024L);
 
 #elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
-    struct rusage rusage;
+    struct rusage rusage{};
     getrusage(RUSAGE_SELF, &rusage);
 #if defined(__APPLE__) && defined(__MACH__)
     return (size_t)rusage.ru_maxrss;
@@ -357,9 +357,10 @@ size_t getCurrentRSS() {
     return (size_t)info.WorkingSetSize;
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    struct mach_task_basic_info info;
+    struct mach_task_basic_info info{};
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
-    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) != KERN_SUCCESS)
+    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &infoCount) !=
+       KERN_SUCCESS)
         return (size_t)0L;
     return (size_t)info.resident_size;
 
@@ -384,9 +385,10 @@ size_t getVirtualSize() {
     return enumerateVirtualMemory().totalCommitted;
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    struct mach_task_basic_info info;
+    struct mach_task_basic_info info{};
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
-    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) != KERN_SUCCESS)
+    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &infoCount) !=
+       KERN_SUCCESS)
         return (size_t)0L;
     return (size_t)info.virtual_size;
 
@@ -416,7 +418,7 @@ size_t getTotalPhysicalMemory() {
     int mib[2] = {CTL_HW, HW_MEMSIZE};
     int64_t memsize = 0;
     size_t len = sizeof(memsize);
-    if(sysctl(mib, 2, &memsize, &len, nullptr, 0) == 0) return (size_t)memsize;
+    if(sysctl(&mib[0], 2, &memsize, &len, nullptr, 0) == 0) return (size_t)memsize;
     return (size_t)0L;
 
 #elif defined(MCENGINE_PLATFORM_LINUX)
@@ -443,7 +445,8 @@ size_t getAvailablePhysicalMemory() {
 #elif defined(__APPLE__) && defined(__MACH__)
     vm_statistics64_data_t vmStats;
     mach_msg_type_number_t infoCount = HOST_VM_INFO64_COUNT;
-    if(host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t)&vmStats, &infoCount) != KERN_SUCCESS)
+    if(host_statistics64(mach_host_self(), HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&vmStats), &infoCount) !=
+       KERN_SUCCESS)
         return (size_t)0L;
     // Free + inactive pages are generally considered "available"
     return (size_t)(vmStats.free_count + vmStats.inactive_count) * (size_t)sysconf(_SC_PAGESIZE);
@@ -480,7 +483,7 @@ size_t getTotalVirtualAddressSpace() {
     // - 32-bit: ~3GB user space (1GB kernel)
     // - 64-bit: 128TB+ (varies by kernel/architecture)
     // RLIMIT_AS gives the soft limit if set, otherwise it's RLIM_INFINITY
-    struct rlimit rl;
+    struct rlimit rl{};
     if(getrlimit(RLIMIT_AS, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY) return (size_t)rl.rlim_cur;
 
     // Return a reasonable default based on pointer size
@@ -506,7 +509,7 @@ uint64_t getPageFaultCount() {
     return 0;
 
 #elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
-    struct rusage rusage;
+    struct rusage rusage{};
     if(getrusage(RUSAGE_SELF, &rusage) == 0) return (uint64_t)(rusage.ru_majflt + rusage.ru_minflt);
     return 0;
 
@@ -527,7 +530,7 @@ size_t getSharedMemory() {
     // Use task_vm_info for more detailed breakdown
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
-    if(task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vmInfo, &count) == KERN_SUCCESS) {
+    if(task_info(mach_task_self(), TASK_VM_INFO, reinterpret_cast<task_info_t>(&vmInfo), &count) == KERN_SUCCESS) {
         // external pages are file-backed/shared, internal pages are anonymous/private
         return (size_t)vmInfo.external * (size_t)sysconf(_SC_PAGESIZE);
     }
@@ -575,9 +578,10 @@ void getMemoryInfo(MemoryInfo& info) {
     info.sharedBytes = vmStats.sharedBytes;
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    struct mach_task_basic_info taskInfo;
+    struct mach_task_basic_info taskInfo{};
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
-    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&taskInfo, &infoCount) == KERN_SUCCESS) {
+    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&taskInfo), &infoCount) ==
+       KERN_SUCCESS) {
         info.currentRSS = (size_t)taskInfo.resident_size;
         info.virtualSize = (size_t)taskInfo.virtual_size;
     }
@@ -585,13 +589,13 @@ void getMemoryInfo(MemoryInfo& info) {
     // Use task_vm_info for private/shared breakdown
     task_vm_info_data_t vmInfo;
     infoCount = TASK_VM_INFO_COUNT;
-    if(task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vmInfo, &infoCount) == KERN_SUCCESS) {
+    if(task_info(mach_task_self(), TASK_VM_INFO, reinterpret_cast<task_info_t>(&vmInfo), &infoCount) == KERN_SUCCESS) {
         size_t pageSize = (size_t)sysconf(_SC_PAGESIZE);
         info.privateBytes = (size_t)vmInfo.internal * pageSize;
         info.sharedBytes = (size_t)vmInfo.external * pageSize;
     }
 
-    struct rusage rusage;
+    struct rusage rusage{};
     if(getrusage(RUSAGE_SELF, &rusage) == 0) {
         info.peakRSS = (size_t)rusage.ru_maxrss;
         info.pageFaults = (uint64_t)(rusage.ru_majflt + rusage.ru_minflt);
@@ -600,15 +604,16 @@ void getMemoryInfo(MemoryInfo& info) {
     int mib[2] = {CTL_HW, HW_MEMSIZE};
     int64_t memsize = 0;
     size_t len = sizeof(memsize);
-    if(sysctl(mib, 2, &memsize, &len, nullptr, 0) == 0) info.totalPhysical = (size_t)memsize;
+    if(sysctl(&mib[0], 2, &memsize, &len, nullptr, 0) == 0) info.totalPhysical = (size_t)memsize;
 
     vm_statistics64_data_t vmStats;
     infoCount = HOST_VM_INFO64_COUNT;
-    if(host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t)&vmStats, &infoCount) == KERN_SUCCESS) {
+    if(host_statistics64(mach_host_self(), HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&vmStats), &infoCount) ==
+       KERN_SUCCESS) {
         info.availPhysical = (size_t)(vmStats.free_count + vmStats.inactive_count) * (size_t)sysconf(_SC_PAGESIZE);
     }
 
-    struct rlimit rl;
+    struct rlimit rl{};
     if(getrlimit(RLIMIT_AS, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY) info.totalVirtual = (size_t)rl.rlim_cur;
 
 #elif defined(MCENGINE_PLATFORM_LINUX)
@@ -622,7 +627,7 @@ void getMemoryInfo(MemoryInfo& info) {
         info.privateBytes = info.currentRSS - info.sharedBytes;
     }
 
-    struct rusage rusage;
+    struct rusage rusage{};
     if(getrusage(RUSAGE_SELF, &rusage) == 0) {
         info.peakRSS = (size_t)(rusage.ru_maxrss * 1024L);
         info.pageFaults = (uint64_t)(rusage.ru_majflt + rusage.ru_minflt);
@@ -634,7 +639,7 @@ void getMemoryInfo(MemoryInfo& info) {
     i64 availPages = sysconf(_SC_AVPHYS_PAGES);
     if(availPages > 0) info.availPhysical = (size_t)availPages * pageSize;
 
-    struct rlimit rl;
+    struct rlimit rl{};
     if(getrlimit(RLIMIT_AS, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY)
         info.totalVirtual = (size_t)rl.rlim_cur;
     else
@@ -659,7 +664,7 @@ double getUserCPUTime() {
     return 0.0;
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    struct rusage rusage;
+    struct rusage rusage{};
     if(getrusage(RUSAGE_SELF, &rusage) == 0) {
         return (double)rusage.ru_utime.tv_sec + (double)rusage.ru_utime.tv_usec / 1000000.0;
     }
@@ -692,7 +697,7 @@ double getKernelCPUTime() {
     return 0.0;
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    struct rusage rusage;
+    struct rusage rusage{};
     if(getrusage(RUSAGE_SELF, &rusage) == 0) {
         return (double)rusage.ru_stime.tv_sec + (double)rusage.ru_stime.tv_usec / 1000000.0;
     }
@@ -721,10 +726,10 @@ inline uint64_t getMonotonicTimeMS() {
 #endif
 }
 
-struct CpuUsageSamplerPortable {
-    uint64_t lastSampleTimeMS = 0;
-    double lastTotalCpuTime = 0.0;
-    double lastUsagePercent = 0.0;
+struct CpuUsageSamplerPortable final {
+    uint64_t lastSampleTimeMS{0};
+    double lastTotalCpuTime{0.0};
+    double lastUsagePercent{0.0};
 
     double sample(double currentTotalCpuTime) {
         const uint64_t now = getMonotonicTimeMS();
@@ -750,10 +755,8 @@ struct CpuUsageSamplerPortable {
     }
 };
 
-inline CpuUsageSamplerPortable& getCpuSampler() {
-    static CpuUsageSamplerPortable sampler;
-    return sampler;
-}
+static constinit CpuUsageSamplerPortable cpuSampler{};
+
 }  // namespace
 
 /**
@@ -763,7 +766,7 @@ inline CpuUsageSamplerPortable& getCpuSampler() {
  */
 double getCPUUsagePercent() {
     const double totalCpu = getUserCPUTime() + getKernelCPUTime();
-    return getCpuSampler().sample(totalCpu);
+    return cpuSampler.sample(totalCpu);
 }
 
 /**
@@ -789,18 +792,19 @@ uint32_t getThreadCount() {
     return count;
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    struct mach_task_basic_info info;
+    struct mach_task_basic_info info{};
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
-    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) == KERN_SUCCESS) {
+    if(task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &infoCount) ==
+       KERN_SUCCESS) {
         // task_basic_info doesn't have thread count directly, need thread_info
-        thread_array_t threads;
-        mach_msg_type_number_t threadCount;
+        thread_array_t threads{};
+        mach_msg_type_number_t threadCount{};
         if(task_threads(mach_task_self(), &threads, &threadCount) == KERN_SUCCESS) {
             // Deallocate the thread list
             for(mach_msg_type_number_t i = 0; i < threadCount; i++) {
                 mach_port_deallocate(mach_task_self(), threads[i]);
             }
-            vm_deallocate(mach_task_self(), (vm_address_t)threads, threadCount * sizeof(thread_t));
+            vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(threads), threadCount * sizeof(thread_t));
             return (uint32_t)threadCount;
         }
     }
@@ -837,14 +841,14 @@ void getCpuInfo(CpuInfo& info) {
         info.kernelTime = (double)k.QuadPart / 10000000.0;
     }
 
-    info.cpuUsage = getCpuSampler().sample(info.userTime + info.kernelTime);
+    info.cpuUsage = cpuSampler.sample(info.userTime + info.kernelTime);
     info.threadCount = getThreadCount();
 
     // Windows doesn't expose context switches per-process easily
     // Could use ETW or performance counters, but that's heavyweight
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    struct rusage rusage;
+    struct rusage rusage{};
     if(getrusage(RUSAGE_SELF, &rusage) == 0) {
         info.userTime = (double)rusage.ru_utime.tv_sec + (double)rusage.ru_utime.tv_usec / 1000000.0;
         info.kernelTime = (double)rusage.ru_stime.tv_sec + (double)rusage.ru_stime.tv_usec / 1000000.0;
@@ -852,16 +856,16 @@ void getCpuInfo(CpuInfo& info) {
         info.involuntaryCtxSwitches = (uint64_t)rusage.ru_nivcsw;
     }
 
-    info.cpuUsage = getCpuSampler().sample(info.userTime + info.kernelTime);
+    info.cpuUsage = cpuSampler.sample(info.userTime + info.kernelTime);
 
-    thread_array_t threads;
-    mach_msg_type_number_t threadCount;
+    thread_array_t threads{};
+    mach_msg_type_number_t threadCount{};
     if(task_threads(mach_task_self(), &threads, &threadCount) == KERN_SUCCESS) {
         info.threadCount = (uint32_t)threadCount;
         for(mach_msg_type_number_t i = 0; i < threadCount; i++) {
             mach_port_deallocate(mach_task_self(), threads[i]);
         }
-        vm_deallocate(mach_task_self(), (vm_address_t)threads, threadCount * sizeof(thread_t));
+        vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(threads), threadCount * sizeof(thread_t));
     }
 
 #elif defined(MCENGINE_PLATFORM_LINUX)
@@ -872,7 +876,7 @@ void getCpuInfo(CpuInfo& info) {
         info.threadCount = statData.threadCount;
     }
 
-    info.cpuUsage = getCpuSampler().sample(info.userTime + info.kernelTime);
+    info.cpuUsage = cpuSampler.sample(info.userTime + info.kernelTime);
     {
         uint64_t voluntary, involuntary;
         if(getStatusReader().readContextSwitches(voluntary, involuntary)) {
