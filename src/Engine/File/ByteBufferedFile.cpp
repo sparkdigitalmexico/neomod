@@ -5,6 +5,7 @@
 #include "File.h"
 #include "SyncMutex.h"
 #include "MD5Hash.h"
+#include "fmt/format.h"
 
 #include <system_error>
 #include <cassert>
@@ -24,7 +25,7 @@ ByteBufferedFile::Reader::Reader(std::string_view readPath_param)
     auto path = File::getFsPath(this->read_path);
     this->file.open(path, std::ios::binary);
     if(!this->file.is_open()) {
-        this->set_error("Failed to open file for reading: " + std::generic_category().message(errno));
+        this->set_error(fmt::format("Failed to open file for reading: {:s}", std::generic_category().message(errno)));
         debugLog("Failed to open '{:s}': {:s}", this->read_path, std::generic_category().message(errno).c_str());
         return;
     }
@@ -44,7 +45,7 @@ ByteBufferedFile::Reader::Reader(std::string_view readPath_param)
     return;  // success
 
 seek_error:
-    this->set_error("Failed to initialize file reader: " + std::generic_category().message(errno));
+    this->set_error(fmt::format("Failed to initialize file reader: {:s}", std::generic_category().message(errno)));
     debugLog("Failed to initialize file reader '{:s}': {:s}", this->read_path,
              std::generic_category().message(errno).c_str());
     this->file.close();
@@ -58,6 +59,15 @@ void ByteBufferedFile::Reader::set_error(const std::string &error_msg) {
         this->error_flag = true;
         this->last_error = error_msg;
     }
+}
+
+void ByteBufferedFile::Reader::set_oversized_error(uSz attempted) {
+    this->set_error(
+        fmt::format("Attempted to read {:d} bytes (exceeding buffer size {:d})", attempted, READ_BUFFER_SIZE));
+}
+
+void ByteBufferedFile::Reader::set_seek_error(u32 amount) {
+    this->set_error(fmt::format("Failed to seek {:d} bytes", amount));
 }
 
 // TODO: error handling is wildly incorrect/dubious
@@ -157,7 +167,7 @@ bool ByteBufferedFile::Reader::read_string(std::string &inout) {
 
     if(inout.size() != len) {
         inout.clear();
-        this->set_error("Failed to read " + std::to_string(len) + " bytes for string");
+        this->set_error(fmt::format("Failed to read {:d} bytes for string", len));
         return false;
     }
 
@@ -189,7 +199,7 @@ bool ByteBufferedFile::Reader::read_cstring(std::unique_ptr<char[]> &inout) {
     inout[len] = '\0';
 
     if(read != len) {
-        this->set_error("Failed to read " + std::to_string(len) + " bytes for string");
+        this->set_error(fmt::format("Failed to read {:d} bytes for string", len));
         goto out;
     }
     success = true;
@@ -253,7 +263,7 @@ ByteBufferedFile::Writer::Writer(std::string_view writePath_param)
 
     this->file.open(this->tmp_file_path, std::ios::binary);
     if(!this->file.is_open()) {
-        this->set_error("Failed to open file for writing: " + std::generic_category().message(errno));
+        this->set_error(fmt::format("Failed to open file for writing: {:s}", std::generic_category().message(errno)));
         debugLog("Failed to open '{:s}': {:s}", this->write_path, std::generic_category().message(errno).c_str());
         return;
     }
@@ -312,7 +322,7 @@ void ByteBufferedFile::Writer::flush() {
 
     this->file.write(reinterpret_cast<const char *>(&this->buffer[0]), this->pos);
     if(this->file.fail()) {
-        this->set_error("Failed to write to file: " + std::generic_category().message(errno));
+        this->set_error(fmt::format("Failed to write to file: {:s}", std::generic_category().message(errno)));
         return;
     }
     this->pos = 0;
@@ -331,8 +341,8 @@ void ByteBufferedFile::Writer::write_bytes(const u8 *bytes, uSz n) {
     }
 
     if(this->pos + n > WRITE_BUFFER_SIZE) {
-        this->set_error("Attempted to write " + std::to_string(n) + " bytes (exceeding buffer size " +
-                        std::to_string(WRITE_BUFFER_SIZE) + ")");
+        this->set_error(
+            fmt::format("Attempted to write {:d} bytes (exceeding buffer size {:d})", n, WRITE_BUFFER_SIZE));
         return;
     }
 

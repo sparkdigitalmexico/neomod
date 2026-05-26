@@ -52,8 +52,7 @@ class ByteBufferedFile {
             }
 
             if(len > READ_BUFFER_SIZE) {
-                this->set_error("Attempted to read " + std::to_string(len) + " bytes (exceeding buffer size " +
-                                std::to_string(READ_BUFFER_SIZE) + ")");
+                this->set_oversized_error(len);
                 if(out != nullptr) {
                     memset(out, 0, len);
                 }
@@ -164,7 +163,7 @@ class ByteBufferedFile {
             // seek in the file to skip the rest
             this->file.seekg(skip_from_file, std::ios::cur);
             if(this->file.fail()) {
-                this->set_error("Failed to seek " + std::to_string(skip_from_file) + " bytes");
+                this->set_seek_error(skip_from_file);
                 return;
             }
 
@@ -204,6 +203,8 @@ class ByteBufferedFile {
 
        private:
         void set_error(const std::string &error_msg);
+        void set_oversized_error(uSz attempted);
+        void set_seek_error(u32 amount);
 
         std::unique_ptr<u8[]> buffer;
 
