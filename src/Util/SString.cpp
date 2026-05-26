@@ -5,7 +5,10 @@
 
 #include "SString.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <memory>
 
 #ifndef BUILD_TOOLS_ONLY
 #include "BaseEnvironment.h"
@@ -48,6 +51,74 @@ bool alnum_comp(std::string_view a, std::string_view b) {
         j++;
     }
     return false;
+}
+
+void trim_inplace(std::string& str) {
+    if(str.empty()) return;
+    str.erase(0, str.find_first_not_of(" \t\r\n"));
+    str.erase(str.find_last_not_of(" \t\r\n") + 1);
+}
+
+// adjusts the view to exclude leading/trailing whitespace
+void trim_inplace(std::string_view& str) {
+    if(str.empty()) return;
+    size_t start = str.find_first_not_of(" \t\r\n");
+    if(start == std::string_view::npos) {
+        str = std::string_view();
+        return;
+    }
+    size_t end = str.find_last_not_of(" \t\r\n");
+    str = str.substr(start, end - start + 1);
+}
+
+bool contains_ncase(const std::string_view haystack, const std::string_view needle) {
+    return !haystack.empty() && !std::ranges::search(haystack, needle, [](unsigned char ch1, unsigned char ch2) {
+                                     return std::tolower(ch1) == std::tolower(ch2);
+                                 }).empty();
+}
+
+bool is_wspace_only(const std::string_view str) {
+    return str.empty() || std::ranges::all_of(str, [](unsigned char c) { return std::isspace(c) != 0; });
+}
+
+bool is_comment(const std::string_view str, const std::string_view token) {
+    size_t start = str.find_first_not_of(" \t\r\n");
+    if(start == std::string_view::npos) return false;
+    return str.substr(start).starts_with(token);
+}
+
+void lower_inplace(std::string& str) {
+    if(str.empty()) return;
+    std::ranges::transform(str, str.begin(), [](unsigned char c) { return std::tolower(c); });
+}
+
+std::string to_lower(const std::string_view str) {
+    std::string lstr{str.data(), str.length()};
+    if(str.empty()) return lstr;
+    lower_inplace(lstr);
+    return lstr;
+}
+
+std::unique_ptr<char[]> strcpy_u(std::string_view sv) {
+    if(sv.empty()) return nullptr;
+
+    const size_t len = sv.length();
+    std::unique_ptr<char[]> ret = std::make_unique_for_overwrite<char[]>(len + 1);
+    std::memcpy(ret.get(), sv.data(), len);
+    ret[len] = '\0';
+
+    return ret;
+}
+
+std::unique_ptr<char[]> strcpy_u(const char* data) {
+    if(!data) return nullptr;
+
+    const size_t len = std::strlen(data);
+    std::unique_ptr<char[]> ret = std::make_unique_for_overwrite<char[]>(len + 1);
+    std::memcpy(ret.get(), data, len);
+    ret[len] = '\0';
+
+    return ret;
 }
 
 template <typename R, typename S, split_ret_enabled_t<R>, split_join_enabled_t<S>>
