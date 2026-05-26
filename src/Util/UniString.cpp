@@ -27,7 +27,6 @@ uSz num_codepoints(std::u16string_view utf16) noexcept {
 uSz num_codepoints(std::u32string_view utf32) noexcept { return utf32.size(); }
 
 namespace {
-
 // U+FFFD in UTF-8
 constexpr char UTF8_REPLACEMENT[]{'\xEF', '\xBF', '\xBD'};
 
