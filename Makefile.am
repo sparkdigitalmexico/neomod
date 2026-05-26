@@ -1511,7 +1511,7 @@ if USE_FFMPEG
 BUILT_SOURCES += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 endif
 
-# (this is also disabled in CI by default, because we dont cache the pch there, so there's no point)
+# --- pch setup section (TODO: move flags to configure to check for support instead of hardcoding here) ---
 if BUILD_PCH
 
 # build precompiled headers

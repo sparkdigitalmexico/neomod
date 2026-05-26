@@ -1890,8 +1890,7 @@ AM_CONDITIONAL([STRIPBINS], [test "x$enable_strip" != "xno" && ! { test "$SYSNAM
 # since strip removes the debug map dsymutil reads.
 AM_CONDITIONAL([RUN_DSYMUTIL], [test "$SYSNAME" = "macos" && test -n "$DSYMUTIL" && { test "x$enable_debug" = "xyes" || test "x$enable_strip" = "xno" ; } ])
 
-# to avoid building pch files redundantly in CI (not really worth it)
-AS_IF([test "$CI" = "true" || test x"$enable_pch" = "xno"], [using_pch=no], [using_pch=yes])
+AS_IF([test x"$enable_pch" = "xno"], [using_pch=no], [using_pch=yes])
 AM_CONDITIONAL([BUILDING_IN_CI], [test "$CI" = "true"])
 AM_CONDITIONAL([BUILD_PCH], [test "$using_pch" = "yes"])
 
