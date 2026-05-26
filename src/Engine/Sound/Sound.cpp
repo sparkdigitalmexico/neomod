@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <utility>
+#include <algorithm>
 
 void Sound::initAsync() {
     std::string toLoad;

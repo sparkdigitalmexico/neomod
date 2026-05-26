@@ -38,6 +38,8 @@
 #include "Image.h"
 #include "Console.h"
 
+#include "SyncMutex.h"
+#include "SyncJthread.h"
 #include "Thread.h"
 
 #include <iostream>
@@ -57,8 +59,16 @@ std::unique_ptr<DirectoryWatcher> directoryWatcher{nullptr};
 
 Mc::atomic_sharedptr<ConsoleBox> Engine::consoleBox{nullptr};
 
+struct Engine::Jthread : public Sync::jthread {
+    using Sync::jthread::jthread;
+    using Sync::jthread::operator=;
+};
+
+struct Engine::Mutex : public Sync::mutex {};
+static void stdinReaderThread(const Sync::stop_token &stopToken, Engine::Mutex &mtx, std::deque<std::string> &queue);
+
 Engine *engine{nullptr};
-Engine::Engine() {
+Engine::Engine() : stdinThread(new Jthread{}), stdinMutex(new Mutex{}) {
     engine = this;
 
     // init crypto/rng seeding
@@ -151,12 +161,12 @@ Engine::Engine() {
 Engine::~Engine() {
     debugLog("-= Engine Shutdown =-");
 
-    if(this->bShouldProcessStdin && this->stdinThread.joinable()) {
+    if(this->bShouldProcessStdin && this->stdinThread->joinable()) {
         // there's no portable way to programmatically unblock a thread std::getline, wtf?
         // this just leaves a zombie thread alive until you send an input/close the terminal...
         // oh well, we're shutting down anyways
-        this->stdinThread.request_stop();
-        this->stdinThread.detach();
+        this->stdinThread->request_stop();
+        this->stdinThread->detach();
     }
 
     // reset() all global unique_ptrs
@@ -287,7 +297,10 @@ void Engine::loadApp() {
         // start stdin reader thread for headless mode
         // on WASM, stdin is polled from the main thread via JS (pthreads can't do blocking stdin reads)
         if(this->bShouldProcessStdin && !Env::cfg(OS::WASM)) {
-            this->stdinThread = Sync::jthread{stdinReaderThread};
+            *this->stdinThread =
+                Jthread{[&mtx = *this->stdinMutex, &queue = this->stdinQueue](const Sync::stop_token &stoken) {
+                    stdinReaderThread(stoken, mtx, queue);
+                }};
         }
     }
     debugLog("Engine: Loading app done.");
@@ -647,7 +660,7 @@ double Engine::getSimulatedVsyncFrameDelta() const {
     }
 }
 
-void Engine::stdinReaderThread(const Sync::stop_token &stopToken) {
+static void stdinReaderThread(const Sync::stop_token &stopToken, Engine::Mutex &mtx, std::deque<std::string> &queue) {
     McThread::set_current_thread_name("stdin_reader");
     McThread::set_current_thread_prio(McThread::Priority::LOW);
 
@@ -655,10 +668,10 @@ void Engine::stdinReaderThread(const Sync::stop_token &stopToken) {
     while(!stopToken.stop_requested() && std::getline(std::cin, line)) {
         if(stopToken.stop_requested()) return;
 
-        Sync::scoped_lock lock(engine->stdinMutex);
+        Sync::scoped_lock lock(mtx);
         // this is a bit of a hack but there's no easy way to unblock std::getline from the main thread
         const bool gotExit = (line == "exit"sv || line == "shutdown"sv || line == "restart"sv || line == "crash"sv);
-        engine->stdinQueue.push_back(std::move(line));
+        queue.push_back(std::move(line));
         if(gotExit) return;
     }
 }
@@ -698,7 +711,7 @@ void Engine::processStdinCommands() {
 #else
     int sleepMillis = 0;
     {
-        Sync::scoped_lock lock(this->stdinMutex);
+        Sync::scoped_lock lock(*this->stdinMutex);
         while(!this->stdinQueue.empty()) {
             std::string cmd = std::move(this->stdinQueue.front());
             this->stdinQueue.pop_front();

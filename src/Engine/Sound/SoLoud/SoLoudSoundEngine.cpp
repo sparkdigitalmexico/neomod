@@ -18,6 +18,7 @@
 #include "ResourceManager.h"
 
 #include <utility>
+#include <algorithm>
 #include <cstdlib>
 
 #include <SDL3/SDL_hints.h>

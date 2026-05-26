@@ -9,8 +9,6 @@
 #include "Rect.h"
 #include "KeyboardListener.h"
 #include "AtomicSharedPtr.h"
-#include "SyncMutex.h"
-#include "SyncJthread.h"
 #include "Vectors.h"
 
 #include <vector>
@@ -129,6 +127,10 @@ class Engine final : public KeyboardListener {
     [[nodiscard]] constexpr McFont *getDefaultFont() const { return this->defaultFont; }
     [[nodiscard]] constexpr McFont *getConsoleFont() const { return this->consoleFont; }
 
+    // forward defs (header bloat reduction)
+    struct Jthread;
+    struct Mutex;
+
    private:
     void runtime_assert(bool cond, const char *reason);
 
@@ -168,11 +170,11 @@ class Engine final : public KeyboardListener {
 
     // stdin input for headless/console mode
     bool bShouldProcessStdin;
-    Sync::jthread stdinThread;
-    Sync::mutex stdinMutex;
+
+    std::unique_ptr<Jthread> stdinThread;
+    std::unique_ptr<Mutex> stdinMutex;
     std::deque<std::string> stdinQueue;
     int stdinWaitFrames{0};  // @wait support: skip N frames before processing more commands
-    static void stdinReaderThread(const Sync::stop_token &stopToken);
     void processStdinCommands();
 };
 
