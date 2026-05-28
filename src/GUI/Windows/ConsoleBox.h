@@ -58,7 +58,7 @@ class ConsoleBox : public CBaseUIElement {
 
     void onSuggestionClicked(CBaseUIButton *suggestion);
 
-    void addSuggestion(std::string text, std::string helpText, std::string command);
+    void addSuggestion(std::string text, std::string_view helpText, std::string_view command);
     void clearSuggestions();
 
     void show();

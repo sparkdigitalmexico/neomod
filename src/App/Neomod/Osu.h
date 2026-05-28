@@ -263,8 +263,8 @@ class Osu final : public App, public MouseListener, public TouchListener {
     float prevUIScale{1.f};  // hack-ish dpi change reload check
 
     void globalOnSetValueProtectedCallback();
-    static bool globalOnGetValueProtectedCallback(const char *cvarname);
-    static bool globalOnSetValueGameplayCallback(const char *cvarname, CvarEditor setterkind);
+    static bool globalOnGetValueProtectedCallback(std::string_view cvarname);
+    static bool globalOnSetValueGameplayCallback(std::string_view cvarname, CvarEditor setterkind);
     static bool globalOnAreAllCvarsSubmittableCallback();
 
     // NOTE: unique_ptrs are destroyed in reverse order of declaration in header

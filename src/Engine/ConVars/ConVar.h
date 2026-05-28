@@ -219,7 +219,28 @@ class ConVar {
         // (NOT gameplay flag) OR ((NOT onSetValueGameplayCallback is set) OR (onSetValueGameplayCallback returns true))
         if(!this->isFlagSet(cv::GAMEPLAY) || (unlikely(!ConVar::onSetValueGameplayCallback) ||
                                               likely(ConVar::onSetValueGameplayCallback(this->sName, editor)))) {
-            this->setValueInt(std::forward<T>(value), doCallback, editor);
+            // determine double and string representations depending on whether setValue("string") or setValue(double) was
+            // called
+            auto [newDouble, newString] = [&]() -> std::pair<double, std::string> {
+                if constexpr(((std::is_convertible_v<std::decay_t<T>, double> ||
+                               std::is_convertible_v<std::decay_t<T>, float>)) &&
+                             !std::is_same_v<std::decay_t<T>, std::string_view> &&
+                             !std::is_same_v<std::decay_t<T>, const char *>) {
+                    const auto f = static_cast<double>(std::forward<T>(value));
+                    return std::make_pair(f, fmt::format("{:g}", f));
+                } else if constexpr(std::is_same_v<T, bool>) {
+                    const auto f = static_cast<double>(std::forward<T>(value) ? 1. : 0.);
+                    return std::make_pair(f, f > 0 ? "true" : "false");
+                } else {
+                    const std::string s{std::forward<T>(value)};
+                    double dbl{};
+                    const auto [ptr, err] = std::from_chars(s.data(), s.data() + s.size(), dbl);
+                    if(err != std::errc()) return std::make_pair(this->dDefaultValue, s);
+                    return std::make_pair(dbl, s);
+                }
+            }();
+
+            this->setValueInt(newDouble, std::move(newString), doCallback, editor);
         }
     }
 
@@ -274,7 +295,7 @@ class ConVar {
     void setDefaultDouble(double defaultValue);
     void setDefaultString(std::string_view defaultValue);
 
-    std::string getFancyDefaultValue();
+    std::string getFancyDefaultValue() const;
 
     [[nodiscard]] inline double getDouble() const {
         if(likely(this->bUseCachedDouble.load(std::memory_order_relaxed))) {
@@ -299,8 +320,8 @@ class ConVar {
     [[nodiscard]] forceinline bool get() const { return !!static_cast<int>(this->getDouble()); }
     [[nodiscard]] forceinline float getFloat() const { return static_cast<float>(this->getDouble()); }
 
-    [[nodiscard]] forceinline const char *getHelpstring() const { return this->sHelpString; }
-    [[nodiscard]] forceinline const char *getName() const { return this->sName; }
+    [[nodiscard]] forceinline std::string_view getHelpstring() const { return this->sHelpString; }
+    [[nodiscard]] forceinline std::string_view getName() const { return this->sName; }
     [[nodiscard]] forceinline CONVAR_TYPE getType() const { return this->type; }
     [[nodiscard]] forceinline uint8_t getFlags() const { return this->iFlags; }
 
@@ -354,10 +375,10 @@ class ConVar {
     // shared callbacks, app-defined
     static void setOnSetValueProtectedCallback(const VoidCB &callback);
 
-    using ProtectedCVGetCB = bool (*)(const char *cvarname);
+    using ProtectedCVGetCB = bool (*)(std::string_view cvarname);
     static void setOnGetValueProtectedCallback(ProtectedCVGetCB func);
 
-    using GameplayCVChangeCB = bool (*)(const char *cvarname, CvarEditor setterkind);
+    using GameplayCVChangeCB = bool (*)(std::string_view cvarname, CvarEditor setterkind);
     static void setOnSetValueGameplayCallback(GameplayCVChangeCB func);
 
    private:
@@ -427,94 +448,7 @@ class ConVar {
     }
 
     // no flag checking, setValue (user-accessible) already does that
-    template <typename T>
-    void setValueInt(T &&value, bool doCallback, CvarEditor editor) {
-        // determine double and string representations depending on whether setValue("string") or setValue(double) was
-        // called
-        const auto [newDouble, newString] = [&]() -> std::pair<double, std::string> {
-            if constexpr(((std::is_convertible_v<std::decay_t<T>, double> ||
-                           std::is_convertible_v<std::decay_t<T>, float>)) &&
-                         !std::is_same_v<std::decay_t<T>, std::string_view> &&
-                         !std::is_same_v<std::decay_t<T>, const char *>) {
-                const auto f = static_cast<double>(std::forward<T>(value));
-                return std::make_pair(f, fmt::format("{:g}", f));
-            } else if constexpr(std::is_same_v<T, bool>) {
-                const auto f = static_cast<double>(std::forward<T>(value) ? 1. : 0.);
-                return std::make_pair(f, f > 0 ? "true" : "false");
-            } else {
-                const std::string s{std::forward<T>(value)};
-                double dbl{};
-                const auto [ptr, err] = std::from_chars(s.data(), s.data() + s.size(), dbl);
-                if(err != std::errc()) return std::make_pair(this->dDefaultValue, s);
-                return std::make_pair(dbl, s);
-            }
-        }();
-
-        // backup old values, for passing into callbacks
-        double oldDouble{this->getDoubleInt()};
-        std::string oldString;
-        if(doCallback) {
-            oldString = this->getStringInt();
-        }
-
-        // set new values
-        switch(editor) {
-            case CvarEditor::CLIENT: {
-                this->dClientValue.store(newDouble, std::memory_order_release);
-                this->sClientValue = newString;
-                break;
-            }
-            case CvarEditor::SKIN: {
-                this->dSkinValue.store(newDouble, std::memory_order_release);
-                this->sSkinValue = newString;
-                this->hasSkinValue.store(true, std::memory_order_release);
-                break;
-            }
-            case CvarEditor::SERVER: {
-                this->dServerValue.store(newDouble, std::memory_order_release);
-                this->sServerValue = newString;
-                this->hasServerValue.store(true, std::memory_order_release);
-                break;
-            }
-        }
-
-        this->invalidateCache();
-
-        // run protected value change cb
-        if(this->isProtected() && oldDouble != newDouble && likely(!!ConVar::onSetValueProtectedCallback)) {
-            ConVar::onSetValueProtectedCallback();
-        }
-
-        if(doCallback) {
-            // handle possible execution callbacks
-            std::visit(
-                [&newString, newDouble](auto &&callback) -> void {
-                    using CBType = std::decay_t<decltype(callback)>;
-                    if constexpr(std::is_same_v<CBType, VoidCB>)
-                        callback();
-                    else if constexpr(std::is_same_v<CBType, StringCB>)
-                        callback(newString);
-                    else if constexpr(std::is_same_v<CBType, FloatCB>)
-                        callback(static_cast<float>(newDouble));
-                    else if constexpr(std::is_same_v<CBType, DoubleCB>)
-                        callback(newDouble);
-                },
-                this->callback);
-
-            // handle possible change callbacks
-            std::visit(
-                [&oldString, &newString, oldDouble, newDouble](auto &&callback) -> void {
-                    using CBType = std::decay_t<decltype(callback)>;
-                    if constexpr(std::is_same_v<CBType, StringChangeCB>)
-                        callback(oldString, newString);
-                    else if constexpr(std::is_same_v<CBType, FloatChangeCB>)
-                        callback(static_cast<float>(oldDouble), static_cast<float>(newDouble));
-                    else if constexpr(std::is_same_v<CBType, DoubleChangeCB>)
-                        callback(oldDouble, newDouble);
-                },
-                this->changeCallback);
-        }
-    }
+    void setValueInt(double newDouble, std::string newString, bool doCallback, CvarEditor editor);
 
     [[nodiscard]] double getDoubleInt() const;
     [[nodiscard]] const std::string &getStringInt() const;
@@ -539,8 +473,8 @@ class ConVar {
     // if the callback returns FALSE, the convar won't be changed
     static GameplayCVChangeCB onSetValueGameplayCallback;
 
-    const char *sName;
-    const char *sHelpString;
+    std::string_view sName;
+    std::string_view sHelpString;
 
     std::string sDefaultValue{};
     double dDefaultValue{0.0};

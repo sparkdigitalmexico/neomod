@@ -38,7 +38,7 @@ void ConVar::addConVar() {
     cvars().vConVarArray.push_back(this);
 }
 
-std::string ConVar::getFancyDefaultValue() {
+std::string ConVar::getFancyDefaultValue() const {
     switch(this->getType()) {
         case CONVAR_TYPE::BOOL:
             return this->dDefaultValue == 0 ? "false" : "true";
@@ -138,6 +138,74 @@ const std::string &ConVar::getStringInt() const {
 
     this->bUseCachedString.store(true, std::memory_order_release);
     return *(this->sCachedReturnedString.load(std::memory_order_acquire));
+}
+
+// no flag checking, setValue (user-accessible) already does that
+void ConVar::setValueInt(double newDouble, std::string newString, bool doCallback, CvarEditor editor) {
+    // backup old values, for passing into callbacks
+    double oldDouble{this->getDoubleInt()};
+    std::string oldString;
+    if(doCallback) {
+        oldString = this->getStringInt();
+    }
+
+    // set new values
+    switch(editor) {
+        case CvarEditor::CLIENT: {
+            this->dClientValue.store(newDouble, std::memory_order_release);
+            this->sClientValue = newString;
+            break;
+        }
+        case CvarEditor::SKIN: {
+            this->dSkinValue.store(newDouble, std::memory_order_release);
+            this->sSkinValue = newString;
+            this->hasSkinValue.store(true, std::memory_order_release);
+            break;
+        }
+        case CvarEditor::SERVER: {
+            this->dServerValue.store(newDouble, std::memory_order_release);
+            this->sServerValue = newString;
+            this->hasServerValue.store(true, std::memory_order_release);
+            break;
+        }
+    }
+
+    this->invalidateCache();
+
+    // run protected value change cb
+    if(this->isProtected() && oldDouble != newDouble && likely(!!ConVar::onSetValueProtectedCallback)) {
+        ConVar::onSetValueProtectedCallback();
+    }
+
+    if(doCallback) {
+        // handle possible execution callbacks
+        std::visit(
+            [&newString, newDouble](auto &&callback) -> void {
+                using CBType = std::decay_t<decltype(callback)>;
+                if constexpr(std::is_same_v<CBType, VoidCB>)
+                    callback();
+                else if constexpr(std::is_same_v<CBType, StringCB>)
+                    callback(newString);
+                else if constexpr(std::is_same_v<CBType, FloatCB>)
+                    callback(static_cast<float>(newDouble));
+                else if constexpr(std::is_same_v<CBType, DoubleCB>)
+                    callback(newDouble);
+            },
+            this->callback);
+
+        // handle possible change callbacks
+        std::visit(
+            [&oldString, &newString, oldDouble, newDouble](auto &&callback) -> void {
+                using CBType = std::decay_t<decltype(callback)>;
+                if constexpr(std::is_same_v<CBType, StringChangeCB>)
+                    callback(oldString, newString);
+                else if constexpr(std::is_same_v<CBType, FloatChangeCB>)
+                    callback(static_cast<float>(oldDouble), static_cast<float>(newDouble));
+                else if constexpr(std::is_same_v<CBType, DoubleChangeCB>)
+                    callback(oldDouble, newDouble);
+            },
+            this->changeCallback);
+    }
 }
 
 void ConVar::setDefaultDouble(double defaultValue) {

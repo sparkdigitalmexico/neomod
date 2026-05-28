@@ -611,8 +611,8 @@ void ModSelector::update(CBaseUIEventCtx &c) {
         if(!nonSubmittableCvars.empty()) {
             TooltipOverlay *ttoverlay = ui->getTooltipOverlay();
             ttoverlay->begin();
-            for(const auto &cvar : nonSubmittableCvars) {
-                ttoverlay->addLine(cvar->getName());
+            for(const auto *cvar : nonSubmittableCvars) {
+                ttoverlay->addLine(std::string{cvar->getName()});
             }
             ttoverlay->end();
         }

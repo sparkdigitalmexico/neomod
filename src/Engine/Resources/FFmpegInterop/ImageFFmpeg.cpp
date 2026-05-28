@@ -7,7 +7,6 @@
 #include "FFmpegLoader.h"
 #include "ConVar.h"
 
-#include "Image.h"
 #include "SyncOnce.h"
 #include "Logging.h"
 

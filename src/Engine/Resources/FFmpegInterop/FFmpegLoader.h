@@ -111,7 +111,7 @@ static inline char *av_make_error_string(char *errbuf, size_t errbuf_size, int e
 bool init();
 
 // if init failed, this might have something
-std::string getInitError();
+std::string_view getInitError();
 }  // namespace Mc::FFmpeg
 
 #endif  // defined(MCENGINE_FEATURE_FFMPEG)

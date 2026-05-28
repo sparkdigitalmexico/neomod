@@ -92,26 +92,26 @@ void Osu::globalOnSetValueProtectedCallback() {
 }
 
 // prevents getting changed protected convars while in a multi lobby
-bool Osu::globalOnGetValueProtectedCallback(const char *cvarname) {
+bool Osu::globalOnGetValueProtectedCallback(std::string_view cvarname) {
     if(BanchoState::is_in_a_multi_room()) {
-        logIfCV(debug_cv, "Returning default value for {}, currently in a multi room.", cvarname);
+        logIfCV(debug_cv, "Returning default value for {:s}, currently in a multi room.", cvarname);
         return false;
     }
     return true;
 }
 
 // prevents changing gameplay convars while playing multi and disables score submission
-bool Osu::globalOnSetValueGameplayCallback(const char *cvarname, CvarEditor setterkind) {
+bool Osu::globalOnSetValueGameplayCallback(std::string_view cvarname, CvarEditor setterkind) {
     // Only SERVER can edit GAMEPLAY cvars during multiplayer matches
     if(BanchoState::is_playing_a_multi_map() && setterkind != CvarEditor::SERVER) {
-        debugLog("Can't edit {} while in a multiplayer match.", cvarname);
+        debugLog("Can't edit {:s} while in a multiplayer match.", cvarname);
         return false;
     }
 
     // Regardless of the editor, changing GAMEPLAY cvars in the middle of a map
     // will result in an invalid replay. Set it as cheated so the score isn't saved.
     if(osu->isInPlayMode()) {
-        debugLog("{} affects gameplay: won't submit score.", cvarname);
+        debugLog("{:s} affects gameplay: won't submit score.", cvarname);
     }
     // maybe an impossible scenario for this to be NULL here but just checking anyways
     if(auto *liveScore = osu->getScore(); !!liveScore) {

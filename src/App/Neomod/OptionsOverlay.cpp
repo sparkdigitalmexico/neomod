@@ -4312,7 +4312,7 @@ void OptionsOverlayImpl::save() {
     };
 
     static AsyncIOHandler::ReadCallback rd_callback = [](std::vector<u8> read_data) -> void {
-        std::vector<std::string> read_lines;
+        std::vector<std::string_view> read_lines;
         if(read_data.empty()) {
             if(Environment::fileExists(cfg_name)) {
                 debugLog("WARNING: read no data from previous osu.cfg!");
@@ -4323,19 +4323,19 @@ void OptionsOverlayImpl::save() {
                 }
             }
         } else {
-            read_lines = SString::split<std::string>(
-                std::string{reinterpret_cast<const char *>(read_data.data()), read_data.size()}, '\n');
+            read_lines = SString::split(
+                std::string_view{reinterpret_cast<const char *>(read_data.data()), read_data.size()}, '\n');
         }
 
         std::string write_lines;
         write_lines.reserve(read_lines.size());
 
-        for(auto &line : read_lines) {
+        for(auto line : read_lines) {
             SString::trim_inplace(line);
             if(line.empty()) continue;
             if(SString::is_comment(line, "#") || SString::is_comment(line, "//")) {
-                if(!line.ends_with('\n')) line.push_back('\n');
                 write_lines.append(line);
+                if(!write_lines.ends_with('\n')) write_lines.push_back('\n');
                 continue;
             }
 
@@ -4350,8 +4350,8 @@ void OptionsOverlayImpl::save() {
             }
 
             if(!cvar_found) {
-                if(!line.ends_with('\n')) line.push_back('\n');
                 write_lines.append(line);
+                if(!write_lines.ends_with('\n')) write_lines.push_back('\n');
                 continue;
             }
         }
@@ -4360,7 +4360,7 @@ void OptionsOverlayImpl::save() {
             write_lines.append("\n\n");
         }
 
-        for(auto convar : cvars().getConVarArray()) {
+        for(auto *convar : cvars().getConVarArray()) {
             if(!convar->canHaveValue() || convar->isFlagSet(cv::NOSAVE)) continue;
             if(convar->isDefault()) continue;
             write_lines.append(fmt::format("{} {}\n", convar->getName(), convar->getString()));

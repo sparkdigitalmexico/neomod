@@ -51,13 +51,14 @@ class ConsoleBoxTextbox : public CBaseUITextbox {
     std::string sSuggestion;
 };
 
+namespace {
 class ConsoleBoxSuggestionButton : public CBaseUIButton {
    public:
     ConsoleBoxSuggestionButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text,
                                std::string helpText, const ConsoleBoxTextbox *const textbox)
-        : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), cboxtbox(textbox) {
-        this->sHelpText = std::move(helpText);
-    }
+        : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)),
+          cboxtbox(textbox),
+          sHelpText(std::move(helpText)) {}
 
    protected:
     void drawText() override {
@@ -100,6 +101,7 @@ class ConsoleBoxSuggestionButton : public CBaseUIButton {
     const ConsoleBoxTextbox *const cboxtbox;
     std::string sHelpText;
 };
+}  // namespace
 
 ConsoleBox::ConsoleBox() : CBaseUIElement(0, 0, 0, 0, ""), fConsoleDelay(engine->getTime() + 0.2f) {
     const float dpiScale = env->getDPIScale();
@@ -500,7 +502,7 @@ void ConsoleBox::onChar(KeyboardEvent &e) {
 
         if(suggestions.size() > 0) {
             this->suggestion->scrollToElement(this->suggestion->container.getElements()[0]);
-            this->textbox->setSuggestion(suggestions[0]->getName());
+            this->textbox->setSuggestion(std::string{suggestions[0]->getName()});
         } else
             this->textbox->setSuggestion(""s);
 
@@ -539,7 +541,7 @@ bool ConsoleBox::isActive() {
     return (this->textbox->isActive() || this->suggestion->isActive()) && this->textbox->isVisible();
 }
 
-void ConsoleBox::addSuggestion(std::string text, std::string helpText, std::string command) {
+void ConsoleBox::addSuggestion(std::string text, std::string_view helpText, std::string_view command) {
     const float dpiScale = this->getDPIScale();
 
     const int vsize = this->vSuggestionButtons.size() + 1;
@@ -549,10 +551,11 @@ void ConsoleBox::addSuggestion(std::string text, std::string helpText, std::stri
 
     // create button and add it
     CBaseUIButton *button = new ConsoleBoxSuggestionButton(3 * dpiScale, (vsize - 1) * buttonheight + 2 * dpiScale, 100,
-                                                           addheight, command, text, helpText, this->textbox.get());
+                                                           addheight, std::string{command}, std::move(text),
+                                                           std::string{helpText}, this->textbox.get());
     {
         button->setDrawFrame(false);
-        button->setSizeX(button->getFont()->getStringWidth(text));
+        button->setSizeX(button->getFont()->getStringWidth(button->getText()));
         button->setClickCallback(SA::MakeDelegate<&ConsoleBox::onSuggestionClicked>(this));
         button->setDrawBackground(false);
     }

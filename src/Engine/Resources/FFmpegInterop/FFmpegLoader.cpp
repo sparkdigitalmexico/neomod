@@ -161,7 +161,7 @@ bool load_full_ff_lib(const std::array<FFmpegFuncset, 4> &ffmpeg_funcsets) {
 
 #define LOAD_LIB_FUNCS_BODY(fname)                                                                    \
     failed_count += !((fname) = dynutils::load_func<fname##_t>(current_library_outer_macro, #fname)); \
-    if(!(fname)) ld_ctx().error_string.append(missing_prefix_outer_macro + #fname + "\n");
+    if(!(fname)) ld_ctx().error_string.append(missing_prefix_outer_macro + #fname "\n");
 
         // then load the functions using the x-macro list for the current lib
         // (this is for passing into the x-macro expansion)
@@ -253,7 +253,7 @@ bool init() {
     return available;
 }
 
-std::string getInitError() { return ld_ctx().error_string; }
+std::string_view getInitError() { return ld_ctx().error_string; }
 
 }  // namespace Mc::FFmpeg
 
