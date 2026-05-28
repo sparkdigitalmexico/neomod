@@ -24,19 +24,21 @@ class ConVarHandler {
     ConVarHandler();
     ~ConVarHandler() = default;
 
-    [[nodiscard]] forceinline const std::vector<ConVar *> &getConVarArray() { return this->vConVarArray; }
-    [[nodiscard]] forceinline const Hash::unstable_stringmap<ConVar *> &getConVarMap() { return this->vConVarMap; }
-    [[nodiscard]] forceinline const ConVar *getConVar(std::string_view name) {
+    [[nodiscard]] forceinline const std::vector<ConVar *> &getConVarArray() const { return this->vConVarArray; }
+    [[nodiscard]] forceinline const Hash::unstable_stringmap<ConVar *> &getConVarMap() const {
+        return this->vConVarMap;
+    }
+    [[nodiscard]] forceinline const ConVar *getConVar(std::string_view name) const {
         return static_cast<const ConVar *>(getConVar_int(name));
     }
 
-    [[nodiscard]] forceinline size_t getNumConVars() { return getConVarArray().size(); }
+    [[nodiscard]] forceinline size_t getNumConVars() const { return getConVarArray().size(); }
 
     [[nodiscard]] ConVar *getConVarByName(std::string_view name, bool warnIfNotFound = true) const;
     [[nodiscard]] std::vector<ConVar *> getConVarByLetter(std::string_view letters) const;
 
     [[nodiscard]] std::vector<ConVar *> getNonSubmittableCvars() const;
-    bool areAllCvarsSubmittable();
+    [[nodiscard]] bool areAllCvarsSubmittable() const;
 
     // HACKHACK: terrible API (currently necessary for making caching work 100% reliably)
     void invalidateAllProtectedCaches();

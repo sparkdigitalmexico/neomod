@@ -79,7 +79,7 @@ extern void onDebugAnimChange(float newVal);
 }
 
 // TODO: cmake support
-#ifndef _MSC_VER
+#ifdef MCENGINE_FEATURE_I18N
 namespace i18n {
 extern void load(std::string_view locale);
 }

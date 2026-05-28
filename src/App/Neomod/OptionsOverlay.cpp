@@ -4301,7 +4301,7 @@ void OptionsOverlayImpl::save() {
     static constexpr const std::string_view cfg_name = NEOMOD_CFG_PATH "/osu.cfg"sv;
     static AsyncIOHandler::WriteCallback wr_callback = [](bool success) -> void {
         if(!success) {
-            if(osu) {
+            if(osu && osu->UIReady()) {
                 ui->getNotificationOverlay()->addToast(_("Failed to save osu.cfg"), ERROR_TOAST);
             } else {
                 debugLog("Failed to save osu.cfg");

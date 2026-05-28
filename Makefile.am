@@ -1368,6 +1368,8 @@ endif
 ## TRANSLATIONS
 #####################################################################################################################################################
 
+if ENABLE_I18N
+
 # neomod.pot file is the main translation template
 # .po files contain translations for each language
 # .mo files are compiled translations
@@ -1393,8 +1395,21 @@ $(GEN_TRANSLATIONS_STAMP): $(TRANSLATION_SCRIPT) $(TRANSLATION_SRCS) $(PO_FILES)
 	@touch $@
 
 $(builddir)/gen/%.mo: $(GEN_TRANSLATIONS_STAMP) ;
-$(builddir)/gen/translations.h: $(GEN_TRANSLATIONS_STAMP) ;
-$(builddir)/gen/locale_embed.manifest: $(GEN_TRANSLATIONS_STAMP) ;
+
+TRANSLATIONS_HEADER := $(builddir)/gen/translations.h
+$(TRANSLATIONS_HEADER): $(GEN_TRANSLATIONS_STAMP) ;
+
+TRANSLATIONS_LOCALE_MANIFEST := $(builddir)/gen/locale_embed.manifest
+$(TRANSLATIONS_LOCALE_MANIFEST): $(GEN_TRANSLATIONS_STAMP) ;
+
+else # !ENABLE_I18N
+
+MO_FILES :=
+GEN_TRANSLATIONS_STAMP :=
+TRANSLATIONS_HEADER :=
+TRANSLATIONS_LOCALE_MANIFEST :=
+
+endif # ENABLE_I18N
 
 #####################################################################################################################################################
 ## SDL_GPU SHADER COMPILATION (GLSL → SPIR-V / MSL → .shdpk shader packs)
@@ -1446,7 +1461,7 @@ else # !USE_SDLGPU
 SDLGPU_EMBED_DEPS :=
 SDLGPU_EMBED_MANIFEST_FLAG :=
 
-endif # !USE_SDLGPU
+endif # USE_SDLGPU
 
 # content-based stamp: only updates (and triggers re-embed) when the manifest list actually changes
 EMBED_CONFIG_STAMP := $(builddir)/gen/.embed_config
@@ -1466,7 +1481,7 @@ neomod_SOURCES += $(EMBED_OUTPUT)
 CLEANFILES += $(EMBED_OUTPUT) $(builddir)/gen/binary_embed.h $(EMBED_DEPFILE) $(EMBED_CONFIG_STAMP) \
 	$(builddir)/gen/shaders/*.shdpk $(builddir)/gen/shaders/*.spv $(builddir)/gen/shaders/*.dxil \
 	$(builddir)/gen/shaders/sdlgpu_shaders.manifest $(builddir)/gen/shaders/.stamp \
-	$(GEN_TRANSLATIONS_STAMP) $(builddir)/gen/translations.h $(builddir)/gen/locale_embed.manifest $(MO_FILES)
+	$(GEN_TRANSLATIONS_STAMP) $(TRANSLATIONS_HEADER) $(TRANSLATIONS_LOCALE_MANIFEST) $(MO_FILES)
 
 #####################################################################################################################################################
 ## END EXTERNAL DEPENDENCY BUILD/SETUP SECTION
@@ -1551,7 +1566,7 @@ endif # BUILD_PCH
 # translations.h is also order-only: only the ~20 TUs that explicitly `#include "i18n.h"` actually
 # depend on it (the per-source .d files track this). Keeping it order-only means a translatable-string
 # add/remove doesn't churn the whole tree; non-translation TUs sail through unchanged.
-$(neomod_OBJECTS): $(BUILT_SOURCES) $(PCH_OUTPUT) | $(EMBED_OUTPUT) $(builddir)/gen/translations.h
+$(neomod_OBJECTS): $(BUILT_SOURCES) $(PCH_OUTPUT) | $(EMBED_OUTPUT) $(TRANSLATIONS_HEADER)
 
 # add all paths with sources as an include ("-I") flag
 NEOMOD_INCLUDE_FLAGS := $(shell find $(srcdir)/src -not -path '*/.*' -type d -print | $(SED) 's|^|-I|' | tr '\n' ' ')

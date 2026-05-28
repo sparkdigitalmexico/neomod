@@ -181,6 +181,9 @@ AC_DEFUN([AC_PROG_PYTHON], [
     if test -z "$PYTHON"; then
         AC_CHECK_PROG([PYTHON], [python], [python])
     fi
+    AS_IF([test -z "$PYTHON"], [
+        AC_MSG_ERROR([python not found - required for various build-stage tasks])
+    ])
 ])
 AC_DEFUN([AC_PROG_MESON], [
     AC_CHECK_PROG([MESON], [meson], [meson])
@@ -227,7 +230,7 @@ AC_DEFUN([AC_PROG_GETTEXT_TOOLS], [
     m4_foreach_w([gt_tool], [xgettext msgmerge msgattrib msgfmt msginit], [
         AC_CHECK_PROG(m4_toupper(gt_tool), gt_tool, [yes], [no])
         AS_IF([test "x$m4_toupper(gt_tool)" = "xno"], [
-            AC_MSG_ERROR([gt_tool (from gettext) not found - install the gettext package (provides xgettext/msgmerge/msgattrib/msgfmt/msginit)])
+            AC_MSG_ERROR([gt_tool (from gettext) not found - install the gettext package (or pass --without-i18n)])
         ])
     ])
 ])
@@ -255,7 +258,9 @@ AC_PROG_UNZIP
 AC_PROG_MESON
 AC_PROG_CMAKE
 AC_PROG_LIB_TOOLIZE
-AC_PROG_GETTEXT_TOOLS
+AS_IF([test "x$with_i18n" = "xyes"], [
+    AC_PROG_GETTEXT_TOOLS
+])
 AC_PROG_PYTHON
 AC_SUBST([PYTHON])
 
@@ -322,6 +327,9 @@ AC_ARG_WITH([nsync],
 
 AC_ARG_WITH([discord],
     AS_HELP_STRING([--with-discord], [Build with Discord rich presence support (default on for native targets, off for Emscripten)]))
+
+AC_ARG_WITH([i18n],
+    AS_HELP_STRING([--with-i18n], [Build with support for internationalization (translated text) (default: on)]))
 
 # setup defaults
 # default to clang on macOS (GCC could be supported but later)
@@ -394,6 +402,7 @@ AS_IF([test "x$enable_ime" != "xno"], [
 
     NOIME="yes"
 ])
+AC_SUBST([NOIME])
 
 AS_IF([test "x$with_discord" != "xno" && test -z "$WASM_CC"], [
     with_discord=yes
@@ -407,7 +416,13 @@ AS_IF([test "x$enable_tests" != "xno"], [
     AC_DEFINE([MCENGINE_TESTS], [1], [Defined if building with support for the testing framework.])
 ])
 
-AC_SUBST([NOIME])
+# include translations by default
+AS_IF([test "x$with_i18n" != "xno"], [
+    with_i18n=yes
+    AC_DEFINE([MCENGINE_FEATURE_I18N], [1], [Defined if internationalization features are to be supported.])
+],[
+    with_i18n=no
+])
 
 # set some default flags here
 AS_IF([test "x$enable_static" = "xyes"], [
@@ -658,10 +673,6 @@ AS_IF([test -n "$WASM_CC"], [
 
 # WASM-specific defaults: disable nsync+mimalloc unless explicitly requested
 AS_IF([test -n "$WASM_CC"], [
-    # python is required for WASM builds (for generating #embed source files)
-    AS_IF([test -z "$PYTHON"], [
-        AC_MSG_ERROR([python3 not found - required for WASM builds to generate embedded binary sources])
-    ])
     # nsync doesn't build properly with emscripten
     AS_IF([test "x$with_nsync" != "xyes"], [
         with_nsync=no
@@ -1876,6 +1887,7 @@ AM_CONDITIONAL([USE_DX11], [test "$use_dx11" = "yes"])
 AM_CONDITIONAL([USE_SDLGPU], [test "$use_sdlgpu" = "yes"])
 AM_CONDITIONAL([DOWNLOAD_DXC], [test -z "$DXC" && test "$host_os" = "mingw32"])
 AM_CONDITIONAL([USE_DISCORDRPC], [test "$with_discord" = "yes"])
+AM_CONDITIONAL([ENABLE_I18N], [test "x$with_i18n" = "xyes"])
 AM_CONDITIONAL([WIN_PLATFORM], [test "$SYSNAME" = "windows"])
 AM_CONDITIONAL([WIN32_PLATFORM], [test "$SYSNAME" = "windows" && test "$host_cpu" = "i686"])
 AM_CONDITIONAL([MACOS_PLATFORM], [test "$SYSNAME" = "macos"])
@@ -1939,6 +1951,7 @@ neomod build configuration:
     BASS:               ${with_bass-no}
     SoLoud:             ${with_soloud-no}
     Discord:            ${with_discord-yes}
+    i18n:               ${with_i18n-yes}
     IME enabled:        ${enable_ime-yes}
     Hardened build:     ${hardened_build-no}
     Redistrib. build:   ${enable_redistributable-yes}

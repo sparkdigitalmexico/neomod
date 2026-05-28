@@ -28,6 +28,7 @@ enum class FEAT : uint8_t {
     DISCORD = 1 << 1,
     MAINCB = 1 << 2,
     TESTS = 1 << 3,
+    I18N = 1 << 4,
     NONE = 0,
 };
 enum class AUD : uint8_t {
@@ -105,6 +106,9 @@ consteval FEAT getFeatures() {
 #endif
 #if defined(MCENGINE_TESTS)
         FEAT::TESTS |
+#endif
+#if defined(MCENGINE_FEATURE_I18N)
+        FEAT::I18N |
 #endif
         FEAT::NONE;
 }

@@ -1,10 +1,12 @@
 #pragma once
 // Copyright (c) 2026, kiwec, All rights reserved.
+#include "config.h"
+
 #include <span>
 #include <string_view>
 
-// TODO: add CMake support for translation generation (using _MSC_VER as a "hack" to detect CMake here)
-#if !defined(_MSC_VER) && !defined(BUILD_TOOLS_ONLY)
+// TODO: add CMake support for translation generation
+#if defined(MCENGINE_FEATURE_I18N)
 
 #include <algorithm>
 #include "fmt/format.h"
@@ -51,7 +53,7 @@ std::string tformat_impl(fmt::format_string<Args...> /*original*/, const char* t
 }
 #define tformat(String, ...) tformat_impl(String, _(String) __VA_OPT__(, ) __VA_ARGS__)
 
-#else  // _MSC_VER || BUILD_TOOLS_ONLY
+#else  // !(MCENGINE_FEATURE_I18N)
 
 #include <array>
 
@@ -89,4 +91,4 @@ inline std::span<const Language> get_available_languages() {
 #define tformat(String, ...) fmt::format(String __VA_OPT__(, ) __VA_ARGS__)
 #endif
 
-#endif  // !(_MSC_VER || BUILD_TOOLS_ONLY)
+#endif  // MCENGINE_FEATURE_I18N

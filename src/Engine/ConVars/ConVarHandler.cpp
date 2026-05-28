@@ -135,7 +135,7 @@ std::vector<ConVar *> ConVarHandler::getNonSubmittableCvars() const {
     return list;
 }
 
-bool ConVarHandler::areAllCvarsSubmittable() {
+bool ConVarHandler::areAllCvarsSubmittable() const {
     if(!this->getNonSubmittableCvars().empty()) return false;
 
     if(!!this->areAllCvarsSubmittableExtraCheck) {
@@ -178,7 +178,7 @@ bool ConVarHandler::removeServerValue(std::string_view cvarName) {
 //	ConVarHandler ConCommands  //
 //*****************************//
 
-struct ConVarHandler::ConVarBuiltins {
+struct ConVarHandler::ConVarBuiltins final {
     static void find(std::string_view args);
     static void help(std::string_view args);
     static void listcommands(void);

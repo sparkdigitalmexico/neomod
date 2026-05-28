@@ -1,9 +1,9 @@
 // Copyright (c) 2026, kiwec, All rights reserved.
 #include "i18n.h"
 
-// Stub-mode builds (MSVC CMake, BUILD_TOOLS_ONLY tools) get all their i18n behavior
+// Stub-mode builds get all their i18n behavior
 // from i18n.h's passthrough branch, so this TU compiles to empty there.
-#if !defined(_MSC_VER) && !defined(BUILD_TOOLS_ONLY)
+#if defined(MCENGINE_FEATURE_I18N)
 
 #include "binary_embed.h"
 #include "Logging.h"
@@ -306,4 +306,4 @@ std::span<const Language> get_available_languages() { return AVAILABLE_LANGUAGES
 
 }  // namespace i18n
 
-#endif  // !(_MSC_VER || BUILD_TOOLS_ONLY)
+#endif  // MCENGINE_FEATURE_I18N
