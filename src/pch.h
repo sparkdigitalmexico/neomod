@@ -8,6 +8,7 @@
 #include "Hashing.h"
 #include "MD5Hash.h"
 #include "Color.h"
+#include "Rect.h"  // mostly due to formatters
 
 #include "SyncMutex.h"
 #include "SyncCV.h"
@@ -46,6 +47,7 @@
 
 // commonly-included stdlib includes
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <charconv>
 #include <cstdint>
@@ -57,6 +59,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <deque>
 #include <array>
 #include <set>
 #include <unordered_set>
