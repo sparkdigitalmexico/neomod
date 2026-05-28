@@ -283,11 +283,11 @@ DownloadHandle download(std::string_view url) {
     return DownloadHandle{std::move(req)};
 }
 
-i32 extract_beatmapset_id(const u8* data, size_t data_s) {
-    debugLog("Reading beatmapset ({:d} bytes)", data_s);
+i32 extract_beatmapset_id(std::span<const u8> data) {
+    debugLog("Reading beatmapset ({:d} bytes)", data.size());
     i32 set_id = -1;
 
-    Archive::Reader archive(data, data_s);
+    Archive::Reader archive(data);
     if(!archive.isValid()) {
         debugLog("Failed to open .osz file");
         return set_id;
@@ -315,10 +315,10 @@ i32 extract_beatmapset_id(const u8* data, size_t data_s) {
     return set_id;
 }
 
-bool extract_beatmapset(const u8* data, size_t data_s, std::string& map_dir) {
-    debugLog("Extracting beatmapset ({:d} bytes)", data_s);
+bool extract_beatmapset(std::span<const u8> data, const std::string &map_dir) {
+    debugLog("Extracting beatmapset ({:d} bytes)", data.size());
 
-    Archive::Reader archive(data, data_s);
+    Archive::Reader archive(data);
     if(!archive.isValid()) {
         debugLog("Failed to open .osz file");
         return false;
@@ -395,7 +395,7 @@ bool download_beatmapset(u32 set_id, DownloadHandle& handle) {
 
     // Download succeeded: save map to disk
     Sync::scoped_lock lock(handle->data_mutex);
-    if(!extract_beatmapset(handle->data.data(), handle->data.size(), map_dir)) {
+    if(!extract_beatmapset(handle->data, map_dir)) {
         handle->progress.store(-1.f, std::memory_order_release);
         return false;
     }

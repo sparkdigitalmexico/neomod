@@ -55,7 +55,7 @@ bool Skin::unpack(std::string_view filepath) {
         // close the file here
     }
 
-    Archive::Reader archive(fileBuffer.get(), fileSize);
+    Archive::Reader archive({fileBuffer.get(), fileSize});
     if(!archive.isValid()) {
         debugLog("Failed to open .osk file");
         return false;

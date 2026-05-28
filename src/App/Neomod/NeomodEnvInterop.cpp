@@ -75,7 +75,7 @@ const BeatmapSet *handle_osz(std::string_view osz_path) {
         }
     }
 
-    i32 set_id = Downloader::extract_beatmapset_id(osz_data.data(), osz_data.size());
+    i32 set_id = Downloader::extract_beatmapset_id(osz_data);
     if(set_id < 0) {
         // special case: legacy fallback behavior for invalid beatmapSetID, try to parse the ID from the
         // path
@@ -93,7 +93,7 @@ const BeatmapSet *handle_osz(std::string_view osz_path) {
 
     std::string mapset_dir = fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id);
     Environment::createDirectory(mapset_dir);
-    if(!Downloader::extract_beatmapset(osz_data.data(), osz_data.size(), mapset_dir)) {
+    if(!Downloader::extract_beatmapset(osz_data, mapset_dir)) {
         ui->getNotificationOverlay()->addToast("Failed to extract beatmapset", ERROR_TOAST);
         return nullptr;
     }

@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <span>
 
 class DatabaseBeatmap;
 struct MD5Hash;
@@ -60,7 +61,7 @@ i32 resolve_beatmapset_id_for(i32 beatmap_id, i32 set_id_hint = 0);
 
 void process_beatmapset_info_response(const Packet &packet);
 
-i32 extract_beatmapset_id(const u8 *data, size_t data_s);
-bool extract_beatmapset(const u8 *data, size_t data_s, std::string &map_dir);
+i32 extract_beatmapset_id(std::span<const u8> data);
+bool extract_beatmapset(std::span<const u8> data, const std::string &map_dir);
 
 }  // namespace Downloader

@@ -165,14 +165,15 @@ class DirectoryCache final {
 #include <fcntl.h>
 #include <unistd.h>
 
-bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
+bool File::getDirectoryEntries(std::string_view pathToEnumView, DirContents types,
                                std::vector<std::string> &utf8NamesOut) noexcept {
-    if(pathToEnum.empty()) return false;
+    if(pathToEnumView.empty()) return false;
 
     using namespace flags::operators;
     const bool wantDirectories = !!(types & DirContents::DIRECTORIES);
     const bool wantFiles = !!(types & DirContents::FILES);
 
+    const std::string pathToEnum{pathToEnumView};
     const int fd = openat64(AT_FDCWD, pathToEnum.c_str(), O_RDONLY | O_CLOEXEC | O_DIRECTORY);
     if(fd == -1) {
         debugLog("openat64 failed on {}: {}", pathToEnum, strerror(errno));
@@ -602,7 +603,7 @@ bool readdirNTAPI(const std::wstring &dirPath, File::DirContents types,
     return true;
 }
 
-bool readdirWin32(const std::string &pathToEnum, File::DirContents types,
+bool readdirWin32(std::string_view pathToEnum, File::DirContents types,
                   std::vector<std::string> &utf8NamesOut) noexcept {
     using enum File::DirContents;
     using namespace flags::operators;
@@ -659,7 +660,7 @@ bool readdirWin32(const std::string &pathToEnum, File::DirContents types,
 }  // namespace
 
 // windows impl
-bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
+bool File::getDirectoryEntries(std::string_view pathToEnum, DirContents types,
                                std::vector<std::string> &utf8NamesOut) noexcept {
     if(pathToEnum.empty()) return false;
 
@@ -673,7 +674,7 @@ bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
 #else
 
 // for getting files in folder/ folders in folder
-bool File::getDirectoryEntries(const std::string &pathToEnum, DirContents types,
+bool File::getDirectoryEntries(std::string_view pathToEnum, DirContents types,
                                std::vector<std::string> &utf8NamesOut) noexcept {
     if(pathToEnum.empty()) return false;
 
@@ -972,12 +973,14 @@ bool File::openForWriting() {
     return true;
 }
 
-void File::write(const u8 *buffer, uSz size) {
+bool File::write(std::span<const u8> buffer) {
     logIfCV(debug_file, "{:s} (canWrite: {})", this->sFilePath, canWrite());
 
-    if(!canWrite()) return;
+    if(!canWrite()) return false;
 
-    this->ofstream->write(reinterpret_cast<const char *>(buffer), static_cast<std::streamsize>(size));
+    return !(this->ofstream->write(reinterpret_cast<const char *>(buffer.data()),
+                                   static_cast<std::streamsize>(buffer.size())))
+                .bad();
 }
 
 bool File::writeLine(std::string_view line, bool insertNewline) {

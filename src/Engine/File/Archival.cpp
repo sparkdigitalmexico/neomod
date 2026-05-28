@@ -6,6 +6,7 @@
 #include "SString.h"
 #include "ConVar.h"
 #include "Thread.h"
+#include "ContainerRanges.h"
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -66,7 +67,7 @@ Archive::Entry::Entry(struct archive* archive, struct archive_entry* entry) {
     }
 }
 
-std::string Archive::Entry::getFilename() const { return this->sFilename; }
+const std::string& Archive::Entry::getFilename() const { return this->sFilename; }
 
 size_t Archive::Entry::getUncompressedSize() const { return this->iUncompressedSize; }
 
@@ -78,28 +79,27 @@ bool Archive::Entry::isFile() const { return !this->bIsDirectory; }
 
 const std::vector<u8>& Archive::Entry::getUncompressedData() const { return this->data; }
 
-bool Archive::Entry::extractToFile(const std::string& outputPath) const {
+bool Archive::Entry::extractToFile(std::string_view outputPath) const {
     if(this->bIsDirectory) return false;
 
-    std::ofstream file(outputPath, std::ios::binary);
-    if(!file.good()) {
-        logIfCV(debug_file, "failed to create output file {:s}", outputPath.c_str());
+    File file(outputPath, File::MODE::WRITE);
+    if(!file.canWrite()) {
+        logIfCV(debug_file, "failed to create output file {:s}", outputPath);
         return false;
     }
 
     if(this->data.empty()) {
-        logIfCV(debug_file, "Archive WARNING: extracted data for path {:s} is empty.", outputPath.c_str());
+        logIfCV(debug_file, "Archive WARNING: extracted data for path {:s} is empty.", outputPath);
     }
 
-    file.write(reinterpret_cast<const char*>(this->data.data()), static_cast<std::streamsize>(this->data.size()));
-    if(file.bad()) {
-        logIfCV(debug_file, "failed to write to file {:s}", outputPath.c_str());
+    if(!file.write(this->data)) {
+        logIfCV(debug_file, "failed to write to file {:s}", outputPath);
         return false;
     }
 
 #ifndef _WIN32
     if(this->iPermissions != 0) {
-        chmod(outputPath.c_str(), this->iPermissions);
+        chmod(file.getPath().c_str(), this->iPermissions);
     }
 #endif
 
@@ -114,8 +114,8 @@ Archive::Reader::Reader(const std::string& filePath) : archive(nullptr), bValid(
     initFromFile(filePath);
 }
 
-Archive::Reader::Reader(const u8* data, size_t size) : archive(nullptr), bValid(false), bIterationStarted(false) {
-    initFromMemory(data, size);
+Archive::Reader::Reader(std::span<const u8> data) : archive(nullptr), bValid(false), bIterationStarted(false) {
+    initFromMemory(data);
 }
 
 Archive::Reader::~Reader() { cleanup(); }
@@ -141,14 +141,14 @@ void Archive::Reader::initFromFile(const std::string& filePath) {
     this->bValid = true;
 }
 
-void Archive::Reader::initFromMemory(const u8* data, size_t size) {
-    if(!data || size == 0) {
+void Archive::Reader::initFromMemory(std::span<const u8> data) {
+    if(data.empty()) {
         logIfCV(debug_file, "invalid memory buffer");
         return;
     }
 
     // copy data to our own buffer to ensure it stays alive
-    this->vMemoryBuffer.assign(data, data + size);
+    Mc::assign_range(this->vMemoryBuffer, data);
 
     this->archive = archive_read_new();
     if(!this->archive) {
@@ -188,14 +188,14 @@ std::vector<Archive::Entry> Archive::Reader::getAllEntries() {
     if(this->bIterationStarted) {
         cleanup();
         if(!this->vMemoryBuffer.empty()) {
-            initFromMemory(this->vMemoryBuffer.data(), this->vMemoryBuffer.size());
+            initFromMemory(this->vMemoryBuffer);
         } else {
             logIfCV(debug_file, "cannot restart iteration on file-based archive");
             return entries;
         }
     }
 
-    struct archive_entry* entry;
+    struct archive_entry* entry{};
     while(archive_read_next_header(this->archive, &entry) == ARCHIVE_OK) {
         entries.emplace_back(this->archive, entry);
         // skip file data to move to next entry
@@ -210,7 +210,7 @@ bool Archive::Reader::hasNext() {
     if(!this->bValid) return false;
 
     if(!this->bIterationStarted) {
-        struct archive_entry* entry;
+        struct archive_entry* entry{};
         int r = archive_read_next_header(this->archive, &entry);
         if(r == ARCHIVE_OK) {
             this->currentEntry = std::make_unique<Entry>(this->archive, entry);
@@ -248,7 +248,7 @@ bool Archive::Reader::moveNext() {
         this->currentEntry.reset();
     }
 
-    struct archive_entry* entry;
+    struct archive_entry* entry{};
     int r = archive_read_next_header(this->archive, &entry);
     if(r == ARCHIVE_OK) {
         this->currentEntry = std::make_unique<Entry>(this->archive, entry);
@@ -261,7 +261,7 @@ bool Archive::Reader::moveNext() {
     }
 }
 
-Archive::Entry* Archive::Reader::findEntry(const std::string& filename) {
+Archive::Entry* Archive::Reader::findEntry(std::string_view filename) {
     auto entries = getAllEntries();
 
     auto it =
@@ -278,7 +278,7 @@ Archive::Entry* Archive::Reader::findEntry(const std::string& filename) {
     return nullptr;
 }
 
-bool Archive::Reader::extractAll(const std::string& outputDir, const std::vector<std::string>& ignorePaths,
+bool Archive::Reader::extractAll(std::string_view outputDir, const std::vector<std::string>& ignorePaths,
                                  bool skipDirectories, const Sync::stop_token& stopToken) {
     if(!this->bValid) return false;
 
@@ -306,7 +306,7 @@ bool Archive::Reader::extractAll(const std::string& outputDir, const std::vector
             std::string dirPath = fmt::format("{}/{}", outputDir, dir.getFilename());
 
             // check ignore list
-            bool shouldIgnore = std::ranges::any_of(ignorePaths, [&dirPath](const std::string& ignorePath) {
+            bool shouldIgnore = std::ranges::any_of(ignorePaths, [&dirPath](std::string_view ignorePath) {
                 return dirPath.find(ignorePath) != std::string::npos;
             });
 
@@ -331,7 +331,7 @@ bool Archive::Reader::extractAll(const std::string& outputDir, const std::vector
         std::string filePath = fmt::format("{}/{}", outputDir, file.getFilename());
 
         // check ignore list
-        bool shouldIgnore = std::ranges::any_of(ignorePaths, [&filePath](const std::string& ignorePath) {
+        bool shouldIgnore = std::ranges::any_of(ignorePaths, [&filePath](std::string_view ignorePath) {
             return filePath.find(ignorePath) != std::string::npos;
         });
 
@@ -347,7 +347,7 @@ bool Archive::Reader::extractAll(const std::string& outputDir, const std::vector
 
         // ensure parent directory exists
         auto folders = SString::split(file.getFilename(), '/');
-        std::string currentPath = outputDir;
+        std::string currentPath{outputDir};
         for(size_t i = 0; i < folders.size() - 1; i++) {
             currentPath = fmt::format("{}/{}", currentPath, folders[i]);
             Environment::createDirectory(currentPath);
@@ -362,7 +362,7 @@ bool Archive::Reader::extractAll(const std::string& outputDir, const std::vector
     return true;
 }
 
-bool Archive::Reader::isPathSafe(const std::string& path) { return path.find("..") == std::string::npos; }
+bool Archive::Reader::isPathSafe(std::string_view path) { return path.find("..") == std::string::npos; }
 
 //------------------------------------------------------------------------------
 // Archive::Writer implementation
@@ -373,8 +373,8 @@ Archive::Writer::Writer(Format format, int compressionLevel)
       threads(std::clamp<int>(cv::archive_threads.getInt(), 0, McThread::get_logical_cpu_count())),
       format(format) {}
 
-std::string Archive::Writer::normalizePath(const std::string& path) {
-    std::string ret = path;
+std::string Archive::Writer::normalizePath(std::string_view path) {
+    std::string ret{path};
     File::normalizeSlashes(ret, '\\', '/');
 
     // strip leading slash
@@ -390,8 +390,8 @@ std::string Archive::Writer::normalizePath(const std::string& path) {
     return ret;
 }
 
-std::string Archive::Writer::extractFilename(const std::string& path) {
-    std::string normalized = path;
+std::string Archive::Writer::extractFilename(std::string_view path) {
+    std::string normalized{path};
     File::normalizeSlashes(normalized, '\\', '/');
 
     // strip trailing slashes
@@ -406,23 +406,23 @@ std::string Archive::Writer::extractFilename(const std::string& path) {
     return normalized;
 }
 
-bool Archive::Writer::addFile(const std::string& diskPath, const std::string& archivePath) {
+bool Archive::Writer::addFile(std::string_view diskPath, std::string_view archivePath) {
     auto type = File::exists(diskPath);
     if(type == File::FILETYPE::FOLDER) {
-        logIfCV(debug_file, "addFile called on directory, use addPath for directories: {:s}", diskPath.c_str());
+        logIfCV(debug_file, "addFile called on directory, use addPath for directories: {:s}", diskPath);
         return false;
     }
 
     File file(diskPath, File::MODE::READ);
     if(!file.canRead()) {
-        logIfCV(debug_file, "failed to open file for reading: {:s}", diskPath.c_str());
+        logIfCV(debug_file, "failed to open file for reading: {:s}", diskPath);
         return false;
     }
 
     std::vector<u8> data;
     file.readToVector(data);
 
-    std::string finalArchivePath = archivePath;
+    std::string finalArchivePath{archivePath};
     if(finalArchivePath.empty()) {
         finalArchivePath = extractFilename(diskPath);
     }
@@ -430,7 +430,7 @@ bool Archive::Writer::addFile(const std::string& diskPath, const std::string& ar
     return addData(finalArchivePath, std::move(data));
 }
 
-bool Archive::Writer::addPath(const std::string& diskPath, const std::string& archiveRoot,
+bool Archive::Writer::addPath(std::string_view diskPath, std::string_view archiveRoot,
                               const Sync::stop_token& stopToken) {
     auto type = File::exists(diskPath);
 
@@ -442,11 +442,11 @@ bool Archive::Writer::addPath(const std::string& diskPath, const std::string& ar
         return addDirectoryRecursive(diskPath, archiveRoot, stopToken);
     }
 
-    logIfCV(debug_file, "path does not exist or is not accessible: {:s}", diskPath.c_str());
+    logIfCV(debug_file, "path does not exist or is not accessible: {:s}", diskPath);
     return false;
 }
 
-bool Archive::Writer::addDirectoryRecursive(const std::string& diskDir, const std::string& archiveDir,
+bool Archive::Writer::addDirectoryRecursive(std::string_view diskDir, std::string_view archiveDir,
                                             const Sync::stop_token& stopToken) {
     if(stopToken.stop_requested()) {
         logIfCV(debug_file, "addDirectoryRecursive interrupted");
@@ -456,7 +456,7 @@ bool Archive::Writer::addDirectoryRecursive(const std::string& diskDir, const st
     // add files in this directory
     std::vector<std::string> files;
     if(!File::getDirectoryEntries(diskDir, File::DirContents::FILES, files)) {
-        logIfCV(debug_file, "failed to enumerate files in {:s}", diskDir.c_str());
+        logIfCV(debug_file, "failed to enumerate files in {:s}", diskDir);
         return false;
     }
 
@@ -470,7 +470,7 @@ bool Archive::Writer::addDirectoryRecursive(const std::string& diskDir, const st
         std::string archivePath = archiveDir.empty() ? filename : fmt::format("{}/{}", archiveDir, filename);
 
         if(!addFile(diskPath, archivePath)) {
-            logIfCV(debug_file, "failed to add file: {:s}", diskPath.c_str());
+            logIfCV(debug_file, "failed to add file: {:s}", diskPath);
             return false;
         }
     }
@@ -478,7 +478,7 @@ bool Archive::Writer::addDirectoryRecursive(const std::string& diskDir, const st
     // recurse into subdirectories
     std::vector<std::string> dirs;
     if(!File::getDirectoryEntries(diskDir, File::DirContents::DIRECTORIES, dirs)) {
-        logIfCV(debug_file, "failed to enumerate directories in {:s}", diskDir.c_str());
+        logIfCV(debug_file, "failed to enumerate directories in {:s}", diskDir);
         return false;
     }
 
@@ -494,7 +494,7 @@ bool Archive::Writer::addDirectoryRecursive(const std::string& diskDir, const st
     return true;
 }
 
-bool Archive::Writer::addData(const std::string& archivePath, const u8* data, size_t size) {
+bool Archive::Writer::addData(std::string_view archivePath, std::span<const u8> data) {
     if(archivePath.empty()) {
         logIfCV(debug_file, "empty archive path");
         return false;
@@ -508,18 +508,14 @@ bool Archive::Writer::addData(const std::string& archivePath, const u8* data, si
 
     PendingEntry entry;
     entry.archivePath = std::move(normalizedPath);
-    entry.data.assign(data, data + size);
+    Mc::assign_range(entry.data, data);
     entry.isDirectory = false;
 
     this->pendingEntries.push_back(std::move(entry));
     return true;
 }
 
-bool Archive::Writer::addData(const std::string& archivePath, const std::vector<u8>& data) {
-    return addData(archivePath, data.data(), data.size());
-}
-
-bool Archive::Writer::addData(const std::string& archivePath, std::vector<u8>&& data) {
+bool Archive::Writer::addData(std::string_view archivePath, std::vector<u8>&& data) {
     if(archivePath.empty()) {
         logIfCV(debug_file, "empty archive path");
         return false;
@@ -541,7 +537,7 @@ bool Archive::Writer::addData(const std::string& archivePath, std::vector<u8>&& 
 }
 
 bool Archive::Writer::configureArchive(struct archive* a) {
-    int r;
+    int r{ARCHIVE_OK};
     std::string options;
 
     switch(this->format) {

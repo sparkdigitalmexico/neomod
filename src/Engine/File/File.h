@@ -23,6 +23,7 @@
 #include <fstream>
 #include <memory>
 #include <vector>
+#include <span>
 
 #include <sys/stat.h>
 
@@ -53,7 +54,7 @@ class File {
         return this->bReady && this->ofstream && this->ofstream->good() && this->fileMode == MODE::WRITE;
     }
 
-    void write(const u8 *buffer, uSz size);
+    bool write(std::span<const u8> buffer);
     bool writeLine(std::string_view line, bool insertNewline = true);
 
     std::string readLine();
@@ -70,7 +71,7 @@ class File {
 
     void readToVector(std::vector<u8> &out);
 
-    [[nodiscard]] inline std::string_view getPath() const { return this->sFilePath; }
+    [[nodiscard]] inline const std::string &getPath() const { return this->sFilePath; }
 
     // in bytes
     [[nodiscard]] forceinline uSz getFileSize() const { return this->fsstat.st_size; }
@@ -89,7 +90,7 @@ class File {
 
     // only returns true if succeeded, appends to the input vector
     enum class DirContents : u8 { DIRECTORIES = 1 << 0, FILES = 1 << 1, ALL = DIRECTORIES | FILES };
-    static bool getDirectoryEntries(const std::string &toEnumerate, DirContents types,
+    static bool getDirectoryEntries(std::string_view toEnumerate, DirContents types,
                                     std::vector<std::string> &utf8NamesOut) noexcept;
 
     // fs::path works differently depending on the type of string it was constructed with
