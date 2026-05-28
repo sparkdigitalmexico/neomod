@@ -258,9 +258,6 @@ AC_PROG_UNZIP
 AC_PROG_MESON
 AC_PROG_CMAKE
 AC_PROG_LIB_TOOLIZE
-AS_IF([test "x$with_i18n" = "xyes"], [
-    AC_PROG_GETTEXT_TOOLS
-])
 AC_PROG_PYTHON
 AC_SUBST([PYTHON])
 
@@ -418,6 +415,9 @@ AS_IF([test "x$enable_tests" != "xno"], [
 
 # include translations by default
 AS_IF([test "x$with_i18n" != "xno"], [
+    # check for relevant tools
+    AC_PROG_GETTEXT_TOOLS
+
     with_i18n=yes
     AC_DEFINE([MCENGINE_FEATURE_I18N], [1], [Defined if internationalization features are to be supported.])
 ],[
