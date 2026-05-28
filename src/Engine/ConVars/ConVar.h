@@ -7,18 +7,13 @@
 #include "Delegate.h"
 
 #include <atomic>
-#include <cassert>
-#include <charconv>
 #include <string>
 #include <string_view>
-#include <variant>
 #include <type_traits>
 
 #ifndef DEFINE_CONVARS
 #include "ConVarDefs.h"
 #endif
-
-#include "fmt/format.h"
 
 using std::string_view_literals::operator""sv;
 using std::string_literals::operator""s;
@@ -54,7 +49,19 @@ enum CvarFlags : uint8_t {
     // NOTE: This is intended to be used without any other flags
     CONSTANT = HIDDEN | NOLOAD | NOSAVE,
 };
-}
+
+namespace detail {
+// command-only convars accept the 4 single-arg "exec" signatures
+template <typename C>
+concept CallbackCmd = std::is_invocable_v<C> || std::is_invocable_v<C, std::string_view> ||
+                      std::is_invocable_v<C, float> || std::is_invocable_v<C, double>;
+
+// value convars also accept the 3 two-arg "change" signatures
+template <typename C>
+concept CallbackAny = CallbackCmd<C> || std::is_invocable_v<C, std::string_view, std::string_view> ||
+                      std::is_invocable_v<C, float, float> || std::is_invocable_v<C, double, double>;
+}  // namespace detail
+}  // namespace cv
 
 enum class CvarEditor : uint8_t { CLIENT, SERVER, SKIN };
 enum class CvarProtection : uint8_t { DEFAULT, PROTECTED, UNPROTECTED };
@@ -77,36 +84,27 @@ class ConVar {
     using FloatChangeCB = SA::delegate<void(float, float)>;
     using DoubleChangeCB = SA::delegate<void(double, double)>;
 
-    // polymorphic callback storage
-    using ExecCallback = std::variant<std::monostate,  // empty
-                                      VoidCB,          // void()
-                                      StringCB,        // void(std::string_view)
-                                      FloatCB,         // void(float)
-                                      DoubleCB         // void(double)
-                                      >;
-
-    using ChangeCB = std::variant<std::monostate,  // empty
-                                  StringChangeCB,  // void(std::string_view, std::string_view)
-                                  FloatChangeCB,   // void(float, float)
-                                  DoubleChangeCB   // void(double, double)
-                                  >;
-
     template <typename... Args>
     static inline constexpr bool cb_invocable = std::is_invocable_v<Args...>;
 
    private:
-    // type detection helper
-    template <typename T>
-    static constexpr CONVAR_TYPE getTypeFor() {
-        if constexpr(std::is_same_v<std::decay_t<T>, bool>)
-            return CONVAR_TYPE::BOOL;
-        else if constexpr(std::is_integral_v<std::decay_t<T>>)
-            return CONVAR_TYPE::INT;
-        else if constexpr(std::is_floating_point_v<std::decay_t<T>>)
-            return CONVAR_TYPE::FLOAT;
-        else
-            return CONVAR_TYPE::STRING;
-    }
+    // discriminated opaque storage for any callback delegate. all SA::delegate<R(Args...)>
+    // share the same 2-pointer layout (object + stub), so a single sized/aligned buffer holds
+    // any of them.
+    enum class CallbackKind : uint8_t {
+        None,
+        Void,
+        String,
+        Float,
+        Double,
+        StringChange,
+        FloatChange,
+        DoubleChange,
+    };
+    struct CallbackSlot final {
+        CallbackKind kind{CallbackKind::None};
+        alignas(VoidCB) unsigned char storage[sizeof(VoidCB)]{};
+    };
 
     void addConVar();
 
@@ -124,19 +122,17 @@ class ConVar {
     // callback-only constructors (no value)
     template <typename Callback>
     explicit ConVar(const char *name, uint8_t flags, Callback &&callback)
-        requires cb_invocable<Callback> || cb_invocable<Callback, std::string_view> || cb_invocable<Callback, float> ||
-                     cb_invocable<Callback, double>
+        requires cv::detail::CallbackCmd<Callback>
         : sName(name), sHelpString("") {
-        this->initCallback(flags, std::forward<Callback>(callback));
+        this->setupCmdCallback(flags, std::forward<Callback>(callback));
         this->addConVar();
     }
 
     template <typename Callback>
     explicit ConVar(const char *name, uint8_t flags, const char *helpString, Callback &&callback)
-        requires cb_invocable<Callback> || cb_invocable<Callback, std::string_view> || cb_invocable<Callback, float> ||
-                     cb_invocable<Callback, double>
+        requires cv::detail::CallbackCmd<Callback>
         : sName(name), sHelpString(helpString) {
-        this->initCallback(flags, std::forward<Callback>(callback));
+        this->setupCmdCallback(flags, std::forward<Callback>(callback));
         this->addConVar();
     }
 
@@ -145,59 +141,51 @@ class ConVar {
     explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, const char *helpString = "")
         requires(!std::is_same_v<std::decay_t<T>, const char *>)
         : sName(name), sHelpString(helpString) {
-        this->initValue(std::forward<T>(defaultValue), flags, nullptr);
+        this->setupValue(std::forward<T>(defaultValue), flags);
         this->addConVar();
     }
 
     template <typename T, typename Callback>
     explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, const char *helpString, Callback &&callback)
-        requires(!std::is_same_v<std::decay_t<T>, const char *>) &&
-                    (cb_invocable<Callback> || cb_invocable<Callback, std::string_view> ||
-                     cb_invocable<Callback, float> || cb_invocable<Callback, double> ||
-                     cb_invocable<Callback, std::string_view, std::string_view> ||
-                     cb_invocable<Callback, float, float> || cb_invocable<Callback, double, double>)
+        requires(!std::is_same_v<std::decay_t<T>, const char *>) && cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString(helpString) {
-        this->initValue(std::forward<T>(defaultValue), flags, std::forward<Callback>(callback));
+        this->setupValue(std::forward<T>(defaultValue), flags);
+        this->setCallback(std::forward<Callback>(callback));
         this->addConVar();
     }
 
     template <typename T, typename Callback>
     explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, Callback &&callback)
-        requires(!std::is_same_v<std::decay_t<T>, const char *>) &&
-                    (cb_invocable<Callback> || cb_invocable<Callback, std::string_view> ||
-                     cb_invocable<Callback, float> || cb_invocable<Callback, double> ||
-                     cb_invocable<Callback, std::string_view, std::string_view> ||
-                     cb_invocable<Callback, float, float> || cb_invocable<Callback, double, double>)
+        requires(!std::is_same_v<std::decay_t<T>, const char *>) && cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString("") {
-        this->initValue(std::forward<T>(defaultValue), flags, std::forward<Callback>(callback));
+        this->setupValue(std::forward<T>(defaultValue), flags);
+        this->setCallback(std::forward<Callback>(callback));
         this->addConVar();
     }
 
     // const char* specializations for string convars
     explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, const char *helpString = "")
         : sName(name), sHelpString(helpString) {
-        this->initValue(defaultValue, flags, nullptr);
+        this->initValueImpl(defaultValue, flags);
         this->addConVar();
     }
 
     template <typename Callback>
     explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, const char *helpString,
                     Callback &&callback)
-        requires(cb_invocable<Callback> || cb_invocable<Callback, std::string_view> || cb_invocable<Callback, float> ||
-                 cb_invocable<Callback, double> || cb_invocable<Callback, std::string_view, std::string_view> ||
-                 cb_invocable<Callback, float, float> || cb_invocable<Callback, double, double>)
+        requires cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString(helpString) {
-        this->initValue(defaultValue, flags, std::forward<Callback>(callback));
+        this->initValueImpl(defaultValue, flags);
+        this->setCallback(std::forward<Callback>(callback));
         this->addConVar();
     }
 
     template <typename Callback>
     explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, Callback &&callback)
-        requires(cb_invocable<Callback> || cb_invocable<Callback, std::string_view> || cb_invocable<Callback, float> ||
-                 cb_invocable<Callback, double> || cb_invocable<Callback, std::string_view, std::string_view> ||
-                 cb_invocable<Callback, float, float> || cb_invocable<Callback, double, double>)
+        requires cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString("") {
-        this->initValue(defaultValue, flags, std::forward<Callback>(callback));
+        this->initValueImpl(defaultValue, flags);
+        this->setCallback(std::forward<Callback>(callback));
         this->addConVar();
     }
 
@@ -209,79 +197,43 @@ class ConVar {
 
     template <typename T>
     void setValue(T &&value, bool doCallback = true, CvarEditor editor = CvarEditor::CLIENT) {
-        // if(!this->bCanHaveValue) return; // ignore command convars
-        // STUPID: even command convars need to run through all of this validation logic to run callbacks (like find)
-        if(editor == CvarEditor::CLIENT && !this->isFlagSet(cv::CLIENT)) return;
-        if(editor == CvarEditor::SKIN && !this->isFlagSet(cv::SKINS)) return;
-        if(editor == CvarEditor::SERVER && !this->isFlagSet(cv::SERVER)) return;
-
-        // if:
-        // (NOT gameplay flag) OR ((NOT onSetValueGameplayCallback is set) OR (onSetValueGameplayCallback returns true))
-        if(!this->isFlagSet(cv::GAMEPLAY) || (unlikely(!ConVar::onSetValueGameplayCallback) ||
-                                              likely(ConVar::onSetValueGameplayCallback(this->sName, editor)))) {
-            // determine double and string representations depending on whether setValue("string") or setValue(double) was
-            // called
-            auto [newDouble, newString] = [&]() -> std::pair<double, std::string> {
-                if constexpr(((std::is_convertible_v<std::decay_t<T>, double> ||
-                               std::is_convertible_v<std::decay_t<T>, float>)) &&
-                             !std::is_same_v<std::decay_t<T>, std::string_view> &&
-                             !std::is_same_v<std::decay_t<T>, const char *>) {
-                    const auto f = static_cast<double>(std::forward<T>(value));
-                    return std::make_pair(f, fmt::format("{:g}", f));
-                } else if constexpr(std::is_same_v<T, bool>) {
-                    const auto f = static_cast<double>(std::forward<T>(value) ? 1. : 0.);
-                    return std::make_pair(f, f > 0 ? "true" : "false");
-                } else {
-                    const std::string s{std::forward<T>(value)};
-                    double dbl{};
-                    const auto [ptr, err] = std::from_chars(s.data(), s.data() + s.size(), dbl);
-                    if(err != std::errc()) return std::make_pair(this->dDefaultValue, s);
-                    return std::make_pair(dbl, s);
-                }
-            }();
-
-            this->setValueInt(newDouble, std::move(newString), doCallback, editor);
-        }
+        using D = std::decay_t<T>;
+        if constexpr(std::is_same_v<D, bool>)
+            this->setValueImpl(static_cast<bool>(value), doCallback, editor);
+        else if constexpr(std::is_convertible_v<D, double>)
+            this->setValueImpl(static_cast<double>(value), doCallback, editor);
+        else
+            this->setValueImpl(std::string_view{std::forward<T>(value)}, doCallback, editor);
     }
 
     // generic callback setter that auto-detects callback type
     template <typename Callback>
     void setCallback(Callback &&callback)
-        requires(cb_invocable<Callback> || cb_invocable<Callback, std::string_view> || cb_invocable<Callback, float> ||
-                 cb_invocable<Callback, double> || cb_invocable<Callback, std::string_view, std::string_view> ||
-                 cb_invocable<Callback, float, float> || cb_invocable<Callback, double, double>)
+        requires cv::detail::CallbackAny<Callback>
     {
-        if constexpr(cb_invocable<Callback>)
-            this->callback.template emplace<VoidCB>(std::forward<Callback>(callback));
-        else if constexpr(cb_invocable<Callback, std::string_view>)
-            this->callback.template emplace<StringCB>(std::forward<Callback>(callback));
-        else if constexpr(cb_invocable<Callback, float>)
-            this->callback.template emplace<FloatCB>(std::forward<Callback>(callback));
-        else if constexpr(cb_invocable<Callback, double>)
-            this->callback.template emplace<DoubleCB>(std::forward<Callback>(callback));
-        else if constexpr(cb_invocable<Callback, std::string_view, std::string_view>)
-            this->changeCallback.template emplace<StringChangeCB>(std::forward<Callback>(callback));
-        else if constexpr(cb_invocable<Callback, float, float>)
-            this->changeCallback.template emplace<FloatChangeCB>(std::forward<Callback>(callback));
-        else if constexpr(cb_invocable<Callback, double, double>)
-            this->changeCallback.template emplace<DoubleChangeCB>(std::forward<Callback>(callback));
+        using D = std::decay_t<Callback>;
+        if constexpr(cb_invocable<D>)
+            this->setCallbackImpl(VoidCB(std::forward<Callback>(callback)));
+        else if constexpr(cb_invocable<D, std::string_view>)
+            this->setCallbackImpl(StringCB(std::forward<Callback>(callback)));
+        else if constexpr(cb_invocable<D, float>)
+            this->setCallbackImpl(FloatCB(std::forward<Callback>(callback)));
+        else if constexpr(cb_invocable<D, double>)
+            this->setCallbackImpl(DoubleCB(std::forward<Callback>(callback)));
+        else if constexpr(cb_invocable<D, std::string_view, std::string_view>)
+            this->setCallbackImpl(StringChangeCB(std::forward<Callback>(callback)));
+        else if constexpr(cb_invocable<D, float, float>)
+            this->setCallbackImpl(FloatChangeCB(std::forward<Callback>(callback)));
+        else if constexpr(cb_invocable<D, double, double>)
+            this->setCallbackImpl(DoubleChangeCB(std::forward<Callback>(callback)));
         else
-            static_assert(Env::always_false_v<Callback>, "Unsupported callback signature");
+            static_assert(Env::always_false_v<D>, "Unsupported callback signature");
     }
 
-    inline void removeCallback() { this->callback = std::monostate(); }
-    inline void removeChangeCallback() { this->changeCallback = std::monostate(); }
-    inline void removeAllCallbacks() {
-        this->removeCallback();
-        this->removeChangeCallback();
-    }
-    inline void reset() {
-        this->removeAllCallbacks();
-        this->invalidateCache();
-        this->hasServerValue = false;
-        this->hasSkinValue = false;
-        this->setServerProtected(CvarProtection::DEFAULT);
-    }
+    void removeCallback();
+    void removeChangeCallback();
+    void removeAllCallbacks();
+    void reset();
 
     // get
     template <typename T = int>
@@ -328,27 +280,8 @@ class ConVar {
     [[nodiscard]] CvarEditor getMaster() const;
     [[nodiscard]] forceinline bool canHaveValue() const { return this->bCanHaveValue; }
 
-    [[nodiscard]] inline bool hasAnyCallbacks() const {
-        return !std::holds_alternative<std::monostate>(this->callback) ||
-               !std::holds_alternative<std::monostate>(this->changeCallback);
-    }
-
-    [[nodiscard]] inline bool hasAnyNonVoidCallback() const {
-        return std::holds_alternative<StringCB>(this->callback) || std::holds_alternative<FloatCB>(this->callback) ||
-               std::holds_alternative<DoubleCB>(this->callback) ||
-               !std::holds_alternative<std::monostate>(this->changeCallback);
-    }
-
-    [[nodiscard]] inline bool hasVoidCallback() const { return std::holds_alternative<VoidCB>(this->callback); }
-
-    [[nodiscard]] inline bool hasSingleArgCallback() const {
-        return std::holds_alternative<StringCB>(this->callback) || std::holds_alternative<FloatCB>(this->callback) ||
-               std::holds_alternative<DoubleCB>(this->callback);
-    }
-
-    [[nodiscard]] inline bool hasChangeCallback() const {
-        return !std::holds_alternative<std::monostate>(this->changeCallback);
-    }
+    [[nodiscard]] bool hasAnyNonVoidCallback() const;
+    [[nodiscard]] bool hasSingleArgCallback() const;
 
     [[nodiscard]] inline bool isFlagSet(uint8_t flag) const { return ((this->iFlags & flag) == flag); }
     [[nodiscard]] inline bool isDefault() const {
@@ -382,72 +315,60 @@ class ConVar {
     static void setOnSetValueGameplayCallback(GameplayCVChangeCB func);
 
    private:
-    // unified init for callback-only convars
+    // typed setValue impls — public setValue<T> dispatches into these based on T category
+    void setValueImpl(double newDouble, bool doCallback, CvarEditor editor);
+    void setValueImpl(bool newBool, bool doCallback, CvarEditor editor);
+    void setValueImpl(std::string_view newString, bool doCallback, CvarEditor editor);
+
+    // typed setCallback impls — public setCallback<C> dispatches into these
+    void setCallbackImpl(VoidCB cb);
+    void setCallbackImpl(StringCB cb);
+    void setCallbackImpl(FloatCB cb);
+    void setCallbackImpl(DoubleCB cb);
+    void setCallbackImpl(StringChangeCB cb);
+    void setCallbackImpl(FloatChangeCB cb);
+    void setCallbackImpl(DoubleChangeCB cb);
+
+    // constructor helpers — compile-time dispatch into typed init impls
+    template <typename T>
+    void setupValue(T &&v, uint8_t flags) {
+        using D = std::decay_t<T>;
+        if constexpr(std::is_same_v<D, bool>)
+            this->initValueImpl(static_cast<bool>(v), flags);
+        else if constexpr(std::is_integral_v<D>)
+            this->initValueImpl(static_cast<int>(v), flags);
+        else if constexpr(std::is_floating_point_v<D>)
+            this->initValueImpl(static_cast<double>(v), flags);
+        else
+            this->initValueImpl(std::string_view{std::forward<T>(v)}, flags);
+    }
+
     template <typename Callback>
-    void initCallback(uint8_t flags, Callback &&callback) {
-        this->iFlags = flags | cv::NOSAVE;
-
-        if constexpr(cb_invocable<Callback>) {
-            this->callback.template emplace<VoidCB>(std::forward<Callback>(callback));
-            this->type = CONVAR_TYPE::STRING;
-        } else if constexpr(cb_invocable<Callback, std::string_view>) {
-            this->callback.template emplace<StringCB>(std::forward<Callback>(callback));
-            this->type = CONVAR_TYPE::STRING;
-        } else if constexpr(cb_invocable<Callback, float>) {
-            this->callback.template emplace<FloatCB>(std::forward<Callback>(callback));
-            this->type = CONVAR_TYPE::INT;
-        } else if constexpr(cb_invocable<Callback, double>) {
-            this->callback.template emplace<DoubleCB>(std::forward<Callback>(callback));
-            this->type = CONVAR_TYPE::INT;
-        }
+    void setupCmdCallback(uint8_t flags, Callback &&cb) {
+        using D = std::decay_t<Callback>;
+        if constexpr(cb_invocable<D>)
+            this->initCmdCallbackImpl(flags, VoidCB(std::forward<Callback>(cb)));
+        else if constexpr(cb_invocable<D, std::string_view>)
+            this->initCmdCallbackImpl(flags, StringCB(std::forward<Callback>(cb)));
+        else if constexpr(cb_invocable<D, float>)
+            this->initCmdCallbackImpl(flags, FloatCB(std::forward<Callback>(cb)));
+        else if constexpr(cb_invocable<D, double>)
+            this->initCmdCallbackImpl(flags, DoubleCB(std::forward<Callback>(cb)));
+        else
+            static_assert(Env::always_false_v<D>, "Unsupported command callback signature");
     }
 
-    // unified init for value convars
-    template <typename T, typename Callback>
-    void initValue(T &&defaultValue, uint8_t flags, Callback &&callback) {
-        this->bCanHaveValue = true;
-        this->iFlags = flags;
-        this->type = getTypeFor<T>();
+    void initValueImpl(bool v, uint8_t flags);
+    void initValueImpl(int v, uint8_t flags);
+    void initValueImpl(double v, uint8_t flags);
+    void initValueImpl(std::string_view v, uint8_t flags);
 
-        if constexpr((std::is_convertible_v<std::decay_t<T>, double> || std::is_convertible_v<std::decay_t<T>, float> ||
-                      std::is_same_v<T, bool>) &&
-                     !std::is_same_v<std::decay_t<T>, std::string_view> &&
-                     !std::is_same_v<std::decay_t<T>, const char *>) {
-            // T is double-like
-            this->setDefaultDouble(static_cast<double>(std::forward<T>(defaultValue)));
-        } else {
-            // T is string-like
-            this->setDefaultString(std::forward<T>(defaultValue));
-        }
+    void initCmdCallbackImpl(uint8_t flags, VoidCB cb);
+    void initCmdCallbackImpl(uint8_t flags, StringCB cb);
+    void initCmdCallbackImpl(uint8_t flags, FloatCB cb);
+    void initCmdCallbackImpl(uint8_t flags, DoubleCB cb);
 
-        this->sClientValue = this->sDefaultValue;
-        this->sSkinValue = this->sDefaultValue;
-        this->sServerValue = this->sDefaultValue;
-
-        this->dClientValue.store(this->dDefaultValue, std::memory_order_relaxed);
-        this->dSkinValue.store(this->dDefaultValue, std::memory_order_relaxed);
-        this->dServerValue.store(this->dDefaultValue, std::memory_order_relaxed);
-
-        // set callback if provided
-        if constexpr(!std::is_same_v<Callback, std::nullptr_t>) {
-            if constexpr(cb_invocable<Callback>)
-                this->callback.template emplace<VoidCB>(std::forward<Callback>(callback));
-            else if constexpr(cb_invocable<Callback, std::string_view>)
-                this->callback.template emplace<StringCB>(std::forward<Callback>(callback));
-            else if constexpr(cb_invocable<Callback, float>)
-                this->callback.template emplace<FloatCB>(std::forward<Callback>(callback));
-            else if constexpr(cb_invocable<Callback, double>)
-                this->callback.template emplace<DoubleCB>(std::forward<Callback>(callback));
-            else if constexpr(cb_invocable<Callback, std::string_view, std::string_view>)
-                this->changeCallback.template emplace<StringChangeCB>(std::forward<Callback>(callback));
-            else if constexpr(cb_invocable<Callback, float, float>)
-                this->changeCallback.template emplace<FloatChangeCB>(std::forward<Callback>(callback));
-            else if constexpr(cb_invocable<Callback, double, double>)
-                this->changeCallback.template emplace<DoubleChangeCB>(std::forward<Callback>(callback));
-        }
-    }
-
-    // no flag checking, setValue (user-accessible) already does that
+    // central store-and-dispatch routine called by all 3 setValueImpl overloads
     void setValueInt(double newDouble, std::string newString, bool doCallback, CvarEditor editor);
 
     [[nodiscard]] double getDoubleInt() const;
@@ -493,8 +414,8 @@ class ConVar {
     mutable std::atomic<double> dCachedReturnedDouble{0.};
 
     // callback storage (allow having 1 "change" callback and 1 single value (or void) callback)
-    ExecCallback callback{std::monostate()};
-    ChangeCB changeCallback{std::monostate()};
+    CallbackSlot callback;
+    CallbackSlot changeCallback;
 
     std::atomic<CvarProtection> serverProtectionPolicy{CvarProtection::DEFAULT};
 
