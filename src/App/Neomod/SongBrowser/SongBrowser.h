@@ -158,7 +158,6 @@ class SongBrowser final : public ScreenBackable {
     void refreshBeatmaps();
     void refreshBeatmaps(UIScreen *next_screen, std::function<void()> on_refreshed = nullptr);
     void addBeatmapSet(BeatmapSet *beatmap, bool initialSongBrowserLoad = false);
-    void addSongButtonToAlphanumericGroup(SongButton *btn, CollBtnContainer &group, std::string_view name);
 
     void requestNextScrollToSongButtonJumpFix(SongDifficultyButton *diffButton);
     [[nodiscard]] bool isButtonVisible(CarouselButton *songButton) const;

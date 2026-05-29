@@ -32,7 +32,7 @@ class AsyncPool final {
     };
 
     template <typename T>
-    struct Task : TaskBase {
+    struct Task final : TaskBase {
         std::function<T()> work;
         std::promise<T> promise;
 
@@ -50,7 +50,7 @@ class AsyncPool final {
         std::future<T> get_future() { return this->promise.get_future(); }
     };
 
-    struct FireAndForgetTask : TaskBase {
+    struct FireAndForgetTask final : TaskBase {
         std::function<void()> work;
 
         FireAndForgetTask(std::function<void()> w) noexcept : work(std::move(w)) {}

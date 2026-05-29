@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include "fmt/format.h"
+
 Resource::Resource(Resource &&o) noexcept {
     this->resType = o.resType;
 
@@ -22,7 +24,6 @@ Resource::Resource(Resource &&o) noexcept {
     o.bInterrupted.store(false);
 }
 
-
 Resource::Resource(Type resType, std::string filepath, bool doFilesystemExistenceCheck) : resType(resType) {
     this->sFilePath = std::move(filepath);
 
@@ -37,6 +38,11 @@ Resource::Resource(Type resType, std::string filepath, bool doFilesystemExistenc
                                          exists == -1  ? "unknown"
                                          : exists == 1 ? "true"
                                                        : "false");
+}
+
+// for constructor to move fmt call out of line
+std::string Resource::initDebugIdentifier() const {
+    return fmt::format("{:8p}:{:s}:name=<none>:postinit=false:filepath=<none>", fmt::ptr(this), this->typeToString());
 }
 
 void Resource::setName(std::string_view name) {

@@ -240,11 +240,10 @@ std::unordered_map<i32, i32> beatmap_to_beatmapset;
 // dedupe in-flight resolution queries: at most one outstanding request at a time.
 i32 queried_map_id = 0;
 
-i32 get_beatmapset_id_from_osu_file(const u8* osu_data, size_t s_osu_data) {
+i32 get_beatmapset_id_from_osu_file(std::string_view file) {
     i32 set_id = -1;
     bool inMetadata = false;
 
-    std::string_view file((const char*)osu_data, (const char*)osu_data + s_osu_data);
     for(const auto line : SString::split_newlines(file)) {
         if(line.empty() || SString::is_comment(line)) continue;
         if(line.contains("[Metadata]")) {
@@ -308,14 +307,15 @@ i32 extract_beatmapset_id(std::span<const u8> data) {
         const auto& osu_data = entry.getUncompressedData();
         if(osu_data.empty()) continue;
 
-        set_id = get_beatmapset_id_from_osu_file(osu_data.data(), osu_data.size());
+        set_id = get_beatmapset_id_from_osu_file(
+            std::string_view{reinterpret_cast<const char*>(osu_data.data()), osu_data.size()});
         if(set_id != -1) break;
     }
 
     return set_id;
 }
 
-bool extract_beatmapset(std::span<const u8> data, const std::string &map_dir) {
+bool extract_beatmapset(std::span<const u8> data, const std::string& map_dir) {
     debugLog("Extracting beatmapset ({:d} bytes)", data.size());
 
     Archive::Reader archive(data);

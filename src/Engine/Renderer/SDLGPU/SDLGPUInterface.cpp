@@ -798,12 +798,13 @@ void SDLGPUInterface::drawVAO(VertexArrayObject *vao) {
     // clang-format off
     uSz _srcStepTmp, _outStepTmp, srcIdx; // NOLINT(cppcoreguidelines-init-variables)
     switch(srcPrimitive) {
-        case DrawPrimitive::QUADS:        _srcStepTmp = 4; _outStepTmp = 6; srcIdx = 0; break;
-        case DrawPrimitive::TRIANGLE_FAN: _srcStepTmp = 1; _outStepTmp = 3; srcIdx = 2; break;
-        case DrawPrimitive::TRIANGLES:    _srcStepTmp = 3; _outStepTmp = 3; srcIdx = 0; break;
-        case DrawPrimitive::LINES:        _srcStepTmp = 2; _outStepTmp = 2; srcIdx = 0; break;
+        using enum DrawPrimitive;
+        case QUADS:        _srcStepTmp = 4; _outStepTmp = 6; srcIdx = 0; break;
+        case TRIANGLE_FAN: _srcStepTmp = 1; _outStepTmp = 3; srcIdx = 2; break;
+        case TRIANGLES:    _srcStepTmp = 3; _outStepTmp = 3; srcIdx = 0; break;
+        case LINES:        _srcStepTmp = 2; _outStepTmp = 2; srcIdx = 0; break;
         // not worth trying to split strips, points, etc.
-        default: _srcStepTmp = 1; _outStepTmp = 1; srcIdx = 0;
+        default:           _srcStepTmp = 1; _outStepTmp = 1; srcIdx = 0;
     }
     // clang-format on
 

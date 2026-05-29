@@ -6,9 +6,6 @@
 
 #include "BaseEnvironment.h"
 
-#include "fmt/format.h"
-#include "fmt/compile.h"
-
 #include <atomic>
 #include <string>
 #include <memory>
@@ -32,6 +29,7 @@ class Resource {
    private:
     friend class ResourceManager;
     friend struct ResourceManagerImpl;
+    [[nodiscard]] std::string initDebugIdentifier() const;
 
    public:
     enum Type : uint8_t { IMAGE, FONT, RENDERTARGET, SHADER, TEXTUREATLAS, VAO, SOUND, LAST_RESTYPE = SOUND };
@@ -41,9 +39,7 @@ class Resource {
         if consteval {
             this->sDebugIdentifier.assign(this->typeToString());
         } else {
-            this->sDebugIdentifier.assign(fmt::format(
-                fmt::operator""_cf < "{:8p}:{:s}:name=<none>:postinit=false:filepath=<none>">(), fmt::ptr(this),
-                this->typeToString()));
+            this->sDebugIdentifier.assign(this->initDebugIdentifier());
         }
     }
 

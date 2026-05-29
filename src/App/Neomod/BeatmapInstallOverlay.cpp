@@ -110,8 +110,8 @@ void InstallRow::update_cached_strings() {
     this->cached_title =
         this->display_name.empty() ? fmt::format("Beatmap #{:d}", this->mapset_id) : this->display_name;
 
-    using enum MapInstallStage;
     switch(this->stage) {
+        using enum MapInstallStage;
         case Failed:
             this->cached_status = "Failed";
             break;

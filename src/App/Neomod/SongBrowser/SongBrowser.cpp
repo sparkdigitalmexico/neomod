@@ -1569,6 +1569,34 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> o
     ui->hide();
 }
 
+namespace {
+void add_mapset_to_alphanum_group(SongButton *sbtn, SongBrowser::CollBtnContainer &group, std::string_view name) {
+    if(group.size() != 28) {
+        debugLog("Alphanumeric group wasn't initialized!");
+        return;
+    }
+
+    const char firstChar = name.length() == 0 ? '#' : name[0];
+    const bool isNumber = (firstChar >= '0' && firstChar <= '9');
+    const bool isLowerCase = (firstChar >= 'a' && firstChar <= 'z');
+    const bool isUpperCase = (firstChar >= 'A' && firstChar <= 'Z');
+
+    CollectionButton *cbtn = nullptr;
+    if(isNumber) {
+        cbtn = group[0].get();
+    } else if(isLowerCase || isUpperCase) {
+        const int index = 1 + (25 - (isLowerCase ? 'z' - firstChar : 'Z' - firstChar));
+        cbtn = group[index].get();
+    } else {
+        cbtn = group[27].get();
+    }
+
+    logIfCV(debug_osu, "Inserting {:s}", name);
+
+    cbtn->addChild(sbtn);
+}
+}  // namespace
+
 // this is an insane hack to be calling from places that don't even use songbrowser
 void SongBrowser::addBeatmapSet(BeatmapSet *mapset, bool initialSongBrowserLoad) {
     if(!this->bInitializedBeatmaps && !initialSongBrowserLoad) {
@@ -1597,9 +1625,10 @@ void SongBrowser::addBeatmapSet(BeatmapSet *mapset, bool initialSongBrowserLoad)
     this->parentButtons.push_back(parentButton);
 
     // add mapset to all necessary groups
-    this->addSongButtonToAlphanumericGroup(parentButton, this->artistCollectionButtons, mapset->getArtistLatin());
-    this->addSongButtonToAlphanumericGroup(parentButton, this->creatorCollectionButtons, mapset->getCreator());
-    this->addSongButtonToAlphanumericGroup(parentButton, this->titleCollectionButtons, mapset->getTitleLatin());
+
+    add_mapset_to_alphanum_group(parentButton, this->artistCollectionButtons, mapset->getArtistLatin());
+    add_mapset_to_alphanum_group(parentButton, this->creatorCollectionButtons, mapset->getCreator());
+    add_mapset_to_alphanum_group(parentButton, this->titleCollectionButtons, mapset->getTitleLatin());
 
     // use parent's children for grouping
     const auto &tempChildrenForGroups =
@@ -1671,32 +1700,6 @@ void SongBrowser::addBeatmapSet(BeatmapSet *mapset, bool initialSongBrowserLoad)
             this->lengthCollectionButtons[btnIdx]->addChild(diff_btn);
         }
     }
-}
-
-void SongBrowser::addSongButtonToAlphanumericGroup(SongButton *sbtn, CollBtnContainer &group, std::string_view name) {
-    if(group.size() != 28) {
-        debugLog("Alphanumeric group wasn't initialized!");
-        return;
-    }
-
-    const char firstChar = name.length() == 0 ? '#' : name[0];
-    const bool isNumber = (firstChar >= '0' && firstChar <= '9');
-    const bool isLowerCase = (firstChar >= 'a' && firstChar <= 'z');
-    const bool isUpperCase = (firstChar >= 'A' && firstChar <= 'Z');
-
-    CollectionButton *cbtn = nullptr;
-    if(isNumber) {
-        cbtn = group[0].get();
-    } else if(isLowerCase || isUpperCase) {
-        const int index = 1 + (25 - (isLowerCase ? 'z' - firstChar : 'Z' - firstChar));
-        cbtn = group[index].get();
-    } else {
-        cbtn = group[27].get();
-    }
-
-    logIfCV(debug_osu, "Inserting {:s}", name);
-
-    cbtn->addChild(sbtn);
 }
 
 void SongBrowser::requestNextScrollToSongButtonJumpFix(SongDifficultyButton *diffButton) {
