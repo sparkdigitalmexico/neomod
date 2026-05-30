@@ -17,6 +17,7 @@ bool str_comp(std::string_view a, std::string_view b);
 
 // strcasecmp accepting string_views
 bool strcase_comp(std::string_view a, std::string_view b);
+inline bool strcase_equal(std::string_view a, std::string_view b) { return !strcase_comp(a, b); }
 
 // alphanumeric string comparator that ignores special characters at the start of strings
 bool alnum_comp(std::string_view a, std::string_view b);

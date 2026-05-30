@@ -2,7 +2,7 @@
 #include "ConVar.h"
 #include "ConVarHandler.h"
 
-#include "File.h"
+#include "SString.h"
 
 #include "build_timestamp.h"
 
@@ -132,11 +132,10 @@ void ConVar::execDouble(double args) {
 }
 
 CvarEditor ConVar::getMaster() const {
-    if(this->isFlagSet(cv::SERVER) && this->hasServerValue.load(std::memory_order_acquire)) {
-        return CvarEditor::SERVER;
-    } else if(this->isProtected() &&
-              (likely(!!ConVar::onGetValueProtectedCallback) && !ConVar::onGetValueProtectedCallback(this->sName))) {
-        // (only for multiplayer rooms, see note on invalidateAllProtectedCaches below)
+    if((this->isFlagSet(cv::SERVER) && this->hasServerValue.load(std::memory_order_acquire)) ||
+       // (only for multiplayer rooms, see note on invalidateAllProtectedCaches below)
+       (this->isProtected() &&
+        (likely(!!ConVar::onGetValueProtectedCallback) && !ConVar::onGetValueProtectedCallback(this->sName)))) {
         return CvarEditor::SERVER;
     } else if(this->isFlagSet(cv::SKINS) && this->hasSkinValue.load(std::memory_order_acquire)) {
         return CvarEditor::SKIN;
@@ -213,17 +212,26 @@ void ConVar::setValueImpl(double newDouble, bool doCallback, CvarEditor editor) 
     this->setValueInt(newDouble, fmt::format("{:g}", newDouble), doCallback, editor);
 }
 
-void ConVar::setValueImpl(bool newBool, bool doCallback, CvarEditor editor) {
-    this->setValueInt(newBool ? 1.0 : 0.0, newBool ? std::string("true") : std::string("false"), doCallback, editor);
-}
-
-void ConVar::setValueImpl(std::string_view newString, bool doCallback, CvarEditor editor) {
-    std::string s{newString};
+void ConVar::setValueImpl(std::string newString, bool doCallback, CvarEditor editor) {
     double dbl{this->dDefaultValue};
-    const auto [ptr, err] = std::from_chars(s.data(), s.data() + s.size(), dbl);
+    const auto [ptr, err] = std::from_chars(newString.data(), newString.data() + newString.size(), dbl);
     (void)ptr;
-    if(err != std::errc()) dbl = this->dDefaultValue;
-    this->setValueInt(dbl, std::move(s), doCallback, editor);
+    if(err != std::errc()) {
+        // older builds saved bool convars as "true"/"false", accept those too, but normalize the
+        // stored string back to the canonical "1"/"0". otherwise a default-valued bool keeps the
+        // textual "false" while its default string is "0", so isDefault() ("incorrectly") reports non-default
+        dbl = this->dDefaultValue;
+        if(this->type == CONVAR_TYPE::BOOL) {
+            if(SString::strcase_equal(newString, "true")) {
+                dbl = 1.0;
+                newString = "1";
+            } else if(SString::strcase_equal(newString, "false")) {
+                dbl = 0.0;
+                newString = "0";
+            }
+        }
+    }
+    this->setValueInt(dbl, std::move(newString), doCallback, editor);
 }
 
 // central store-and-dispatch. handles flag gating, value store, protected/exec/change callbacks.
@@ -242,7 +250,7 @@ void ConVar::setValueInt(double newDouble, std::string newString, bool doCallbac
     // backup old values for callbacks
     double oldDouble{this->getDoubleInt()};
     std::string oldString;
-    std::string *newStringStored{nullptr};  // minor optimization to avoid copying (points to field we moved into)
+    std::string_view newStringStored;  // minor optimization to avoid copying (points to field we moved into)
     if(doCallback) {
         oldString = this->getStringInt();
     }
@@ -252,18 +260,18 @@ void ConVar::setValueInt(double newDouble, std::string newString, bool doCallbac
         using enum CvarEditor;
         case CLIENT: {
             this->dClientValue.store(newDouble, std::memory_order_release);
-            newStringStored = &(this->sClientValue = std::move(newString));
+            newStringStored = (this->sClientValue = std::move(newString));
             break;
         }
         case SKIN: {
             this->dSkinValue.store(newDouble, std::memory_order_release);
-            newStringStored = &(this->sSkinValue = std::move(newString));
+            newStringStored = (this->sSkinValue = std::move(newString));
             this->hasSkinValue.store(true, std::memory_order_release);
             break;
         }
         case SERVER: {
             this->dServerValue.store(newDouble, std::memory_order_release);
-            newStringStored = &(this->sServerValue = std::move(newString));
+            newStringStored = (this->sServerValue = std::move(newString));
             this->hasServerValue.store(true, std::memory_order_release);
             break;
         }
@@ -285,7 +293,7 @@ void ConVar::setValueInt(double newDouble, std::string newString, bool doCallbac
             (*std::launder(reinterpret_cast<VoidCB *>(&this->callback.storage[0])))();
             break;
         case String:
-            (*std::launder(reinterpret_cast<StringCB *>(&this->callback.storage[0])))(*newStringStored);
+            (*std::launder(reinterpret_cast<StringCB *>(&this->callback.storage[0])))(newStringStored);
             break;
         case Float:
             (*std::launder(reinterpret_cast<FloatCB *>(&this->callback.storage[0])))(static_cast<float>(newDouble));
@@ -302,7 +310,7 @@ void ConVar::setValueInt(double newDouble, std::string newString, bool doCallbac
         using enum CallbackKind;
         case StringChange:
             (*std::launder(reinterpret_cast<StringChangeCB *>(&this->changeCallback.storage[0])))(oldString,
-                                                                                                  *newStringStored);
+                                                                                                  newStringStored);
             break;
         case FloatChange:
             (*std::launder(reinterpret_cast<FloatChangeCB *>(&this->changeCallback.storage[0])))(

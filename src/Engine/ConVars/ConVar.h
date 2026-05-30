@@ -198,12 +198,12 @@ class ConVar {
     template <typename T>
     void setValue(T &&value, bool doCallback = true, CvarEditor editor = CvarEditor::CLIENT) {
         using D = std::decay_t<T>;
-        if constexpr(std::is_same_v<D, bool>)
-            this->setValueImpl(static_cast<bool>(value), doCallback, editor);
-        else if constexpr(std::is_convertible_v<D, double>)
+        // bool is convertible to double, so it flows through the numeric path and is stored as
+        // "1"/"0" like ints/floats; the std::string overload parses/normalizes "true"/"false" back
+        if constexpr(std::is_convertible_v<D, double>)
             this->setValueImpl(static_cast<double>(value), doCallback, editor);
         else
-            this->setValueImpl(std::string_view{std::forward<T>(value)}, doCallback, editor);
+            this->setValueImpl(std::string{std::forward<T>(value)}, doCallback, editor);
     }
 
     // generic callback setter that auto-detects callback type
@@ -316,9 +316,9 @@ class ConVar {
 
    private:
     // typed setValue impls — public setValue<T> dispatches into these based on T category
+    // (bool routes through the double overload; there's no dedicated bool string form)
     void setValueImpl(double newDouble, bool doCallback, CvarEditor editor);
-    void setValueImpl(bool newBool, bool doCallback, CvarEditor editor);
-    void setValueImpl(std::string_view newString, bool doCallback, CvarEditor editor);
+    void setValueImpl(std::string newString, bool doCallback, CvarEditor editor);
 
     // typed setCallback impls — public setCallback<C> dispatches into these
     void setCallbackImpl(VoidCB cb);
