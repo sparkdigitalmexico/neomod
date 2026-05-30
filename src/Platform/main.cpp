@@ -123,9 +123,6 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
         }
     }
 
-    // flush IDBFS to IndexedDB after config/scores have been saved (only does anything on WASM)
-    File::flushToDisk();
-
     if constexpr(Env::cfg(OS::WASM) || Env::cfg(FEAT::MAINCB)) {
         // we allocated it with new
         delete fmain;
@@ -133,6 +130,9 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
         // not heap-allocated
         fmain->~SDLMain();
     }
+
+    // flush IDBFS to IndexedDB after config/scores have been saved (only does anything on WASM)
+    File::flushToDisk();
 
 #ifdef MCENGINE_PLATFORM_WASM
     if(restart) {
