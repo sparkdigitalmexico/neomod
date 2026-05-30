@@ -36,7 +36,9 @@
 EM_JS(int, js_get_canvas_width, (), { return document.getElementById('canvas').width; });
 EM_JS(int, js_get_canvas_height, (), { return document.getElementById('canvas').height; });
 #elif defined(MCENGINE_PLATFORM_MACOS)
-#include <unistd.h>  // execv
+#include <spawn.h>  // posix_spawn
+#include <cstring>  // strerror
+extern char **environ;
 #endif
 
 // for sending keys synthetically from console
@@ -1036,8 +1038,19 @@ void SDLMain::restart(const std::vector<std::string> &args) {
 
 #ifdef MCENGINE_PLATFORM_MACOS
     // fork+exec is bugged with mimalloc on macos
-    execv(restartArgsChar.front(), const_cast<char *const *>(restartArgsChar.data()));
-    perror("restart failed");
+    posix_spawnattr_t attr;  // NOLINT(cppcoreguidelines-init-variables)
+    posix_spawnattr_init(&attr);
+    posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSID);
+
+    pid_t pid;  // NOLINT(cppcoreguidelines-init-variables)
+    const int err = posix_spawn(
+        &pid, restartArgsChar.front(), nullptr, &attr,
+        const_cast<char *const *>(restartArgsChar.data()) /*NOLINT(cppcoreguidelines-pro-type-const-cast)*/, environ);
+    posix_spawnattr_destroy(&attr);
+
+    if(err != 0) {
+        logRaw("[restart]: posix_spawn failed: {}", strerror(err));
+    }
     return;
 #else
 
