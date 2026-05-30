@@ -99,30 +99,6 @@ std::vector<ConVar *> ConVarHandler::getConVarByLetter(std::string_view letters)
     return matchingConVars;
 }
 
-std::string ConVarHandler::flagsToString(uint8_t flags) {
-    if(flags == 0) {
-        return "no flags";
-    }
-
-    static constexpr const auto flagStringPairArray = std::array{
-        std::pair{cv::CLIENT, "client"},       std::pair{cv::SERVER, "server"},     std::pair{cv::SKINS, "skins"},
-        std::pair{cv::PROTECTED, "protected"}, std::pair{cv::GAMEPLAY, "gameplay"}, std::pair{cv::HIDDEN, "hidden"},
-        std::pair{cv::NOSAVE, "nosave"},       std::pair{cv::NOLOAD, "noload"}};
-
-    std::string string;
-    for(bool first = true; const auto &[flag, str] : flagStringPairArray) {
-        if((flags & flag) == flag) {
-            if(!first) {
-                string.push_back(' ');
-            }
-            first = false;
-            string.append(str);
-        }
-    }
-
-    return string;
-}
-
 std::vector<ConVar *> ConVarHandler::getNonSubmittableCvars() const {
     std::vector<ConVar *> list;
 
@@ -265,7 +241,7 @@ void ConVarHandler::ConVarBuiltins::help(std::string_view args) {
             thelog.append(fmt::format(" = {:s} ( def. \"{:s}\" , ", cv_str, default_str));
             thelog.append(ConVar::typeToString(match->getType()));
             thelog.append(", ");
-            thelog.append(ConVarHandler::flagsToString(match->getFlags()));
+            thelog.append(ConVar::flagsToString(match->getFlags()));
             thelog.append(" )");
         }
 
@@ -294,11 +270,11 @@ void ConVarHandler::ConVarBuiltins::listcommands(void) {
                     tstring.append(fmt::format(" = {:s} ( def. \"{:s}\" , ", var_str, default_str));
                     tstring.append(ConVar::typeToString(var->getType()));
                     tstring.append(", ");
-                    tstring.append(ConVarHandler::flagsToString(var->getFlags()));
+                    tstring.append(ConVar::flagsToString(var->getFlags()));
                     tstring.append(" )");
                 }
 
-                if(std::string_view{var->getHelpstring()}.length() > 0) {
+                if(var->getHelpstring().length() > 0) {
                     tstring.append(" - ");
                     tstring.append(var->getHelpstring());
                 }
@@ -321,7 +297,7 @@ void ConVarHandler::ConVarBuiltins::dumpcommands(void) {
     for(auto var : convars) {
         // only doing this because of some stupid spurious warning with LTO
 #define STRIF_(FLAG__, flag__) var->isFlagSet(cv::FLAG__) ? "<span class=\"flag " #flag__ "\">" #FLAG__ "</span>" : ""
-        const std::string flags = fmt::format("\n{}{}{}{}{}\n",              //
+        const std::string flags = fmt::format("\n{:s}{:s}{:s}{:s}{:s}\n",    //
                                               STRIF_(CLIENT, client),        //
                                               STRIF_(SKINS, skins),          //
                                               STRIF_(SERVER, server),        //
@@ -331,11 +307,11 @@ void ConVarHandler::ConVarBuiltins::dumpcommands(void) {
 
         html.append(fmt::format(R"(<div>
     <cv-header>
-        <cv-name>{}</cv-name>
-        <cv-default>{}</cv-default>
+        <cv-name>{:s}</cv-name>
+        <cv-default>{:s}</cv-default>
     </cv-header>
-    <cv-description>{}</cv-description>
-    <cv-flags>{}</cv-flags>
+    <cv-description>{:s}</cv-description>
+    <cv-flags>{:s}</cv-flags>
 </div>)",
                                 var->getName(), var->getFancyDefaultValue(), var->getHelpstring(), flags));
     }

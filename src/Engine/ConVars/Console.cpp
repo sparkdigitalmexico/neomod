@@ -22,7 +22,7 @@ bool Console::processCommand(std::string_view command, bool fromFile) {
         int unprocessed = 0;
 
         const auto commands = SString::split(command, ';');
-        for(const auto &command : commands) {
+        for(const auto command : commands) {
             unprocessed += processCommand(command);
         }
         // TODO:
@@ -79,7 +79,7 @@ bool Console::processCommand(std::string_view command, bool fromFile) {
                 logMessage.append(fmt::format(" = {:s} ( def. \"{:s}\" , ", var->getString(), var->getDefaultString()));
                 logMessage.append(ConVar::typeToString(var->getType()));
                 logMessage.append(", ");
-                logMessage.append(ConVarHandler::flagsToString(var->getFlags()));
+                logMessage.append(ConVar::flagsToString(var->getFlags()));
                 logMessage.append(" )");
             }
 

@@ -87,6 +87,12 @@ class ConVar {
     template <typename... Args>
     static inline constexpr bool cb_invocable = std::is_invocable_v<Args...>;
 
+    template <typename C>
+    static inline constexpr bool is_cb_delegate =
+        std::is_same_v<C, VoidCB> || std::is_same_v<C, StringCB> || std::is_same_v<C, FloatCB> ||
+        std::is_same_v<C, DoubleCB> || std::is_same_v<C, StringChangeCB> || std::is_same_v<C, FloatChangeCB> ||
+        std::is_same_v<C, DoubleChangeCB>;
+
    private:
     // discriminated opaque storage for any callback delegate. all SA::delegate<R(Args...)>
     // share the same 2-pointer layout (object + stub), so a single sized/aligned buffer holds
@@ -106,10 +112,13 @@ class ConVar {
         alignas(VoidCB) unsigned char storage[sizeof(VoidCB)]{};
     };
 
+    // ctor helper
     void addConVar();
 
    public:
-    static std::string typeToString(CONVAR_TYPE type);
+    // utils
+    static std::string_view typeToString(CONVAR_TYPE type);
+    static std::string flagsToString(uint8_t flags);
 
    public:
     // command-only constructor
@@ -212,7 +221,9 @@ class ConVar {
         requires cv::detail::CallbackAny<Callback>
     {
         using D = std::decay_t<Callback>;
-        if constexpr(cb_invocable<D>)
+        if constexpr(is_cb_delegate<D>)
+            this->setCallbackImpl(std::forward<Callback>(callback));
+        else if constexpr(cb_invocable<D>)
             this->setCallbackImpl(VoidCB(std::forward<Callback>(callback)));
         else if constexpr(cb_invocable<D, std::string_view>)
             this->setCallbackImpl(StringCB(std::forward<Callback>(callback)));
@@ -351,7 +362,9 @@ class ConVar {
     template <typename Callback>
     void setupCmdCallback(uint8_t flags, Callback &&cb) {
         using D = std::decay_t<Callback>;
-        if constexpr(cb_invocable<D>)
+        if constexpr(is_cb_delegate<D>)
+            this->initCmdCallbackImpl(flags, std::forward<Callback>(cb));
+        else if constexpr(cb_invocable<D>)
             this->initCmdCallbackImpl(flags, VoidCB(std::forward<Callback>(cb)));
         else if constexpr(cb_invocable<D, std::string_view>)
             this->initCmdCallbackImpl(flags, StringCB(std::forward<Callback>(cb)));

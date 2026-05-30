@@ -16,9 +16,6 @@ class ConVar;
 class ConVarHandler {
     NOCOPY_NOMOVE(ConVarHandler)
    public:
-    static std::string flagsToString(uint8_t flags);
-
-   public:
     struct ConVarBuiltins;
 
     ConVarHandler();

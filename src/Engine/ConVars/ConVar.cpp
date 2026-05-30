@@ -11,6 +11,7 @@
 #include <cassert>
 #include <charconv>
 #include <new>
+#include <utility>
 
 // SA::delegate<R(Args...)> has a fixed 2-pointer layout regardless of signature, so a single
 // sized/aligned buffer (CallbackSlot::storage) can hold any of them. This is the load-bearing
@@ -75,36 +76,61 @@ void ConVar::addConVar() {
 
 std::string ConVar::getFancyDefaultValue() const {
     switch(this->getType()) {
-        case CONVAR_TYPE::BOOL:
+        using enum CONVAR_TYPE;
+        case BOOL:
             return this->dDefaultValue == 0 ? "false" : "true";
-        case CONVAR_TYPE::INT:
-            return std::to_string((int)this->dDefaultValue);
-        case CONVAR_TYPE::FLOAT:
-            return std::to_string(this->dDefaultValue);
-        case CONVAR_TYPE::STRING: {
-            std::string out = "\"";
-            out.append(this->sDefaultValue);
-            out.append("\"");
-            return out;
+        case INT:
+            return fmt::format("{:d}", (int)this->dDefaultValue);
+        case FLOAT:
+            return fmt::format("{:g}", this->dDefaultValue);
+        case STRING: {
+            return fmt::format(R"("{:s}")", this->sDefaultValue);
         }
     }
 
+    std::unreachable();
     return "unreachable";
 }
 
-std::string ConVar::typeToString(CONVAR_TYPE type) {
+std::string_view ConVar::typeToString(CONVAR_TYPE type) {
     switch(type) {
-        case CONVAR_TYPE::BOOL:
-            return "bool";
-        case CONVAR_TYPE::INT:
-            return "int";
-        case CONVAR_TYPE::FLOAT:
-            return "float";
-        case CONVAR_TYPE::STRING:
-            return "string";
+        using enum CONVAR_TYPE;
+        case BOOL:
+            return "bool"sv;
+        case INT:
+            return "int"sv;
+        case FLOAT:
+            return "float"sv;
+        case STRING:
+            return "string"sv;
     }
 
-    return "";
+    std::unreachable();
+    return ""sv;
+}
+
+std::string ConVar::flagsToString(uint8_t flags) {
+    if(flags == 0) {
+        return "no flags";
+    }
+
+    static constexpr const auto flagStringPairArray = std::array{
+        std::pair{cv::CLIENT, "client"},       std::pair{cv::SERVER, "server"},     std::pair{cv::SKINS, "skins"},
+        std::pair{cv::PROTECTED, "protected"}, std::pair{cv::GAMEPLAY, "gameplay"}, std::pair{cv::HIDDEN, "hidden"},
+        std::pair{cv::NOSAVE, "nosave"},       std::pair{cv::NOLOAD, "noload"}};
+
+    std::string string;
+    for(bool first = true; const auto &[flag, str] : flagStringPairArray) {
+        if((flags & flag) == flag) {
+            if(!first) {
+                string.push_back(' ');
+            }
+            first = false;
+            string.append(str);
+        }
+    }
+
+    return string;
 }
 
 void ConVar::exec() {
@@ -459,11 +485,13 @@ void ConVar::reset() {
 }
 
 bool ConVar::hasAnyNonVoidCallback() const {
-    return this->callback.kind == CallbackKind::String || this->callback.kind == CallbackKind::Float ||
-           this->callback.kind == CallbackKind::Double || this->changeCallback.kind != CallbackKind::None;
+    using enum CallbackKind;
+    auto kind = this->callback.kind;
+    return kind != None && kind != Void;
 }
 
 bool ConVar::hasSingleArgCallback() const {
-    return this->callback.kind == CallbackKind::String || this->callback.kind == CallbackKind::Float ||
-           this->callback.kind == CallbackKind::Double;
+    using enum CallbackKind;
+    auto kind = this->callback.kind;
+    return kind == String || kind == Float || kind == Double;
 }
