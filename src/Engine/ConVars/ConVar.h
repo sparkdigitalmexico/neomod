@@ -285,7 +285,12 @@ class ConVar {
 
     [[nodiscard]] inline bool isFlagSet(uint8_t flag) const { return ((this->iFlags & flag) == flag); }
     [[nodiscard]] inline bool isDefault() const {
-        return this->getString() == this->getDefaultString() && this->getDouble() == this->getDefaultDouble();
+        // a convar carries two representations (double + string), but (usually?) only one is authoritative per
+        // type: the double for numeric convars, the string for STRING convars.
+        // the other is derived and can diverge (e.g. an unparseable/"true"/"false" string set on a numeric convar
+        // resets the double to default but leaves the raw text behind).
+        if(this->type == CONVAR_TYPE::STRING) return this->getString() == this->getDefaultString();
+        return this->getDouble() == this->getDefaultDouble();
     }
 
     void setServerProtected(CvarProtection policy) {
