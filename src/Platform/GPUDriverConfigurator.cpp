@@ -139,56 +139,53 @@ struct NvApiState {
 };
 
 std::string s_init_info{""};
-
-NvApiState &getNvAPIState() noexcept {
-    static NvApiState state;
-    return state;
-}
+static constinit NvApiState s_state{};
 
 [[maybe_unused]] bool initNvAPI() noexcept {
-    auto &state = getNvAPIState();
-    if(state.initialized) return true;
+    if(s_state.initialized) return true;
 
     static constexpr const char *nvapi_libname = (sizeof(void *) == 8) ? "nvapi64.dll" : "nvapi.dll";
-    state.lib = dynutils::load_lib(nvapi_libname);
+    s_state.lib = dynutils::load_lib(nvapi_libname);
 
-    if(!state.lib) {
+    if(!s_state.lib) {
         s_init_info = fmt::format("NOTICE: failed to load {}: {}", nvapi_libname, dynutils::get_error());
         return false;
     }
 
     // load NvAPI_QueryInterface function
-    state.queryInterface = dynutils::load_func<NvAPI_QueryInterface_t>(state.lib, "nvapi_QueryInterface");
-    if(!state.queryInterface) {
+    s_state.queryInterface = dynutils::load_func<NvAPI_QueryInterface_t>(s_state.lib, "nvapi_QueryInterface");
+    if(!s_state.queryInterface) {
         s_init_info = "NOTICE: failed to load nvapi_QueryInterface (can't set threaded optimizations setting)";
         return false;
     }
 
     // load function pointers through QueryInterface
-    state.initialize = reinterpret_cast<NvAPI_Initialize_t *>(state.queryInterface(NVAPI_INITIALIZE_ID));
-    state.createSession =
-        reinterpret_cast<NvAPI_DRS_CreateSession_t *>(state.queryInterface(NVAPI_DRS_CREATE_SESSION_ID));
-    state.destroySession =
-        reinterpret_cast<NvAPI_DRS_DestroySession_t *>(state.queryInterface(NVAPI_DRS_DESTROY_SESSION_ID));
-    state.loadSettings = reinterpret_cast<NvAPI_DRS_LoadSettings_t *>(state.queryInterface(NVAPI_DRS_LOAD_SETTINGS_ID));
-    state.findApplicationByName = reinterpret_cast<NvAPI_DRS_FindApplicationByName_t *>(
-        state.queryInterface(NVAPI_DRS_FIND_APPLICATION_BY_NAME_ID));
-    state.createProfile =
-        reinterpret_cast<NvAPI_DRS_CreateProfile_t *>(state.queryInterface(NVAPI_DRS_CREATE_PROFILE_ID));
-    state.createApplication =
-        reinterpret_cast<NvAPI_DRS_CreateApplication_t *>(state.queryInterface(NVAPI_DRS_CREATE_APPLICATION_ID));
-    state.setSetting = reinterpret_cast<NvAPI_DRS_SetSetting_t *>(state.queryInterface(NVAPI_DRS_SET_SETTING_ID));
-    state.saveSettings = reinterpret_cast<NvAPI_DRS_SaveSettings_t *>(state.queryInterface(NVAPI_DRS_SAVE_SETTINGS_ID));
+    s_state.initialize = reinterpret_cast<NvAPI_Initialize_t *>(s_state.queryInterface(NVAPI_INITIALIZE_ID));
+    s_state.createSession =
+        reinterpret_cast<NvAPI_DRS_CreateSession_t *>(s_state.queryInterface(NVAPI_DRS_CREATE_SESSION_ID));
+    s_state.destroySession =
+        reinterpret_cast<NvAPI_DRS_DestroySession_t *>(s_state.queryInterface(NVAPI_DRS_DESTROY_SESSION_ID));
+    s_state.loadSettings =
+        reinterpret_cast<NvAPI_DRS_LoadSettings_t *>(s_state.queryInterface(NVAPI_DRS_LOAD_SETTINGS_ID));
+    s_state.findApplicationByName = reinterpret_cast<NvAPI_DRS_FindApplicationByName_t *>(
+        s_state.queryInterface(NVAPI_DRS_FIND_APPLICATION_BY_NAME_ID));
+    s_state.createProfile =
+        reinterpret_cast<NvAPI_DRS_CreateProfile_t *>(s_state.queryInterface(NVAPI_DRS_CREATE_PROFILE_ID));
+    s_state.createApplication =
+        reinterpret_cast<NvAPI_DRS_CreateApplication_t *>(s_state.queryInterface(NVAPI_DRS_CREATE_APPLICATION_ID));
+    s_state.setSetting = reinterpret_cast<NvAPI_DRS_SetSetting_t *>(s_state.queryInterface(NVAPI_DRS_SET_SETTING_ID));
+    s_state.saveSettings =
+        reinterpret_cast<NvAPI_DRS_SaveSettings_t *>(s_state.queryInterface(NVAPI_DRS_SAVE_SETTINGS_ID));
 
-    if(!state.initialize || !state.createSession || !state.destroySession || !state.loadSettings ||
-       !state.findApplicationByName || !state.createProfile || !state.createApplication || !state.setSetting ||
-       !state.saveSettings) {
+    if(!s_state.initialize || !s_state.createSession || !s_state.destroySession || !s_state.loadSettings ||
+       !s_state.findApplicationByName || !s_state.createProfile || !s_state.createApplication || !s_state.setSetting ||
+       !s_state.saveSettings) {
         s_init_info = "NOTICE: failed to load one or more NvAPI functions (can't set threaded optimizations setting)";
         return false;
     }
 
     // initialize NvAPI
-    NvStatus status = state.initialize();
+    NvStatus status = s_state.initialize();
     if(status != NvStatus::OK) {
         s_init_info =
             fmt::format("NOTICE: NvAPI_Initialize failed with status {} (can't set threaded optimizations setting)",
@@ -196,7 +193,7 @@ NvApiState &getNvAPIState() noexcept {
         return false;
     }
 
-    state.initialized = true;
+    s_state.initialized = true;
 
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         s_init_info = "NvAPI initialized";
@@ -207,18 +204,16 @@ NvApiState &getNvAPIState() noexcept {
 
 void unloadNvAPI() noexcept {
     if constexpr(!Env::cfg(OS::WINDOWS)) return;
-    auto &state = getNvAPIState();
-    if(!state.initialized || !state.lib) return;
+    if(!s_state.initialized || !s_state.lib) return;
 
-    dynutils::unload_lib(state.lib);
+    dynutils::unload_lib(s_state.lib);
 }
 
 bool setNvidiaThreadedOpts(bool enable) noexcept {
-    auto &state = getNvAPIState();
-    if(!state.initialized) return false;
+    if(!s_state.initialized) return false;
 
     void *sessionHandle = nullptr;
-    NvStatus status = state.createSession(&sessionHandle);
+    NvStatus status = s_state.createSession(&sessionHandle);
     if(status != NvStatus::OK) {
         debugLog("couldn't {} threaded opts: NvAPI_DRS_CreateSession failed with status {}",
                  enable ? "enable" : "disable", static_cast<int>(status));
@@ -226,11 +221,11 @@ bool setNvidiaThreadedOpts(bool enable) noexcept {
     }
 
     // load current settings
-    status = state.loadSettings(sessionHandle);
+    status = s_state.loadSettings(sessionHandle);
     if(status != NvStatus::OK) {
         debugLog("couldn't {} threaded opts: NvAPI_DRS_LoadSettings failed with status {}",
                  enable ? "enable" : "disable", static_cast<int>(status));
-        state.destroySession(sessionHandle);
+        s_state.destroySession(sessionHandle);
         return false;
     }
 
@@ -239,7 +234,7 @@ bool setNvidiaThreadedOpts(bool enable) noexcept {
     app.version = NvDrsApplicationV1::makeVersion();
 
     void *profileHandle = nullptr;
-    status = state.findApplicationByName(sessionHandle, L"" PACKAGE_NAME ".exe", &profileHandle, &app);
+    status = s_state.findApplicationByName(sessionHandle, L"" PACKAGE_NAME ".exe", &profileHandle, &app);
 
     if(status == NvStatus::EXECUTABLE_NOT_FOUND) {
         // create new profile
@@ -251,11 +246,11 @@ bool setNvidiaThreadedOpts(bool enable) noexcept {
 
         profile.isPredefined = 0;
 
-        status = state.createProfile(sessionHandle, &profile, &profileHandle);
+        status = s_state.createProfile(sessionHandle, &profile, &profileHandle);
         if(status != NvStatus::OK) {
             debugLog("couldn't {} threaded opts: NvAPI_DRS_CreateProfile failed with status {}",
                      enable ? "enable" : "disable", static_cast<int>(status));
-            state.destroySession(sessionHandle);
+            s_state.destroySession(sessionHandle);
             return false;
         }
 
@@ -266,11 +261,11 @@ bool setNvidiaThreadedOpts(bool enable) noexcept {
         std::wcsncpy(&app.userFriendlyName[0], L"" PACKAGE_NAME,
                      (sizeof(app.userFriendlyName) / sizeof(app.userFriendlyName[0])) - 1);
 
-        status = state.createApplication(sessionHandle, profileHandle, &app);
+        status = s_state.createApplication(sessionHandle, profileHandle, &app);
         if(status != NvStatus::OK) {
             debugLog("couldn't {} threaded opts: NvAPI_DRS_CreateApplication failed with status {}",
                      enable ? "enable" : "disable", static_cast<int>(status));
-            state.destroySession(sessionHandle);
+            s_state.destroySession(sessionHandle);
             return false;
         }
 
@@ -281,7 +276,7 @@ bool setNvidiaThreadedOpts(bool enable) noexcept {
     } else if(status != NvStatus::OK) {
         debugLog("couldn't {} threaded opts: NvAPI_DRS_FindApplicationByName failed with status {}",
                  enable ? "enable" : "disable", static_cast<int>(status));
-        state.destroySession(sessionHandle);
+        s_state.destroySession(sessionHandle);
         return false;
     }
 
@@ -299,24 +294,24 @@ bool setNvidiaThreadedOpts(bool enable) noexcept {
     setting.currentValue.u32Value = settingValue;
     setting.predefinedValue.u32Value = settingValue;
 
-    status = state.setSetting(sessionHandle, profileHandle, &setting);
+    status = s_state.setSetting(sessionHandle, profileHandle, &setting);
     if(status != NvStatus::OK) {
         debugLog("couldn't {} threaded opts: NvAPI_DRS_SetSetting failed with status {}", enable ? "enable" : "disable",
                  static_cast<int>(status));
-        state.destroySession(sessionHandle);
+        s_state.destroySession(sessionHandle);
         return false;
     }
 
     // save settings
-    status = state.saveSettings(sessionHandle);
+    status = s_state.saveSettings(sessionHandle);
     if(status != NvStatus::OK) {
         debugLog("couldn't {} threaded opts: NvAPI_DRS_SaveSettings failed with status {}",
                  enable ? "enable" : "disable", static_cast<int>(status));
-        state.destroySession(sessionHandle);
+        s_state.destroySession(sessionHandle);
         return false;
     }
 
-    state.destroySession(sessionHandle);
+    s_state.destroySession(sessionHandle);
 
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         debugLog("nvidia threaded optimizations {}", enable ? "enabled" : "disabled");

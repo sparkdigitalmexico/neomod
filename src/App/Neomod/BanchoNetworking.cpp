@@ -151,7 +151,7 @@ void attempt_logging_in() {
             }
         }
 
-        parse_packets({(u8 *)response.body.data(), response.body.length()});
+        parse_packets({reinterpret_cast<u8 *>(response.body.data()), response.body.length()});
     });
 }
 
@@ -176,7 +176,7 @@ void send_bancho_packet_http(Packet outgoing) {
             return;
         }
 
-        parse_packets({(u8 *)response.body.data(), response.body.length()});
+        parse_packets({reinterpret_cast<u8 *>(response.body.data()), response.body.length()});
     });
 }
 
@@ -322,6 +322,8 @@ void send_packet(Packet &packet) {
         packet.size = 0;
         return;
     }
+
+    logIfCV(debug_network, "{:d} ({:s})", packet.id, OutgoingPackets_to_string((OutgoingPackets)packet.id));
 
     // debugLog("Sending packet of type {:}: ", packet.id);
     // for (int i = 0; i < packet.pos; i++) {

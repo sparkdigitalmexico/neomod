@@ -61,6 +61,7 @@ extern void _update();
 #define CONVAR(name, ...) ConVar _CV(name)(#name __VA_OPT__(, ) __VA_ARGS__)
 
 #include "BaseEnvironment.h"
+#include <cstdlib>  // abort()
 
 namespace Profiling {
 extern void vprofToggleCB(float);
@@ -202,7 +203,6 @@ CONVAR(debug_shaders, false, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(debug_vprof, false, CLIENT | SERVER);
 CONVAR(debug_opengl, false, CLIENT | PROTECTED | GAMEPLAY);
 CONVAR(debug_snd, false, CLIENT | NOSAVE);
-CONVAR(debug_disable_async_free, false, CLIENT | SERVER);
 #ifdef MCENGINE_FEATURE_FFMPEG
 extern ConVar debug_ffmpeg;  // FFmpegLoader.cpp
 #endif

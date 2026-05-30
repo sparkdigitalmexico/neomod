@@ -93,7 +93,7 @@ class Image : public Resource {
     bool loadRawImage();
 
     struct CFree {
-        void operator()(void *p) const noexcept;
+        void operator()(void *p) const noexcept { free(p); }
     };
     struct SizedRGBABytes final : public std::unique_ptr<u8[], CFree> {
         using unique_ptr::unique_ptr;

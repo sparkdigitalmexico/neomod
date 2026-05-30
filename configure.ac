@@ -12,6 +12,7 @@ CI="${CI:-"${GITHUB_ACTIONS}"}"
 
 # add include guards to config.h, they aren't there by default for some reason
 AH_TOP([
+#pragma once
 #ifndef __TOP_SRC_CONFIG_H_INCLUDE_GUARD
 #define __TOP_SRC_CONFIG_H_INCLUDE_GUARD
 ])

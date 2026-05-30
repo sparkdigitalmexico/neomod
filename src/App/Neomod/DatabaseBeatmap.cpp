@@ -636,7 +636,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
 
                     slider.type = SLIDERCURVETYPE{curves[0][0]};
                     curves.erase(curves.begin());
-                    for(const auto &curvePoints : curves) {
+                    for(const auto curvePoints : curves) {
                         f32 cpX{}, cpY{};
                         // just skip infinite/invalid curve points (https://osu.ppy.sh/b/1029976)
                         const bool valid = Parsing::parse(curvePoints, &cpX, ':', &cpY) &&  //

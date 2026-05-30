@@ -73,10 +73,10 @@ void ThumbnailManager::update() {
         auto& identifier = this->load_queue[i];
 
         bool exists_on_disk = false;
-        struct stat64 attr;
+        struct stat64 attr;  // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
         if(File::stat_c(identifier.save_path.c_str(), &attr) == 0) {
             time_t now = time(nullptr);
-            struct tm expiration_date;
+            struct tm expiration_date;  // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
             localtime_x(&attr.st_mtime, &expiration_date);
             expiration_date.tm_mday += 7;
             if(now <= mktime(&expiration_date)) {

@@ -15,7 +15,7 @@ struct Camera::CamImpl {
     };
 
     static float planeDotCoord(CAM_PLANE plane, vec3 point);
-    static float planeDotCoord(vec3 planeNormal, vec3 planePoint, vec3 &pv);
+    static float planeDotCoord(vec3 planeNormal, vec3 planePoint, vec3 pv);
 
     void setPos(vec3 pos);
 
@@ -410,6 +410,6 @@ float Camera::CamImpl::planeDotCoord(CAM_PLANE plane, vec3 point) {
     return ((plane.a * point.x) + (plane.b * point.y) + (plane.c * point.z) + plane.d);
 }
 
-float Camera::CamImpl::planeDotCoord(vec3 planeNormal, vec3 planePoint, vec3 &pv) {
+float Camera::CamImpl::planeDotCoord(vec3 planeNormal, vec3 planePoint, vec3 pv) {
     return vec::dot(planeNormal, pv - planePoint);
 }

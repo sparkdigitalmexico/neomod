@@ -759,17 +759,3 @@ bool Image::isRawImageCompletelyTransparent() const {
 
     return true;  // all pixels are transparent
 }
-
-void Image::CFree::operator()(void *p) const noexcept {
-    if(!engine || engine->isShuttingDown() || cv::debug_disable_async_free.getBool()) {
-        free(p);
-    } else {
-        // this can take a long time on the main thread so just let some background thread do it
-        Async::dispatch(
-            [p]() {
-                // stb_image_free is just a macro to free, anyways
-                free(p);
-            },
-            Lane::Background);
-    }
-}

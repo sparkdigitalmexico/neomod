@@ -871,17 +871,14 @@ bool Skin::parseSkinINI(std::string filepath) {
 #undef PARSE_LINE
 
             case NEOMOD: {
-                size_t pos = curLine.find(':');
+                const size_t pos = curLine.find(':');
                 if(pos == std::string::npos) break;
 
-                bool shouldParse = true;
                 std::string name, value;
-                shouldParse &= !!Parsing::parse(curLine.substr(0, pos), &name);
-                shouldParse &= !!Parsing::parse(curLine.substr(pos + 1), &value);
 
                 // XXX: shouldn't be setting cvars directly in parsing method
-                if(shouldParse) {
-                    auto cvar = cvars().getConVarByName(name, false);
+                if(Parsing::parse(curLine.substr(0, pos), &name) && Parsing::parse(curLine.substr(pos + 1), &value)) {
+                    auto *cvar = cvars().getConVarByName(name, false);
                     if(cvar) {
                         cvar->setValue(value, true, CvarEditor::SKIN);
                     } else {

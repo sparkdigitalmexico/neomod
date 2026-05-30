@@ -1896,24 +1896,19 @@ void Database::saveMaps() {
         }
     }
 
+    Hash::flat::map<MD5Hash, MapOverrides> real_overrides;
+
     // We want to save settings we applied on peppy-imported maps
     // When calculating loudness we don't call update_overrides() for performance reasons
     {
         Sync::unique_lock lock(this->peppy_overrides_mtx);
-        for(const auto &map : this->loudness_to_calc) {
+        for(const auto *map : this->loudness_to_calc) {
             if(map->type != DatabaseBeatmap::BeatmapType::PEPPY_DIFFICULTY) continue;
             if(map->loudness.load(std::memory_order_acquire) == 0.f) continue;
             this->peppy_overrides[map->getMD5()] = map->get_overrides();
         }
-    }
 
-    u32 nb_overrides = 0;
-    Hash::flat::map<MD5Hash, MapOverrides> real_overrides;
-
-    // avoid adding overrides with empty/0/"suspicious" hashes
-    {
-        // only need read lock here
-        Sync::shared_lock lock(this->peppy_overrides_mtx);
+        // avoid adding overrides with empty/0/"suspicious" hashes
         real_overrides.reserve(this->peppy_overrides.size());
 
         for(const auto &it : this->peppy_overrides) {
@@ -1921,6 +1916,8 @@ void Database::saveMaps() {
             real_overrides.emplace(it);
         }
     }
+
+    u32 nb_overrides = 0;
 
     maps.write<u32>(real_overrides.size());
     for(const auto &[hash, override_] : real_overrides) {
