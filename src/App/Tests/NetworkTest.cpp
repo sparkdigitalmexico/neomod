@@ -4,7 +4,10 @@
 #include "TestMacros.h"
 #include "Engine.h"
 #include "Timing.h"
+#include "NetworkHandler.h"
+#include "SyncStoptoken.h"
 
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -12,7 +15,63 @@ namespace Mc::Tests {
 
 using namespace Mc::Net;
 
+struct NetworkTest::NetworkTestImpl final {
+    void update();
+
+    // one async response, recorded on the main thread by the request's callback
+    struct Capture {
+        Mc::Net::Response resp;
+        bool fired{false};
+    };
+
+    void runUrlEncodeTests();
+    void runSyncTest();
+    void startGet(std::string_view url, Capture& cap, Sync::stop_token token = {});
+    void finish();
+
+    int m_passes = 0;
+    int m_failures = 0;
+
+    // request targets, resolved from -testarg:base_url (default http://127.0.0.1:8423) in the ctor
+    std::string m_urlOk;
+    std::string m_urlSlow;
+    std::string m_url404;
+
+    // each network request spans multiple frames: kick it off, then poll its Capture until the
+    // callback fires (delivered by networkHandler->update(), which runs just before app->update())
+    // or the watchdog elapses. the cancellation cases are the inverse: the callback must NOT arrive.
+    enum Phase : u8 {
+        START,  // deterministic urlEncode + synchronous GET, then kick off the async GET
+
+        WAIT_GET,       // async GET succeeds
+        WAIT_NOTFOUND,  // GET to a missing path reports a 404 failure
+        WAIT_BADHOST,   // GET to an unresolvable host reports a connection failure
+        WAIT_TOKEN,     // a cancel token that is never stopped still delivers normally
+
+        WAIT_CANCEL_IMMEDIATE,   // stopped in the same frame as submit: callback must never arrive
+        CANCEL_INFLIGHT_DECIDE,  // one frame later: cancel if still pending, else accept it finished first
+        WAIT_CANCEL_INFLIGHT,    // a request cancelled while in flight must never deliver
+
+        DONE
+    };
+    Phase m_phase{START};
+    double m_watchdog{0.0};  // wall-clock deadline for the current wait
+
+    Capture m_get;
+    Capture m_notfound;
+    Capture m_badhost;
+    Capture m_token;
+    Capture m_cancelImmediate;  // stopped same-frame; .fired must stay false
+    Capture m_cancelInflight;   // stopped a frame in, unless it finished first
+
+    Sync::stop_source m_token_src;            // armed but never stopped
+    Sync::stop_source m_cancelImmediate_src;  // stopped in the same frame as submit
+    Sync::stop_source m_cancelInflight_src;   // stopped once the request is in flight
+};
+
 namespace {
+using NTImpl = NetworkTest::NetworkTestImpl;
+
 // browsers enforce CORS, so the wasm/emrun build can't fetch arbitrary third-party hosts. point the HTTP
 // cases at the local CORS-enabled helper (src/App/Tests/network_test_server.py) so the same suite runs
 // against the same routes from both the native (curl) and browser (fetch) builds. override the base with
@@ -25,15 +84,19 @@ constexpr double WATCHDOG_SECS = 15.0;      // a request that hung past its own 
 constexpr double CANCEL_SETTLE_SECS = 4.0;  // long enough that an un-cancelled request would have completed
 }  // namespace
 
-NetworkTest::NetworkTest() {
+NetworkTest::NetworkTest() : m() {
     const std::string base{getTestArg("base_url").value_or(std::string{DEFAULT_BASE_URL})};
-    m_urlOk = base + "/ok";
-    m_urlSlow = base + "/slow";  // delays ~1s server-side so it stays in flight long enough to cancel
-    m_url404 = base + "/does-not-exist";
+    m->m_urlOk = base + "/ok";
+    m->m_urlSlow = base + "/slow";  // delays ~1s server-side so it stays in flight long enough to cancel
+    m->m_url404 = base + "/does-not-exist";
     logRaw("NetworkTest created (base_url = {})", base);
 }
 
-void NetworkTest::startGet(std::string_view url, Capture& cap, Sync::stop_token token) {
+NetworkTest::~NetworkTest() = default;
+
+void NetworkTest::update() { m->update(); }
+
+void NTImpl::startGet(std::string_view url, Capture& cap, Sync::stop_token token) {
     cap = {};
     RequestOptions options{
         .user_agent = "neomod-NetworkTest",
@@ -47,7 +110,7 @@ void NetworkTest::startGet(std::string_view url, Capture& cap, Sync::stop_token 
     });
 }
 
-void NetworkTest::runUrlEncodeTests() {
+void NTImpl::runUrlEncodeTests() {
     TEST_SECTION("urlEncode");
     TEST_ASSERT_EQ(urlEncode("hello world"), "hello%20world", "encodes spaces");
     TEST_ASSERT_EQ(urlEncode("a/b?c=d&e"), "a%2Fb%3Fc%3Dd%26e", "encodes reserved characters");
@@ -55,7 +118,7 @@ void NetworkTest::runUrlEncodeTests() {
     TEST_ASSERT_EQ(urlEncode(""), "", "empty input stays empty");
 }
 
-void NetworkTest::runSyncTest() {
+void NTImpl::runSyncTest() {
     TEST_SECTION("synchronous GET");
     RequestOptions options{
         .user_agent = "neomod-NetworkTest",
@@ -68,7 +131,7 @@ void NetworkTest::runSyncTest() {
     TEST_ASSERT(resp.body.contains(BODY_OK), "synchronous GET body has expected content");
 }
 
-void NetworkTest::update() {
+void NTImpl::update() {
     const double now = Timing::getTimeReal();
 
     switch(m_phase) {
@@ -190,7 +253,7 @@ void NetworkTest::update() {
     }
 }
 
-void NetworkTest::finish() {
+void NTImpl::finish() {
     m_phase = DONE;
     TEST_PRINT_RESULTS("NetworkTest");
     engine->shutdown();

@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 
-class AppRunner : public App, public MouseListener {
+class AppRunner final : public App, public MouseListener {
     NOCOPY_NOMOVE(AppRunner)
    public:
     AppRunner() = delete;
