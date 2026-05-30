@@ -47,6 +47,8 @@ void UIButtonRounded::drawHoverRect(int hoverRectOffset, bool isClickHeld) {
 }
 
 // based on font dpi (more rounded for higher dpi)
+// NOTE (@spec): this is a hack... obviously a button with no font (e.g. no text) shouldn't have different corner rounding!
+// but i can't think of a better solution atm
 int UIButtonRounded::getRealCornerRadius() const {
     if(!this->font) return this->cornerRadius;
     return (int)std::round((f32)this->cornerRadius * ((f32)this->font->getDPI() / 96.f));

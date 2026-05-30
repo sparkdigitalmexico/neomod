@@ -329,12 +329,12 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
                           _("By Title"),       //
                           _("Collections"),    //
                           _("No Grouping")}};  //
-    this->SCORE_SORTING_METHODS = {{{_("By accuracy"), db->sortScoreByAccuracy},
-                                    {_("By combo"), db->sortScoreByCombo},
-                                    {_("By date"), db->sortScoreByDate},
-                                    {_("By misses"), db->sortScoreByMisses},
-                                    {_("By score"), db->sortScoreByScore},
-                                    {_("By pp"), db->sortScoreByPP}}};
+    this->SCORE_SORTING_METHODS = {{{_("By accuracy"), Database::sortScoreByAccuracy},
+                                    {_("By combo"), Database::sortScoreByCombo},
+                                    {_("By date"), Database::sortScoreByDate},
+                                    {_("By misses"), Database::sortScoreByMisses},
+                                    {_("By score"), Database::sortScoreByScore},
+                                    {_("By pp"), Database::sortScoreByPP}}};
     this->DEFAULT_SCORE_SORTING_INDEX = 5;  // By pp
 
     this->lastDiffSortModIndex = StarPrecalc::active_idx;
@@ -915,7 +915,7 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
 
     // handle changed mods resort
     if(this->lastDiffSortModIndex != StarPrecalc::active_idx) {
-        this->onSortChange("", cv::songbrowser_sortingtype.getInt());
+        this->onSortChange(cv::songbrowser_sortingtype.getString(), cv::songbrowser_sortingtype.getInt());
         this->lastDiffSortModIndex = StarPrecalc::active_idx;
     }
 
@@ -2542,7 +2542,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
     this->bInitializedBeatmaps = true;
     this->bSongButtonsNeedSorting = true;
 
-    this->onSortChange("", cv::songbrowser_sortingtype.getInt());
+    this->onSortChange(cv::songbrowser_sortingtype.getString(), cv::songbrowser_sortingtype.getInt());
     this->onGroupChange("", this->curGroup);  // does nothing besides re-highlight the buttons
     this->onSortScoresChange("", cv::songbrowser_scores_sortingtype.getInt());
 
@@ -3263,7 +3263,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
             this->rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(
                 false, false);  // (last false = skipping rebuildSongButtons() here)
             this->bSongButtonsNeedSorting = true;
-            this->onSortChange("",
+            this->onSortChange(cv::songbrowser_sortingtype.getString(),
                                cv::songbrowser_sortingtype.getInt());  // (because this does the rebuildSongButtons())
         }
         if(previouslySelectedCollectionName.length() > 0) {

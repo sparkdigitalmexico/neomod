@@ -370,9 +370,8 @@ Osu::Osu()
         this->last_res_change_req_src |= R_MISC_MANUAL;
     }
 
-    // load ui
+    // (finish) loading ui
     this->userButton = std::make_unique<UserCard>(BanchoState::get_uid());
-
     this->bUILoaded = ui->init();
 }
 
@@ -567,7 +566,6 @@ void Osu::draw() {
 }
 
 void Osu::update() {
-    if(unlikely(!this->UIReady())) return;  // TODO: guarantee that this can't happen
     if(unlikely(!this->bFirstUpdateTasksDone)) {
         this->bFirstUpdateTasksDone = true;
         this->doDeferredInitTasks();
