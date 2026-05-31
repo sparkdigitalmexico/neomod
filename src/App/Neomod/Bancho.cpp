@@ -982,16 +982,12 @@ std::string BanchoState::build_login_packet() {
     req.append(OSU_VERSION "|");
 
     // UTC offset
-    time_t now = time(nullptr);
-    struct tm tmbuf;  // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-    auto gmt = gmtime_x(&now, &tmbuf);
-    auto local_time = localtime_x(&now, &tmbuf);
-    i32 utc_offset = static_cast<int>(difftime(mktime(local_time), mktime(gmt)) / 3600.);
-    if(utc_offset < 0) {
-        req.append("-");
-        utc_offset *= -1;
-    }
-    req.push_back(static_cast<char>('0' + utc_offset));
+    const time_t now = time(nullptr);
+    struct tm tmbuf1{}, tmbuf2{};
+    struct tm *gmt = gmtime_x(&now, &tmbuf1);
+    struct tm *local_time = localtime_x(&now, &tmbuf2);
+    const i32 utc_offset = static_cast<i32>(difftime(mktime(local_time), mktime(gmt)) / 3600.);
+    req.append(fmt::format("{:d}|", utc_offset));
     req.append("|");
 
     // Don't dox the user's city
