@@ -988,7 +988,6 @@ std::string BanchoState::build_login_packet() {
     struct tm *local_time = localtime_x(&now, &tmbuf2);
     const i32 utc_offset = static_cast<i32>(difftime(mktime(local_time), mktime(gmt)) / 3600.);
     req.append(fmt::format("{:d}|", utc_offset));
-    req.append("|");
 
     // Don't dox the user's city
     req.append("0|");
