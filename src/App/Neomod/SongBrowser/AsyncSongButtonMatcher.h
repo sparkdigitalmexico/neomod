@@ -9,11 +9,16 @@
 class SongButton;
 namespace AsyncSongButtonMatcher {
 
-// in order to avoid the possible case where song buttons are having their children sorted
-// while we are iterating over them (async), we need to pre-create the data to-be-iterated-over
-// and pass that in
-// TODO: still ugly (but safe(r))
-Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songButtons,
-                                                 std::string searchString, std::string hardcodedSearchString,
-                                                 float speedMultiplier);
+// the match runs on a background thread, so the caller snapshots on the main thread everything
+// the search touches that isn't immutable-after-load:
+//   - the flat list of difficulty buttons to flag (so their children can't be re-sorted under us)
+//   - each beatmap's star rating, since it depends on the global StarPrecalc::active_idx and mutates
+//     a per-beatmap cache on read; all other beatmap metadata is fixed at load and safe to read async (probably!)
+struct SearchEntry {
+    SongButton *button;
+    float stars;
+};
+
+Async::CancellableHandle<void> submitSearchMatch(std::vector<SearchEntry> entries, std::string searchString,
+                                                 std::string hardcodedSearchString, float speedMultiplier);
 }  // namespace AsyncSongButtonMatcher

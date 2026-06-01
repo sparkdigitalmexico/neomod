@@ -2625,17 +2625,19 @@ void SongBrowser::onSearchUpdate() {
             // stop potentially running async search
             this->checkHandleKillBackgroundSearchMatcher();
 
-            // set up song buttons to be searched
-            std::vector<SongButton *> searchData;
+            // set up song buttons to be searched, snapshotting each diff's star rating here (on the
+            // main thread) since it depends on the global mod index and caches on read (see SearchEntry)
+            std::vector<AsyncSongButtonMatcher::SearchEntry> searchData;
             for(auto *songButton : this->parentButtons) {
                 if(const auto &children = songButton->getChildren(); !children.empty()) {
                     for(auto *c : children) {
-                        searchData.push_back(c);
+                        searchData.emplace_back(c, c->getDatabaseBeatmap()->getStarRating(StarPrecalc::active_idx));
                     }
                 } else {
                     // sanity, to be removed
                     assert(false && "parent song button with 0 difficulties");
-                    searchData.push_back(songButton);
+                    searchData.emplace_back(songButton,
+                                            songButton->getDatabaseBeatmap()->getStarRating(StarPrecalc::active_idx));
                 }
             }
 

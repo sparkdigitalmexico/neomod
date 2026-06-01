@@ -8,49 +8,31 @@
 
 #include "DatabaseBeatmap.h"
 
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cctype>
 #include <charconv>
+#include <cmath>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <vector>
+#include <utility>
 
 namespace AsyncSongButtonMatcher {
 
 namespace {
-static bool search_matcher(const DatabaseBeatmap *databaseBeatmap,
-                           const std::vector<std::string_view> &searchStringTokens, float speed);
-}
 
-Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songButtons, std::string searchString,
-                                                 std::string hardcodedSearchString, float speed) {
-    return Async::submit_cancellable(
-        [buttons = std::move(songButtons), hardcodedSearchString = std::move(hardcodedSearchString),
-         searchString = std::move(searchString), speed](const Sync::stop_token &tok) {
-            // prepare combined lowercase search string
-            std::string search;
-            if(!hardcodedSearchString.empty()) {
-                search.append(hardcodedSearchString);
-                search.push_back(' ');
-            }
-
-            search.append(searchString);
-            // do case-insensitive searches
-            // TODO: this would not work properly for non-ASCII searches...
-            SString::lower_inplace(search);
-
-            // flag matches across entire database
-            const auto searchStringTokens = SString::split(search, ' ');
-            for(auto *b : buttons) {
-                const bool match = search_matcher(b->getDatabaseBeatmap(), searchStringTokens, speed);
-                b->setIsSearchMatch(match);
-
-                // cancellation point
-                // TODO: don't check this so often...?
-                if(tok.stop_requested()) break;
-            }
-        },
-        Lane::Background);
-}
-
-namespace {
+// ---- query grammar ----------------------------------------------------------
 
 enum class OPID : uint8_t { EQ, LT, GT, LE, GE, NE };
+
+// an operator is detected by searching for its string anywhere in a token, so the
+// order matters: multi-char operators must be listed before the single-char ones they
+// contain (otherwise '=' would shadow "<=", ">=", "==", etc.).
 inline constexpr struct Operator {
     std::string_view str;
     OPID id;
@@ -101,282 +83,240 @@ inline constexpr struct Keyword {
              {"star", KWID::STARS},
              {"creator", KWID::CREATOR}};
 
-// similar to SString::contains_ncase but doesn't lowercase the needle (it's already lowercase)
-static forceinline INLINE_BODY bool find_needle_in_lowercase_haystack(std::string_view haystack,
-                                                                      std::string_view needle) {
-    return !std::ranges::search(haystack, needle, [](unsigned char ch1, unsigned char ch2) {
-                return std::tolower(ch1) == ch2;
+// a single parsed "<keyword><op><value>" filter, e.g. "ar>=9" or "creator=foo".
+struct Expression {
+    KWID keyword;
+    OPID op;
+    float value{0.0f};  // numeric right-hand side (stays 0 if it wasn't a number)
+    bool valueIsPercent{false};
+    std::string text;  // raw right-hand side, for the string-valued CREATOR keyword
+};
+
+// a parsed search string: stat filters plus free-text needles (already lowercased and deduplicated).
+struct Query {
+    std::vector<Expression> expressions;
+    std::vector<std::string> needles;
+};
+
+// ---- parsing (done once per search) -----------------------------------------
+
+// interpret one whitespace-delimited token as a keyword expression,
+// or return nullopt if it's just free text.
+static std::optional<Expression> parse_expression(std::string_view token) {
+    for(const auto &[op_str, op_id] : operators) {
+        if(!token.contains(op_str)) continue;
+
+        // the operator must split the token into exactly two non-empty sides;
+        // anything else (e.g. "0<bpm<1") falls through to free text.
+        const auto sides = SString::split(token, op_str);
+        if(sides.size() != 2 || sides[0].empty() || sides[1].empty()) return std::nullopt;
+
+        for(const auto &[kw_str, kw_id] : keywords) {
+            if(kw_str != sides[0]) continue;
+
+            const std::string_view rhs = sides[1];
+            const auto percent = rhs.find('%');
+
+            Expression expr{.keyword = kw_id,
+                            .op = op_id,
+                            .value = 0.f,
+                            .valueIsPercent = percent != std::string_view::npos,
+                            .text = std::string{rhs}};
+
+            const std::string_view number = expr.valueIsPercent ? rhs.substr(0, percent) : rhs;
+            std::from_chars(number.data(), number.data() + number.size(), expr.value);  // leaves 0 on failure
+
+            return expr;
+        }
+
+        // the left side isn't a known keyword: treat the token as free text. don't retry
+        // other operators (the first one present decides).
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
+static Query parse_query(std::string_view search) {
+    Query query;
+    for(std::string_view token : SString::split(search, ' ')) {
+        if(auto expr = parse_expression(token)) {
+            query.expressions.push_back(std::move(*expr));
+            continue;
+        }
+        SString::trim_inplace(token);
+        if(SString::is_wspace_only(token)) continue;
+        if(std::ranges::find(query.needles, token) == query.needles.end()) query.needles.emplace_back(token);
+    }
+    return query;
+}
+
+// ---- matching (done once per button) ----------------------------------------
+
+// case-insensitive substring search where the needle is already lowercased
+// (like SString::contains_ncase, but it skips re-lowercasing the needle every call).
+static forceinline INLINE_BODY bool haystack_contains_needle(std::string_view haystack, std::string_view lower_needle) {
+    return !std::ranges::search(haystack, lower_needle, [](unsigned char hay, unsigned char ndl) {
+                return std::tolower(hay) == ndl;
             }).empty();
 }
 
-static forceinline bool find_substr_in_metadata(const DatabaseBeatmap *diff, std::string_view lower_substr) {
-    return (find_needle_in_lowercase_haystack(diff->getTitleLatin(), lower_substr)) ||
-           (find_needle_in_lowercase_haystack(diff->getArtistLatin(), lower_substr)) ||
-           (!diff->getTitleUnicode().empty() && diff->getTitleUnicode().contains(lower_substr)) ||
-           (!diff->getArtistUnicode().empty() && diff->getArtistUnicode().contains(lower_substr)) ||
-           (find_needle_in_lowercase_haystack(diff->getCreator(), lower_substr)) ||
-           (find_needle_in_lowercase_haystack(diff->getDifficultyName(), lower_substr)) ||
-           (find_needle_in_lowercase_haystack(diff->getSource(), lower_substr)) ||
-           (find_needle_in_lowercase_haystack(diff->getTags(), lower_substr)) ||
-           (diff->getID() > 0 && find_needle_in_lowercase_haystack(std::to_string(diff->getID()), lower_substr)) ||
-           (diff->getSetID() > 0 && find_needle_in_lowercase_haystack(std::to_string(diff->getSetID()), lower_substr));
+// does any of the difficulty's text metadata contain the (lowercased) needle?
+static forceinline bool metadata_contains_needle(const DatabaseBeatmap *diff, std::string_view lower_needle) {
+    if(haystack_contains_needle(diff->getTitleLatin(), lower_needle) ||
+       haystack_contains_needle(diff->getArtistLatin(), lower_needle) ||
+       haystack_contains_needle(diff->getCreator(), lower_needle) ||
+       haystack_contains_needle(diff->getDifficultyName(), lower_needle) ||
+       haystack_contains_needle(diff->getSource(), lower_needle) ||
+       haystack_contains_needle(diff->getTags(), lower_needle))
+        return true;
+
+    // unicode titles/artists are matched case-sensitively; properly lowercasing non-ASCII
+    // is out of scope (see the combined-string TODO in submitSearchMatch).
+    if((!diff->getTitleUnicode().empty() && diff->getTitleUnicode().contains(lower_needle)) ||
+       (!diff->getArtistUnicode().empty() && diff->getArtistUnicode().contains(lower_needle)))
+        return true;
+
+    // online ids
+    std::array<char, 16> buf{};
+    for(const int id : {diff->getID(), diff->getSetID()}) {
+        if(id <= 0) continue;
+        if(auto [end, ec] = std::to_chars(buf.data(), buf.data() + buf.size(), id);
+           ec == std::errc() &&
+           haystack_contains_needle({buf.data(), static_cast<size_t>(end - buf.data())}, lower_needle))
+            return true;
+    }
+    return false;
 }
 
-static bool search_matcher(const DatabaseBeatmap *databaseBeatmap,
-                           const std::vector<std::string_view> &searchStringTokens, float speed) {
-    assert(!!databaseBeatmap && "NULL databaseBeatmap");
+// evaluate one stat filter against a difficulty.
+static bool eval_expression(const Expression &expr, const DatabaseBeatmap *diff, float stars, float speed) {
+    const auto length_ms = diff->getLengthMS();
+    const auto num_objects = diff->getNumObjects();
 
-    const auto diffs = [&bdiffs = databaseBeatmap->getDifficulties(),
-                        databaseBeatmap]() -> std::vector<const DatabaseBeatmap *> {
-        std::vector<const DatabaseBeatmap *> ret;
-        if(bdiffs.empty()) {
-            // beatmap difficulty
-            ret.push_back(databaseBeatmap);
-        } else {
-            // beatmapset
-            // sanity, to be removed
-            // (this code is a leftover from when some song buttons had no children (mapset with 1 difficulty))
-            assert(false && "searching over beatmapset instead of beatmap difficulty");
-            for(const auto &diff : bdiffs) {
-                ret.push_back(diff.get());
-            }
-        }
-        return ret;
-    }();
+    // object/circle/slider count per minute (scaled by the speed multiplier)
+    const auto per_minute = [length_ms, speed](i32 count) -> float {
+        return length_ms > 0 ? (float)count / ((float)length_ms / 1000.0f / 60.0f) * speed : 0.0f;
+    };
 
-    // TODO: optimize this dumpster fire. can at least cache the parsed tokens and literal strings array instead of
-    // parsing every single damn time
+    // a raw count, or its share of all objects as a percentage
+    const auto obj_count_or_percent = [is_percent = expr.valueIsPercent, num_objects](i32 count) -> float {
+        return is_percent ? (float)count / (float)num_objects * 100.0f : (float)count;
+    };
 
-    // intelligent search parser
-    // all strings which are not expressions get appended with spaces between, then checked with one call to
-    // findSubstringInDiff() the rest is interpreted
-    // NOTE: this code is quite shitty. the order of the operators
-    // array does matter, because find() is used to detect their presence (and '=' would then break '<=' etc.)
-
-    // split search string into tokens
-    // parse over all difficulties
-    bool expressionMatches = false;  // if any diff matched all expressions
-    std::vector<std::string> literalSearchStrings;
-    for(const auto *diff : diffs) {
-        bool expressionsMatch = true;  // if the current search string (meaning only the expressions in this case)
-                                       // matches the current difficulty
-
-        for(const auto &searchStringToken : searchStringTokens) {
-            // debugLog("token[{:d}] = {:s}", i, tokens[i].toUtf8());
-            //  determine token type, interpret expression
-            bool expression = false;
-            for(const auto &[op_str, op_id] : operators) {
-                if(searchStringToken.find(op_str) != std::string::npos) {
-                    // split expression into left and right parts (only accept singular expressions, things like
-                    // "0<bpm<1" will not work with this)
-                    // debugLog("splitting by string {:s}", operators[o].first.toUtf8());
-                    std::vector<std::string_view> values{SString::split(searchStringToken, op_str)};
-                    if(values.size() == 2 && values[0].length() > 0 && values[1].length() > 0) {
-                        const std::string_view lvalue = values[0];
-                        const std::string_view rstring = values[1];
-
-                        const auto rvaluePercentIndex = rstring.find('%');
-                        const bool rvalueIsPercent = (rvaluePercentIndex != std::string::npos);
-                        const float rvalue = [&rstring, rvaluePercentIndex]() -> float {
-                            float rvalue_tmp{0.f};
-                            const std::string_view rstring_sub = rvaluePercentIndex == std::string::npos
-                                                                     ? rstring
-                                                                     : rstring.substr(0, rvaluePercentIndex);
-
-                            auto [ptr, ec] = std::from_chars(rstring_sub.data(),
-                                                             rstring_sub.data() + rstring_sub.size(), rvalue_tmp);
-                            if(ec != std::errc()) return 0.f;
-                            return rvalue_tmp;
-                        }();  // this must always be a number (at least, assume it is)
-
-                        // find lvalue keyword in array (only continue if keyword exists)
-                        for(const auto &[kw_str, kw_id] : keywords) {
-                            if(kw_str == lvalue) {
-                                expression = true;
-
-                                // we now have a valid expression: the keyword, the operator and the value
-
-                                // solve keyword
-                                float compareValue = 5.0f;
-                                std::string compareString{};
-                                switch(kw_id) {
-                                    using enum KWID;
-                                    case AR:
-                                        compareValue = diff->getAR();
-                                        break;
-                                    case CS:
-                                        compareValue = diff->getCS();
-                                        break;
-                                    case OD:
-                                        compareValue = diff->getOD();
-                                        break;
-                                    case HP:
-                                        compareValue = diff->getHP();
-                                        break;
-                                    case BPM:
-                                        compareValue = diff->getMostCommonBPM();
-                                        break;
-                                    case OPM:
-                                        compareValue =
-                                            (diff->getLengthMS() > 0 ? ((float)diff->getNumObjects() /
-                                                                        (float)(diff->getLengthMS() / 1000.0f / 60.0f))
-                                                                     : 0.0f) *
-                                            speed;
-                                        break;
-                                    case CPM:
-                                        compareValue =
-                                            (diff->getLengthMS() > 0 ? ((float)diff->getNumCircles() /
-                                                                        (float)(diff->getLengthMS() / 1000.0f / 60.0f))
-                                                                     : 0.0f) *
-                                            speed;
-                                        break;
-                                    case SPM:
-                                        compareValue =
-                                            (diff->getLengthMS() > 0 ? ((float)diff->getNumSliders() /
-                                                                        (float)(diff->getLengthMS() / 1000.0f / 60.0f))
-                                                                     : 0.0f) *
-                                            speed;
-                                        break;
-                                    case OBJECTS:
-                                        compareValue = diff->getNumObjects();
-                                        break;
-                                    case CIRCLES:
-                                        compareValue =
-                                            (rvalueIsPercent
-                                                 ? ((float)diff->getNumCircles() / (float)diff->getNumObjects()) *
-                                                       100.0f
-                                                 : diff->getNumCircles());
-                                        break;
-                                    case SLIDERS:
-                                        compareValue =
-                                            (rvalueIsPercent
-                                                 ? ((float)diff->getNumSliders() / (float)diff->getNumObjects()) *
-                                                       100.0f
-                                                 : diff->getNumSliders());
-                                        break;
-                                    case SPINNERS:
-                                        compareValue =
-                                            (rvalueIsPercent
-                                                 ? ((float)diff->getNumSpinners() / (float)diff->getNumObjects()) *
-                                                       100.0f
-                                                 : diff->getNumSpinners());
-                                        break;
-                                    case LENGTH:
-                                        compareValue = diff->getLengthMS() / 1000.0f;
-                                        break;
-                                    case STARS:
-                                        compareValue =
-                                            std::round(diff->getStarRating(StarPrecalc::active_idx) * 100.0f) /
-                                            100.0f;  // round to 2 decimal places
-                                        break;
-                                    case CREATOR:
-                                        compareString = SString::to_lower(diff->getCreator());
-                                        break;
-                                }
-
-                                // solve operator
-                                bool matches = false;
-                                switch(op_id) {
-                                    using enum OPID;
-                                    case LE:
-                                        if(compareValue <= rvalue) matches = true;
-                                        break;
-                                    case GE:
-                                        if(compareValue >= rvalue) matches = true;
-                                        break;
-                                    case LT:
-                                        if(compareValue < rvalue) matches = true;
-                                        break;
-                                    case GT:
-                                        if(compareValue > rvalue) matches = true;
-                                        break;
-                                    case NE:
-                                        if(compareValue != rvalue) matches = true;
-                                        break;
-                                    case EQ:
-                                        if(compareValue == rvalue ||
-                                           (!compareString.empty() && compareString == SString::to_lower(rstring)))
-                                            matches = true;
-                                        break;
-                                }
-
-                                // debugLog("comparing {:f} {:s} {:f} (OP_ID = {:d}) = {:d}", compareValue,
-                                // operators[o].first.toUtf8(), rvalue, (int)operators[o].second, (int)matches);
-
-                                if(!matches)  // if a single expression doesn't match, then the whole diff doesn't match
-                                    expressionsMatch = false;
-
-                                break;
-                            }
-                        }
-                    }
-
-                    break;
-                }
-            }
-
-            // if this is not an expression, add the token to the literalSearchStrings array
-            if(!expression) {
-                // only add it if it doesn't exist yet
-                // this check is only necessary due to multiple redundant parser executions (one per diff!)
-                bool exists = false;
-                for(const auto &literalSearchString : literalSearchStrings) {
-                    if(literalSearchString == searchStringToken) {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if(!exists) {
-                    std::string litAdd{searchStringToken};
-                    SString::trim_inplace(litAdd);
-                    if(!SString::is_wspace_only(litAdd)) {
-                        literalSearchStrings.push_back(litAdd);
-                    }
-                }
-            }
-        }
-
-        if(expressionsMatch)  // as soon as one difficulty matches all expressions, we are done here
-        {
-            expressionMatches = true;
+    float lhs = 5.0f;           // the keyword's numeric value for this diff
+    std::string_view lhs_text;  // its string value (CREATOR is the only string-valued keyword)
+    switch(expr.keyword) {
+        using enum KWID;
+        case AR:
+            lhs = diff->getAR();
             break;
-        }
-    }
-
-    // if no diff matched any expression, then we can already stop here
-    if(!expressionMatches) return false;
-
-    bool hasAnyValidLiteralSearchString = false;
-    for(const auto &literalSearchString : literalSearchStrings) {
-        if(literalSearchString.length() > 0) {
-            hasAnyValidLiteralSearchString = true;
+        case CS:
+            lhs = diff->getCS();
             break;
-        }
+        case OD:
+            lhs = diff->getOD();
+            break;
+        case HP:
+            lhs = diff->getHP();
+            break;
+        case BPM:
+            lhs = (float)diff->getMostCommonBPM();
+            break;
+        case OPM:
+            lhs = per_minute(num_objects);
+            break;
+        case CPM:
+            lhs = per_minute(diff->getNumCircles());
+            break;
+        case SPM:
+            lhs = per_minute(diff->getNumSliders());
+            break;
+        case OBJECTS:
+            lhs = (float)num_objects;
+            break;
+        case CIRCLES:
+            lhs = obj_count_or_percent(diff->getNumCircles());
+            break;
+        case SLIDERS:
+            lhs = obj_count_or_percent(diff->getNumSliders());
+            break;
+        case SPINNERS:
+            lhs = obj_count_or_percent(diff->getNumSpinners());
+            break;
+        case LENGTH:
+            lhs = (float)length_ms / 1000.0f;
+            break;
+        case STARS:
+            // snapshotted on the main thread at collection time (see SearchEntry)
+            lhs = std::round(stars * 100.0f) / 100.0f;  // 2 decimal places
+            break;
+        case CREATOR:
+            lhs_text = diff->getCreator();
+            break;
     }
 
-    // early return here for literal match/contains
-    if(hasAnyValidLiteralSearchString) {
-        for(const auto *diff : diffs) {
-            bool atLeastOneFullMatch = true;
-
-            for(const auto &literalSearchString : literalSearchStrings) {
-                if(!find_substr_in_metadata(diff, literalSearchString)) {
-                    atLeastOneFullMatch = false;
-                    break;
-                }
-            }
-
-            // as soon as one diff matches all strings, we are done
-            if(atLeastOneFullMatch) return true;
-        }
-
-        // expression may have matched, but literal didn't match, so the entire beatmap doesn't match
-        return false;
+    switch(expr.op) {
+        using enum OPID;
+        case LT:
+            return lhs < expr.value;
+        case GT:
+            return lhs > expr.value;
+        case LE:
+            return lhs <= expr.value;
+        case GE:
+            return lhs >= expr.value;
+        case NE:
+            return lhs != expr.value;
+        case EQ:
+            return lhs == expr.value || (!lhs_text.empty() && SString::strcase_equal(lhs_text, expr.text));
     }
 
-    return expressionMatches;
+    std::unreachable();
+}
+
+// a beatmap matches when its difficulty satisfies every stat filter and contains every needle.
+static bool matches(const DatabaseBeatmap *diff, float stars, const Query &query, float speed) {
+    assert(!!diff && "NULL databaseBeatmap");
+
+    for(const auto &expr : query.expressions)
+        if(!eval_expression(expr, diff, stars, speed)) return false;
+
+    for(const auto &needle : query.needles)
+        if(!metadata_contains_needle(diff, needle)) return false;
+
+    return true;
 }
 
 }  // namespace
+
+Async::CancellableHandle<void> submitSearchMatch(std::vector<SearchEntry> entries, std::string searchString,
+                                                 std::string hardcodedSearchString, float speed) {
+    return Async::submit_cancellable(
+        [entries = std::move(entries), hardcodedSearchString = std::move(hardcodedSearchString),
+         searchString = std::move(searchString), speed](const Sync::stop_token &tok) {
+            // combine the hardcoded prefix with the user's query, lowercased for case-insensitive matching.
+            // NOTE: this lowercasing won't work for non-ASCII queries, but
+            // SString::lower_inplace shouldn't modify those (if I understand correctly...)
+            std::string combined;
+            if(!hardcodedSearchString.empty()) {
+                combined.append(hardcodedSearchString);
+                combined.push_back(' ');
+            }
+            combined.append(searchString);
+            SString::lower_inplace(combined);
+
+            // parse the query once, then flag every difficulty that matches it. each button is a single
+            // difficulty (SongBrowser flattens every set into its difficulty children before submitting),
+            // so there is nothing to recurse into here.
+            const Query query = parse_query(combined);
+            for(const auto &entry : entries) {
+                entry.button->setIsSearchMatch(matches(entry.button->getDatabaseBeatmap(), entry.stars, query, speed));
+
+                // cancellation point
+                if(tok.stop_requested()) break;
+            }
+        },
+        Lane::Background);
+}
+
 }  // namespace AsyncSongButtonMatcher

@@ -47,24 +47,28 @@
 
 // commonly-included stdlib includes
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cassert>
+#include <cctype>
 #include <charconv>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <deque>
 #include <memory>
+#include <optional>
 #include <ranges>
+#include <set>
 #include <span>
 #include <string_view>
 #include <string>
+#include <system_error>
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
-#include <deque>
-#include <array>
-#include <set>
-#include <unordered_set>
-#include <unordered_map>
-#include <type_traits>
 
 // i have no idea where these come from but they seem to be transitively included through some stdlib header,
 // and they're so ridiculously slow to compile that it's worth putting them here as well
