@@ -103,20 +103,20 @@ static f64 erf(f64 x);
 static f64 erfInv(f64 x);
 static forceinline INLINE_BODY f64 reverseLerp(f64 x, f64 start, f64 end) {
     return std::clamp<f64>((x - start) / (end - start), 0.0, 1.0);
-};
+}
 static forceinline INLINE_BODY f64 smoothstep(f64 x, f64 start, f64 end) {
     x = reverseLerp(x, start, end);
     return x * x * (3.0 - 2.0 * x);
-};
+}
 static forceinline INLINE_BODY f64 smootherStep(f64 x, f64 start, f64 end) {
     x = reverseLerp(x, start, end);
     return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
-};
+}
 static forceinline INLINE_BODY f64 smoothstepBellCurve(f64 x, f64 mean = 0.5, f64 width = 0.5) {
     x -= mean;
     x = x > 0 ? (width - x) : (width + x);
     return smoothstep(x, 0, width);
-};
+}
 static forceinline INLINE_BODY f64 logistic(f64 x, f64 midpointOffset, f64 multiplier, f64 maxValue = 1.0) {
     return maxValue / (1 + std::exp(multiplier * (midpointOffset - x)));
 }

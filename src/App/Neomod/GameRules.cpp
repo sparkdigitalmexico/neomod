@@ -59,42 +59,44 @@ extern ConVar playfield_border_top_percent;
 
 #endif
 
-float GameRules::getFadeOutTime(float animationSpeedMultiplier) {
+namespace GameRules {
+
+float getFadeOutTime(float animationSpeedMultiplier) {
     const float fade_out_time = HITOBJECT_FADE_OUT_TIME;
     const float multiplier_min = HITOBJECT_FADE_OUT_TIME_SPEED_MULTIPLIER_MIN;
     return fade_out_time * (1.0f / std::max(animationSpeedMultiplier, multiplier_min));
 }
 
-i32 GameRules::getFadeInTime() { return (i32)HITOBJECT_FADE_IN_TIME; }
+i32 getFadeInTime() { return (i32)HITOBJECT_FADE_IN_TIME; }
 
-float GameRules::getMinApproachTime() { return APPROACHTIME_MIN * (MOD_MILLHIOREF ? MOD_MILLHIOREF_MULTIPLIER : 1.0f); }
+float getMinApproachTime() { return APPROACHTIME_MIN * (MOD_MILLHIOREF ? MOD_MILLHIOREF_MULTIPLIER : 1.0f); }
 
-float GameRules::getMidApproachTime() { return APPROACHTIME_MID * (MOD_MILLHIOREF ? MOD_MILLHIOREF_MULTIPLIER : 1.0f); }
+float getMidApproachTime() { return APPROACHTIME_MID * (MOD_MILLHIOREF ? MOD_MILLHIOREF_MULTIPLIER : 1.0f); }
 
-float GameRules::getMaxApproachTime() { return APPROACHTIME_MAX * (MOD_MILLHIOREF ? MOD_MILLHIOREF_MULTIPLIER : 1.0f); }
+float getMaxApproachTime() { return APPROACHTIME_MAX * (MOD_MILLHIOREF ? MOD_MILLHIOREF_MULTIPLIER : 1.0f); }
 
-float GameRules::arToMilliseconds(float AR) {
+float arToMilliseconds(float AR) {
     return mapDifficultyRange(AR, APPROACHTIME_MIN, APPROACHTIME_MID, APPROACHTIME_MAX);
 }
 
-float GameRules::arWithSpeed(float AR, float speed) {
+float arWithSpeed(float AR, float speed) {
     float approachTime = arToMilliseconds(AR);
     return mapDifficultyRangeInv(approachTime / speed, APPROACHTIME_MIN, APPROACHTIME_MID, APPROACHTIME_MAX);
 }
 
 // raw spins required per second
-float GameRules::getSpinnerSpinsPerSecond(const AbstractBeatmapInterface *beatmap) {
+float getSpinnerSpinsPerSecond(const AbstractBeatmapInterface *beatmap) {
     (void)beatmap;
     return mapDifficultyRange(BEATMAP_OD(beatmap), 3.0f, 5.0f, 7.5f);
 }
 
 // spinner length compensated rotations
 // respect all mods and overrides
-float GameRules::getSpinnerRotationsForSpeedMultiplier(const AbstractBeatmapInterface *beatmap, i32 spinnerDuration) {
+float getSpinnerRotationsForSpeedMultiplier(const AbstractBeatmapInterface *beatmap, i32 spinnerDuration) {
     return getSpinnerRotationsForSpeedMultiplier(beatmap, spinnerDuration, BEATMAP_SPEED(beatmap));
 }
 
-vec2 GameRules::getPlayfieldOffset() {
+vec2 getPlayfieldOffset() {
     const vec2 res = OSU_RES;
 
     const float osu_screen_width = res.x;
@@ -110,7 +112,7 @@ vec2 GameRules::getPlayfieldOffset() {
             (osu_screen_height - playfield_size.y) / 2.0f + playfield_y_offset};
 }
 
-float GameRules::getPlayfieldScaleFactor() {
+float getPlayfieldScaleFactor() {
     const vec2 res = OSU_RES;
 
     const float osu_screen_width = res.x;
@@ -124,3 +126,4 @@ float GameRules::getPlayfieldScaleFactor() {
                ? (adjusted_playfield_height / (float)OSU_COORD_HEIGHT)
                : (osu_screen_width / (float)OSU_COORD_WIDTH);
 }
+}  // namespace GameRules
