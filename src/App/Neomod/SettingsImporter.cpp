@@ -466,7 +466,7 @@ bool import_from_osu_stable() {
             try_set_key(str, binds::TOGGLE_SCOREBOARD);
         else if(Parsing::parse(line, "keyToggleChat", '=', &str))
             try_set_key(str, binds::TOGGLE_CHAT);
-        else if(Parsing::parse(line, "keyToggleExtendedChat \n]", '=', &str))
+        else if(Parsing::parse(line, "keyToggleExtendedChat", '=', &str))
             try_set_key(str, binds::TOGGLE_EXTENDED_CHAT);
         else if(Parsing::parse(line, "keyScreenshot", '=', &str))
             try_set_key(str, binds::SAVE_SCREENSHOT);
