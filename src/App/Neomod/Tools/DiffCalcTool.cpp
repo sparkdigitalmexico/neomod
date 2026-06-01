@@ -93,15 +93,18 @@ BeatmapSettings parseDifficultySettings(LiteFile &file) {
         if(line.starts_with('[') && inDifficulty) {
             break;
         }
-
+#define TRY_PARSE(...) \
+    if(Parsing::parse(__VA_ARGS__)) continue;
         if(inDifficulty) {
-            Parsing::parse(line, "CircleSize", ':', &settings.CS);
+            TRY_PARSE(line, "CircleSize", ':', &settings.CS);
             if(Parsing::parse(line, "ApproachRate", ':', &settings.AR)) {
                 foundAR = true;
+                continue;
             }
-            Parsing::parse(line, "HPDrainRate", ':', &settings.HP);
-            Parsing::parse(line, "OverallDifficulty", ':', &settings.OD);
+            TRY_PARSE(line, "HPDrainRate", ':', &settings.HP);
+            TRY_PARSE(line, "OverallDifficulty", ':', &settings.OD);
         }
+#undef TRY_PARSE
     }
 
     // old beatmaps: AR = OD

@@ -1062,11 +1062,12 @@ void Environment::enableFullscreen() {
     }
 
     // some weird hack that apparently makes this behave better on macos?
+    SDL_SetWindowBordered(m_window, false);
     SDL_SetWindowFullscreenMode(m_window, nullptr);
+
     if(!SDL_SetWindowFullscreen(m_window, true)) {
+        SDL_SetWindowBordered(m_window, true);
         debugLog("Failed to enable fullscreen: {:s}", SDL_GetError());
-    } else {
-        SDL_SetWindowBordered(m_window, false);
     }
 }
 
