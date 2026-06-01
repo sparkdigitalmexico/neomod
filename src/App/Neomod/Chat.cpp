@@ -348,9 +348,9 @@ void Chat::draw() {
     this->button_container->draw();
 
     if(this->selected_channel == nullptr) {
-        f32 chat_h = std::round(this->getSize().y * 0.3f);
-        f32 chat_y = this->getSize().y - chat_h;
-        f32 chat_w = this->isSmallChat() ? std::round(this->getSize().x * 0.6f) : this->getSize().x;
+        const f32 chat_h = std::round(this->getSize().y * 0.3f);
+        const f32 chat_y = this->getSize().y - chat_h;
+        const f32 chat_w = this->isSmallChat() ? std::round(this->getSize().x * 0.6f) : this->getSize().x;
         g->setColor(argb(150, 0, 0, 0));
         g->fillRect(0, chat_y, chat_w, chat_h);
     } else {
@@ -378,11 +378,9 @@ void Chat::draw() {
 void Chat::drawTicker() {
     if(!cv::chat_ticker.getBool()) return;
 
-    f64 time_elapsed = engine->getTime() - this->ticker_tms;
+    const f64 time_elapsed = engine->getTime() - this->ticker_tms;
     if(this->ticker_tms == 0.0 || time_elapsed > 6.0) return;
 
-    f32 a = std::clamp(6.0 - time_elapsed, 0.0, 1.0);
-    auto ticker_size = this->ticker->ui->getSize();
     if(!this->fAnimation.animating()) {
         this->fAnimation = 0.f;
         if(this->isVisible()) return;  // don't draw ticker while chat is visible
@@ -390,14 +388,20 @@ void Chat::drawTicker() {
 
     // XXX: Setting PREMUL_ALPHA is not enough, transparency is still incorrect
     osu->getSliderFrameBuffer()->enable();
+
     g->setBlendMode(DrawBlendMode::PREMUL_ALPHA);
     this->ticker->ui->draw();
+
     osu->getSliderFrameBuffer()->disable();
 
     g->setBlendMode(DrawBlendMode::ALPHA);
+
+    const auto ticker_size = this->ticker->ui->getSize();
     g->push3DScene(McRect(0, 0, ticker_size.x, ticker_size.y));
     {
         g->rotate3DScene(this->fAnimation * 90, 0, 0);
+
+        const f32 a = (f32)std::clamp(6.0 - time_elapsed, 0.0, 1.0);
         osu->getSliderFrameBuffer()->setColor(argb(a * (1.f - this->fAnimation), 1.f, 1.f, 1.f));
         osu->getSliderFrameBuffer()->draw(0, 0);
     }

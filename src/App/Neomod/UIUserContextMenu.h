@@ -6,18 +6,6 @@
 
 class UIContextMenu;
 
-enum UserActions : uint8_t {
-    UA_TRANSFER_HOST,
-    KICK,
-    VIEW_PROFILE,
-    TOGGLE_SPECTATE,
-    START_CHAT,
-    INVITE_TO_GAME,
-    UA_ADD_FRIEND,
-    UA_REMOVE_FRIEND,
-    VIEW_TOP_PLAYS,
-};
-
 class UIUserContextMenuScreen final : public UIScreen {
    public:
     UIUserContextMenuScreen();

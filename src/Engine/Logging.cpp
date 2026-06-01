@@ -16,6 +16,8 @@
 #include <unistd.h>
 #endif
 
+#include <array>
+
 // TODO: handle log level switching at runtime
 // we currently want all logging to be output, so set it to the most verbose level
 // otherwise, the SPDLOG_ macros below SPD_LOG_LEVEL_INFO will just do (void)0;
@@ -85,54 +87,162 @@ struct custom_spdmtx : public Sync::mutex {
     }
 };
 
-// custom %! (function name) formatter, because std::source_location::current().function_name()
-// gives WAY too much information
+// custom %! (function name) formatter: std::source_location::current().function_name() gives the full
+// signature (return type + parameters), and every compiler spells namespaces/lambdas differently, e.g.
+// for a lambda inside an anonymous-namespace function "BANCHO::Net::attempt_logging_in":
+//   clang: "auto BANCHO::Net::(anonymous namespace)::attempt_logging_in()::(lambda)::operator()(...) const"
+//   gcc:   "BANCHO::Net::{anonymous}::attempt_logging_in()::<lambda()>"
+//   msvc:  uses `anonymous namespace' and <lambda_N>::operator ()
+// this reduces all of them to "BANCHO::Net::attempt_logging_in::λ" (or just "attempt_logging_in::λ" in release).
 class custom_srcloc_formatter : public spdlog::custom_flag_formatter {
-    static forceinline void trim_funcname_inplace(std::string_view &str) {
-        // Strip parameter list by finding the last '('
-        // Works correctly for operators like operator() which become "...::operator()"
-        if(const size_t paren_pos = str.rfind('('); paren_pos != std::string_view::npos) {
-            str = str.substr(0, paren_pos);
+    // how a lambda's closure type is rendered (compilers spell it (lambda)/<lambda(...)>/<lambda_N>)
+    static constexpr std::string_view LAMBDA_TOKEN{"λ"};
+
+    static forceinline bool is_ident(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+    }
+    // bracket-like delimiters, so spaces and "::" nested inside (), <>, [], {} or msvc's `...' quoting
+    // aren't treated as top-level separators
+    static forceinline bool is_open(char c) { return c == '(' || c == '<' || c == '[' || c == '{' || c == '`'; }
+    static forceinline bool is_close(char c) { return c == ')' || c == '>' || c == ']' || c == '}' || c == '\''; }
+
+    static forceinline bool is_anon_ns(std::string_view seg) {
+        return seg == "(anonymous namespace)" || seg == "{anonymous}" || seg == "`anonymous namespace'";
+    }
+    static forceinline bool is_lambda(std::string_view seg) {
+        return seg.starts_with("(lambda") || seg.starts_with("<lambda");
+    }
+
+    static void append_clean(std::string_view fn, spdlog::memory_buf_t &dest) {
+        const size_t n = fn.size();
+
+        // 1) find the function's own parameter list: the first top-level '(' whose matching ')' is followed
+        //    by neither "::" (a scope group like "(anonymous namespace)"/"(lambda)"/"foo()") nor '(' (the
+        //    empty "()" of an operator()). everything from there on is parameters/qualifiers, so drop it.
+        size_t name_end = n;
+        {
+            size_t depth = 0, cand = std::string_view::npos;
+            for(size_t i = 0; i < n; ++i) {
+                const char c = fn[i];
+                if(c == '(') {
+                    if(depth == 0) cand = i;
+                    ++depth;
+                } else if(is_open(c)) {
+                    ++depth;
+                } else if(c == ')') {
+                    if(depth > 0) --depth;
+                    if(depth == 0 && cand != std::string_view::npos) {
+                        const size_t k = i + 1;
+                        // followed by "::" (a scope group) or '(' (operator()'s "()") -> keep looking,
+                        // otherwise this is the real parameter list
+                        if((k + 1 < n && fn[k] == ':' && fn[k + 1] == ':') || (k < n && fn[k] == '('))
+                            cand = std::string_view::npos;
+                        else {
+                            name_end = cand;
+                            break;
+                        }
+                    }
+                } else if(is_close(c)) {
+                    if(depth > 0) --depth;
+                }
+            }
         }
 
-        const size_t last_scope = str.rfind("::");
-
-        if(last_scope != std::string_view::npos) {
-            // Scan backwards from the qualified name to find where the return type ends
-            // The qualified name has no spaces, so the first space we find (going backwards)
-            // marks the end of the return type
-            size_t name_start = last_scope;
-            while(name_start > 0 && str[name_start - 1] != ' ') {
-                --name_start;
-            }
-            if(name_start > 0) {
-                // Found a space; everything from name_start onwards is the qualified function name
-                str = str.substr(name_start);
-            }
-            // If name_start == 0, there's no return type (constructor/destructor)
-        } else {
-            // No "::", so this is a free function like "void foo"
-            // Find the last space and strip the return type
-            if(const size_t space_pos = str.rfind(' '); space_pos != std::string_view::npos) {
-                str = str.substr(space_pos + 1);
+        // 2) skip the return type / specifiers / calling convention: the qualified name begins after the
+        //    last top-level space before it. stop at a top-level "operator" token so its own spaces
+        //    (e.g. msvc "operator ()", "operator new") aren't mistaken for the return-type boundary.
+        size_t name_begin = 0;
+        {
+            size_t depth = 0;
+            for(size_t i = 0; i < name_end; ++i) {
+                const char c = fn[i];
+                if(is_open(c))
+                    ++depth;
+                else if(is_close(c)) {
+                    if(depth > 0) --depth;
+                } else if(depth == 0) {
+                    if(c == ' ')
+                        name_begin = i + 1;
+                    else if(c == 'o' && fn.substr(i).starts_with("operator") && (i == 0 || !is_ident(fn[i - 1])) &&
+                            (i + 8 >= name_end || !is_ident(fn[i + 8])))
+                        break;
+                }
             }
         }
 
+        // 3) split the qualified name on top-level "::", normalising each segment into a small list
+        struct Seg {
+            std::string_view text;
+            bool lambda;
+        };
+        std::array<Seg, 32> segs{};  // 32 is far more than any realistic namespace/class/lambda nesting
+        size_t nsegs = 0;
+        bool prev_lambda = false;
+
+        const auto push = [&](std::string_view seg) {
+            while(!seg.empty() && (seg.front() == ' ' || seg.front() == '*' || seg.front() == '&'))
+                seg.remove_prefix(1);
+            while(!seg.empty() && seg.back() == ' ') seg.remove_suffix(1);
+            if(seg.empty() || is_anon_ns(seg)) return;  // drop file-local anonymous-namespace noise
+
+            if(is_lambda(seg)) {
+                if(nsegs < segs.size()) segs[nsegs++] = {LAMBDA_TOKEN, true};
+                prev_lambda = true;
+                return;
+            }
+            // a lambda's call operator immediately after its closure type is redundant once λ is printed
+            if(prev_lambda && seg.starts_with("operator")) return;
+            prev_lambda = false;
+
+            // drop a trailing "(...)" shown on enclosing functions in lambda contexts (e.g. "foo()" -> "foo")
+            if(!seg.starts_with("operator") && seg.back() == ')') {
+                int d = 0;
+                for(size_t i = seg.size(); i-- > 0;) {
+                    if(seg[i] == ')')
+                        ++d;
+                    else if(seg[i] == '(' && --d == 0) {
+                        seg.remove_suffix(seg.size() - i);
+                        break;
+                    }
+                }
+            }
+            if(!seg.empty() && nsegs < segs.size()) segs[nsegs++] = {seg, false};
+        };
+
+        size_t seg_start = name_begin;
+        {
+            size_t depth = 0;
+            for(size_t i = name_begin; i < name_end; ++i) {
+                const char c = fn[i];
+                if(is_open(c))
+                    ++depth;
+                else if(is_close(c)) {
+                    if(depth > 0) --depth;
+                } else if(depth == 0 && c == ':' && i + 1 < name_end && fn[i + 1] == ':') {
+                    push(fn.substr(seg_start, i - seg_start));
+                    seg_start = i + 2;
+                    ++i;
+                }
+            }
+        }
+        push(fn.substr(seg_start, name_end - seg_start));
+
+        if(nsegs == 0) return;
+
+        size_t first = 0;
 #ifndef _DEBUG
-        // In release mode, trim to just the function name (no class/namespace qualification)
-        if(const size_t final_scope = str.rfind("::"); final_scope != std::string_view::npos) {
-            str = str.substr(final_scope + 2);
-        }
+        // release pattern is terse: keep only the function name plus any trailing lambda markers
+        for(first = nsegs - 1; first > 0 && segs[first].lambda;) --first;
 #endif
+        for(size_t i = first; i < nsegs; ++i) {
+            if(i > first) dest.append(std::string_view{"::"});
+            dest.append(segs[i].text);
+        }
     }
 
    public:
     void format(const spdlog::details::log_msg &logmsg, const std::tm & /*tms*/, spdlog::memory_buf_t &dest) override {
-        if(logmsg.source.funcname && logmsg.source.funcname[0] != '\0') {
-            std::string_view funcname_view{logmsg.source.funcname};
-            trim_funcname_inplace(funcname_view);
-            dest.append(funcname_view);
-        }
+        if(logmsg.source.funcname && logmsg.source.funcname[0] != '\0') append_clean(logmsg.source.funcname, dest);
     }
 
     [[nodiscard]] std::unique_ptr<custom_flag_formatter> clone() const override {
