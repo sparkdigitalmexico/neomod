@@ -31,6 +31,12 @@ bool strcase_comp(std::string_view a, std::string_view b) {
     return strncasecmp(a.data(), b.data(), std::min<size_t>(a.length(), b.length())) < 0;
 }
 
+bool strcase_equal(std::string_view a, std::string_view b) {
+    if (a.length() != b.length()) return false;
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+    return strncasecmp(a.data(), b.data(), a.length()) == 0;
+}
+
 // alphanumeric string comparator that ignores special characters at the start of strings
 bool alnum_comp(std::string_view a, std::string_view b) {
     int i = 0;
