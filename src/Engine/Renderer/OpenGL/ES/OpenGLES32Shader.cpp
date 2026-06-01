@@ -117,33 +117,33 @@ void OpenGLES32Shader::writeUniform(std::string_view name, UniformType type, con
     switch(type) {
         using enum Shader::UniformType;
         case UNI_1F:
-            glUniform1f(id, *static_cast<const float *const>(data));
+            glUniform1f(id, *static_cast<const float *>(data));
             break;
         case UNI_1FV:
-            glUniform1fv(id, static_cast<int>(dataSize / sizeof(float)), static_cast<const float *const>(data));
+            glUniform1fv(id, static_cast<int>(dataSize / sizeof(float)), static_cast<const float *>(data));
             break;
         case UNI_1I:
-            glUniform1i(id, *static_cast<const int *const>(data));
+            glUniform1i(id, *static_cast<const int *>(data));
             break;
         case UNI_2F:
-            glUniform2f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1]);
+            glUniform2f(id, static_cast<const float *>(data)[0], static_cast<const float *>(data)[1]);
             break;
         case UNI_2FV:
-            glUniform2fv(id, static_cast<int>(dataSize / sizeof(float) / 2), static_cast<const float *const>(data));
+            glUniform2fv(id, static_cast<int>(dataSize / sizeof(float) / 2), static_cast<const float *>(data));
             break;
         case UNI_3F:
-            glUniform3f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
-                        static_cast<const float *const>(data)[2]);
+            glUniform3f(id, static_cast<const float *>(data)[0], static_cast<const float *>(data)[1],
+                        static_cast<const float *>(data)[2]);
             break;
         case UNI_3FV:
-            glUniform3fv(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *const>(data));
+            glUniform3fv(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *>(data));
             break;
         case UNI_4F:
-            glUniform4f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
-                        static_cast<const float *const>(data)[2], static_cast<const float *const>(data)[3]);
+            glUniform4f(id, static_cast<const float *>(data)[0], static_cast<const float *>(data)[1],
+                        static_cast<const float *>(data)[2], static_cast<const float *>(data)[3]);
             break;
         case UNI_MATRIX4FV:
-            glUniformMatrix4fv(id, 1, GL_FALSE, static_cast<const float *const>(data));
+            glUniformMatrix4fv(id, 1, GL_FALSE, static_cast<const float *>(data));
             break;
         default:
             debugLog("OpenGLES32Shader ERROR: unhandled type {} name {}", (u32)type, name);

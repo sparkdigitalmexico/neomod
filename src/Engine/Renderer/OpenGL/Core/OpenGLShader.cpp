@@ -119,39 +119,38 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
     switch(type) {
         using enum Shader::UniformType;
         case UNI_1F:
-            MCglUniform1f(id, *static_cast<const float *const>(data));
+            MCglUniform1f(id, *static_cast<const float *>(data));
             break;
         case UNI_1FV:
-            MCglUniform1fv(id, static_cast<int>(dataSize / sizeof(float)), static_cast<const float *const>(data));
+            MCglUniform1fv(id, static_cast<int>(dataSize / sizeof(float)), static_cast<const float *>(data));
             break;
         case UNI_1I:
-            MCglUniform1i(id, *static_cast<const int *const>(data));
+            MCglUniform1i(id, *static_cast<const int *>(data));
             break;
         case UNI_2F:
-            MCglUniform2f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1]);
+            MCglUniform2f(id, static_cast<const float *>(data)[0], static_cast<const float *>(data)[1]);
             break;
         case UNI_2FV:
-            MCglUniform2fv(id, static_cast<int>(dataSize / sizeof(float) / 2), static_cast<const float *const>(data));
+            MCglUniform2fv(id, static_cast<int>(dataSize / sizeof(float) / 2), static_cast<const float *>(data));
             break;
         case UNI_3F:
-            MCglUniform3f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
-                          static_cast<const float *const>(data)[2]);
+            MCglUniform3f(id, static_cast<const float *>(data)[0], static_cast<const float *>(data)[1],
+                          static_cast<const float *>(data)[2]);
             break;
         case UNI_3FV:
-            MCglUniform3fv(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *const>(data));
+            MCglUniform3fv(id, static_cast<int>(dataSize / sizeof(float) / 3), static_cast<const float *>(data));
             break;
         case UNI_4F:
-            MCglUniform4f(id, static_cast<const float *const>(data)[0], static_cast<const float *const>(data)[1],
-                          static_cast<const float *const>(data)[2], static_cast<const float *const>(data)[3]);
+            MCglUniform4f(id, static_cast<const float *>(data)[0], static_cast<const float *>(data)[1],
+                          static_cast<const float *>(data)[2], static_cast<const float *>(data)[3]);
             break;
         case UNI_MATRIX4FV:
-            MCglUniformMatrix4fv(id, 1, GL_FALSE, static_cast<const float *const>(data));
+            MCglUniformMatrix4fv(id, 1, GL_FALSE, static_cast<const float *>(data));
             break;
         default:
             debugLog("OpenGLShader ERROR: unhandled type {} name {}", (u32)type, name);
             break;
     }
-
 }
 
 int OpenGLShader::getAttribLocation(std::string_view name) {

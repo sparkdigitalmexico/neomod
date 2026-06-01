@@ -382,7 +382,7 @@ void DirectX11Shader::writeUniform(std::string_view name, UniformType type, cons
 
         // HACKHACK: REMOVE/FIX
         if(type == UNI_MATRIX4FV) {
-            Matrix4 transposed(static_cast<const float *const>(src));
+            Matrix4 transposed(static_cast<const float *>(src));
             auto *dataReal = transposed.transpose().get();
             if(memcmp(dataReal, &bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], numBytes) != 0) {
                 memcpy(&bindDesc.floats[cacheEntry.offsetBytes / sizeof(float)], dataReal, numBytes);
