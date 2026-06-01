@@ -13,10 +13,12 @@
 
 #include <utility>  // std::unreachable on gcc
 
+namespace i18n {
+
 namespace {
 
 // Reference: https://www.gnu.org/software/gettext/manual/html_node/Plural-forms.html
-enum PLURAL_FORM : u8 {
+enum class PLURAL_FORM : u8 {
     ONE_FORM,
     TWO_FORMS_A,
     TWO_FORMS_B,
@@ -30,6 +32,8 @@ enum PLURAL_FORM : u8 {
     FOUR_FORMS,
     SIX_FORMS,
 };
+
+using enum PLURAL_FORM;
 
 static const std::unordered_map<std::string_view, PLURAL_FORM> plural_forms_table = {
     {"ja", ONE_FORM},       {"vi", ONE_FORM},      {"ko", ONE_FORM},      {"th", ONE_FORM},
@@ -172,8 +176,6 @@ int get_plural(int n) {
 
 }  // namespace
 
-namespace i18n {
-
 // gen_translations.py emits TRANSLATABLE_STRINGS via Python's sorted(set(...)) over the
 // .po-decoded msgids, which matches std::string_view::operator< (byte order) for
 // well-formed UTF-8. string_index() relies on this sort invariant for its binary search;
@@ -255,10 +257,7 @@ void load(std::string_view locale) {
 }
 
 const char* translate(int index, std::string_view original) {
-    // NOTE: if the compiler is being retarded and stripping null bytes from static strings, gg
-    //       technically ub but no other way to do this and keep consteval
-    //       unless we rewrite whole codebase to expect string_views everywhere it's string or char*
-    //       _() always feeds us a string literal (string_index is consteval), so reading the byte
+    // NOTE: _() always feeds us a string literal (string_index is consteval), so reading the byte
     //       at .size() is well-defined for every real call site; the assert catches any future
     //       non-literal misuse before it silently reads past-end bytes.
     assert(original.data()[original.size()] == '\0');
@@ -289,20 +288,6 @@ const char* translate_plural(int index, std::string_view singular, std::string_v
 
     return text;
 }
-
-namespace {
-// Convert the generated LANGUAGES pairs to Language structs at compile time so callers can
-// iterate with `.code` / `.name` without paying for a vector allocation on every call.
-constexpr auto AVAILABLE_LANGUAGES = []() consteval {
-    std::array<Language, LANGUAGES.size()> arr{};
-    for(size_t i = 0; i < arr.size(); i++) {
-        arr[i] = {.code = LANGUAGES[i].first, .name = LANGUAGES[i].second};
-    }
-    return arr;
-}();
-}  // namespace
-
-std::span<const Language> get_available_languages() { return AVAILABLE_LANGUAGES; }
 
 }  // namespace i18n
 

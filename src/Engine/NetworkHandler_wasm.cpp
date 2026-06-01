@@ -158,7 +158,7 @@ void encodeMimeParts(RequestOptions& options) {
     options.post_data = "";
     boundary = "--" + boundary;
 
-    for(auto part : options.mime_parts) {
+    for(const auto& part : options.mime_parts) {
         options.post_data += boundary + "\r\n";
         options.post_data += "Content-Disposition: form-data; name=\"" + part.name + "\"";
         if(!part.filename.empty()) options.post_data += "; filename=\"" + part.filename + "\"";

@@ -34,11 +34,7 @@ void load(std::string_view locale);
 const char* translate(int index, std::string_view original);
 const char* translate_plural(int index, std::string_view singular, std::string_view plural, int n);
 
-struct Language {
-    std::string_view code;
-    std::string_view name;
-};
-std::span<const Language> get_available_languages();
+inline consteval std::span<const Language> get_available_languages() { return LANGUAGES; }
 
 }  // namespace i18n
 

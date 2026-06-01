@@ -45,13 +45,14 @@ static std::array s_tips{
     Tip{_(R"(Press Shift + F1 to open the in-game console.)")},
     Tip{_(R"(Shift + Click on a skin in the dropdown list to change the source for base skin elements.)")},
     Tip{
-        [&b = binds::TOGGLE_MODSELECT]() -> std::string
-        { return tformat(R"(Press {:s} during gameplay to change mods in realtime.)", env->scanCodeToString(b.get())); }
+        []() -> std::string
+        { return tformat(R"(Press {:s} during gameplay to change mods in realtime.)", env->scanCodeToString(binds::TOGGLE_MODSELECT.get())); }
     },
     Tip{
-        [&ch = binds::TOGGLE_CHAT, &exch = binds::TOGGLE_EXTENDED_CHAT]() -> std::string {
+        []() -> std::string {
             if(!BanchoState::is_online()) return "";
-            return tformat(R"(Press {:s} or {:s} anywhere to open chat.)", env->scanCodeToString(ch.get()), env->scanCodeToString(exch.get()));
+            return tformat(R"(Press {:s} or {:s} anywhere to open chat.)",
+                env->scanCodeToString(binds::TOGGLE_CHAT.get()), env->scanCodeToString(binds::TOGGLE_EXTENDED_CHAT.get()));
         }
     },
 #if !defined(MCENGINE_PLATFORM_WASM) // irrelevant for web

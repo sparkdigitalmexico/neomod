@@ -39,6 +39,7 @@ manifest_path = gen_dir / "locale_embed.manifest"
 
 # Translation calls only live in .cpp - .h files contain raw-string OBJ blobs
 # and other non-C content that confuses xgettext.
+# TODO: just use TRANSLATION_SRCS from Makefile?
 SOURCES = sorted(
     str(p.relative_to(srcdir_abs)) for p in (srcdir_abs / "src").rglob("*.cpp")
 )
@@ -114,20 +115,27 @@ def build_translations_h(msgids: list[str]) -> str:
 #include <array>
 #include <string_view>
 
-using namespace std::string_view_literals;
+namespace i18n {
 
-inline constexpr auto TRANSLATABLE_STRINGS = std::to_array<std::string_view>({
+using std::string_view_literals::operator""sv;
+
+inline constexpr std::array TRANSLATABLE_STRINGS{
 """
     for s in sorted(set(msgids)):
         out += f'    "{_encode_c_escapes(s)}"sv,\n'
-    out += """});
+    out += """};
 
-inline constexpr auto LANGUAGES = std::to_array<std::pair<std::string_view, std::string_view>>({
-    {"en"sv, "English"sv},
+struct Language final {
+    std::string_view code;
+    std::string_view name;
+};
+
+inline constexpr std::array LANGUAGES{
+    Language{"en"sv, "English"sv},
 """
     for code, lang in languages.items():
-        out += f'    {{"{code}"sv, "{lang}"sv}},\n'
-    out += "});\n\n"
+        out += f'    Language{{"{code}"sv, "{lang}"sv}},\n'
+    out += "};\n}  // namespace i18n\n\n"
     return out
 
 
