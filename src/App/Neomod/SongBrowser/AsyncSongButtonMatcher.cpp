@@ -13,44 +13,35 @@
 namespace AsyncSongButtonMatcher {
 
 namespace {
-static bool search_matcher(const DatabaseBeatmap *databaseBeatmap, const std::vector<std::string> &searchStringTokens,
-                           float speed);
+static bool search_matcher(const DatabaseBeatmap *databaseBeatmap,
+                           const std::vector<std::string_view> &searchStringTokens, float speed);
 }
 
-Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songButtons, const std::string &searchString,
-                                                 const std::string &hardcodedSearchString, float speedMultiplier) {
-    // prepare combined lowercase search string
-    std::string uSearch;
-    if(!hardcodedSearchString.empty()) {
-        uSearch.append(hardcodedSearchString);
-        uSearch.push_back(' ');
-    }
-
-    uSearch.append(searchString);
-    // do case-insensitive searches
-    SString::lower_inplace(uSearch);
-
-    std::string combinedSearch{uSearch};
-
+Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songButtons, std::string searchString,
+                                                 std::string hardcodedSearchString, float speed) {
     return Async::submit_cancellable(
-        [buttons = std::move(songButtons), search = std::move(combinedSearch),
-         speed = speedMultiplier](const Sync::stop_token &tok) {
+        [buttons = std::move(songButtons), hardcodedSearchString = std::move(hardcodedSearchString),
+         searchString = std::move(searchString), speed](const Sync::stop_token &tok) {
+            // prepare combined lowercase search string
+            std::string search;
+            if(!hardcodedSearchString.empty()) {
+                search.append(hardcodedSearchString);
+                search.push_back(' ');
+            }
+
+            search.append(searchString);
+            // do case-insensitive searches
+            // TODO: this would not work properly for non-ASCII searches...
+            SString::lower_inplace(search);
+
             // flag matches across entire database
-            const std::vector<std::string> searchStringTokens = SString::split<std::string>(search, ' ');
-            for(auto *songButton : buttons) {
-                // FIXME: this is unsafe, children could be getting sorted while we do this
-                std::vector<SongButton *> children = songButton->getChildren();
-                if(children.size() > 0) {
-                    for(auto c : children) {
-                        const bool match = search_matcher(c->getDatabaseBeatmap(), searchStringTokens, speed);
-                        c->setIsSearchMatch(match);
-                    }
-                } else {
-                    const bool match = search_matcher(songButton->getDatabaseBeatmap(), searchStringTokens, speed);
-                    songButton->setIsSearchMatch(match);
-                }
+            const auto searchStringTokens = SString::split(search, ' ');
+            for(auto *b : buttons) {
+                const bool match = search_matcher(b->getDatabaseBeatmap(), searchStringTokens, speed);
+                b->setIsSearchMatch(match);
 
                 // cancellation point
+                // TODO: don't check this so often...?
                 if(tok.stop_requested()) break;
             }
         },
@@ -58,19 +49,17 @@ Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songB
 }
 
 namespace {
-enum operatorId : uint8_t { EQ, LT, GT, LE, GE, NE };
 
-struct Operator {
+enum class OPID : uint8_t { EQ, LT, GT, LE, GE, NE };
+inline constexpr struct Operator {
     std::string_view str;
-    operatorId id;
+    OPID id;
+} operators[]{
+    {"<=", OPID::LE}, {">=", OPID::GE}, {"<", OPID::LT}, {">", OPID::GT},
+    {"!=", OPID::NE}, {"==", OPID::EQ}, {"=", OPID::EQ},
 };
 
-inline constexpr std::initializer_list<Operator> operators = {
-    {.str = "<=", .id = LE}, {.str = ">=", .id = GE}, {.str = "<", .id = LT}, {.str = ">", .id = GT},
-    {.str = "!=", .id = NE}, {.str = "==", .id = EQ}, {.str = "=", .id = EQ},
-};
-
-enum keywordId : uint8_t {
+enum class KWID : uint8_t {
     AR,
     CS,
     OD,
@@ -87,42 +76,40 @@ enum keywordId : uint8_t {
     STARS,
     CREATOR
 };
-
-struct Keyword {
+inline constexpr struct Keyword {
     std::string_view str;
-    keywordId id;
-};
-
-inline constexpr std::initializer_list<Keyword> keywords = {{.str = "ar", .id = AR},
-                                                            {.str = "cs", .id = CS},
-                                                            {.str = "od", .id = OD},
-                                                            {.str = "hp", .id = HP},
-                                                            {.str = "bpm", .id = BPM},
-                                                            {.str = "opm", .id = OPM},
-                                                            {.str = "cpm", .id = CPM},
-                                                            {.str = "spm", .id = SPM},
-                                                            {.str = "object", .id = OBJECTS},
-                                                            {.str = "objects", .id = OBJECTS},
-                                                            {.str = "circle", .id = CIRCLES},
-                                                            {.str = "circles", .id = CIRCLES},
-                                                            {.str = "slider", .id = SLIDERS},
-                                                            {.str = "sliders", .id = SLIDERS},
-                                                            {.str = "spinner", .id = SPINNERS},
-                                                            {.str = "spinners", .id = SPINNERS},
-                                                            {.str = "length", .id = LENGTH},
-                                                            {.str = "len", .id = LENGTH},
-                                                            {.str = "stars", .id = STARS},
-                                                            {.str = "star", .id = STARS},
-                                                            {.str = "creator", .id = CREATOR}};
+    KWID id;
+} keywords[]{{"ar", KWID::AR},
+             {"cs", KWID::CS},
+             {"od", KWID::OD},
+             {"hp", KWID::HP},
+             {"bpm", KWID::BPM},
+             {"opm", KWID::OPM},
+             {"cpm", KWID::CPM},
+             {"spm", KWID::SPM},
+             {"object", KWID::OBJECTS},
+             {"objects", KWID::OBJECTS},
+             {"circle", KWID::CIRCLES},
+             {"circles", KWID::CIRCLES},
+             {"slider", KWID::SLIDERS},
+             {"sliders", KWID::SLIDERS},
+             {"spinner", KWID::SPINNERS},
+             {"spinners", KWID::SPINNERS},
+             {"length", KWID::LENGTH},
+             {"len", KWID::LENGTH},
+             {"stars", KWID::STARS},
+             {"star", KWID::STARS},
+             {"creator", KWID::CREATOR}};
 
 // similar to SString::contains_ncase but doesn't lowercase the needle (it's already lowercase)
-static forceinline bool find_needle_in_lowercase_haystack(std::string_view haystack, std::string_view needle) {
-    return !haystack.empty() && !std::ranges::search(haystack, needle, [](unsigned char ch1, unsigned char ch2) {
-                                     return std::tolower(ch1) == ch2;
-                                 }).empty();
+static forceinline INLINE_BODY bool find_needle_in_lowercase_haystack(std::string_view haystack,
+                                                                      std::string_view needle) {
+    return !std::ranges::search(haystack, needle, [](unsigned char ch1, unsigned char ch2) {
+                return std::tolower(ch1) == ch2;
+            }).empty();
 }
 
-static inline bool find_substr_in_metadata(const DatabaseBeatmap *diff, std::string_view lower_substr) {
+static forceinline bool find_substr_in_metadata(const DatabaseBeatmap *diff, std::string_view lower_substr) {
     return (find_needle_in_lowercase_haystack(diff->getTitleLatin(), lower_substr)) ||
            (find_needle_in_lowercase_haystack(diff->getArtistLatin(), lower_substr)) ||
            (!diff->getTitleUnicode().empty() && diff->getTitleUnicode().contains(lower_substr)) ||
@@ -135,17 +122,21 @@ static inline bool find_substr_in_metadata(const DatabaseBeatmap *diff, std::str
            (diff->getSetID() > 0 && find_needle_in_lowercase_haystack(std::to_string(diff->getSetID()), lower_substr));
 }
 
-static bool search_matcher(const DatabaseBeatmap *databaseBeatmap, const std::vector<std::string> &searchStringTokens,
-                           float speed) {
-    if(databaseBeatmap == nullptr) return false;
+static bool search_matcher(const DatabaseBeatmap *databaseBeatmap,
+                           const std::vector<std::string_view> &searchStringTokens, float speed) {
+    assert(!!databaseBeatmap && "NULL databaseBeatmap");
 
     const auto diffs = [&bdiffs = databaseBeatmap->getDifficulties(),
                         databaseBeatmap]() -> std::vector<const DatabaseBeatmap *> {
         std::vector<const DatabaseBeatmap *> ret;
         if(bdiffs.empty()) {
-            // standalone set
+            // beatmap difficulty
             ret.push_back(databaseBeatmap);
         } else {
+            // beatmapset
+            // sanity, to be removed
+            // (this code is a leftover from when some song buttons had no children (mapset with 1 difficulty))
+            assert(false && "searching over beatmapset instead of beatmap difficulty");
             for(const auto &diff : bdiffs) {
                 ret.push_back(diff.get());
             }
@@ -158,7 +149,8 @@ static bool search_matcher(const DatabaseBeatmap *databaseBeatmap, const std::ve
 
     // intelligent search parser
     // all strings which are not expressions get appended with spaces between, then checked with one call to
-    // findSubstringInDiff() the rest is interpreted NOTE: this code is quite shitty. the order of the operators
+    // findSubstringInDiff() the rest is interpreted
+    // NOTE: this code is quite shitty. the order of the operators
     // array does matter, because find() is used to detect their presence (and '=' would then break '<=' etc.)
 
     // split search string into tokens
@@ -208,6 +200,7 @@ static bool search_matcher(const DatabaseBeatmap *databaseBeatmap, const std::ve
                                 float compareValue = 5.0f;
                                 std::string compareString{};
                                 switch(kw_id) {
+                                    using enum KWID;
                                     case AR:
                                         compareValue = diff->getAR();
                                         break;
@@ -284,6 +277,7 @@ static bool search_matcher(const DatabaseBeatmap *databaseBeatmap, const std::ve
                                 // solve operator
                                 bool matches = false;
                                 switch(op_id) {
+                                    using enum OPID;
                                     case LE:
                                         if(compareValue <= rvalue) matches = true;
                                         break;
@@ -306,7 +300,7 @@ static bool search_matcher(const DatabaseBeatmap *databaseBeatmap, const std::ve
                                         break;
                                 }
 
-                                // debugLog("comparing {:f} {:s} {:f} (operatorId = {:d}) = {:d}", compareValue,
+                                // debugLog("comparing {:f} {:s} {:f} (OP_ID = {:d}) = {:d}", compareValue,
                                 // operators[o].first.toUtf8(), rvalue, (int)operators[o].second, (int)matches);
 
                                 if(!matches)  // if a single expression doesn't match, then the whole diff doesn't match

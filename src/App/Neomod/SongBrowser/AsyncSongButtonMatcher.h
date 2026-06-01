@@ -4,9 +4,16 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 class SongButton;
 namespace AsyncSongButtonMatcher {
-Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songButtons, const std::string &searchString,
-                                                 const std::string &hardcodedSearchString, float speedMultiplier);
-}
+
+// in order to avoid the possible case where song buttons are having their children sorted
+// while we are iterating over them (async), we need to pre-create the data to-be-iterated-over
+// and pass that in
+// TODO: still ugly (but safe(r))
+Async::CancellableHandle<void> submitSearchMatch(std::vector<SongButton *> songButtons,
+                                                 std::string searchString, std::string hardcodedSearchString,
+                                                 float speedMultiplier);
+}  // namespace AsyncSongButtonMatcher

@@ -999,27 +999,22 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
     }
 
     // handle background search matcher
-    {
-        if(this->searchHandle.valid() && this->searchHandle.is_ready()) {
-            this->searchHandle.get();
-            this->rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(true);
-        }
-        if(!this->searchHandle.valid()) {
-            if(this->scheduled_scroll_to_selected_button) {
-                this->scheduled_scroll_to_selected_button = false;
-                this->scrollToBestButton();
-            }
+    if(this->searchHandle.valid() && this->searchHandle.is_ready()) {
+        this->searchHandle.get();
+        this->rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(true);
+    }
+    if(!this->searchHandle.valid()) {
+        if(this->scheduled_scroll_to_selected_button) {
+            this->scheduled_scroll_to_selected_button = false;
+            this->scrollToBestButton();
         }
     }
 
     // handle export completion
-    {
-        if(this->exportHandle.valid() && this->exportHandle.is_ready()) {
-            this->exportHandle.get();
-            if(!this->pendingExports.empty()) {
-                this->exportHandle =
-                    MapExporter::submit_export(std::move(this->pendingExports), this->exportNotifications);
-            }
+    if(this->exportHandle.valid() && this->exportHandle.is_ready()) {
+        this->exportHandle.get();
+        if(!this->pendingExports.empty()) {
+            this->exportHandle = MapExporter::submit_export(std::move(this->pendingExports), this->exportNotifications);
         }
     }
 
@@ -2630,8 +2625,22 @@ void SongBrowser::onSearchUpdate() {
             // stop potentially running async search
             this->checkHandleKillBackgroundSearchMatcher();
 
+            // set up song buttons to be searched
+            std::vector<SongButton *> searchData;
+            for(auto *songButton : this->parentButtons) {
+                if(const auto &children = songButton->getChildren(); !children.empty()) {
+                    for(auto *c : children) {
+                        searchData.push_back(c);
+                    }
+                } else {
+                    // sanity, to be removed
+                    assert(false && "parent song button with 0 difficulties");
+                    searchData.push_back(songButton);
+                }
+            }
+
             this->searchHandle = AsyncSongButtonMatcher::submitSearchMatch(
-                this->parentButtons, this->sSearchString, hardcodedFilterString,
+                std::move(searchData), this->sSearchString, hardcodedFilterString,
                 osu->getMapInterface()->getSpeedMultiplier());
         } else
             this->rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(true, true);
