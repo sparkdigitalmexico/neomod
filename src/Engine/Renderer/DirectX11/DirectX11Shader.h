@@ -130,7 +130,7 @@ class DirectX11Shader final : public Shader {
 
     bool compile(const std::string &vertexShader, const std::string &fragmentShader);
 
-    void writeUniform(std::string_view name, UniformType type, const void *data, unsigned int dataSize) override;
+    void writeUniform(std::string_view name, UniformType type, const void *const data, unsigned int dataSize) override;
 
     const CACHE_ENTRY getAndCacheUniformLocation(std::string_view name);
 

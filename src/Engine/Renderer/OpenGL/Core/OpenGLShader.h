@@ -25,7 +25,7 @@ class OpenGLShader final : public Shader {
     void initAsync() override;
     void destroy() override;
 
-    void writeUniform(std::string_view name, UniformType type, const void *data, unsigned int dataSize) override;
+    void writeUniform(std::string_view name, UniformType type, const void *const data, unsigned int dataSize) override;
 
    private:
     bool compile(const std::string &vertexShader, const std::string &fragmentShader, bool source);

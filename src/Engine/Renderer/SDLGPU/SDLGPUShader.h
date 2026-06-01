@@ -84,7 +84,7 @@ class SDLGPUShader final : public Shader {
     [[nodiscard]] const FixedSizeArray<UniformBlock> &getUniformBlocks() const { return m_uniformBlocks; }
 
    protected:
-    void writeUniform(std::string_view name, UniformType type, const void *data, u32 dataSize) override;
+    void writeUniform(std::string_view name, UniformType type, const void *const data, u32 dataSize) override;
 
    private:
     // parse a .shdpk shader pack, extracting GLSL source and the best-matching binary for the device

@@ -184,7 +184,7 @@ void SDLGPUShader::disable() {
 
 // uniform setters
 
-void SDLGPUShader::writeUniform(std::string_view name, [[maybe_unused]] UniformType type, const void *data,
+void SDLGPUShader::writeUniform(std::string_view name, [[maybe_unused]] UniformType type, const void *const data,
                                 u32 dataSize) {
     if(unlikely(!m_gpu || !m_device || !this->isReady())) return;
 

@@ -107,7 +107,7 @@ void OpenGLShader::disable() {
     GLStateCache::setCurrentProgram(this->iProgramBackup);
 }
 
-void OpenGLShader::writeUniform(std::string_view name, UniformType type, const void *data, u32 dataSize) {
+void OpenGLShader::writeUniform(std::string_view name, UniformType type, const void *const data, u32 dataSize) {
     if(unlikely(!this->isReady())) return;
 
     const int id = getAndCacheUniformLocation(name);
@@ -115,13 +115,6 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
         logIfCV(debug_shaders, "OpenGLShader Warning: Can't find uniform {:s}", name);
         return;
     }
-
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#endif
 
     switch(type) {
         using enum Shader::UniformType;
@@ -159,9 +152,6 @@ void OpenGLShader::writeUniform(std::string_view name, UniformType type, const v
             break;
     }
 
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
 }
 
 int OpenGLShader::getAttribLocation(std::string_view name) {

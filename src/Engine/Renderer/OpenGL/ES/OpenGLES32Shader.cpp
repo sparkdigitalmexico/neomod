@@ -106,7 +106,7 @@ int OpenGLES32Shader::getAndCacheUniformLocation(std::string_view name) {
     return id;
 }
 
-void OpenGLES32Shader::writeUniform(std::string_view name, UniformType type, const void *data, u32 dataSize) {
+void OpenGLES32Shader::writeUniform(std::string_view name, UniformType type, const void *const data, u32 dataSize) {
     if(unlikely(!this->isReady())) return;
 
     const int id = getAndCacheUniformLocation(name);

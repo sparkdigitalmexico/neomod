@@ -53,7 +53,7 @@ class Shader : public Resource {
         UNI_MATRIX4FV,
     };
 
-    virtual void writeUniform(std::string_view name, UniformType type, const void *data, unsigned int dataSize) = 0;
+    virtual void writeUniform(std::string_view name, UniformType type, const void *const data, unsigned int dataSize) = 0;
 
     struct SHADER_PARSE_RESULT {
         std::string source;

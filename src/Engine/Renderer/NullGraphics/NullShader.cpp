@@ -10,7 +10,7 @@ void NullShader::init() { this->setReady(true); }
 void NullShader::initAsync() { this->setAsyncReady(true); }
 void NullShader::destroy() {}
 
-void NullShader::writeUniform(std::string_view name, UniformType type, const void *data, unsigned int dataSize) {
+void NullShader::writeUniform(std::string_view name, UniformType type, const void *const data, unsigned int dataSize) {
     (void)name;
     (void)type;
     (void)data;
