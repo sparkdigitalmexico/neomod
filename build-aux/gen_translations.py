@@ -119,23 +119,23 @@ namespace i18n {
 
 using std::string_view_literals::operator""sv;
 
-inline constexpr std::array TRANSLATABLE_STRINGS{
+inline constexpr auto TRANSLATABLE_STRINGS = std::to_array<std::string_view>({
 """
     for s in sorted(set(msgids)):
         out += f'    "{_encode_c_escapes(s)}"sv,\n'
-    out += """};
+    out += """});
 
 struct Language final {
     std::string_view code;
     std::string_view name;
 };
 
-inline constexpr std::array LANGUAGES{
+inline constexpr auto LANGUAGES = std::to_array<Language>({
     Language{"en"sv, "English"sv},
 """
     for code, lang in languages.items():
         out += f'    Language{{"{code}"sv, "{lang}"sv}},\n'
-    out += "};\n}  // namespace i18n\n\n"
+    out += "});\n}  // namespace i18n\n\n"
     return out
 
 
