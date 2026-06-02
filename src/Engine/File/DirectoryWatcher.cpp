@@ -155,8 +155,14 @@ struct DirWatcherImpl {
             // Add/remove directories
             {
                 Sync::scoped_lock lock(this->directories_mtx);
+                for(auto& path : this->directories_to_remove) {
+                    if(!path.ends_with('/')) path.push_back('/');
+
+                    if(active_directories.contains(path)) active_directories.erase(path);
+                }
+                this->directories_to_remove.clear();
+
                 for(auto& [path, cb] : this->directories_to_add) {
-                    if(std::ranges::contains(this->directories_to_remove, path)) continue;
                     if(!path.ends_with('/')) path.push_back('/');  // make sure it ends with a /
 
                     auto [it, added] = active_directories.emplace(path, DirectoryState(cb));
@@ -166,13 +172,6 @@ struct DirWatcherImpl {
                     }
                 }
                 this->directories_to_add.clear();
-
-                for(auto& path : this->directories_to_remove) {
-                    if(!path.ends_with('/')) path.push_back('/');
-
-                    if(active_directories.contains(path)) active_directories.erase(path);
-                }
-                this->directories_to_remove.clear();
             }
 
             // Initialize new directories
@@ -423,14 +422,18 @@ struct DirWatcherImpl {
 
         Hash::stable_stringmap<DirectoryState> active_directories;
         std::vector<Hash::stable_stringmap<DirectoryState>::iterator> directories_to_init;
-
         while(!stoken.stop_requested()) {
             // Add/remove directories
             {
                 Sync::scoped_lock lock(this->directories_mtx);
+                for(auto& path : this->directories_to_remove) {
+                    if(!path.ends_with('/')) path.push_back('/');
+
+                    if(active_directories.contains(path)) active_directories.erase(path);
+                }
+                this->directories_to_remove.clear();
+
                 for(auto& [path, cb] : this->directories_to_add) {
-                    // Don't add if it's going to be removed
-                    if(std::ranges::contains(this->directories_to_remove, path)) continue;
                     if(!path.ends_with('/')) path.push_back('/');
 
                     auto [it, added] = active_directories.emplace(path, DirectoryState(cb));
@@ -440,13 +443,6 @@ struct DirWatcherImpl {
                     }
                 }
                 this->directories_to_add.clear();
-
-                for(auto& path : this->directories_to_remove) {
-                    if(!path.ends_with('/')) path.push_back('/');
-
-                    if(active_directories.contains(path)) active_directories.erase(path);
-                }
-                this->directories_to_remove.clear();
             }
             {
                 // Initialize state now (avoiding lock)
