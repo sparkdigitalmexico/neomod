@@ -683,6 +683,11 @@ void Engine::processStdinCommands() {
         return;
     }
 
+    // @wait_secs
+    if(this->stdinWaitDeadline < this->dTime) {
+        return;
+    }
+
 #ifdef MCENGINE_PLATFORM_WASM
     // poll the JS-side line buffer (filled by process.stdin in wasm-node-polyfill.js)
     while(true) {
@@ -700,7 +705,11 @@ void Engine::processStdinCommands() {
         std::string cmd(line);
         free(line);
 
-        if(cmd.starts_with("@wait")) {
+        if(cmd.starts_with("@wait_secs")) {
+            this->stdinWaitDeadline =
+                this->dTime + std::max(0., Parsing::strto<double>(cmd.substr("@wait_secs"sv.size())));
+            break;
+        } else if(cmd.starts_with("@wait")) {
             this->stdinWaitFrames = std::max(1, Parsing::strto<int>(cmd.substr("@wait"sv.size())));
             break;  // can't sleep in the main thread in WASM
         }
@@ -716,7 +725,11 @@ void Engine::processStdinCommands() {
             std::string cmd = std::move(this->stdinQueue.front());
             this->stdinQueue.pop_front();
 
-            if(cmd.starts_with("@wait")) {
+            if(cmd.starts_with("@wait_secs")) {
+                this->stdinWaitDeadline =
+                    this->dTime + std::max(0., Parsing::strto<double>(cmd.substr("@wait_secs"sv.size())));
+                break;
+            } else if(cmd.starts_with("@wait")) {
                 this->stdinWaitFrames = std::max(1, Parsing::strto<int>(cmd.substr("@wait"sv.size())));
                 break;
             } else if(cmd.starts_with("@sleep")) {

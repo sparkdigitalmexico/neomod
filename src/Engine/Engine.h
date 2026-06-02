@@ -175,6 +175,7 @@ class Engine final : public KeyboardListener {
     std::unique_ptr<Mutex> stdinMutex;
     std::deque<std::string> stdinQueue;
     int stdinWaitFrames{0};  // @wait support: skip N frames before processing more commands
+    double stdinWaitDeadline{0.};  // @wait_secs support: wait N seconds before processing more commands
     void processStdinCommands();
 };
 
