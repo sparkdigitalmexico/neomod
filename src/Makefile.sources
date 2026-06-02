@@ -214,6 +214,7 @@ neomod_SOURCES = \
 	src/Engine/ConVars/ConVar.cpp \
 	src/Engine/ConVars/ConVarHandler.cpp \
 	src/Engine/ConVars/Console.cpp \
+	src/Engine/ConsoleReader.cpp \
 	src/Engine/DiscordInterface.cpp \
 	src/Engine/Engine.cpp \
 	src/Engine/FPSLimiter.cpp \

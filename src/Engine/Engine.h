@@ -28,9 +28,12 @@ class InputDevice;
 class SoundEngine;
 class Touch;
 
-namespace Mc::Net {
+namespace Mc {
+class ConsoleReader;
+namespace Net {
 class NetworkHandler;
 }
+}  // namespace Mc
 
 using Mc::Net::NetworkHandler;
 class ResourceManager;
@@ -127,10 +130,6 @@ class Engine final : public KeyboardListener {
     [[nodiscard]] constexpr McFont *getDefaultFont() const { return this->defaultFont; }
     [[nodiscard]] constexpr McFont *getConsoleFont() const { return this->consoleFont; }
 
-    // forward defs (header bloat reduction)
-    struct Jthread;
-    struct Mutex;
-
    private:
     void runtime_assert(bool cond, const char *reason);
 
@@ -169,14 +168,8 @@ class Engine final : public KeyboardListener {
     bool bDrawing;
 
     // stdin input for headless/console mode
-    bool bShouldProcessStdin;
-
-    std::unique_ptr<Jthread> stdinThread;
-    std::unique_ptr<Mutex> stdinMutex;
-    std::deque<std::string> stdinQueue;
-    int stdinWaitFrames{0};  // @wait support: skip N frames before processing more commands
-    double stdinWaitDeadline{0.};  // @wait_secs support: wait N seconds before processing more commands
-    void processStdinCommands();
+    // (might stay null if we don't want console input)
+    std::unique_ptr<Mc::ConsoleReader> consoleReader{nullptr};
 };
 
 extern std::unique_ptr<Mouse> mouse;
