@@ -65,7 +65,7 @@ void UIButton::draw() {
         const f32 scale = (this->getSize().y * 0.8) / skin->i_loading_spinner.getSize().y;
         g->setColor(0xffffffff);
         g->pushTransform();
-        g->rotate((f32)std::fmod(engine->getTime(), PI * 2) * 180.f, 0, 0, 1);
+        g->rotate((f32)std::fmod(engine->getTime(), 2.) * 180.f, 0, 0, 1);
         g->scale(scale, scale);
         g->translate(this->getPos().x + this->getSize().x / 2.0f, this->getPos().y + this->getSize().y / 2.0f);
         g->drawImage(skin->i_loading_spinner);

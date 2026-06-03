@@ -455,7 +455,7 @@ void OsuDirectScreen::draw() {
         const f32 scale = spinner_size / (f32)osu->getSkin()->i_loading_spinner.getSize().y;
         g->setColor(0xffffffff);
         g->pushTransform();
-        g->rotate((f32)std::fmod(engine->getTime(), PI * 2) * 180.f, 0, 0, 1);
+        g->rotate((f32)std::fmod(engine->getTime(), 2.) * 180.f, 0, 0, 1);
         g->scale(scale, scale);
         g->translate(this->spinner_pos.x, this->spinner_pos.y);
         g->drawImage(osu->getSkin()->i_loading_spinner);
