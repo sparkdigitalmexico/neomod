@@ -1,5 +1,5 @@
+#pragma once
 // Copyright (c) 2025, WH, All rights reserved.
-
 #include "config.h"
 
 #ifdef MCENGINE_FEATURE_SOLOUD
@@ -8,7 +8,6 @@
 #include "Timing.h"
 #include "SyncCV.h"
 #include "SyncJthread.h"
-
 
 #include "soloud.h"
 
