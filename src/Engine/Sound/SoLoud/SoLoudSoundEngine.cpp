@@ -227,10 +227,6 @@ bool SoLoudSoundEngine::playSound(SoLoudSound *soloudSound, f32 pan, f32 pitch, 
     SOUNDHANDLE handle = 0;
 
     if(soloudSound->bStream) {
-        // reset these, because they're "sticky" properties
-        soloudSound->setPitch(pitch);
-        soloudSound->setPan(pan);
-
         // streaming audio (music) - play SLFXStream directly (it handles SoundTouch internally)
         // start it at 0 volume and fade it in when we play it (to avoid clicks/pops)
         handle = soloud->play(*soloudSound->audioSource, 0, pan, true /* paused */);
@@ -271,11 +267,14 @@ bool SoLoudSoundEngine::playSound(SoLoudSound *soloudSound, f32 pan, f32 pitch, 
               "soundPitch={:f}, soundSpeed={:f})",
               startPaused ? "enqueuing" : "playing", playbackPitch, pitch, soloudSound->getPitch(),
               soloudSound->getSpeed());
-    }
+    } else {
+        // FIXME: sanity reset for streams
+        soloudSound->setPitch(pitch);
+        soloudSound->setPan(pan);
 
-    logIf(debug && soloudSound->bStream,
-          "SoLoudSoundEngine: {} streaming audio through SLFXStream with speed={:f}, pitch={:f}",
-          startPaused ? "enqueuing" : "playing", soloudSound->getSpeed(), soloudSound->getPitch());
+        logIf(debug, "SoLoudSoundEngine: {} streaming audio through SLFXStream with speed={:f}, pitch={:f}",
+              startPaused ? "enqueuing" : "playing", soloudSound->getSpeed(), soloudSound->getPitch());
+    }
 
     // exit early if we don't want to play yet
     if(startPaused) return true;

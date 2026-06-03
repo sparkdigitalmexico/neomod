@@ -1539,7 +1539,7 @@ void BeatmapInterface::handlePreviewPlay() {
             if(almost_finished || this->music->getPositionPct() > 0.95f) this->iContinueMusicPos = 0;
 
             if(this->music->getFrequency() < this->fMusicFrequencyBackup)  // player has died, reset frequency
-                this->music->setFrequency(this->fMusicFrequencyBackup);
+                this->music->setFrequency(0.f);
 
             // When neomod is initialized, it starts playing a random song in the main menu.
             // Users can set a convar to make it start at its preview point instead.
