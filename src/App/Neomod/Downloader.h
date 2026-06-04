@@ -4,7 +4,6 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <span>
 
 class DatabaseBeatmap;
 struct MD5Hash;
@@ -53,8 +52,9 @@ void abort_download(DownloadHandle &handle);
 // Start an HTTP download. Deduplicates by URL.
 DownloadHandle download(std::string_view url);
 
-// Downloads and extracts given beatmapset.
-// Returns true when files are on disk. Check handle.failed() on failure.
+// Drives the transfer of a beatmapset .osz. Returns true once the response body has arrived
+// (claim it with handle.take_data()). On failure, latches handle.failed(); see also
+// handle.cancelled().
 bool download_beatmapset(u32 set_id, DownloadHandle &handle);
 
 // Resolves a beatmap_id to its containing beatmapset_id.
@@ -64,17 +64,5 @@ bool download_beatmapset(u32 set_id, DownloadHandle &handle);
 i32 resolve_beatmapset_id_for(i32 beatmap_id, i32 set_id_hint = 0);
 
 void process_beatmapset_info_response(const Packet &packet);
-
-// extract an archive whose beatmapset id is already known, into map_dir.
-bool extract_beatmapset(std::span<const u8> data, const std::string &map_dir);
-
-// extract a local .osz already in memory: resolves the beatmapset id from the archive (or, failing
-// that, a leading number in osz_name), extracts into maps/<id>/, and returns the resolved id (-1 if
-// none).
-i32 resolve_and_extract_osz(std::span<const u8> data, std::string_view osz_name);
-
-// read a local .osz from disk and extract it via resolve_and_extract_osz. returns the resolved set id
-// (> 0) or <= 0 on failure. does blocking file I/O + decompression, so call it off the main thread.
-i32 read_and_extract_osz(std::string_view path);
 
 }  // namespace Downloader

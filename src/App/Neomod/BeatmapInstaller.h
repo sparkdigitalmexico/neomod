@@ -4,9 +4,9 @@
 #include "noinclude.h"
 
 #include "types.h"
-#include "AsyncFuture.h"
-#include "DownloadHandle.h"
+#include "StaticPImpl.h"
 
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -21,15 +21,38 @@ enum class MapInstallStage : u8 {
     Installing = (1 << 3),
     Done = (1 << 4),
     Failed = (1 << 5),
-    Extracting = (1 << 6),  // local .osz imports only: decompress on a worker before Installing
+    Extracting = (1 << 6),  // decompress the .osz on a worker before Installing
 };
+MAKE_FLAG_ENUM(MapInstallStage)
 
 // drives beatmapset import (downloaded sets and local .osz files) as a single async unit, decoupled
-// from any UI element. ticked from Osu::update(). both kinds share one queue and one stage machine;
-// downloads know their set_id up front, local files resolve theirs on a worker thread (Extracting).
+// from any UI element. ticked from Osu::update().
 class BeatmapInstaller final {
     NOCOPY_NOMOVE(BeatmapInstaller)
    public:
+    BeatmapInstaller();
+    ~BeatmapInstaller();
+
+    ////////////
+    // Utils: //
+    ////////////
+
+    // extract a .osz already in memory: resolves the beatmapset id from the archive (or, failing
+    // that, a leading number in osz_name), extracts into maps/<id>/, and returns the resolved id
+    // (-1 if none).
+    static i32 resolve_and_extract_osz(std::span<const u8> data, std::string_view osz_name);
+
+    // same as resolve_and_extract osz but reading from a path on disk instead of directly from memory
+    static i32 read_and_extract_osz(std::string_view path);
+
+    // extract an archive whose beatmapset id is already known, into map_dir.
+    static bool extract_beatmapset(std::span<const u8> data, const std::string& map_dir);
+
+    // how long to keep Failed entries around so listings can render the red state
+    static constexpr f64 FAILED_ENTRY_TTL_S = 60.0;
+
+    ////////////
+
     struct State {
         MapInstallStage stage{MapInstallStage::None};
         f32 progress{0.f};  // 0..1, only meaningful while Downloading
@@ -45,9 +68,6 @@ class BeatmapInstaller final {
         f32 progress{0.f};
         std::string display_name;  // filename for local imports; empty if caller didn't supply one
     };
-
-    BeatmapInstaller() = default;
-    ~BeatmapInstaller() = default;
 
     // main thread; tick from Osu::update()
     void update();
@@ -78,45 +98,6 @@ class BeatmapInstaller final {
     [[nodiscard]] std::vector<EntryView> snapshot() const;
 
    private:
-    // one queued import. two kinds share the stage machine, discriminated by is_local():
-    // - download: set_id known up front, dl_handle drives Queued/Downloading
-    // - local .osz: osz_path set, extract_future drives Extracting and resolves set_id (-1 until then)
-    struct Entry {
-        u32 uid{0};
-        i32 set_id{-1};
-        std::string display_name;
-        Downloader::DownloadHandle dl_handle;
-        std::string osz_path;
-        Async::Future<i32> extract_future;  // resolved set_id (>0) on success, <= 0 on failure
-        MapInstallStage stage{MapInstallStage::Queued};
-        f32 progress{0.f};
-        bool auto_select{false};
-        bool delete_after{false};
-        f64 finished_time{0.0};
-
-        [[nodiscard]] bool is_local() const { return !this->osz_path.empty(); }
-    };
-
-    // result of try_import(): set/imported are valid only when ready == true. ready == false means the
-    // db is mid-(re)build and the caller should retry next tick (addBeatmapSet would race the loader).
-    struct ImportResult {
-        BeatmapSet* set{nullptr};
-        bool imported{false};
-        bool ready{false};
-    };
-
-    // shared Installing-stage tail for downloads and local imports: imports the already-extracted
-    // maps/<set_id>/ folder once the db is idle.
-    ImportResult try_import(i32 set_id);
-
-    void on_done(BeatmapSet* set, i32 set_id, bool added, bool auto_select);
-    void fail(Entry& e, f64 now);
-
-    std::vector<Entry> entries;  // typically <= 5 entries, so linear scans throughout
-    u32 next_uid{1};
-
-    // how long to keep Failed entries around so listings can render the red state
-    static constexpr f64 FAILED_ENTRY_TTL_S = 60.0;
+   struct BMInstallerImpl;
+   StaticPImpl<BMInstallerImpl, 32> m;
 };
-
-MAKE_FLAG_ENUM(MapInstallStage)

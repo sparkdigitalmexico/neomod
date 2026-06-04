@@ -944,7 +944,7 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
                 } else if(state.stage == None) {
                     installer->enqueue(set_id, /*auto_select=*/false);
                 }
-                // else (Queued/Downloading/Installing): still in flight, wait
+                // else (Queued/Downloading/Extracting/Installing): still in flight, wait
             }
         }
         // else: still resolving (set_id == 0)
@@ -961,7 +961,7 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
             } else if(state.stage == None) {
                 installer->enqueue(this->set_autodl, /*auto_select=*/false);
             }
-            // else (Queued/Downloading/Installing): still in flight, wait
+            // else (Queued/Downloading/Extracting/Installing): still in flight, wait
         }
     }
 

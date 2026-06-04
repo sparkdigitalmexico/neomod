@@ -14,7 +14,7 @@
 #include "Database.h"
 #include "DatabaseBeatmap.h"
 #include "DirectoryWatcher.h"
-#include "Downloader.h"
+#include "BeatmapInstaller.h"
 #include "Engine.h"
 #include "File.h"
 #include "LegacyReplay.h"
@@ -588,8 +588,8 @@ std::pair<BeatmapSet *, bool /*added*/> Database::addBeatmapSet(std::string_view
     return {raw_mapset, true};
 }
 
-// shares the .osz read + extract path with BeatmapInstaller (Downloader::read_and_extract_osz); kept as
-// a separate loader-stage import because it runs before the installer and song browser exist.
+// uses BeatmapInstaller's static .osz read + extract helper; kept as a separate loader-stage import
+// because it runs before the installer and song browser exist.
 void Database::importLooseOsz() {
     // import any loose .osz files sitting in the maps/ drop-zone (dropped in while the game was closed).
     // runs on the loader thread before the song browser builds its buttons, so these maps are part of
@@ -620,7 +620,7 @@ void Database::importLooseOsz() {
 
     auto submit_extract = [](const std::string &osz_name) {
         return Async::submit(
-            [path = NEOMOD_MAPS_PATH "/" + osz_name]() -> i32 { return Downloader::read_and_extract_osz(path); },
+            [path = NEOMOD_MAPS_PATH "/" + osz_name]() -> i32 { return BeatmapInstaller::read_and_extract_osz(path); },
             Lane::Background);
     };
 

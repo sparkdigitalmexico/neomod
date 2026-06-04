@@ -124,7 +124,7 @@ void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
             // toggle: if already in flight (and not yet terminal), cancel; otherwise (re)enqueue
             using enum MapInstallStage;
             using namespace flags::operators;
-            if(!!(state.stage & (Queued | Downloading | Installing))) {
+            if(!!(state.stage & (Queued | Downloading | Extracting | Installing))) {
                 installer->cancel(this->meta.set_id);
             } else {
                 installer->enqueue(this->meta.set_id, /*auto_select=*/true,
@@ -311,7 +311,7 @@ void OnlineMapListing::draw() {
     const bool downloading = !installed && !failed && [stg = install_state.stage]() -> bool {
         using enum MapInstallStage;
         using namespace flags::operators;
-        return !!(stg & (Queued | Downloading | Installing));
+        return !!(stg & (Queued | Downloading | Extracting | Installing));
     }();
 
     // To show we're downloading, always draw at least 5%
