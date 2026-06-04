@@ -180,7 +180,7 @@ add_custom_command(
 enable_language(ASM_NASM)
 
 # Collect source files
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/../../src/*.cpp"
     "${CMAKE_SOURCE_DIR}/../../src/*.c"
     "${CMAKE_SOURCE_DIR}/../../libraries/*.cpp"
@@ -191,7 +191,7 @@ file(GLOB_RECURSE SOURCES
 add_executable(neomod ${SOURCES})
 
 # Get all source files and extract their directories
-file(GLOB_RECURSE ALL_SOURCE_FILES
+file(GLOB_RECURSE ALL_SOURCE_FILES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/../../src/*.cpp"
     "${CMAKE_SOURCE_DIR}/../../src/*.h"
 )

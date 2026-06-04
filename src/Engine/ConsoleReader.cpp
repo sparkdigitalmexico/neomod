@@ -7,6 +7,7 @@
 #include "Engine.h"
 #include "Timing.h"
 
+#include <algorithm>  // std::clamp
 #include <iostream>
 
 #ifdef MCENGINE_PLATFORM_WASM
