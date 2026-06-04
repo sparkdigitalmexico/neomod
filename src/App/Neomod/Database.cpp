@@ -2527,7 +2527,6 @@ void Database::loadPeppyScores(std::string_view dbPath) {
 
     debugLog("osu!stable scores.db: version = {:d}, nb_beatmaps = {:d}", db_version, nb_beatmaps);
 
-    std::array<char, 15> client_str{"peppy-YYYYMMDD"};
     for(u32 b = 0; b < nb_beatmaps; b++) {
         const std::string md5hash_str = dbr.read_string();
         if(md5hash_str.length() < 32) {
@@ -2549,8 +2548,7 @@ void Database::loadPeppyScores(std::string_view dbPath) {
             u8 gamemode = dbr.read<u8>();
 
             u32 score_version = dbr.read<u32>();
-            snprintf(client_str.data(), 14, "peppy-%d", score_version);
-            sc.client = std::string_view{client_str};
+            sc.client = fmt::format("peppy-{}", score_version);
 
             sc.server = "ppy.sh";
             dbr.skip_string();  // beatmap hash (already have it)
