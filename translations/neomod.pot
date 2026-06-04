@@ -10,6 +10,27 @@ msgstr ""
 msgid "Licenses"
 msgstr ""
 
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, c++-format
+msgid "Beatmap #{:d}"
+msgstr ""
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+msgid "Failed"
+msgstr ""
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+msgid "Installing..."
+msgstr ""
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+msgid "Extracting..."
+msgstr ""
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+msgid "Queued"
+msgstr ""
+
 #: src/App/Neomod/BeatmapInstaller.cpp
 #, c++-format
 msgid "Downloaded beatmapset #{:d}"

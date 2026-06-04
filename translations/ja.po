@@ -35,6 +35,30 @@ msgstr "クレジット"
 msgid "Licenses"
 msgstr "ライセンス"
 
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy, c++-format
+msgid "Beatmap #{:d}"
+msgstr "ビートマップ"
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy
+msgid "Failed"
+msgstr "No Fail"
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy
+msgid "Installing..."
+msgstr "読み込み中..."
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy
+msgid "Extracting..."
+msgstr "ルームを作成中..."
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+msgid "Queued"
+msgstr ""
+
 #: src/App/Neomod/BeatmapInstaller.cpp
 #, c++-format
 msgid "Downloaded beatmapset #{:d}"

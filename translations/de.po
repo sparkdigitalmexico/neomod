@@ -35,6 +35,30 @@ msgstr "Mitwirkende"
 msgid "Licenses"
 msgstr "Lizenzen"
 
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy, c++-format
+msgid "Beatmap #{:d}"
+msgstr "Beatmap"
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy
+msgid "Failed"
+msgstr "No Fail"
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy
+msgid "Installing..."
+msgstr "Laden..."
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+#, fuzzy
+msgid "Extracting..."
+msgstr "Erstelle Raum..."
+
+#: src/App/Neomod/BeatmapInstallOverlay.cpp
+msgid "Queued"
+msgstr ""
+
 #: src/App/Neomod/BeatmapInstaller.cpp
 #, c++-format
 msgid "Downloaded beatmapset #{:d}"

@@ -9,6 +9,7 @@
 #include "Logging.h"
 #include "Osu.h"
 #include "OsuConVars.h"
+#include "i18n.h"
 
 #include "BeatmapInstaller.h"
 
@@ -107,16 +108,15 @@ void InstallRow::apply(const BeatmapInstaller::EntryView& v) {
 }
 
 void InstallRow::update_cached_strings() {
-    this->cached_title =
-        this->display_name.empty() ? fmt::format("Beatmap #{:d}", this->mapset_id) : this->display_name;
+    this->cached_title = this->display_name.empty() ? tformat("Beatmap #{:d}", this->mapset_id) : this->display_name;
 
     switch(this->stage) {
         using enum MapInstallStage;
         case Failed:
-            this->cached_status = "Failed";
+            this->cached_status = _("Failed");
             break;
         case Installing:
-            this->cached_status = "Installing...";
+            this->cached_status = _("Installing...");
             break;
         case Downloading:
             this->cached_status = fmt::format("{:d}%", static_cast<i32>(this->progress * 100.f));
@@ -125,7 +125,7 @@ void InstallRow::update_cached_strings() {
         case Done:
         case None:
         default:
-            this->cached_status = "Queued";
+            this->cached_status = _("Queued");
             break;
     }
 }
