@@ -133,7 +133,8 @@ bool write_entries_to_dir(const std::vector<Archive::Entry>& entries, std::strin
     std::string base{map_dir};
     while(base.size() > 1 && (base.back() == '/' || base.back() == '\\')) base.pop_back();
 
-    env->createDirectory(base);
+    const bool existed = env->directoryExists(base);
+    if(!existed) env->createDirectory(base);
 
     bool wrote_any = false;
     for(const auto& entry : entries) {
@@ -155,6 +156,13 @@ bool write_entries_to_dir(const std::vector<Archive::Entry>& entries, std::strin
         } else {
             debugLog("Failed to extract file {:s}", filename);
         }
+    }
+
+    // if we created the destination just now but then wrote nothing into it, don't leave an empty
+    // maps/<id>/ behind
+    if(!wrote_any && !existed) {
+        // no-op if it doesnt exist
+        env->deletePathsRecursive(base);
     }
 
     return wrote_any;
@@ -378,18 +386,19 @@ void BeatmapInstaller::update() {
                         [path = e.osz_path]() -> i32 { return read_and_extract_osz(path); }, Lane::Background);
                     e.stage = Extracting;
                     break;
-                }
-                // disk rung: if the db doesn't know this set but maps/<set_id>/ already exists
-                // (crash before a db save, deleted db, ...), try importing it as-is before spending
-                // a transfer; Installing is the oracle for whether the folder is actually usable,
-                // and escalates back to a real download if it isn't (empty, partial, garbage).
-                // if the db DOES have the set, the enqueuer wants bytes the db doesn't have (e.g.
-                // an updated version), so always download. db busy => can't know, just download.
-                if(db->isFinished() && !db->isCancelled() && db->getBeatmapSet(e.set_id) == nullptr &&
-                   env->directoryExists(fmt::format(NEOMOD_MAPS_PATH "/{}/", e.set_id))) {
-                    e.from_disk = true;
-                    e.stage = Installing;
-                    break;
+                } else {  // trying to download, check disk first
+                    // if the db doesn't know this set but maps/<set_id>/ already exists
+                    // (crash before a db save, deleted db, ...), try importing it as-is before spending
+                    // a transfer; "Installing"/try_import is the oracle for whether the folder is actually usable,
+                    // which will upgrade it back to a real download if it isn't (empty, partial, garbage).
+                    // if the db DOES have the set, the enqueuer wants bytes the db doesn't have (e.g.
+                    // an updated version (TODO!)), so always download. db busy => can't know, just download.
+                    if(db->isFinished() && !db->isCancelled() && db->getBeatmapSet(e.set_id) == nullptr &&
+                       env->directoryExists(fmt::format(NEOMOD_MAPS_PATH "/{}/", e.set_id))) {
+                        e.from_disk = true;
+                        e.stage = Installing;
+                        break;
+                    }
                 }
                 [[fallthrough]];
             case Downloading: {
@@ -439,8 +448,7 @@ void BeatmapInstaller::update() {
 
                 if(set == nullptr) {
                     if(e.from_disk) {
-                        // the on-disk folder wasn't importable after all; escalate to a real
-                        // download (whose extraction overwrites the folder)
+                        // the re-extraction will overwrite the potentially corrupt folder we had
                         debugLog("maps/{:d}/ exists but isn't importable, downloading instead", e.set_id);
                         e.from_disk = false;
                         e.stage = Downloading;

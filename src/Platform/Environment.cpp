@@ -437,31 +437,33 @@ bool Environment::createDirectory(const std::string &directoryName) noexcept {
     return SDL_CreateDirectory(directoryName.c_str());  // returns true if it already exists
 }
 
-bool Environment::deletePathsRecursive(const std::string &path, int recursionLevel) noexcept {
-    if(path == getExeFolder()) {
-        fubar_abort();
+bool Environment::deletePathsRecursive(const std::string &path, int maxRecursionLevels) noexcept {
+    // pointless
+    if(!directoryExists(path)) {
+        return false;
     }
 
+    // canonical absolute form with a trailing slash (safe now that we know the directory exists)
     const std::string curFolder = getFolderFromFilePath(path);
-    if(curFolder == getExeFolder()) {
+
+    // never allow deleting the folder the executable lives in, or any ancestor of it
+    if(getExeFolder().starts_with(curFolder)) {
         fubar_abort();
     }
 
-    auto files = getFilesInFolder(curFolder);
-    for(const auto &file : files) {
+    for(const auto &file : getFilesInFolder(curFolder)) {
         deleteFile(curFolder + file);
     }
 
-    --recursionLevel;
-    if(recursionLevel <= 0) {
-        return !SDL_RemovePath(curFolder.c_str());
+    if(--maxRecursionLevels > 0) {
+        for(const auto &folder : getFoldersInFolder(curFolder)) {
+            deletePathsRecursive(curFolder + folder, maxRecursionLevels);
+        }
     }
 
-    auto folders = getFoldersInFolder(curFolder);
-    for(const auto &folder : folders) {
-        deletePathsRecursive(curFolder + folder, recursionLevel);
-    }
-    return true;  // ?
+    // remove the (now hopefully empty) directory itself, fails if anything survived above,
+    // e.g. a subdirectory tree deeper than maxRecursionLevels
+    return SDL_RemovePath(curFolder.c_str());
 }
 
 bool Environment::renameFile(const std::string &oldFileName, const std::string &newFileName) noexcept {
