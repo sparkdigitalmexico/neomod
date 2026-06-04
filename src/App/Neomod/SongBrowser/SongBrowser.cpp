@@ -35,7 +35,6 @@
 #include "BeatmapInstaller.h"
 #include "Database.h"
 #include "DatabaseBeatmap.h"
-#include "Downloader.h"
 #include "Collections.h"
 #include "Bancho.h"
 #include "BanchoNetworking.h"
@@ -919,49 +918,37 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
         this->lastDiffSortModIndex = StarPrecalc::active_idx;
     }
 
-    // auto-download (delegates to BeatmapInstaller; toasts come from there)
+    // auto-download (delegates to MapFetcher; install failure toasts come from the installer)
     if(this->map_autodl) {
-        const i32 set_id = Downloader::resolve_beatmapset_id_for(this->map_autodl, this->set_autodl);
-        if(set_id < 0) {
-            ui->getNotificationOverlay()->addToast(tformat("Failed to find Beatmap #{:d} :(", this->map_autodl),
-                                                   ERROR_TOAST);
+        this->autodl_fetcher.target_map(this->map_autodl, {}, this->set_autodl);
+        const auto &fs = this->autodl_fetcher.tick();
+        if(fs.status == MapFetcher::Status::Found) {
+            this->onDifficultySelected(this->autodl_fetcher.result(), false);
+            this->selectSelectedBeatmapSongButton();
             this->map_autodl = 0;
             this->set_autodl = 0;
-        } else if(set_id > 0) {
-            // already in db? select directly.
-            if(auto *diff = db->getBeatmapDifficulty(this->map_autodl)) {
-                this->onDifficultySelected(diff, false);
-                this->selectSelectedBeatmapSongButton();
-                this->map_autodl = 0;
-                this->set_autodl = 0;
-            } else {
-                auto *installer = osu->getBeatmapInstaller();
-                using enum MapInstallStage;
-                const auto state = installer->get_state(set_id);
-                if(state.stage == Failed) {
-                    this->map_autodl = 0;
-                    this->set_autodl = 0;
-                } else if(state.stage == None) {
-                    installer->enqueue(set_id, /*auto_select=*/false);
-                }
-                // else (Queued/Downloading/Extracting/Installing): still in flight, wait
+            this->autodl_fetcher.clear();
+        } else if(fs.status == MapFetcher::Status::NotFound) {
+            // only resolution failures / version mismatches need a message here (the linked map
+            // doesn't exist in the set the server has); install failures already toasted
+            if(fs.why != MapFetcher::Why::Install) {
+                ui->getNotificationOverlay()->addToast(tformat("Failed to find Beatmap #{:d} :(", this->map_autodl),
+                                                       ERROR_TOAST);
             }
-        }
-        // else: still resolving (set_id == 0)
-    } else if(this->set_autodl) {
-        if(const auto *set = db->getBeatmapSet(this->set_autodl)) {
-            this->selectBeatmapset(set);
+            this->map_autodl = 0;
             this->set_autodl = 0;
-        } else {
-            auto *installer = osu->getBeatmapInstaller();
-            using enum MapInstallStage;
-            const auto state = installer->get_state(this->set_autodl);
-            if(state.stage == Failed) {
-                this->set_autodl = 0;
-            } else if(state.stage == None) {
-                installer->enqueue(this->set_autodl, /*auto_select=*/false);
-            }
-            // else (Queued/Downloading/Extracting/Installing): still in flight, wait
+            this->autodl_fetcher.clear();
+        }
+    } else if(this->set_autodl) {
+        this->autodl_fetcher.target_set(this->set_autodl);
+        const auto &fs = this->autodl_fetcher.tick();
+        if(fs.status == MapFetcher::Status::Found) {
+            this->selectBeatmapset(this->autodl_fetcher.result());
+            this->set_autodl = 0;
+            this->autodl_fetcher.clear();
+        } else if(fs.status == MapFetcher::Status::NotFound) {
+            this->set_autodl = 0;
+            this->autodl_fetcher.clear();
         }
     }
 

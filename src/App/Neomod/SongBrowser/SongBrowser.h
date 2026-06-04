@@ -6,7 +6,7 @@
 #include "AsyncCancellable.h"
 #include "AsyncChannel.h"
 #include "MapExporter.h"
-#include "DownloadHandle.h"
+#include "MapFetcher.h"
 #include "ScreenBackable.h"
 
 #include <memory>
@@ -369,12 +369,15 @@ class SongBrowser final : public ScreenBackable {
     float fBackgroundFadeInTime;
     std::vector<const DatabaseBeatmap *> previousRandomBeatmaps;
 
-    // map auto-download (driven through BeatmapInstaller; these flags just record the intent)
+    // map auto-download (HACK exposed for ChatLink)
    public:
     i32 map_autodl = 0;
     i32 set_autodl = 0;
 
    private:
+    // drives the map_autodl/set_autodl intent flags to a terminal verdict
+    MapFetcher autodl_fetcher;
+
     // search
     UISearchOverlay *search;
     std::string sSearchString;

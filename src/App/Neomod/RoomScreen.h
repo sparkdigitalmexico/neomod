@@ -2,7 +2,7 @@
 // Copyright (c) 2024, kiwec, All rights reserved.
 
 #include "CBaseUIScrollView.h"
-#include "DownloadHandle.h"
+#include "MapFetcher.h"
 #include "UIScreen.h"
 
 enum class LegacyFlags : u32;
@@ -127,8 +127,8 @@ class RoomScreen final : public UIScreen {
 
     time_t last_packet_tms = {0};
 
-    // tracks the last map_id we successfully downloaded + applied via on_map_change.
-    // pending_map_id is the in-flight target we're trying to install (0 == nothing pending).
+    // tracks the last map_id we successfully downloaded + applied via on_map_change;
+    // map_fetcher drives the install of the host's current pick until it gets there.
     i32 current_map_id{-1};
-    i32 pending_map_id{0};
+    MapFetcher map_fetcher;
 };

@@ -17,7 +17,6 @@
 #include "Bancho.h"
 #include "BanchoNetworking.h"
 #include "BanchoUsers.h"
-#include "BeatmapInstaller.h"
 #include "BeatmapInterface.h"
 #include "CBaseUIContainer.h"
 #include "CBaseUILabel.h"
@@ -26,7 +25,6 @@
 #include "OsuConVars.h"
 #include "Database.h"
 #include "MakeDelegateWrapper.h"
-#include "Downloader.h"
 #include "HUD.h"
 #include "LegacyReplay.h"
 #include "Lobby.h"
@@ -259,23 +257,12 @@ void RoomScreen::draw() {
         this->map_title->setSizeToContent(0, 0);
         this->ready_btn->is_loading = true;
     } else if(BanchoState::room.map_id != this->current_map_id) {
-        // install in flight (or about to be enqueued by update())
-        auto *installer = osu->getBeatmapInstaller();
-        f32 progress = 0.f;
-        bool failed = false;
-        if(this->pending_map_id != 0) {
-            if(const i32 set_id = Downloader::resolve_beatmapset_id_for(this->pending_map_id); set_id > 0) {
-                const auto state = installer->get_state(set_id);
-                progress = state.progress;
-                failed = (state.stage == MapInstallStage::Failed);
-            } else if(set_id < 0) {
-                failed = true;
-            }
-        }
-        if(failed) {
+        // install in flight (or about to be targeted by update())
+        const auto &fs = this->map_fetcher.state();
+        if(fs.status == MapFetcher::Status::NotFound) {
             this->map_title->setText(tformat("Failed to download Beatmap #{:d} :(", BanchoState::room.map_id));
         } else {
-            this->map_title->setText(tformat("Downloading... {:.2f}%", progress * 100.f));
+            this->map_title->setText(tformat("Downloading... {:.2f}%", fs.progress * 100.f));
         }
         this->map_title->setSizeToContent(0, 0);
         this->ready_btn->is_loading = true;
@@ -289,36 +276,14 @@ void RoomScreen::draw() {
 void RoomScreen::update(CBaseUIEventCtx &c) {
     if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
 
-    // drive the room map install: enqueue once, poll for completion, fire on_map_change exactly once.
+    // drive the host's current pick through the fetcher (retargeting is implicit when the host
+    // changes the map under us); fire on_map_change exactly once when it lands.
     if(BanchoState::room.map_id > 0 && BanchoState::room.map_id != this->current_map_id) {
-        // host changed the map under us - retarget the pipeline
-        if(this->pending_map_id != BanchoState::room.map_id) {
-            this->pending_map_id = BanchoState::room.map_id;
-        }
-
-        // already on disk? short-circuit.
-        if(db->getBeatmapDifficulty(BanchoState::room.map_md5) != nullptr) {
+        this->map_fetcher.target_map(BanchoState::room.map_id, BanchoState::room.map_md5);
+        if(this->map_fetcher.tick().status == MapFetcher::Status::Found) {
             this->current_map_id = BanchoState::room.map_id;
-            this->pending_map_id = 0;
+            this->map_fetcher.clear();
             this->on_map_change();
-        } else {
-            const i32 set_id = Downloader::resolve_beatmapset_id_for(BanchoState::room.map_id);
-            if(set_id > 0) {
-                auto *installer = osu->getBeatmapInstaller();
-                const auto state = installer->get_state(set_id);
-                using enum MapInstallStage;
-                if(state.stage == None) {
-                    installer->enqueue(set_id, /*auto_select=*/false);
-                } else if(state.stage == Failed) {
-                    // installer already toasted; clear pending so we don't re-enqueue
-                    this->pending_map_id = 0;
-                }
-                // else: still in flight; wait
-            } else if(set_id < 0) {
-                // resolution failed permanently
-                this->pending_map_id = 0;
-            }
-            // else: still resolving (set_id == 0)
         }
     }
 

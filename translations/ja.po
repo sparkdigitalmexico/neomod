@@ -60,11 +60,6 @@ msgid "Queued"
 msgstr ""
 
 #: src/App/Neomod/BeatmapInstaller.cpp
-#, c++-format
-msgid "Downloaded beatmapset #{:d}"
-msgstr "ビートマップセット #{:d} をダウンロードしました"
-
-#: src/App/Neomod/BeatmapInstaller.cpp
 #, fuzzy, c++-format
 msgid "Failed to import {}"
 msgstr "マップの読み込みに失敗しました"
@@ -73,6 +68,16 @@ msgstr "マップの読み込みに失敗しました"
 #, c++-format
 msgid "Failed to download beatmapset #{:d} :("
 msgstr "ビートマップセット #{:d} のダウンロードに失敗しました :("
+
+#: src/App/Neomod/BeatmapInstaller.cpp
+#, fuzzy, c++-format
+msgid "Imported beatmapset #{:d}"
+msgstr "ビートマップセット #{:d} をダウンロードしました"
+
+#: src/App/Neomod/BeatmapInstaller.cpp
+#, c++-format
+msgid "Downloaded beatmapset #{:d}"
+msgstr "ビートマップセット #{:d} をダウンロードしました"
 
 #: src/App/Neomod/Chat.cpp
 msgid "You are not listening to anything."

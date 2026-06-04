@@ -1,7 +1,7 @@
 #pragma once
 // Copyright (c) 2024, kiwec, All rights reserved.
 
-#include "DownloadHandle.h"
+#include "types.h"
 #include "UIScreen.h"
 
 class McFont;
@@ -31,9 +31,7 @@ class SpectatorScreen final : public UIScreen {
     CBaseUILabel* spectating = nullptr;
     CBaseUILabel* status = nullptr;
 
-    // pending_map_id: spectated user's map_id we're trying to install (0 = nothing pending).
-    // last_failed_map: dedupes the OUTP_CANT_SPECTATE packet to one per failed map.
-    i32 pending_map_id{0};
+    // dedupes the OUTP_CANT_SPECTATE packet to one per failed map
     i32 last_failed_map{0};
 };
 

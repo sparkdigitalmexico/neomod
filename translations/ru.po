@@ -60,11 +60,6 @@ msgid "Queued"
 msgstr ""
 
 #: src/App/Neomod/BeatmapInstaller.cpp
-#, c++-format
-msgid "Downloaded beatmapset #{:d}"
-msgstr "Скачан набор карт #{:d}"
-
-#: src/App/Neomod/BeatmapInstaller.cpp
 #, fuzzy, c++-format
 msgid "Failed to import {}"
 msgstr "Не удалось загрузить карту"
@@ -73,6 +68,16 @@ msgstr "Не удалось загрузить карту"
 #, c++-format
 msgid "Failed to download beatmapset #{:d} :("
 msgstr "Не удалось скачать набор карт #{:d} :("
+
+#: src/App/Neomod/BeatmapInstaller.cpp
+#, fuzzy, c++-format
+msgid "Imported beatmapset #{:d}"
+msgstr "Скачан набор карт #{:d}"
+
+#: src/App/Neomod/BeatmapInstaller.cpp
+#, c++-format
+msgid "Downloaded beatmapset #{:d}"
+msgstr "Скачан набор карт #{:d}"
 
 #: src/App/Neomod/Chat.cpp
 msgid "You are not listening to anything."

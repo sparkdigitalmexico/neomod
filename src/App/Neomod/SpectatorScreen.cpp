@@ -6,12 +6,11 @@
 #include "Bancho.h"
 #include "BanchoNetworking.h"
 #include "BanchoUsers.h"
-#include "BeatmapInstaller.h"
 #include "BeatmapInterface.h"
 #include "Database.h"
 #include "CBaseUILabel.h"
 #include "OsuConVars.h"
-#include "Downloader.h"
+#include "MapFetcher.h"
 #include "ModSelector.h"
 #include "i18n.h"
 #include "KeyBindings.h"
@@ -31,11 +30,12 @@
 #include "UserCard.h"
 #include "Engine.h"
 
-static i32 current_map_id = 0;
-
 using namespace Spectating;
 
 namespace Spectating {
+
+static i32 current_map_id = 0;
+static constinit MapFetcher map_fetcher;
 
 // TODO @kiwec: test that those bugs have been fixed
 
@@ -76,6 +76,7 @@ void start(int user_id) {
     BanchoState::spectating = true;
     BanchoState::spectated_player_id = user_id;
     current_map_id = 0;
+    map_fetcher.clear();
 
     ui->setScreen(ui->getSpectatorScreen());
     soundEngine->play(osu->getSkin()->s_menu_hit);
@@ -106,6 +107,7 @@ void stop() {
     BanchoState::spectating = false;
     BanchoState::spectated_player_id = 0;
     current_map_id = 0;
+    map_fetcher.clear();
 
     Packet packet;
     packet.id = OUTP_STOP_SPECTATING;
@@ -165,29 +167,18 @@ void SpectatorScreen::update(CBaseUIEventCtx &c) {
             osu->getMapInterface()->stop(true);
         }
     } else if(user_info->mode == GameMode::STANDARD && user_info->map_id != current_map_id) {
-        // already on disk? short-circuit straight to spectate.
-        if(auto *diff = db->getBeatmapDifficulty(user_info->map_md5)) {
+        // drive the spectated user's map through the fetcher (retargeting is implicit when they
+        // change maps under us); start spectating once it lands.
+        map_fetcher.target_map(user_info->map_id, user_info->map_md5);
+        if(map_fetcher.tick().status == MapFetcher::Status::Found) {
+            auto *diff = map_fetcher.result();
             current_map_id = user_info->map_id;
-            this->pending_map_id = 0;
+            map_fetcher.clear();
             ui->setScreen(ui->getSpectatorScreen());
             ui->getSongBrowser()->onDifficultySelected(diff, false);
             osu->getMapInterface()->spectate();
-        } else {
-            // retarget the install pipeline if the spectated user changed maps under us
-            if(this->pending_map_id != user_info->map_id) {
-                this->pending_map_id = user_info->map_id;
-            }
-            const i32 set_id = Downloader::resolve_beatmapset_id_for(user_info->map_id);
-            if(set_id > 0) {
-                auto *installer = osu->getBeatmapInstaller();
-                using enum MapInstallStage;
-                if(const auto state = installer->get_state(set_id); state.stage == None) {
-                    installer->enqueue(set_id, /*auto_select=*/false);
-                }
-            }
-            // resolution failed (set_id < 0) is handled by the status text below;
-            // we don't clear pending_map_id here since the spectated user may pick a different map next.
         }
+        // failure is handled by the status text below
     }
 
     // Update spectator screen UI
@@ -214,18 +205,8 @@ void SpectatorScreen::update(CBaseUIEventCtx &c) {
         this->status->setText(tformat("{:s} is playing minigames", user_info->name));
     } else if(user_info->map_id != -1 && user_info->map_id != 0) {
         if(user_info->map_id != current_map_id) {
-            f32 progress = 0.f;
-            bool failed = false;
-            if(this->pending_map_id != 0) {
-                if(const i32 set_id = Downloader::resolve_beatmapset_id_for(this->pending_map_id); set_id > 0) {
-                    const auto state = osu->getBeatmapInstaller()->get_state(set_id);
-                    progress = state.progress;
-                    failed = (state.stage == MapInstallStage::Failed);
-                } else if(set_id < 0) {
-                    failed = true;
-                }
-            }
-            if(failed) {
+            const auto &fs = map_fetcher.state();
+            if(fs.status == MapFetcher::Status::NotFound) {
                 this->status->setText(tformat("Failed to download Beatmap #{:d} :(", user_info->map_id));
                 if(user_info->map_id != this->last_failed_map) {
                     Packet packet;
@@ -234,7 +215,7 @@ void SpectatorScreen::update(CBaseUIEventCtx &c) {
                     this->last_failed_map = user_info->map_id;
                 }
             } else {
-                this->status->setText(tformat("Downloading map... {:.2f}%", progress * 100.f));
+                this->status->setText(tformat("Downloading map... {:.2f}%", fs.progress * 100.f));
             }
         }
     }

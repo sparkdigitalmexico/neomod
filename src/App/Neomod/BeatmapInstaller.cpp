@@ -6,6 +6,7 @@
 #include "AsyncPool.h"
 #include "Database.h"
 #include "DatabaseBeatmap.h"
+#include "DownloadHandle.h"
 #include "Downloader.h"
 #include "Engine.h"
 #include "Environment.h"
@@ -39,6 +40,9 @@ struct Entry {
     f32 progress{0.f};
     bool auto_select{false};
     bool delete_after{false};
+    // download whose Installing attempt sources a pre-existing maps/<set_id>/ folder instead of a
+    // fresh extraction; a failed import escalates to a real download instead of failing the entry
+    bool from_disk{false};
     f64 finished_time{0.0};
 
     [[nodiscard]] bool is_local() const { return !this->osz_path.empty(); }
@@ -375,9 +379,18 @@ void BeatmapInstaller::update() {
                     e.stage = Extracting;
                     break;
                 }
-                // no on-disk short-circuit here on purpose: an existing maps/<set_id>/ may be empty or
-                // stale, so always transfer; the extraction overwrites the folder and addBeatmapSet dedups at Installing.
-                // TODO: avoid endless retry loops (room/spectator/autodl)
+                // disk rung: if the db doesn't know this set but maps/<set_id>/ already exists
+                // (crash before a db save, deleted db, ...), try importing it as-is before spending
+                // a transfer; Installing is the oracle for whether the folder is actually usable,
+                // and escalates back to a real download if it isn't (empty, partial, garbage).
+                // if the db DOES have the set, the enqueuer wants bytes the db doesn't have (e.g.
+                // an updated version), so always download. db busy => can't know, just download.
+                if(db->isFinished() && !db->isCancelled() && db->getBeatmapSet(e.set_id) == nullptr &&
+                   env->directoryExists(fmt::format(NEOMOD_MAPS_PATH "/{}/", e.set_id))) {
+                    e.from_disk = true;
+                    e.stage = Installing;
+                    break;
+                }
                 [[fallthrough]];
             case Downloading: {
                 // download_beatmapset lazily creates the handle on first call (when e.dl_handle is null),
@@ -425,6 +438,14 @@ void BeatmapInstaller::update() {
                 if(!ready) break;  // db busy/rebuilding; retry next tick
 
                 if(set == nullptr) {
+                    if(e.from_disk) {
+                        // the on-disk folder wasn't importable after all; escalate to a real
+                        // download (whose extraction overwrites the folder)
+                        debugLog("maps/{:d}/ exists but isn't importable, downloading instead", e.set_id);
+                        e.from_disk = false;
+                        e.stage = Downloading;
+                        break;
+                    }
                     fail_entry(e, now);
                 } else {
                     e.stage = Done;
@@ -432,7 +453,9 @@ void BeatmapInstaller::update() {
                     if(e.is_local()) {
                         if(e.delete_after) env->deleteFile(e.osz_path);
                     } else {
-                        ui->getNotificationOverlay()->addToast(tformat("Downloaded beatmapset #{:d}", e.set_id),
+                        ui->getNotificationOverlay()->addToast(e.from_disk
+                                                                   ? tformat("Imported beatmapset #{:d}", e.set_id)
+                                                                   : tformat("Downloaded beatmapset #{:d}", e.set_id),
                                                                SUCCESS_TOAST);
                     }
                     on_done(set, e.set_id, imported, e.auto_select);
