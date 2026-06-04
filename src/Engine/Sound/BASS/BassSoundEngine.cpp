@@ -307,7 +307,7 @@ bool BassSoundEngine::initializeOutputDevice(const SoundEngine::OUTPUT_DEVICE &d
         if(!BASS_ASIO_Init(device.id, 0)) {
             this->ready_since = -1.0;
             debugLog("BASS_ASIO_Init() failed.");
-            app->showNotification({BassManager::getErrorString(), NotificationPreset::ERROR});
+            app->showNotification({BassManager::getErrorString(BASS_ASIO_ErrorGetCode()), NotificationPreset::ERROR});
             return false;
         }
 
@@ -323,6 +323,7 @@ bool BassSoundEngine::initializeOutputDevice(const SoundEngine::OUTPUT_DEVICE &d
         cv::snd_freq.setValue(sample_rate, false);
 
         if(!init_bass_mixer(device)) {
+            BASS_ASIO_Free();
             return false;
         }
 
@@ -337,14 +338,16 @@ bool BassSoundEngine::initializeOutputDevice(const SoundEngine::OUTPUT_DEVICE &d
         if(!BASS_ASIO_ChannelEnableBASS(false, 0, this->g_bassOutputMixer, true)) {
             this->ready_since = -1.0;
             debugLog("BASS_ASIO_ChannelEnableBASS() failed.");
-            app->showNotification({BassManager::getErrorString(), NotificationPreset::ERROR});
+            app->showNotification({BassManager::getErrorString(BASS_ASIO_ErrorGetCode()), NotificationPreset::ERROR});
+            BASS_ASIO_Free();
             return false;
         }
 
         if(!BASS_ASIO_Start(bufsize, 0)) {
             this->ready_since = -1.0;
             debugLog("BASS_ASIO_Start() failed.");
-            app->showNotification({BassManager::getErrorString(), NotificationPreset::ERROR});
+            app->showNotification({BassManager::getErrorString(BASS_ASIO_ErrorGetCode()), NotificationPreset::ERROR});
+            BASS_ASIO_Free();
             return false;
         }
 

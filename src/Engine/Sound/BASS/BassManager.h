@@ -98,11 +98,11 @@ using bass_EXTERN::BASS_ATTRIB_TEMPO_FREQ;
 using bass_EXTERN::BASS_ATTRIB_TEMPO_PITCH;
 
 #ifdef MCENGINE_PLATFORM_WINDOWS
-using bass_EXTERN::BASS_ASIO_INFO;
 using bass_EXTERN::BASS_ASIO_DEVICEINFO;
+using bass_EXTERN::BASS_ASIO_INFO;
 
-using bass_EXTERN::BASS_WASAPI_INFO;
 using bass_EXTERN::BASS_WASAPI_DEVICEINFO;
+using bass_EXTERN::BASS_WASAPI_INFO;
 using bass_EXTERN::WASAPIPROC;
 #endif
 
@@ -172,6 +172,7 @@ using bass_EXTERN::WASAPIPROC;
     X(BASS_ASIO_GetVersion)        \
     X(BASS_ASIO_Init)              \
     X(BASS_ASIO_ControlPanel)      \
+    X(BASS_ASIO_ErrorGetCode)      \
     X(BASS_ASIO_GetInfo)           \
     X(BASS_ASIO_GetRate)           \
     X(BASS_ASIO_GetDeviceInfo)     \
