@@ -35,6 +35,7 @@ Color color_for_progress(MapInstallStage stage) {
     switch(stage) {
         case Failed:
             return rgb(220, 80, 80);
+        case Extracting:
         case Installing:
             return rgb(255, 220, 100);
         case Done:  // shouldn't appear; defensive
@@ -50,7 +51,7 @@ Color color_for_progress(MapInstallStage stage) {
 class InstallRow final : public CBaseUIContainer {
     NOCOPY_NOMOVE(InstallRow)
    public:
-    explicit InstallRow(i32 set_id);
+    explicit InstallRow(u32 uid);
     ~InstallRow() override = default;
 
     void draw() override;
@@ -60,11 +61,12 @@ class InstallRow final : public CBaseUIContainer {
     // to duplicate and reconcile state between them?
     void apply(const BeatmapInstaller::EntryView& v);
 
-    [[nodiscard]] i32 set_id() const { return this->mapset_id; }
+    [[nodiscard]] u32 uid() const { return this->entry_uid; }
     [[nodiscard]] CBaseUIButton* xButton() const { return this->x_btn; }
 
    private:
-    i32 mapset_id;
+    u32 entry_uid;
+    i32 mapset_id{-1};
     MapInstallStage stage{MapInstallStage::None};
     f32 progress{0.f};
     std::string display_name;
@@ -77,14 +79,12 @@ class InstallRow final : public CBaseUIContainer {
     void update_cached_strings();
 };
 
-InstallRow::InstallRow(i32 set_id)
-    : CBaseUIContainer(0, 0, 0, 0, fmt::format("install-row-{}", set_id)),
-      mapset_id(set_id),
-      font(engine->getDefaultFont()) {
+InstallRow::InstallRow(u32 uid)
+    : CBaseUIContainer(0, 0, 0, 0, fmt::format("install-row-{}", uid)), entry_uid(uid), font(engine->getDefaultFont()) {
     this->x_btn = new CBaseUIButton(0, 0, 0, 0, "x", "✖"s);
     this->x_btn->setDrawFrame(false);
     this->x_btn->setDrawBackground(false);
-    this->x_btn->setClickCallback([set_id]() { osu->getBeatmapInstaller()->cancel(set_id); });
+    this->x_btn->setClickCallback([uid]() { osu->getBeatmapInstaller()->cancel_entry(uid); });
     this->addBaseUIElement(this->x_btn);
 
     this->update_cached_strings();
@@ -92,6 +92,10 @@ InstallRow::InstallRow(i32 set_id)
 
 void InstallRow::apply(const BeatmapInstaller::EntryView& v) {
     bool dirty = false;
+    if(v.set_id != this->mapset_id) {  // local imports resolve theirs mid-flight
+        this->mapset_id = v.set_id;
+        dirty = true;
+    }
     if(v.stage != this->stage) {
         this->stage = v.stage;
         dirty = true;
@@ -118,6 +122,9 @@ void InstallRow::update_cached_strings() {
         case Installing:
             this->cached_status = _("Installing...");
             break;
+        case Extracting:
+            this->cached_status = _("Extracting...");
+            break;
         case Downloading:
             this->cached_status = fmt::format("{:d}%", static_cast<i32>(this->progress * 100.f));
             break;
@@ -138,8 +145,8 @@ void InstallRow::draw() {
     // progress fill across the bottom (clamp to 5% minimum while in flight, mirrors OsuDirect)
     using enum MapInstallStage;
     using namespace flags::operators;
-    const bool active = !!(this->stage & (Queued | Downloading | Installing));
-    const f32 raw_p = (this->stage == Installing) ? 1.f : this->progress;
+    const bool active = !!(this->stage & (Queued | Downloading | Extracting | Installing));
+    const f32 raw_p = !!(this->stage & (Extracting | Installing)) ? 1.f : this->progress;
     const f32 fill_p = (this->stage == Failed) ? 1.f : (active ? std::max(0.05f, raw_p) : raw_p);
     const f32 bar_h = DEF_PROGRESS_BAR_H * scale;
 
@@ -236,7 +243,7 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
         for(auto* row : this->getElementsAs<InstallRow>()) {
             bool found = false;
             for(const auto& v : m_impl->entry_cache) {
-                if(v.set_id == row->set_id()) {
+                if(v.uid == row->uid()) {
                     found = true;
                     break;
                 }
@@ -252,13 +259,13 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
     for(const auto& v : m_impl->entry_cache) {
         InstallRow* row = nullptr;
         for(auto* r : this->getElementsAs<InstallRow>()) {
-            if(r->set_id() == v.set_id) {
+            if(r->uid() == v.uid) {
                 row = r;
                 break;
             }
         }
         if(!row) {
-            row = new InstallRow(v.set_id);
+            row = new InstallRow(v.uid);
             this->addBaseUIElement(row);
             topology_changed = true;
         }

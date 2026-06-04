@@ -470,8 +470,8 @@ void BanchoState::disconnect(bool shutdown) {
         ui->setScreen(ui->getMainMenu());
     }
 
+    // consumers check for cancellation where relevant
     Downloader::abort_downloads();
-    if(auto *installer = osu->getBeatmapInstaller()) installer->clear();
 }
 
 void BanchoState::reconnect() {
@@ -484,7 +484,7 @@ void BanchoState::reconnect() {
     // XXX: Put this in cv::mp_password callback?
     if(!cv::mp_password.getString().empty()) {
         const char *password = cv::mp_password.getString().c_str();
-        const auto hash{crypto::hash::md5_hex((u8 *)password, strlen(password))};
+        const auto hash{crypto::hash::md5_hex(reinterpret_cast<const u8 *>(password), strlen(password))};
         cv::mp_password_md5.setValue(hash.string());
         cv::mp_password.setValue("");
     }

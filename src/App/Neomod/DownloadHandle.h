@@ -21,6 +21,10 @@ class DownloadHandle : public std::shared_ptr<Request> {
     [[nodiscard]] int response_code() const;  // 0 when nullptr or not completed
     [[nodiscard]] bool completed() const;     // false when nullptr
     [[nodiscard]] bool failed() const;        // true when !nullptr && progress < 0
+    // true when the transfer was aborted (abort_download/abort_downloads). an aborted request's
+    // completion callback never runs, so it will never become completed() or failed(); holders
+    // should poll this and drop the handle.
+    [[nodiscard]] bool cancelled() const;
 
     // Move downloaded bytes out. Empty if !completed() or failed().
     [[nodiscard]] std::vector<u8> take_data();

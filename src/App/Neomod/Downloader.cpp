@@ -61,6 +61,11 @@ bool DownloadHandle::failed() const {
     return (*this)->progress.load(std::memory_order_acquire) < 0.f;
 }
 
+bool DownloadHandle::cancelled() const {
+    if(!*this) return false;
+    return (*this)->cancel_src.stop_requested();
+}
+
 std::vector<u8> DownloadHandle::take_data() {
     auto& request = *this;
     if(!request || !request->completed.load(std::memory_order_acquire)) return {};
