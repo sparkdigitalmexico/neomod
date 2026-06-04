@@ -388,15 +388,17 @@ i32 resolve_and_extract_osz(std::span<const u8> data, std::string_view osz_name)
 
         set_id = get_beatmapset_id_from_osu_file(
             std::string_view{reinterpret_cast<const char*>(osu_data.data()), osu_data.size()});
-        if(set_id != -1) break;
+        if(set_id > 0) break;
     }
 
     // fallback: a leading number in the filename, e.g. "12345 Artist - Title.osz"
-    if(set_id < 0 && !osz_name.empty() && std::isdigit(static_cast<unsigned char>(osz_name.front()))) {
+    if(set_id <= 0 && !osz_name.empty() && std::isdigit(static_cast<unsigned char>(osz_name.front()))) {
         i32 parsed = -1;
         if(Parsing::parse(osz_name, &parsed)) set_id = parsed;
     }
-    if(set_id < 0) return -1;
+    // ids must be > 0; without this an id of 0 (e.g. "BeatmapSetID:0" or a filename like "0 foo.osz")
+    // would extract into maps/0/ and then be treated as a failure by every caller, orphaning the folder
+    if(set_id <= 0) return -1;
 
     if(!write_entries_to_dir(entries, fmt::format(NEOMOD_MAPS_PATH "/{}/", set_id))) {
         return -1;
