@@ -117,7 +117,7 @@ class ScoresStillLoadingElement final : public CBaseUILabel {
         // draw icon
         const float iconScale = 0.6f;
         McFont *iconFont = osu->getFontIcons();
-        int iconWidth = 0;
+        f32 iconWidth = 0;
         g->pushTransform();
         {
             const float scale = (this->getSize().y / iconFont->getHeight()) * iconScale;
@@ -126,8 +126,8 @@ class ScoresStillLoadingElement final : public CBaseUILabel {
             iconWidth = paddingLeft + iconFont->getStringWidth(this->sIconString) * scale;
 
             g->scale(scale, scale);
-            g->translate((int)(this->getPos().x + paddingLeft),
-                         (int)(this->getPos().y + this->getSize().y / 2 + iconFont->getHeight() * scale / 2));
+            g->translate((f32)(i32)(this->getPos().x + paddingLeft),
+                         (f32)(i32)(this->getPos().y + this->getSize().y / 2 + iconFont->getHeight() * scale / 2));
             g->setColor(0xffffffff);
             g->drawString(iconFont, this->sIconString);
         }
@@ -143,9 +143,9 @@ class ScoresStillLoadingElement final : public CBaseUILabel {
             const float scale = ((this->getSize().x - iconWidth) / stringWidth) * textScale;
 
             g->scale(scale, scale);
-            g->translate(
-                (int)(this->getPos().x + iconWidth + (this->getSize().x - iconWidth) / 2 - stringWidth * scale / 2),
-                (int)(this->getPos().y + this->getSize().y / 2 + textFont->getHeight() * scale / 2));
+            g->translate((f32)(i32)(this->getPos().x + iconWidth + (this->getSize().x - iconWidth) / 2 -
+                                    stringWidth * scale / 2),
+                         (f32)(i32)(this->getPos().y + this->getSize().y / 2 + textFont->getHeight() * scale / 2));
             g->setColor(0xff02c3e5);
             g->drawString(textFont, this->sText);
         }
@@ -166,7 +166,7 @@ class NoRecordsSetElement final : public CBaseUILabel {
         // draw icon
         const float iconScale = 0.6f;
         McFont *iconFont = osu->getFontIcons();
-        int iconWidth = 0;
+        f32 iconWidth = 0;
         g->pushTransform();
         {
             const float scale = (this->getSize().y / iconFont->getHeight()) * iconScale;
@@ -175,8 +175,8 @@ class NoRecordsSetElement final : public CBaseUILabel {
             iconWidth = paddingLeft + iconFont->getStringWidth(this->sIconString) * scale;
 
             g->scale(scale, scale);
-            g->translate((int)(this->getPos().x + paddingLeft),
-                         (int)(this->getPos().y + this->getSize().y / 2 + iconFont->getHeight() * scale / 2));
+            g->translate((f32)(i32)(this->getPos().x + paddingLeft),
+                         (f32)(i32)(this->getPos().y + this->getSize().y / 2 + iconFont->getHeight() * scale / 2));
             g->setColor(0xffffffff);
             g->drawString(iconFont, this->sIconString);
         }
@@ -192,9 +192,9 @@ class NoRecordsSetElement final : public CBaseUILabel {
             const float scale = ((this->getSize().x - iconWidth) / stringWidth) * textScale;
 
             g->scale(scale, scale);
-            g->translate(
-                (int)(this->getPos().x + iconWidth + (this->getSize().x - iconWidth) / 2 - stringWidth * scale / 2),
-                (int)(this->getPos().y + this->getSize().y / 2 + textFont->getHeight() * scale / 2));
+            g->translate((f32)(i32)(this->getPos().x + iconWidth + (this->getSize().x - iconWidth) / 2 -
+                                    stringWidth * scale / 2),
+                         (f32)(i32)(this->getPos().y + this->getSize().y / 2 + textFont->getHeight() * scale / 2));
             g->setColor(0xff02c3e5);
             g->drawString(textFont, this->sText);
         }
@@ -216,9 +216,9 @@ bool SongBrowser::sort_by_difficulty(SongButton const *a, SongButton const *b) {
     if(stars1 != stars2) return stars1 < stars2;
 
     float diff1 = (aPtr->getAR() + 1) * (aPtr->getCS() + 1) * (aPtr->getHP() + 1) * (aPtr->getOD() + 1) *
-                  (std::max(aPtr->getMostCommonBPM(), 1));
+                  ((f32)std::max(aPtr->getMostCommonBPM(), 1));
     float diff2 = (bPtr->getAR() + 1) * (bPtr->getCS() + 1) * (bPtr->getHP() + 1) * (bPtr->getOD() + 1) *
-                  (std::max(bPtr->getMostCommonBPM(), 1));
+                  ((f32)std::max(bPtr->getMostCommonBPM(), 1));
 
     if(diff1 == diff2) return false;
     return diff1 < diff2;
@@ -232,6 +232,7 @@ bool SongBrowser::sort_by_artist(SongButton const *a, SongButton const *b) {
     const std::string_view artistA = aPtr->getArtistLatin();
     const std::string_view artistB = bPtr->getArtistLatin();
 
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
     i32 cmp = strncasecmp(artistA.data(), artistB.data(), std::min<size_t>(artistA.length(), artistB.length()));
     if(cmp == 0) return sort_by_title(a, b);  // fall back to sort by title
     return cmp < 0;
@@ -254,6 +255,7 @@ bool SongBrowser::sort_by_creator(SongButton const *a, SongButton const *b) {
     const std::string_view creatorA = aPtr->getCreator();
     const std::string_view creatorB = bPtr->getCreator();
 
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
     i32 cmp = strncasecmp(creatorA.data(), creatorB.data(), std::min<size_t>(creatorA.length(), creatorB.length()));
     if(cmp == 0) return sort_by_difficulty(a, b);
     return cmp < 0;
@@ -291,6 +293,7 @@ bool SongBrowser::sort_by_title(SongButton const *a, SongButton const *b) {
     const std::string_view titleA = aPtr->getTitleLatin();
     const std::string_view titleB = bPtr->getTitleLatin();
 
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
     i32 cmp = strncasecmp(titleA.data(), titleB.data(), std::min<size_t>(titleA.length(), titleB.length()));
     if(cmp == 0) return sort_by_difficulty(a, b);
     return cmp < 0;
@@ -565,10 +568,10 @@ bool SongBrowser::drawBeatmapOrMenuBackground() {
             drew = ready;
 
             if(!ready)
-                this->fBackgroundFadeInTime = engine->getTime();
+                this->fBackgroundFadeInTime = (f32)engine->getTime();
             else if(this->fBackgroundFadeInTime > 0.0f && engine->getTime() > this->fBackgroundFadeInTime) {
-                alpha = std::clamp<float>((engine->getTime() - this->fBackgroundFadeInTime) /
-                                              cv::songbrowser_background_fade_in_duration.getFloat(),
+                alpha = std::clamp<float>((f32)((engine->getTime() - this->fBackgroundFadeInTime) /
+                                                cv::songbrowser_background_fade_in_duration.getFloat()),
                                           0.0f, 1.0f);
                 alpha = 1.0f - (1.0f - alpha) * (1.0f - alpha);
             }
@@ -587,7 +590,7 @@ bool SongBrowser::drawBeatmapOrMenuBackground() {
             g->pushTransform();
             {
                 g->scale(scale, scale);
-                g->translate(osu->getVirtScreenWidth() / 2, osu->getVirtScreenHeight() / 2);
+                g->translate(osu->getVirtScreenSize() / 2.f);
                 g->drawImage(backgroundImage);
             }
             g->popTransform();
@@ -607,12 +610,8 @@ void SongBrowser::draw() {
         f32 mode_osu_scale = SongBrowser::getSkinScale(osu->getSkin()->i_mode_osu);
 
         g->setColor(0xffffffff);
-        if(cv::avoid_flashes.getBool()) {
-            g->setAlpha(0.1f);
-        } else {
-            // XXX: Flash based on song BPM
-            g->setAlpha(0.1f);
-        }
+        // XXX: Flash based on song BPM (unless cv::avoid_flashes is set)
+        g->setAlpha(0.1f);
 
         g->setBlendMode(DrawBlendMode::ADDITIVE);
         osu->getSkin()->i_mode_osu.drawRaw(vec2(osu->getVirtScreenWidth() / 2, osu->getVirtScreenHeight() / 2),
@@ -692,7 +691,7 @@ void SongBrowser::draw() {
 
     // NOTE: Intentionally not calling ScreenBackable::draw() here, since we're already drawing
     //       the back button in draw_bottombar().
-    UIScreen::draw();
+    UIScreen::draw();  // NOLINT(bugprone-parent-virtual-call)
 
     // no beatmaps found (osu folder is probably invalid)
     if(db->getBeatmapSets().size() == 0) {
@@ -705,23 +704,24 @@ void SongBrowser::draw() {
             errorMessage2 = _("Or click \"Online Beatmaps\" in the Main Menu");
         }
 
+        McFont *subTitleFont = osu->getSubTitleFont();
+        const vec2 center = osu->getVirtScreenSize() / 2.f;
+
         g->setColor(Env::cfg(OS::WASM) ? 0xffffffff : 0xffff0000);
         g->pushTransform();
         {
-            g->translate(
-                (int)(osu->getVirtScreenWidth() / 2 - osu->getSubTitleFont()->getStringWidth(errorMessage1) / 2),
-                (int)(osu->getVirtScreenHeight() / 2 + osu->getSubTitleFont()->getHeight()));
-            g->drawString(osu->getSubTitleFont(), errorMessage1);
+            g->translate((f32)(i32)(center.x - subTitleFont->getStringWidth(errorMessage1) / 2),
+                         (f32)(i32)(center.y + subTitleFont->getHeight()));
+            g->drawString(subTitleFont, errorMessage1);
         }
         g->popTransform();
 
         g->setColor(Env::cfg(OS::WASM) ? 0xffffffff : 0xff00ff00);
         g->pushTransform();
         {
-            g->translate(
-                (int)(osu->getVirtScreenWidth() / 2 - osu->getSubTitleFont()->getStringWidth(errorMessage2) / 2),
-                (int)(osu->getVirtScreenHeight() / 2 + osu->getSubTitleFont()->getHeight() * 2 + 15));
-            g->drawString(osu->getSubTitleFont(), errorMessage2);
+            g->translate((f32)(i32)(center.x - subTitleFont->getStringWidth(errorMessage2) / 2),
+                         (f32)(i32)(center.y + subTitleFont->getHeight() * 2 + 15));
+            g->drawString(subTitleFont, errorMessage2);
         }
         g->popTransform();
     }
@@ -747,7 +747,7 @@ void SongBrowser::drawStrainGraphOverlay() {
     if(aimStrains.size() > 0 && aimStrains.size() == speedStrains.size()) {
         const f32 strainStepMS = 400.0f * speedMultiplier;
 
-        const u64 lengthMS = strainStepMS * aimStrains.size();
+        const u64 lengthMS = (u64)(strainStepMS * (f32)aimStrains.size());
 
         // get highest strain values for normalization
         f64 highestAimStrain = 0.0;
@@ -774,8 +774,8 @@ void SongBrowser::drawStrainGraphOverlay() {
 
             const f32
                 bottombarTopY =  // (osu->getVirtScreenHeight() - BottomBar::get_height()) doesn't work quite right? just copying from mcosu for now
-                osu->getVirtScreenHeight() -
-                (osu->getVirtScreenHeight() * 0.115f /*cv::songbrowser_bottombar_percent.getFloat() * dpiScale */);
+                (f32)osu->getVirtScreenHeight() -
+                ((f32)osu->getVirtScreenHeight() * 0.115f /*cv::songbrowser_bottombar_percent.getFloat() * dpiScale */);
 
             const f32 msPerPixel = (f32)lengthMS / graphWidth;
             const f32 strainWidth = strainStepMS / msPerPixel;
@@ -786,13 +786,14 @@ void SongBrowser::drawStrainGraphOverlay() {
             const f32 alpha =
                 (graphRect.contains(mouse->getPos()) ? 1.0f : cv::hud_scrubbing_timeline_strains_alpha.getFloat());
 
-            const Color aimStrainColor = argb(alpha, cv::hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f,
-                                              cv::hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f,
-                                              cv::hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
+            const Color aimStrainColor =
+                argb(alpha, (f32)cv::hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f,
+                     (f32)cv::hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f,
+                     (f32)cv::hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
             const Color speedStrainColor =
-                argb(alpha, cv::hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f,
-                     cv::hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f,
-                     cv::hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
+                argb(alpha, (f32)cv::hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f,
+                     (f32)cv::hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f,
+                     (f32)cv::hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
 
             g->setDepthBuffer(true);
             for(int i = 0; i < aimStrains.size(); i++) {
@@ -800,21 +801,22 @@ void SongBrowser::drawStrainGraphOverlay() {
                 const f64 speedStrain = (speedStrains[i]) / highestStrain;
                 //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
 
-                const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
-                const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
+                const f32 aimStrainHeight = (f32)(aimStrain * strainHeightMultiplier);
+                const f32 speedStrainHeight = (f32)(speedStrain * strainHeightMultiplier);
                 //const f64 strainHeight = strain * strainHeightMultiplier;
 
                 if(!keyboard->isShiftDown()) {
                     g->setColor(aimStrainColor);
-                    g->fillRect(i * strainWidth, bottombarTopY - aimStrainHeight,
-                                std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
+                    g->fillRect((i32)((f32)i * strainWidth), (i32)(bottombarTopY - aimStrainHeight),
+                                (i32)std::max(1.0f, std::round(strainWidth + 0.5f)), (i32)aimStrainHeight);
                 }
 
                 if(!keyboard->isControlDown()) {
                     g->setColor(speedStrainColor);
-                    g->fillRect(i * strainWidth,
-                                bottombarTopY - (keyboard->isShiftDown() ? 0 : aimStrainHeight) - speedStrainHeight,
-                                std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+                    g->fillRect(
+                        (i32)((f32)i * strainWidth),
+                        (i32)(bottombarTopY - (keyboard->isShiftDown() ? 0 : aimStrainHeight) - speedStrainHeight),
+                        (i32)std::max(1.0f, std::round(strainWidth + 0.5f)), (i32)(speedStrainHeight + 1));
                 }
             }
             g->setDepthBuffer(false);
@@ -825,27 +827,27 @@ void SongBrowser::drawStrainGraphOverlay() {
                 const f64 speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
                 //const f64 strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
 
-                const f64 aimStrainHeight = aimStrain * strainHeightMultiplier;
-                const f64 speedStrainHeight = speedStrain * strainHeightMultiplier;
+                const f32 aimStrainHeight = (f32)(aimStrain * strainHeightMultiplier);
+                const f32 speedStrainHeight = (f32)(speedStrain * strainHeightMultiplier);
                 //const f64 strainHeight = strain * strainHeightMultiplier;
 
-                vec2 topLeftCenter = vec2(highestStrainIndex * strainWidth + strainWidth / 2.0f,
+                vec2 topLeftCenter = vec2((f32)highestStrainIndex * strainWidth + strainWidth / 2.0f,
                                           bottombarTopY - aimStrainHeight - speedStrainHeight);
 
                 const f32 margin = 5.0f * dpiScale;
 
+                const f32 rectX = topLeftCenter.x - margin * strainWidth;
+                const f32 rectY = topLeftCenter.y - margin * strainWidth;
+                const f32 rectW = strainWidth * 2 * margin;
+                const f32 rectH = aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth;
+
                 g->setColor(0xffffffff);
                 g->setAlpha(alpha);
-                g->drawRect(topLeftCenter.x - margin * strainWidth, topLeftCenter.y - margin * strainWidth,
-                            strainWidth * 2 * margin, aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth);
+                g->drawRect((i32)rectX, (i32)rectY, (i32)rectW, (i32)rectH);
                 g->setAlpha(alpha * 0.5f);
-                g->drawRect(topLeftCenter.x - margin * strainWidth - 2, topLeftCenter.y - margin * strainWidth - 2,
-                            strainWidth * 2 * margin + 4,
-                            aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth + 4);
+                g->drawRect((i32)(rectX - 2), (i32)(rectY - 2), (i32)(rectW + 4), (i32)(rectH + 4));
                 g->setAlpha(alpha * 0.25f);
-                g->drawRect(topLeftCenter.x - margin * strainWidth - 4, topLeftCenter.y - margin * strainWidth - 4,
-                            strainWidth * 2 * margin + 8,
-                            aimStrainHeight + speedStrainHeight + 2 * margin * strainWidth + 8);
+                g->drawRect((i32)(rectX - 4), (i32)(rectY - 4), (i32)(rectW + 8), (i32)(rectH + 8));
             }
         }
     }
@@ -988,7 +990,7 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
     // collections etc.)
     // NOTE: it's very slow, so only run it every 10 vsync frames
     if(engine->throttledShouldRun(10) && !ui->getOptionsOverlay()->isVisible() &&
-       mouse->getPos().x < osu->getVirtScreenWidth() * 0.1f && !this->contextMenu->isVisible()) {
+       mouse->getPos().x < (f32)osu->getVirtScreenWidth() * 0.1f && !this->contextMenu->isVisible()) {
         this->scheduled_scroll_to_selected_button = true;
     }
 
@@ -1026,7 +1028,7 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
 }
 
 void SongBrowser::onKeyDown(KeyboardEvent &key) {
-    UIScreen::onKeyDown(key);  // only used for options menu
+    UIScreen::onKeyDown(key);  // NOLINT(bugprone-parent-virtual-call) only used for options menu
     if(!this->bVisible || key.isConsumed()) return;
 
     // context menu
@@ -1237,7 +1239,7 @@ void SongBrowser::onPlayEnd(bool quit) {
         // TODO: don't do this here, probably inherently racy somehow
         // NOTE: all modification times need to be accurate to support sorting/grouping by date added
         if(bm->last_modification_time <= 0 && !bm->getFilePath().empty()) {
-            struct stat64 attr;
+            struct stat64 attr;  // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
             if(File::stat_c(bm->sFilePath.get(), &attr) == 0) {
                 bm->last_modification_time = attr.st_mtime;
             }
@@ -1460,8 +1462,9 @@ class SongBrowser::BeatmapLoadingOverlay final : public LoadingScreen {
         g->setColor(0xffffffff);
         g->pushTransform();
         {
-            g->translate((int)(osu->getVirtScreenWidth() / 2 - font->getStringWidth(msg) / 2),
-                         (int)(osu->getVirtScreenHeight() - 15 - font->getHeight() - 5.0f * Osu::getUIScale()));
+            g->translate(
+                (f32)(i32)((f32)osu->getVirtScreenWidth() / 2 - font->getStringWidth(msg) / 2),
+                (f32)(i32)((f32)osu->getVirtScreenHeight() - 15 - font->getHeight() - 5.0f * Osu::getUIScale()));
             g->drawString(font, msg,
                           TextFX{.col_text = rgb(255, 255, 255), .col_shadow = rgb(0, 0, 0), .offs_px = shadowOffset});
         }
@@ -1639,7 +1642,7 @@ void SongBrowser::addBeatmapSet(BeatmapSet *mapset, bool initialSongBrowserLoad)
     const bool doLengthCollBtns = initialSongBrowserLoad || likely(this->lengthCollectionButtons.size() == 7);
 
     // always create parent button for the set
-    auto *parentButton = new SongButton(250.f, 250.f + db->getBeatmapSets().size() * 50.f, 200.f, 50.f, mapset);
+    auto *parentButton = new SongButton(250.f, 250.f + (f32)db->getBeatmapSets().size() * 50.f, 200.f, 50.f, mapset);
     this->parentButtons.push_back(parentButton);
 
     // add mapset to all necessary groups
@@ -1731,7 +1734,7 @@ void SongBrowser::requestNextScrollToSongButtonJumpFix(SongDifficultyButton *dif
         (diffButton->isIndependentDiffButton() ? diffButton->getRelPos().y
                                                : diffButton->getParentSongButton()->getRelPos().y);
 
-    this->fNextScrollToSongButtonJumpFixOldScrollSizeY = this->carousel->getScrollSize().y;
+    this->fNextScrollToSongButtonJumpFixOldScrollSizeY = (f32)this->carousel->getScrollSize().y;
 }
 
 bool SongBrowser::isButtonVisible(CarouselButton *songButton) const {
@@ -1938,15 +1941,17 @@ void SongBrowser::scrollToSongButton(CarouselButton *songButton, bool alignOnTop
             if(!this->bNextScrollToSongButtonJumpFixUseScrollSizeDelta)
                 delta = (songButton->getRelPos().y - this->fNextScrollToSongButtonJumpFixOldRelPosY);  // (default case)
             else
-                delta = this->carousel->getScrollSize().y -
-                        this->fNextScrollToSongButtonJumpFixOldScrollSizeY;  // technically not correct but feels a
-                                                                             // lot better for KEY_LEFT navigation
+                delta = (f32)(this->carousel->getScrollSize().y -
+                              this->fNextScrollToSongButtonJumpFixOldScrollSizeY);  // technically not correct but feels
+                                                                                    // a lot better for KEY_LEFT
+                                                                                    // navigation
         }
-        this->carousel->scrollToY(this->carousel->getRelPosY() - delta, false);
+        this->carousel->scrollToY((i32)(this->carousel->getRelPosY() - delta), false);
     }
 
-    this->carousel->scrollToY(-songButton->getRelPos().y +
-                              (alignOnTop ? (0) : (this->carousel->getSize().y / 2 - songButton->getSize().y / 2)));
+    this->carousel->scrollToY(
+        (i32)(-songButton->getRelPos().y +
+              (alignOnTop ? (0) : (this->carousel->getSize().y / 2 - songButton->getSize().y / 2))));
 }
 
 void SongBrowser::rebuildSongButtons() {
@@ -2039,7 +2044,7 @@ void SongBrowser::updateSongButtonLayout() {
     // all elements must be CarouselButtons, at least
     const auto &elements{this->carousel->container.getElementsAs<CarouselButton>()};
 
-    int yCounter = this->carousel->getSize().y / 4;
+    f32 yCounter = this->carousel->getSize().y / 4;
     if(elements.size() <= 1) yCounter = this->carousel->getSize().y / 2;
 
     bool isSelected = false;
@@ -2075,7 +2080,7 @@ void SongBrowser::updateSongButtonLayout() {
 
         yCounter += carouselButton->getActualSize().y;
     }
-    this->carousel->setScrollSizeToContent(this->carousel->getSize().y / 2);
+    this->carousel->setScrollSizeToContent((i32)(this->carousel->getSize().y / 2));
 }
 
 SongBrowser::SetVisibility SongBrowser::getSetVisibility(const SongButton *parent) const {
@@ -2099,10 +2104,10 @@ void SongBrowser::updateLayout() {
     ScreenBackable::updateLayout();
 
     const float dpiScale = Osu::getUIScale();
-    const int margin = 5 * dpiScale;
+    const f32 margin = 5 * dpiScale;
 
     // topbar left
-    this->topbarLeft->setSize(SongBrowser::getUIScale(390.f), SongBrowser::getUIScale(145.f));
+    this->topbarLeft->setSize((f32)SongBrowser::getUIScale(390.f), (f32)SongBrowser::getUIScale(145.f));
 
     this->songInfo->onResized();  // force update metrics
     this->songInfo->setRelPos(margin, margin);
@@ -2110,13 +2115,13 @@ void SongBrowser::updateLayout() {
         this->topbarLeft->getSize().x - margin,
         std::max(this->topbarLeft->getSize().y * 0.75f, this->songInfo->getMinimumHeight() + margin));
 
-    const int topbarLeftButtonMargin = 5 * dpiScale;
-    const int topbarLeftButtonHeight = 30 * dpiScale;
-    const int topbarLeftButtonWidth = 55 * dpiScale;
+    const f32 topbarLeftButtonMargin = 5 * dpiScale;
+    const f32 topbarLeftButtonHeight = 30 * dpiScale;
+    const f32 topbarLeftButtonWidth = 55 * dpiScale;
 
-    const int dropdowns_width =
+    const f32 dropdowns_width =
         this->topbarLeft->getSize().x - 3 * topbarLeftButtonMargin - (topbarLeftButtonWidth + topbarLeftButtonMargin);
-    const int dropdowns_y = this->topbarLeft->getSize().y - topbarLeftButtonHeight;
+    const f32 dropdowns_y = this->topbarLeft->getSize().y - topbarLeftButtonHeight;
 
     this->webButton->setSize(topbarLeftButtonWidth, topbarLeftButtonHeight);
     this->webButton->onResized();  // HACKHACK: framework bug (should update string metrics on setSize())
@@ -2134,9 +2139,9 @@ void SongBrowser::updateLayout() {
     this->topbarLeft->update_pos();
 
     // topbar right
-    this->topbarRight->setPosX(osu->getVirtScreenWidth() / 2);
-    this->topbarRight->setSize(osu->getVirtScreenWidth() - this->topbarRight->getPos().x,
-                               SongBrowser::getUIScale(80.f));
+    this->topbarRight->setPosX((f32)osu->getVirtScreenWidth() / 2);
+    this->topbarRight->setSize((f32)osu->getVirtScreenWidth() - this->topbarRight->getPos().x,
+                               (f32)SongBrowser::getUIScale(80.f));
 
     // horizontal positioning by DPI makes no sense here if we want them to ever have a chance of lining up with skin elements
     this->sortButton->setSize(200.f * dpiScale, 30.f * dpiScale);
@@ -2160,8 +2165,8 @@ void SongBrowser::updateLayout() {
 
     // "hardcoded" group buttons
     const float group_margin = 10.f * dpiScale;
-    const i32 group_btn_width =
-        std::clamp<i32>((this->topbarRight->getSize().x - 2 * group_margin) / 4, 0, 200 * dpiScale);
+    const f32 group_btn_width =
+        std::clamp<f32>((this->topbarRight->getSize().x - 2 * group_margin) / 4, 0.f, 200 * dpiScale);
     this->groupByCollectionBtn->setSize(group_btn_width - 1, 30 * dpiScale);
     this->groupByCollectionBtn->setRelPos(this->topbarRight->getSize().x - (group_margin + (4 * (group_btn_width + 1))),
                                           this->topbarRight->getSize().y - 30 * dpiScale);
@@ -2182,12 +2187,13 @@ void SongBrowser::updateLayout() {
 
     // song browser
     this->carousel->setPos(this->topbarLeft->getPos().x + this->topbarLeft->getSize().x + 1, 0);
-    this->carousel->setSize(osu->getVirtScreenWidth() - (this->topbarLeft->getPos().x + this->topbarLeft->getSize().x),
-                            osu->getVirtScreenHeight());
+    this->carousel->setSize(
+        (f32)osu->getVirtScreenWidth() - (this->topbarLeft->getPos().x + this->topbarLeft->getSize().x),
+        (f32)osu->getVirtScreenHeight());
     this->updateSongButtonLayout();
 
-    this->search->setPos(osu->getVirtScreenWidth() / 2, this->topbarRight->getSize().y + 8 * dpiScale);
-    this->search->setSize(osu->getVirtScreenWidth() / 2, 20 * dpiScale);
+    this->search->setPos((f32)osu->getVirtScreenWidth() / 2, this->topbarRight->getSize().y + 8 * dpiScale);
+    this->search->setSize((f32)osu->getVirtScreenWidth() / 2, 20 * dpiScale);
 }
 
 void SongBrowser::onBack() {
@@ -2222,9 +2228,9 @@ void SongBrowser::updateScoreBrowserLayout() {
     if(shouldScoreBrowserBeVisible != this->scoreBrowser->isVisible())
         this->scoreBrowser->setVisible(shouldScoreBrowserBeVisible);
 
-    const int scoreButtonWidthMax = this->topbarLeft->getSize().x;
+    const f32 scoreButtonWidthMax = this->topbarLeft->getSize().x;
 
-    f32 browserHeight = osu->getVirtScreenHeight() -
+    f32 browserHeight = (f32)osu->getVirtScreenHeight() -
                         (BottomBar::get_height() + (this->topbarLeft->getPos().y + this->topbarLeft->getSize().y)) +
                         2 * dpiScale;
     this->scoreBrowser->setPos(this->topbarLeft->getPos().x + 2 * dpiScale,
@@ -2233,7 +2239,7 @@ void SongBrowser::updateScoreBrowserLayout() {
     const i32 scoreHeight = SongBrowser::getUIScale(53.f);
 
     // In stable, even when looking at local scores, there is space where the "local best" would be.
-    f32 local_best_size = scoreHeight + SongBrowser::getUIScale(61);
+    f32 local_best_size = (f32)(scoreHeight + SongBrowser::getUIScale(61));
     browserHeight -= local_best_size;
     this->scoreBrowser->setSize(this->scoreBrowser->getSize().x, browserHeight);
     this->scoreBrowser->setScrollSizeToContent();
@@ -2246,21 +2252,22 @@ void SongBrowser::updateScoreBrowserLayout() {
         this->localBestLabel->setSize(this->scoreBrowser->getSize().x, 40);
         if(this->localBestButton) {
             this->localBestButton->setRelPos(0, 40);
-            this->localBestButton->setSize(this->scoreBrowser->getSize().x, scoreHeight);
+            this->localBestButton->setSize(this->scoreBrowser->getSize().x, (f32)scoreHeight);
         }
     }
 
     const std::vector<CBaseUIElement *> &elements = this->scoreBrowser->container.getElements();
     for(size_t i = 0; i < elements.size(); i++) {
         CBaseUIElement *scoreButton = elements[i];
-        scoreButton->setSize(this->scoreBrowser->getSize().x, scoreHeight);
-        scoreButton->setRelPos(0, i * scoreButton->getSize().y);
+        scoreButton->setSize(this->scoreBrowser->getSize().x, (f32)scoreHeight);
+        scoreButton->setRelPos(0, (f32)i * scoreButton->getSize().y);
     }
-    this->scoreBrowserScoresStillLoadingElement->setSize(this->scoreBrowser->getSize().x * 0.9f, scoreHeight * 0.75f);
+    this->scoreBrowserScoresStillLoadingElement->setSize(this->scoreBrowser->getSize().x * 0.9f,
+                                                         (f32)scoreHeight * 0.75f);
     this->scoreBrowserScoresStillLoadingElement->setRelPos(
         this->scoreBrowser->getSize().x / 2 - this->scoreBrowserScoresStillLoadingElement->getSize().x / 2,
         (browserHeight / 2) * 0.65f - this->scoreBrowserScoresStillLoadingElement->getSize().y / 2);
-    this->scoreBrowserNoRecordsSetElement->setSize(this->scoreBrowser->getSize().x * 0.9f, scoreHeight * 0.75f);
+    this->scoreBrowserNoRecordsSetElement->setSize(this->scoreBrowser->getSize().x * 0.9f, (f32)scoreHeight * 0.75f);
     if(elements[0] == this->scoreBrowserNoRecordsSetElement) {
         this->scoreBrowserNoRecordsSetElement->setRelPos(
             this->scoreBrowser->getSize().x / 2 - this->scoreBrowserScoresStillLoadingElement->getSize().x / 2,
@@ -2374,7 +2381,7 @@ void SongBrowser::rebuildScoreButtons() {
         }
     }
 
-    const int numScores = scores.size();
+    const int numScores = (int)scores.size();
 
     if(numScores > 1) {
         // sort
@@ -2383,7 +2390,7 @@ void SongBrowser::rebuildScoreButtons() {
 
     // top up cache as necessary
     if(numScores > this->scoreButtonCache.size()) {
-        const int numNewButtons = numScores - this->scoreButtonCache.size();
+        const int numNewButtons = (int)(numScores - this->scoreButtonCache.size());
         for(size_t i = 0; std::cmp_less(i, numNewButtons); i++) {
             auto *scoreButton = new ScoreButton(this->contextMenu, 0, 0, 0, 0);
             scoreButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onScoreClicked>(this));
@@ -2437,7 +2444,7 @@ void SongBrowser::rebuildScoreButtons() {
 }
 
 void SongBrowser::scheduleSearchUpdate(bool immediately) {
-    this->fSearchWaitTime = engine->getTime() + (immediately ? 0.0f : cv::songbrowser_search_delay.getFloat());
+    this->fSearchWaitTime = (f32)(engine->getTime() + (immediately ? 0.0f : cv::songbrowser_search_delay.getFloat()));
 }
 
 void SongBrowser::checkHandleKillBackgroundSearchMatcher() {
@@ -2805,7 +2812,7 @@ void SongBrowser::onFilterScoresClicked(CBaseUIButton *button) {
 
     this->contextMenu->setPos(button->getPos());
     this->contextMenu->setRelPos(button->getRelPos());
-    this->contextMenu->begin(button->getSize().x);
+    this->contextMenu->begin((i32)button->getSize().x);
     {
         if(BanchoState::is_online()) {
             for(const auto &filter : filters) {
@@ -2826,7 +2833,7 @@ void SongBrowser::onFilterScoresClicked(CBaseUIButton *button) {
 void SongBrowser::onSortScoresClicked(CBaseUIButton *button) {
     this->contextMenu->setPos(button->getPos());
     this->contextMenu->setRelPos(button->getRelPos());
-    this->contextMenu->begin(button->getSize().x);
+    this->contextMenu->begin((i32)button->getSize().x);
     {
         int i = 0;
         for(const auto &scoreSortingMethod : this->SCORE_SORTING_METHODS) {
@@ -2897,7 +2904,7 @@ void SongBrowser::onQuickGroupClicked(CBaseUIButton *button, bool /*left*/, bool
 void SongBrowser::onGroupClicked(CBaseUIButton *button) {
     this->contextMenu->setPos(button->getPos());
     this->contextMenu->setRelPos(button->getRelPos());
-    this->contextMenu->begin(button->getSize().x);
+    this->contextMenu->begin((i32)button->getSize().x);
     {
         for(int gid = -1; const auto &gname : GROUP_NAMES) {
             ++gid;
@@ -2944,7 +2951,7 @@ void SongBrowser::onGroupChange(std::string_view /*text*/, int id) {
 void SongBrowser::onSortClicked(CBaseUIButton *button) {
     this->contextMenu->setPos(button->getPos());
     this->contextMenu->setRelPos(button->getRelPos());
-    this->contextMenu->begin(button->getSize().x);
+    this->contextMenu->begin((i32)button->getSize().x);
     {
         for(int stype = -1; const auto &sortmeth : SORTING_METHODS) {
             ++stype;
@@ -3257,7 +3264,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
     }
 
     if(updateUI) {
-        const float prevScrollPosY = this->carousel->getRelPosY();  // usability
+        const i32 prevScrollPosY = (i32)this->carousel->getRelPosY();  // usability
         const auto previouslySelectedCollectionName =
             (this->selectionPreviousCollectionButton != nullptr
                  ? this->selectionPreviousCollectionButton->getCollectionName()
@@ -3527,7 +3534,8 @@ void SongBrowser::recreateCollectionsButtons() {
         }
 
         if(!folder.empty()) {
-            this->collectionButtons.emplace_back(new CollectionButton(250.f, 250.f + db->getBeatmapSets().size() * 50.f,
+            this->collectionButtons.emplace_back(new CollectionButton(250.f,
+                                                                      250.f + (f32)db->getBeatmapSets().size() * 50.f,
                                                                       200.f, 50.f, "", collection.get_name(), folder));
         }
     }
