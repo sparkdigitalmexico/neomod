@@ -20,6 +20,7 @@
 #include "UI.h"
 #include "crypto.h"
 #include "Logging.h"
+#include "i18n.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -157,23 +158,19 @@ void fetch_online_scores(const DatabaseBeatmap *beatmap) {
     //       (assuming it's some hash that includes all relevant map files)
     url.append("&h=");
 
+    // TODO: avoid needing to pull in translations here (use numeric id)
+    const std::string user_type = cv::songbrowser_scores_filteringtype.getString();
     char lb_type = '1';  // Global / default
-    const char filter_first_letter{cv::songbrowser_scores_filteringtype.getString()[0]};
-    switch(filter_first_letter) {
-        case 'S':  // Selected mods
-            lb_type = '2';
-            break;
-        case 'F':  // Friends
-            lb_type = '3';
-            break;
-        case 'C':  // Country
-            lb_type = '4';
-            break;
-        case 'T':  // Team
-            lb_type = '5';
-            break;
-        default:  // Global / default
-            break;
+    if(user_type == _("Global")) {
+        // (already set)
+    } else if(user_type == _("Selected mods")) {
+        lb_type = '2';
+    } else if(user_type == _("Friends")) {
+        lb_type = '3';
+    } else if(user_type == _("Country")) {
+        lb_type = '4';
+    } else if(user_type == _("Team")) {
+        lb_type = '5';
     }
 
     // leaderboard type filter

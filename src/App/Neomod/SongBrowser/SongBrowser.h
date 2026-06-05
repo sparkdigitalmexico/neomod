@@ -202,8 +202,9 @@ class SongBrowser final : public ScreenBackable {
         SCORE_SORTING_COMPARATOR comparator;
     };
 
-    std::array<SCORE_SORTING_METHOD, 6> SCORE_SORTING_METHODS;
-    int DEFAULT_SCORE_SORTING_INDEX;
+    static constexpr int NUM_SCORE_SORTING_METHODS{6};
+    static constexpr int DEFAULT_SCORE_SORTING_INDEX{NUM_SCORE_SORTING_METHODS - 1};
+    std::array<SCORE_SORTING_METHOD, NUM_SCORE_SORTING_METHODS> SCORE_SORTING_METHODS;
 
     [[nodiscard]] inline GroupType getGroupingMode() const { return this->curGroup; }
 

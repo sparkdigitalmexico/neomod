@@ -334,7 +334,20 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
                                     {_("By misses"), Database::sortScoreByMisses},
                                     {_("By score"), Database::sortScoreByScore},
                                     {_("By pp"), Database::sortScoreByPP}}};
-    this->DEFAULT_SCORE_SORTING_INDEX = 5;  // By pp
+
+    // TODO (ugly): remap possible string convars to numeric ids (old configs/defaults)
+    for(int type = 0; type < 2; ++type) {
+        ConVar *cvar = (type == 0 ? &cv::songbrowser_sortingtype : &cv::songbrowser_scores_sortingtype);
+        const std::string user_string = cvar->getString();
+        const size_t len = (type == 0 ? this->SORTING_METHODS.size() : this->SCORE_SORTING_METHODS.size());
+        for(int method_id = 0; method_id < len; ++method_id) {
+            if(user_string ==
+               (type == 0 ? this->SORTING_METHODS[method_id].name : this->SCORE_SORTING_METHODS[method_id].name)) {
+                cvar->setValue(method_id);
+                break;
+            }
+        }
+    }
 
     this->lastDiffSortModIndex = StarPrecalc::active_idx;
 
@@ -914,7 +927,7 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
 
     // handle changed mods resort
     if(this->lastDiffSortModIndex != StarPrecalc::active_idx) {
-        this->onSortChange(cv::songbrowser_sortingtype.getString(), cv::songbrowser_sortingtype.getInt());
+        this->onSortChange("", cv::songbrowser_sortingtype.getInt());
         this->lastDiffSortModIndex = StarPrecalc::active_idx;
     }
 
@@ -2542,7 +2555,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
     this->bInitializedBeatmaps = true;
     this->bSongButtonsNeedSorting = true;
 
-    this->onSortChange(cv::songbrowser_sortingtype.getString(), cv::songbrowser_sortingtype.getInt());
+    this->onSortChange("", cv::songbrowser_sortingtype.getInt());
     this->onGroupChange("", this->curGroup);  // does nothing besides re-highlight the buttons
     this->onSortScoresChange("", cv::songbrowser_scores_sortingtype.getInt());
 
@@ -2850,10 +2863,7 @@ void SongBrowser::onFilterScoresChange(std::string_view text, int id) {
 }
 
 void SongBrowser::onSortScoresChange(std::string_view /*text*/, int id) {
-    // sanity check
-    if(id < 0 || id >= this->SCORE_SORTING_METHODS.size()) {
-        id = this->DEFAULT_SCORE_SORTING_INDEX;
-    }
+    if(id < 0 || id >= this->SCORE_SORTING_METHODS.size()) id = DEFAULT_SCORE_SORTING_INDEX;
 
     cv::songbrowser_scores_sortingtype.setValue(id);  // NOTE: remember
     this->sortScoresDropdown->setText(std::string{this->SCORE_SORTING_METHODS[id].name});
@@ -2899,19 +2909,9 @@ void SongBrowser::onGroupClicked(CBaseUIButton *button) {
     this->contextMenu->setClickCallback(SA::MakeDelegate<&SongBrowser::onGroupChange>(this));
 }
 
-void SongBrowser::onGroupChange(std::string_view text, int id) {
+void SongBrowser::onGroupChange(std::string_view /*text*/, int id) {
     auto group_id = this->curGroup;
-    if(id >= 0 && id < GroupType::MAX) {
-        group_id = (GroupType)id;
-    } else if(!text.empty()) {
-        for(int gid = -1; const auto &gname : GROUP_NAMES) {
-            ++gid;
-            if(text == gname) {
-                group_id = (GroupType)gid;
-                break;
-            }
-        }
-    }
+    if(id >= 0 && id < GroupType::MAX) group_id = (GroupType)id;
 
     // update group combobox button text
     this->groupButton->setText(std::string{GROUP_NAMES[group_id]});
@@ -2956,19 +2956,9 @@ void SongBrowser::onSortClicked(CBaseUIButton *button) {
     this->contextMenu->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortChange>(this));
 }
 
-void SongBrowser::onSortChange(std::string_view text, int id) {
+void SongBrowser::onSortChange(std::string_view /*text*/, int id) {
     auto sort_id = this->curSortMethod;
-    if(id >= 0 && id < SortType::MAX) {
-        sort_id = (SortType)id;
-    } else if(!text.empty()) {
-        for(int sid = -1; const auto &sortmeth : SORTING_METHODS) {
-            ++sid;
-            if(text == sortmeth.name) {
-                sort_id = (SortType)sid;
-                break;
-            }
-        }
-    }
+    if(id >= 0 && id < SortType::MAX) sort_id = (SortType)id;
 
     SORTING_METHOD newMethod = SORTING_METHODS[sort_id];
 
@@ -3277,7 +3267,7 @@ void SongBrowser::onSongButtonContextMenu(SongButton *songButton, std::string_vi
             this->rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(
                 false, false);  // (last false = skipping rebuildSongButtons() here)
             this->bSongButtonsNeedSorting = true;
-            this->onSortChange(cv::songbrowser_sortingtype.getString(),
+            this->onSortChange("",
                                cv::songbrowser_sortingtype.getInt());  // (because this does the rebuildSongButtons())
         }
         if(previouslySelectedCollectionName.length() > 0) {

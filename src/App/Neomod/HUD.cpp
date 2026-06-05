@@ -1329,7 +1329,7 @@ std::span<const SCORE_ENTRY> HUD::updateAndGetCurrentScores() {
         i32 nb_slots = 0;
         {
             const bool is_online = (BanchoState::is_online() || BanchoState::is_logging_in()) &&
-                                   cv::songbrowser_scores_filteringtype.getString() != "Local";
+                                   cv::songbrowser_scores_filteringtype.getString() != _("Local");
 
             const std::vector<FinishedScore> *scoreVec = nullptr;
             if(is_online) {
