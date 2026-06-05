@@ -2612,7 +2612,7 @@ void SongBrowser::onDatabaseLoadingFinished() {
     // Watch for new maps now
     directoryWatcher->watch_directory(NEOMOD_MAPS_PATH "/", [](const FileChangeEvent &ev) {
         if(ev.type != FileChangeType::CREATED) return;
-        if(env->getFileExtensionFromFilePath(ev.path) != "osz") return;
+        if(SString::to_lower(env->getFileExtensionFromFilePath(ev.path)) != "osz") return;
         logRaw("[DirectoryWatcher] Importing new beatmap {}", ev.path);
 
         // drop-zone file: import async via the installer, navigate to it, and delete the .osz on success.

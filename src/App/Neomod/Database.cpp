@@ -598,7 +598,8 @@ void Database::importLooseOsz() {
 
     std::vector<std::string> oszs;
     for(auto &file : env->getFilesInFolder(NEOMOD_MAPS_PATH "/")) {
-        if(file.ends_with(".osz")) oszs.push_back(std::move(file));
+        if(file.size() > 4 && SString::strcase_equal(std::string_view{file.data() + (file.size() - 4), 4}, ".osz"))
+            oszs.push_back(std::move(file));
     }
     if(oszs.empty()) return;
 
