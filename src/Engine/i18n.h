@@ -8,7 +8,6 @@
 // TODO: add CMake support for translation generation
 #if defined(MCENGINE_FEATURE_I18N)
 
-#include <algorithm>
 #include "fmt/format.h"
 
 #include "translations.h"
@@ -18,8 +17,15 @@ namespace i18n {
 // Gets a compile-time index for any string to translate via O(log N) binary search
 // (so we can access translations in O(1) at runtime, instead of using a hashmap).
 consteval int string_index(std::string_view s) {
-    auto it = std::ranges::lower_bound(TRANSLATABLE_STRINGS, s);
-    if(it == TRANSLATABLE_STRINGS.end() || *it != s) {
+    size_t lo = 0, hi = std::size(TRANSLATABLE_STRINGS);
+    while(lo < hi) {
+        const size_t mid = lo + (hi - lo) / 2;
+        if(TRANSLATABLE_STRINGS[mid] < s)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    if(lo == std::size(TRANSLATABLE_STRINGS) || TRANSLATABLE_STRINGS[lo] != s) {
         // You could imagine an implementation where we throw a compiler error here,
         // but I prefer a soft fallback to the original string.
         //
@@ -27,14 +33,16 @@ consteval int string_index(std::string_view s) {
         // to regenerate strings every time a source file is changed.
         return -1;
     }
-    return static_cast<int>(it - TRANSLATABLE_STRINGS.begin());
+    return static_cast<int>(lo);
 }
 
 void load(std::string_view locale);
 const char* translate(int index, std::string_view original);
 const char* translate_plural(int index, std::string_view singular, std::string_view plural, int n);
 
-inline consteval std::span<const Language> get_available_languages() { return LANGUAGES; }
+inline consteval std::span<const Language> get_available_languages() {
+    return {std::data(LANGUAGES), std::size(LANGUAGES)};
+}
 
 }  // namespace i18n
 
@@ -50,8 +58,6 @@ std::string tformat_impl(fmt::format_string<Args...> /*original*/, const char* t
 #define tformat(String, ...) tformat_impl(String, _(String) __VA_OPT__(, ) __VA_ARGS__)
 
 #else  // !(MCENGINE_FEATURE_I18N)
-
-#include <array>
 
 // BUILD_TOOLS_ONLY explicitly avoids dragging in fmt
 #if defined(BUILD_TOOLS_ONLY)
@@ -71,10 +77,10 @@ struct Language {
 
 inline std::span<const Language> get_available_languages() {
     using namespace std::string_view_literals;
-    static constexpr std::array<Language, 1> AVAILABLE_LANGUAGES{{
+    static constexpr Language AVAILABLE_LANGUAGES[]{
         {.code = "en"sv, .name = "English"sv},
-    }};
-    return AVAILABLE_LANGUAGES;
+    };
+    return {static_cast<const Language*>(AVAILABLE_LANGUAGES), 1};
 }
 
 }  // namespace i18n

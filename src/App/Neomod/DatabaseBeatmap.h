@@ -127,7 +127,8 @@ class DatabaseBeatmap final {
         MetadataBlock{.str = "[TimingPoints]", .id = BlockId::TimingPoints},
         MetadataBlock{.str = "[Colours]", .id = BlockId::Colours},
         MetadataBlock{.str = "[HitObjects]", .id = BlockId::HitObjects}};
-    static inline const auto alwaysFalseStopPred = Sync::stop_token{};
+
+    static const Sync::stop_token alwaysFalseStopPred;
 
     // custom structs
     struct LOAD_DIFFOBJ_RESULT final {
@@ -383,14 +384,11 @@ class DatabaseBeatmap final {
 
     using MapFileReadDoneCallback = std::function<void(std::vector<u8>)>;  // == AsyncIOHandler::ReadCallback
     bool getMapFileAsync(MapFileReadDoneCallback data_callback);
-    [[nodiscard]] inline std::string getFullSoundFilePath() const {
-        return fmt::format("{}{}", this->getFolder(), this->getAudioFileName());
-    }
+
+    [[nodiscard]] std::string getFullSoundFilePath() const;
+    [[nodiscard]] std::string getFullBackgroundImageFilePath() const;
 
     // redundant data
-    [[nodiscard]] inline std::string getFullBackgroundImageFilePath() const {
-        return fmt::format("{}{}", this->getFolder(), this->getBackgroundImageFileName());
-    }
 
     // precomputed data
 

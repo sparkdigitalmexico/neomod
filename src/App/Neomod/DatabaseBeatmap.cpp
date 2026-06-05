@@ -25,6 +25,8 @@
 #include "AsyncIOHandler.h"
 #include "crypto.h"
 
+#include "fmt/format.h"
+
 #include <algorithm>
 #include <sys/stat.h>
 
@@ -69,6 +71,7 @@ enum class HitObjectType : uint8_t {
 using namespace neomod;
 using namespace DBType;
 
+const Sync::stop_token DatabaseBeatmap::alwaysFalseStopPred{};
 
 // defined here to avoid including diffcalc things in DatabaseBeatmap.h
 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::LOAD_DIFFOBJ_RESULT() = default;
@@ -90,6 +93,15 @@ u32 DatabaseBeatmap::LOAD_DIFFOBJ_RESULT::getMaxComboAtIndex(uSz index) const {
 #ifndef BUILD_TOOLS_ONLY
 
 bool DatabaseBeatmap::prefer_cjk_names() { return cv::prefer_cjk.getBool(); }
+
+// out-of-line to keep fmt format string checking out of the header (and out of tools-only builds, which don't link fmt)
+std::string DatabaseBeatmap::getFullSoundFilePath() const {
+    return fmt::format("{:s}{:s}", this->getFolder(), this->getAudioFileName());
+}
+
+std::string DatabaseBeatmap::getFullBackgroundImageFilePath() const {
+    return fmt::format("{:s}{:s}", this->getFolder(), this->getBackgroundImageFileName());
+}
 
 DatabaseBeatmap::LOAD_GAMEPLAY_RESULT::LOAD_GAMEPLAY_RESULT() = default;
 DatabaseBeatmap::LOAD_GAMEPLAY_RESULT::~LOAD_GAMEPLAY_RESULT() = default;

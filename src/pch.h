@@ -57,8 +57,11 @@
 #include <cstdint>
 #include <cstring>
 #include <deque>
+#include <functional>
+#include <future>
 #include <memory>
 #include <optional>
+#include <queue>
 #include <ranges>
 #include <set>
 #include <span>

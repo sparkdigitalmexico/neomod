@@ -34,6 +34,17 @@ void VertexArrayObject::clear() {
     // NOTE: do NOT set m_iNumVertices to 0! (also don't change m_bHasTexcoords)
 }
 
+void VertexArrayObject::addVertex(vec3 v) noexcept {
+    this->vertices.push_back(v);
+    ++this->iNumVertices;
+}
+
+void VertexArrayObject::addTexcoord(vec2 uv) noexcept { this->texcoords.push_back(uv); }
+
+void VertexArrayObject::addNormal(vec3 normal) noexcept { this->normals.push_back(normal); }
+
+void VertexArrayObject::addColor(Color color) noexcept { this->colors.push_back(color); }
+
 void VertexArrayObject::addVertices(std::vector<vec3> vertices) noexcept {
     Mc::append_range(this->vertices, std::move(vertices));
     this->iNumVertices = this->vertices.size();

@@ -11,6 +11,8 @@
 #include "Thread.h"
 #include "types.h"
 
+#include <algorithm>  // std::ranges::lower_bound, std::ranges::is_sorted
+#include <array>
 #include <utility>  // std::unreachable on gcc
 
 namespace i18n {
@@ -69,7 +71,7 @@ const char* translation_fallback = "\0\0\0\0\0\0\0";
 
 std::string current_language{};
 PLURAL_FORM current_plural_form{ONE_FORM};
-std::array<const char*, TRANSLATABLE_STRINGS.size()> translations;
+std::array<const char*, std::size(TRANSLATABLE_STRINGS)> translations;
 
 struct MOHeader {
     u32 magic;
@@ -96,7 +98,7 @@ void load_translation(const char* data) {
 
     // In case .mo file is outdated or a translation is missing.
     // Shouldn't happen in releases, but it would be annoying to crash during development.
-    for(u32 i = 0; i < TRANSLATABLE_STRINGS.size(); i++) {
+    for(u32 i = 0; i < std::size(TRANSLATABLE_STRINGS); i++) {
         translations[i] = translation_fallback;
     }
 
@@ -104,21 +106,21 @@ void load_translation(const char* data) {
     const MOString* trans = reinterpret_cast<const MOString*>(data + mo->trans_offset);
 
     // .mo files store msgids sorted by strcmp (gettext spec), which matches the byte-order
-    // sort of TRANSLATABLE_STRINGS (enforced by static_assert in i18n.h). Binary-search per
+    // sort of TRANSLATABLE_STRINGS (enforced by a static_assert below). Binary-search per
     // .mo entry: O(M log N) instead of the prior O(M*N) nested scan.
     for(u32 i = 0; i < mo->nb_strings; i++) {
         const std::string_view orig{data + origs[i].offset};
 
         auto it = std::ranges::lower_bound(TRANSLATABLE_STRINGS, orig);
-        if(it == TRANSLATABLE_STRINGS.end() || *it != orig) continue;
+        if(it == std::end(TRANSLATABLE_STRINGS) || *it != orig) continue;
 
         const char* translation = data + trans[i].offset;
         if(translation[0] != '\0') {
-            translations[it - TRANSLATABLE_STRINGS.begin()] = translation;
+            translations[it - std::begin(TRANSLATABLE_STRINGS)] = translation;
         }
     }
 
-    for(u32 i = 0; i < TRANSLATABLE_STRINGS.size(); i++) {
+    for(u32 i = 0; i < std::size(TRANSLATABLE_STRINGS); i++) {
         if(translations[i] == translation_fallback) {
             debugLog("Failed to find translation for '{}'!", TRANSLATABLE_STRINGS[i]);
         }

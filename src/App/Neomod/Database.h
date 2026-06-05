@@ -139,7 +139,7 @@ class Database final {
     // only used for raw loading without db
     static std::unique_ptr<BeatmapSet> loadRawBeatmap(std::string_view beatmapPath, bool is_peppy = false);
 
-    inline void addPathToImport(std::string_view dbPath) { this->extern_db_paths_to_import.emplace_back(dbPath); }
+    void addPathToImport(std::string_view dbPath);
 
     // locks peppy_overrides mutex and updates overrides for loaded-from-stable-db maps which will be stored in the local database
     void update_overrides(const BeatmapDifficulty *diff);

@@ -975,6 +975,8 @@ BeatmapSet *Database::getBeatmapSet(i32 set_id) {
     return nullptr;
 }
 
+void Database::addPathToImport(std::string_view dbPath) { this->extern_db_paths_to_import.emplace_back(dbPath); }
+
 std::string Database::getOsuSongsFolder() {
     std::string songs_dir = cv::songs_folder.getString();
     if(songs_dir.empty()) {

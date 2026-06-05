@@ -5,6 +5,7 @@
 #include "AsyncCancellable.h"
 #include "AsyncChannel.h"
 
+#include <compare>
 #include <functional>
 #include <vector>
 #include <string>
@@ -13,18 +14,8 @@
 namespace MapExporter {
 
 struct ExportContext {
-    [[nodiscard]] bool operator==(const ExportContext& o) const {
-        return std::operator==(beatmap_folder_paths, o.beatmap_folder_paths) &&
-               std::operator==(toplevel_archive_bundle, o.toplevel_archive_bundle);
-    }
-
-    [[nodiscard]] auto operator<=>(const ExportContext& o) const {
-        if(beatmap_folder_paths == o.beatmap_folder_paths) {
-            return std::operator<=>(toplevel_archive_bundle, o.toplevel_archive_bundle);
-        } else {
-            return std::operator<=>(beatmap_folder_paths, o.beatmap_folder_paths);
-        }
-    }
+    [[nodiscard]] bool operator==(const ExportContext& o) const;
+    [[nodiscard]] std::strong_ordering operator<=>(const ExportContext& o) const;
 
     // the main path(s) to export
     std::vector<std::string> beatmap_folder_paths;
@@ -44,8 +35,6 @@ struct Notification {
 
 // submits export work on Lane::Background. pushes Notifications into `out` as work completes.
 // caller owns the returned handle and the channel; channel must outlive the handle.
-Async::CancellableHandle<void> submit_export(
-    std::set<ExportContext> contexts,
-    Async::Channel<Notification> &out);
+Async::CancellableHandle<void> submit_export(std::set<ExportContext> contexts, Async::Channel<Notification>& out);
 
 }  // namespace MapExporter

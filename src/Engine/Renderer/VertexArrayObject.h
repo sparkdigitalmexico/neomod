@@ -20,28 +20,24 @@ class VertexArrayObject : public Resource {
 
     void clear();
 
-    inline void addVertex(vec3 v) noexcept {
-        this->vertices.push_back(v);
-        ++this->iNumVertices;
-    }
-
+    void addVertex(vec3 v) noexcept;
     inline void addVertex(vec2 v) noexcept { return addVertex(vec3{v.x, v.y, 0.f}); }
     inline void addVertex(float x, float y, float z = 0.f) noexcept { return addVertex(vec3{x, y, z}); }
     void addVertices(std::vector<vec3> vertices) noexcept;
     void addVertices(std::span<const vec3> vertices) noexcept;
 
-    inline void addTexcoord(vec2 uv) noexcept { this->texcoords.push_back(uv); }
+    void addTexcoord(vec2 uv) noexcept;
     inline void addTexcoord(float u, float v) noexcept { return addTexcoord(vec2{u, v}); }
 
     void addTexcoords(std::vector<vec2> texcoords) noexcept;
     void addTexcoords(std::span<const vec2> texcoords) noexcept;
 
-    inline void addNormal(vec3 normal) noexcept { this->normals.push_back(normal); }
+    void addNormal(vec3 normal) noexcept;
     inline void addNormal(float x, float y, float z) noexcept { return addNormal(vec3{x, y, z}); }
     void addNormals(std::vector<vec3> normals) noexcept;
     void addNormals(std::span<const vec3> normals) noexcept;
 
-    inline void addColor(Color color) noexcept { this->colors.push_back(color); }
+    void addColor(Color color) noexcept;
     void addColors(std::vector<Color> color) noexcept;
     void addColors(std::span<const Color> color) noexcept;
 
@@ -79,10 +75,12 @@ class VertexArrayObject : public Resource {
     [[nodiscard]] inline DrawPrimitive getPrimitive() const { return this->primitive; }
     [[nodiscard]] inline DrawUsageType getUsage() const { return this->usage; }
 
-    [[nodiscard]] std::span<const vec3> getVertices() const { return this->vertices; }
-    [[nodiscard]] std::span<const vec2> getTexcoords() const { return this->texcoords; }
-    [[nodiscard]] std::span<const vec3> getNormals() const { return this->normals; }
-    [[nodiscard]] std::span<const Color> getColors() const { return this->colors; }
+    [[nodiscard]] std::span<const vec3> getVertices() const { return {this->vertices.data(), this->vertices.size()}; }
+    [[nodiscard]] std::span<const vec2> getTexcoords() const {
+        return {this->texcoords.data(), this->texcoords.size()};
+    }
+    [[nodiscard]] std::span<const vec3> getNormals() const { return {this->normals.data(), this->normals.size()}; }
+    [[nodiscard]] std::span<const Color> getColors() const { return {this->colors.data(), this->colors.size()}; }
 
     [[nodiscard]] inline unsigned int getNumVertices() const { return this->iNumVertices; }
     [[nodiscard]] inline bool hasTexcoords() const { return this->bHasTexcoords || this->texcoords.size() > 0; }

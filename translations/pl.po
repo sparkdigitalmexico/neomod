@@ -35,6 +35,31 @@ msgstr "Twórcy"
 msgid "Licenses"
 msgstr "Licencje"
 
+#: src/App/Neomod/BanchoLeaderboard.cpp
+#: src/App/Neomod/SongBrowser/SongBrowser.cpp
+msgid "Global"
+msgstr "Globalne"
+
+#: src/App/Neomod/BanchoLeaderboard.cpp
+#: src/App/Neomod/SongBrowser/SongBrowser.cpp
+msgid "Selected mods"
+msgstr "Wybrane mody"
+
+#: src/App/Neomod/BanchoLeaderboard.cpp
+#: src/App/Neomod/SongBrowser/SongBrowser.cpp
+msgid "Friends"
+msgstr "Znajomi"
+
+#: src/App/Neomod/BanchoLeaderboard.cpp
+#: src/App/Neomod/SongBrowser/SongBrowser.cpp
+msgid "Country"
+msgstr "Kraj"
+
+#: src/App/Neomod/BanchoLeaderboard.cpp
+#: src/App/Neomod/SongBrowser/SongBrowser.cpp
+msgid "Team"
+msgstr "Drużyna"
+
 #: src/App/Neomod/BeatmapInstallOverlay.cpp
 #, fuzzy, c++-format
 msgid "Beatmap #{:d}"
@@ -167,6 +192,10 @@ msgstr "{} [wyjście]"
 #, c++-format
 msgid "{} [skip]"
 msgstr "{} [pomiń]"
+
+#: src/App/Neomod/HUD.cpp src/App/Neomod/SongBrowser/SongBrowser.cpp
+msgid "Local"
+msgstr "Lokalne"
 
 #: src/App/Neomod/HUD.cpp
 #, c++-format
@@ -3148,10 +3177,6 @@ msgid "By pp"
 msgstr "Według pp"
 
 #: src/App/Neomod/SongBrowser/SongBrowser.cpp
-msgid "Local"
-msgstr "Lokalne"
-
-#: src/App/Neomod/SongBrowser/SongBrowser.cpp
 msgid "Web"
 msgstr "Sieć"
 
@@ -3277,26 +3302,6 @@ msgstr "10 minut lub mniej"
 #: src/App/Neomod/SongBrowser/SongBrowser.cpp
 msgid "Over 10 minutes"
 msgstr "Powyżej 10 minut"
-
-#: src/App/Neomod/SongBrowser/SongBrowser.cpp
-msgid "Country"
-msgstr "Kraj"
-
-#: src/App/Neomod/SongBrowser/SongBrowser.cpp
-msgid "Friends"
-msgstr "Znajomi"
-
-#: src/App/Neomod/SongBrowser/SongBrowser.cpp
-msgid "Global"
-msgstr "Globalne"
-
-#: src/App/Neomod/SongBrowser/SongBrowser.cpp
-msgid "Selected mods"
-msgstr "Wybrane mody"
-
-#: src/App/Neomod/SongBrowser/SongBrowser.cpp
-msgid "Team"
-msgstr "Drużyna"
 
 #: src/App/Neomod/SongBrowser/SongBrowser.cpp
 msgid "Disabled FPoSu mode."

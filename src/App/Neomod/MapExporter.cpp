@@ -15,6 +15,19 @@
 
 namespace MapExporter {
 
+bool ExportContext::operator==(const ExportContext &o) const {
+    return std::operator==(beatmap_folder_paths, o.beatmap_folder_paths) &&
+           std::operator==(toplevel_archive_bundle, o.toplevel_archive_bundle);
+}
+
+std::strong_ordering ExportContext::operator<=>(const ExportContext &o) const {
+    if(beatmap_folder_paths == o.beatmap_folder_paths) {
+        return std::operator<=>(toplevel_archive_bundle, o.toplevel_archive_bundle);
+    } else {
+        return std::operator<=>(beatmap_folder_paths, o.beatmap_folder_paths);
+    }
+}
+
 Async::CancellableHandle<void> submit_export(std::set<ExportContext> contexts, Async::Channel<Notification> &out) {
     return Async::submit_cancellable(
         [contexts = std::move(contexts), &out](const Sync::stop_token &tok) mutable -> void {
