@@ -151,7 +151,7 @@ void attempt_logging_in() {
             }
         }
 
-        parse_packets({reinterpret_cast<u8 *>(response.body.data()), response.body.length()});
+        parse_packets(response.body);
     });
 }
 
@@ -176,7 +176,7 @@ void send_bancho_packet_http(Packet outgoing) {
             return;
         }
 
-        parse_packets({reinterpret_cast<u8 *>(response.body.data()), response.body.length()});
+        parse_packets(response.body);
     });
 }
 
@@ -381,7 +381,7 @@ void BanchoState::poll_login() {
                 BANCHO::Net::login_poll_timeout = engine->getTime() + 0.5;
             } else {
                 BANCHO::Net::login_poll_timeout = -1.;  // sanity reset
-                cv::mp_oauth_token.setValue(response.body);
+                cv::mp_oauth_token.setValue(response.text());
                 BanchoState::reconnect();
             }
         } else {

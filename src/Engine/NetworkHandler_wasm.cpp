@@ -60,7 +60,7 @@ EM_JS(void, keepalive_post, (const char* url, const char* req_headers,
 // - allocates response body/headers/error via _malloc; caller must free() them.
 EM_JS(int, sync_xhr, (const char* method, const char* url, const char* req_headers,
                        const char* body, int body_len,
-                       char** out_body, char** out_headers, char** out_error), {
+                       char** out_body, int* out_body_len, char** out_headers, char** out_error), {
     try {
         var xhr = new XMLHttpRequest();
         xhr.open(UTF8ToString(method), UTF8ToString(url), false);
@@ -85,6 +85,7 @@ EM_JS(int, sync_xhr, (const char* method, const char* url, const char* req_heade
             var p = _malloc(n);
             stringToUTF8(text, p, n);
             HEAPU32[out_body >> 2] = p;
+            HEAP32[out_body_len >> 2] = n - 1;
         }
 
         var hdrs = xhr.getAllResponseHeaders() || '';
@@ -262,7 +263,8 @@ void NetworkImpl::fetchSuccess(emscripten_fetch_t* fetch) {
         if(!request->options.cancel_token.stop_requested() && request->callback) {
             Response res;
             res.response_code = fetch->status;
-            res.body = std::string(fetch->data, fetch->numBytes);
+            const auto* data = reinterpret_cast<const u8*>(fetch->data);
+            res.body.assign(data, data + fetch->numBytes);
             res.headers = extractHeaders(fetch);
             res.success = true;
 
@@ -286,7 +288,8 @@ void NetworkImpl::fetchError(emscripten_fetch_t* fetch) {
             Response res;
             res.response_code = fetch->status;
             if(fetch->data && fetch->numBytes > 0) {
-                res.body = std::string(fetch->data, fetch->numBytes);
+                const auto* data = reinterpret_cast<const u8*>(fetch->data);
+                res.body.assign(data, data + fetch->numBytes);
             }
             res.headers = extractHeaders(fetch);
             res.error_msg = fetch->statusText;
@@ -440,20 +443,23 @@ Response NetworkImpl::httpRequestSynchronous(std::string_view url, RequestOption
     }
 
     char* out_body = nullptr;
+    int out_body_len = 0;
     char* out_headers = nullptr;
     char* out_error = nullptr;
 
-    int status = sync_xhr(options.post_data.empty() ? "GET" : "POST", url_with_scheme.c_str(),
-                          headers_str.empty() ? nullptr : headers_str.c_str(),
-                          options.post_data.empty() ? nullptr : options.post_data.c_str(),
-                          static_cast<int>(options.post_data.length()), &out_body, &out_headers, &out_error);
+    int status =
+        sync_xhr(options.post_data.empty() ? "GET" : "POST", url_with_scheme.c_str(),
+                 headers_str.empty() ? nullptr : headers_str.c_str(),
+                 options.post_data.empty() ? nullptr : options.post_data.c_str(),
+                 static_cast<int>(options.post_data.length()), &out_body, &out_body_len, &out_headers, &out_error);
 
     Response res;
     res.response_code = status;
     res.success = (status >= 200 && status < 400);
 
     if(out_body) {
-        res.body = out_body;
+        const auto* body_bytes = reinterpret_cast<const u8*>(out_body);
+        res.body.assign(body_bytes, body_bytes + out_body_len);
         free(out_body);
     }
     if(out_headers) {

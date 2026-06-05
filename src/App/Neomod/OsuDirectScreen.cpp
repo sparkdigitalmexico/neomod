@@ -603,7 +603,7 @@ void OsuDirectScreen::search(std::string_view query) {
         this->loading = false;
 
         if(response.success) {
-            const auto set_lines = SString::split_newlines(response.body);
+            const auto set_lines = SString::split_newlines(response.text());
 
             i32 nb_results{0};
             const bool success = Parsing::strto_s(set_lines[0], nb_results);

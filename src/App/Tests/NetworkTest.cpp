@@ -128,7 +128,7 @@ void NTImpl::runSyncTest() {
     const Response resp = networkHandler->httpRequestSynchronous(m_urlOk, std::move(options));
     TEST_ASSERT(resp.success, "synchronous GET to /ok succeeds");
     TEST_ASSERT_EQ(resp.response_code, 200L, "synchronous GET returns HTTP 200");
-    TEST_ASSERT(resp.body.contains(BODY_OK), "synchronous GET body has expected content");
+    TEST_ASSERT(resp.text().contains(BODY_OK), "synchronous GET body has expected content");
 }
 
 void NTImpl::update() {
@@ -150,7 +150,7 @@ void NTImpl::update() {
             if(m_get.fired) {
                 TEST_ASSERT(m_get.resp.success, "async GET to /ok succeeds");
                 TEST_ASSERT_EQ(m_get.resp.response_code, 200L, "async GET returns HTTP 200");
-                TEST_ASSERT(m_get.resp.body.contains(BODY_OK), "async GET body has expected content");
+                TEST_ASSERT(m_get.resp.text().contains(BODY_OK), "async GET body has expected content");
             } else {
                 TEST_ASSERT(false, "async GET callback never arrived");
             }

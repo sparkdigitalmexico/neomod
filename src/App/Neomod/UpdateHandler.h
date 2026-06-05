@@ -2,9 +2,12 @@
 // Copyright (c) 2016, PG, All rights reserved.
 
 #include "noinclude.h"
+#include "types.h"
 #include "SyncStoptoken.h"
 
 #include <string>
+#include <string_view>
+#include <span>
 #include <atomic>
 
 class UpdateHandler {
@@ -34,8 +37,8 @@ class UpdateHandler {
 
    private:
     // async operation chain
-    void onVersionCheckComplete(const std::string& response, bool success, bool force_update);
-    void onDownloadComplete(const std::string& data, bool success, std::string hash);
+    void onVersionCheckComplete(std::string_view response, bool success, bool force_update);
+    void onDownloadComplete(std::span<const u8> data, bool success, std::string hash);
 
     // status
     std::atomic<STATUS> status = STATUS::STATUS_IDLE;

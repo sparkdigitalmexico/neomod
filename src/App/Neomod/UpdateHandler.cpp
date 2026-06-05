@@ -75,11 +75,11 @@ void UpdateHandler::checkForUpdates(bool force_update) {
     this->status = STATUS_CHECKING_FOR_UPDATE;
     networkHandler->httpRequestAsync(versionUrl, std::move(options),
                                      [this, force_update](const Mc::Net::Response &response) {
-                                         this->onVersionCheckComplete(response.body, response.success, force_update);
+                                         this->onVersionCheckComplete(response.text(), response.success, force_update);
                                      });
 }
 
-void UpdateHandler::onVersionCheckComplete(const std::string &response, bool success, bool force_update) {
+void UpdateHandler::onVersionCheckComplete(std::string_view response, bool success, bool force_update) {
     if(!success || response.empty()) {
         // Avoid setting STATUS_ERROR, since we don't want a big red button to show up for offline players
         // We DO want it to show up if the update check was requested manually.
@@ -151,7 +151,7 @@ void UpdateHandler::onVersionCheckComplete(const std::string &response, bool suc
                                      });
 }
 
-void UpdateHandler::onDownloadComplete(const std::string &data, bool success, std::string hash) {
+void UpdateHandler::onDownloadComplete(std::span<const u8> data, bool success, std::string hash) {
     if(!success || data.size() < 2) {
         debugLog("UpdateHandler ERROR: downloaded file is too small or failed ({:d} bytes)!", data.size());
         this->status = STATUS_ERROR;
@@ -176,7 +176,7 @@ void UpdateHandler::onDownloadComplete(const std::string &data, bool success, st
         return;
     }
 
-    file.write(data.data(), static_cast<std::streamsize>(data.size()));
+    file.write(reinterpret_cast<const char *>(data.data()), static_cast<std::streamsize>(data.size()));
     file.close();
 
     debugLog("UpdateHandler: Update finished successfully.");

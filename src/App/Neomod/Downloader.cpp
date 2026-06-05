@@ -143,7 +143,7 @@ class DownloadManager {
             Sync::scoped_lock lock(request->data_mutex);
             if(response.success) {
                 request->response_code.store(static_cast<int>(response.response_code), std::memory_order_release);
-                request->data = std::vector<u8>(response.body.begin(), response.body.end());
+                request->data = std::move(response.body);
 
                 if(response.response_code == 429) {
                     // rate limited, reset and retry later
@@ -332,7 +332,7 @@ i32 resolve_beatmapset_id_for(i32 beatmap_id, i32 set_id_hint) {
     };
     networkHandler->httpRequestAsync(url, std::move(options), [beatmap_id](const Mc::Net::Response& response) {
         if(response.success) {
-            auto metadata = parse_beatmapset_metadata(response.body);
+            auto metadata = parse_beatmapset_metadata(response.text());
             beatmap_to_beatmapset[beatmap_id] = metadata.set_id;
         } else {
             beatmap_to_beatmapset[beatmap_id] = 0;

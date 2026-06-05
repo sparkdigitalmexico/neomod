@@ -123,10 +123,15 @@ struct RequestOptions {
 struct Response {
    public:
     long response_code{0};
-    std::string body;
+    std::vector<u8> body;
     std::string error_msg;
     Hash::unstable_stringmap<std::string> headers;
     bool success{false};
+
+    // textual view of the body, for callers consuming text responses
+    [[nodiscard]] std::string_view text() const noexcept {
+        return {reinterpret_cast<const char*>(this->body.data()), this->body.size()};
+    }
 };
 
 using AsyncCallback = std::function<void(Response response)>;

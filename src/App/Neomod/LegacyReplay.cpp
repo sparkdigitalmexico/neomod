@@ -417,7 +417,7 @@ void load_and_watch(FinishedScore score) {
         }
 
         // Unzip replay frames from server response
-        score.replay = get_frames((const u8*)response.body.data(), response.body.size());
+        score.replay = get_frames(response.body.data(), response.body.size());
         if(!score.replay.empty()) {
             // Save it to disk (XXX: blocking main thread)
             save_osr(score);

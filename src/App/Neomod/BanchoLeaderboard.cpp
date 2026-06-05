@@ -203,7 +203,8 @@ void fetch_online_scores(const DatabaseBeatmap *beatmap) {
 
     networkHandler->httpRequestAsync(url, std::move(options), [map_md5](const Mc::Net::Response &response) {
         if(response.success) {
-            process_leaderboard_response(map_md5, response.body);
+            // TODO: avoid strtok_x (needs copy)
+            process_leaderboard_response(map_md5, std::string{response.text()});
         } else {
             debugLog("Leaderboard request failed: {}", response.error_msg);
             db->getOnlineScores()[map_md5] = std::vector<FinishedScore>();

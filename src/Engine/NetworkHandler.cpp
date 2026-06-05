@@ -626,7 +626,7 @@ size_t NetworkImpl::writeCallback(void* contents, size_t size, size_t nmemb, voi
             ws->status.store(WSStatus::DISCONNECTED, std::memory_order_relaxed);
         }
     } else if(!ws) {  // non-websocket path
-        request->response.body.append(static_cast<char*>(contents), real_size);
+        Mc::append_range(request->response.body, std::span{static_cast<const u8*>(contents), real_size});
     }
 
     return real_size;
