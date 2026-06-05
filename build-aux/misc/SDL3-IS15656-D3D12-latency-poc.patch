@@ -1,0 +1,60 @@
+diff --git a/src/gpu/d3d12/SDL_gpu_d3d12.c b/src/gpu/d3d12/SDL_gpu_d3d12.c
+--- a/src/gpu/d3d12/SDL_gpu_d3d12.c
++++ b/src/gpu/d3d12/SDL_gpu_d3d12.c
+@@ -844,6 +844,7 @@ typedef struct D3D12WindowData
+     D3D12XBOX_FRAME_PIPELINE_TOKEN frameToken;
+ #else
+     IDXGISwapChain3 *swapchain;
++    HANDLE frameLatencyWaitableObject;
+ #endif
+     SDL_GPUPresentMode present_mode;
+     SDL_GPUSwapchainComposition swapchainComposition;
+@@ -6916,7 +6917,7 @@ static bool D3D12_INTERNAL_ResizeSwapchain(
+         0, // use client window width
+         0, // use client window height
+         DXGI_FORMAT_UNKNOWN, // Keep the old format
+-        renderer->supportsTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0);
++        (renderer->supportsTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0) | DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT);
+     CHECK_D3D12_ERROR_AND_RETURN("Could not resize swapchain buffers", false);
+ 
+     // Create texture object for the swapchain
+@@ -6960,6 +6961,10 @@ static void D3D12_INTERNAL_DestroySwapchain(
+ 
+     IDXGISwapChain_Release(windowData->swapchain);
+     windowData->swapchain = NULL;
++    if (windowData->frameLatencyWaitableObject != NULL) {
++        CloseHandle(windowData->frameLatencyWaitableObject);
++        windowData->frameLatencyWaitableObject = NULL;
++    }
+ }
+ 
+ static bool D3D12_INTERNAL_CreateSwapchain(
+@@ -7015,6 +7020,7 @@ static bool D3D12_INTERNAL_CreateSwapchain(
+     } else {
+         swapchainDesc.Flags = 0;
+     }
++    swapchainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+ 
+     if (!IsWindow(dxgiHandle)) {
+         return false;
+@@ -7038,6 +7044,9 @@ static bool D3D12_INTERNAL_CreateSwapchain(
+     IDXGISwapChain1_Release(swapchain);
+     CHECK_D3D12_ERROR_AND_RETURN("Could not create IDXGISwapChain3", false);
+ 
++    IDXGISwapChain2_SetMaximumFrameLatency((IDXGISwapChain2 *)swapchain3, 1);
++    windowData->frameLatencyWaitableObject = IDXGISwapChain2_GetFrameLatencyWaitableObject((IDXGISwapChain2 *)swapchain3);
++
+     if (swapchainComposition != SDL_GPU_SWAPCHAINCOMPOSITION_SDR) {
+         // Support already verified if we hit this block
+         IDXGISwapChain3_SetColorSpace1(
+@@ -7556,6 +7565,10 @@ static bool D3D12_WaitForSwapchain(
+         SET_STRING_ERROR_AND_RETURN("Cannot wait for a swapchain from an unclaimed window!", false);
+     }
+ 
++    if (windowData->frameLatencyWaitableObject != NULL) {
++        WaitForSingleObjectEx(windowData->frameLatencyWaitableObject, 1000, true);
++    }
++
+     if (windowData->inFlightFences[windowData->frameCounter] != NULL) {
+         if (!D3D12_WaitForFences(
+             driverData,

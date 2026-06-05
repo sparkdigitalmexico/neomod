@@ -1,3 +1,31 @@
+From e31693073a151d9b725cebdf21570bd5f2e7cdb5 Mon Sep 17 00:00:00 2001
+From: William Horvath <william@horvath.blog>
+Date: Fri, 5 Jun 2026 21:18:37 +0900
+Subject: [PATCH] Revert "GPU: Set missing fields on Vulkan swapchain texture
+ (#15606)"
+
+This reverts commit 86296ac8f01597076979630667472a846b04ce46.
+---
+ src/gpu/vulkan/SDL_gpu_vulkan.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/src/gpu/vulkan/SDL_gpu_vulkan.c b/src/gpu/vulkan/SDL_gpu_vulkan.c
+index 3b9efe5c4..b7983859d 100644
+--- a/src/gpu/vulkan/SDL_gpu_vulkan.c
++++ b/src/gpu/vulkan/SDL_gpu_vulkan.c
+@@ -4900,9 +4900,6 @@ static Uint32 VULKAN_INTERNAL_CreateSwapchain(
+         windowData->textureContainers[i].activeTexture->aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+         windowData->textureContainers[i].activeTexture->depth = 1;
+         windowData->textureContainers[i].activeTexture->usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
+-        windowData->textureContainers[i].activeTexture->levelCount = 1;
+-        windowData->textureContainers[i].activeTexture->layerCount = 1;
+-        windowData->textureContainers[i].activeTexture->type = SDL_GPU_TEXTURETYPE_2D;
+         windowData->textureContainers[i].activeTexture->container = &windowData->textureContainers[i];
+         SDL_SetAtomicInt(&windowData->textureContainers[i].activeTexture->referenceCount, 0);
+ 
+-- 
+2.50.1
+
 From 81b81f8828c1e14c4dead6ed6e2b7d14d7e60838 Mon Sep 17 00:00:00 2001
 From: William Horvath <william@horvath.blog>
 Date: Sat, 16 May 2026 01:48:50 +0900
