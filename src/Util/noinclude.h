@@ -60,6 +60,7 @@ inline bool isInt(float f) { return (f == static_cast<float>(static_cast<int>(f)
 #define likely(x) __builtin_expect(bool(x), 1)
 #define unlikely(x) __builtin_expect(bool(x), 0)
 #define really_forceinline __attribute__((always_inline)) inline
+#define neverinline __attribute__((noinline))
 
 // force all functions in the function body to be inlined into it
 // different from "really_forceinline", because the function itself won't necessarily be inlined at all call sites
@@ -70,8 +71,10 @@ inline bool isInt(float f) { return (f == static_cast<float>(static_cast<int>(f)
 #define unlikely(x) (x)
 #ifdef _MSC_VER
 #define really_forceinline __forceinline
+#define neverinline __declspec(noinline)
 #else
 #define really_forceinline inline
+#define neverinline
 #endif
 #define REALLY_INLINE_BODY
 #endif

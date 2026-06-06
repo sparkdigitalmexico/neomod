@@ -121,8 +121,12 @@ class ConVar {
     static std::string flagsToString(uint8_t flags);
 
    public:
+    // ctors are neverinline due to causing giant compile-time blowups on TUs with many convars defined
+    // they only ever run once at startup anyway, so there's no measurable runtime cost (besides maybe some extra milliseconds to boot)
+
     // command-only constructor
-    explicit ConVar(const char *name, uint8_t flags = cv::CLIENT) : sName(name), sHelpString(""), sDefaultValue(name) {
+    neverinline explicit ConVar(const char *name, uint8_t flags = cv::CLIENT)
+        : sName(name), sHelpString(""), sDefaultValue(name) {
         this->type = CONVAR_TYPE::STRING;
         this->iFlags = cv::NOSAVE | flags;
         this->addConVar();
@@ -130,7 +134,7 @@ class ConVar {
 
     // callback-only constructors (no value)
     template <typename Callback>
-    explicit ConVar(const char *name, uint8_t flags, Callback &&callback)
+    neverinline explicit ConVar(const char *name, uint8_t flags, Callback &&callback)
         requires cv::detail::CallbackCmd<Callback>
         : sName(name), sHelpString("") {
         this->setupCmdCallback(flags, std::forward<Callback>(callback));
@@ -138,7 +142,7 @@ class ConVar {
     }
 
     template <typename Callback>
-    explicit ConVar(const char *name, uint8_t flags, const char *helpString, Callback &&callback)
+    neverinline explicit ConVar(const char *name, uint8_t flags, const char *helpString, Callback &&callback)
         requires cv::detail::CallbackCmd<Callback>
         : sName(name), sHelpString(helpString) {
         this->setupCmdCallback(flags, std::forward<Callback>(callback));
@@ -147,7 +151,7 @@ class ConVar {
 
     // value constructors handle all types uniformly
     template <typename T>
-    explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, const char *helpString = "")
+    neverinline explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, const char *helpString = "")
         requires(!std::is_same_v<std::decay_t<T>, const char *>)
         : sName(name), sHelpString(helpString) {
         this->setupValue(std::forward<T>(defaultValue), flags);
@@ -155,7 +159,8 @@ class ConVar {
     }
 
     template <typename T, typename Callback>
-    explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, const char *helpString, Callback &&callback)
+    neverinline explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, const char *helpString,
+                                Callback &&callback)
         requires(!std::is_same_v<std::decay_t<T>, const char *>) && cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString(helpString) {
         this->setupValue(std::forward<T>(defaultValue), flags);
@@ -164,7 +169,7 @@ class ConVar {
     }
 
     template <typename T, typename Callback>
-    explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, Callback &&callback)
+    neverinline explicit ConVar(const char *name, T &&defaultValue, uint8_t flags, Callback &&callback)
         requires(!std::is_same_v<std::decay_t<T>, const char *>) && cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString("") {
         this->setupValue(std::forward<T>(defaultValue), flags);
@@ -173,15 +178,16 @@ class ConVar {
     }
 
     // const char* specializations for string convars
-    explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, const char *helpString = "")
+    neverinline explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags,
+                                const char *helpString = "")
         : sName(name), sHelpString(helpString) {
         this->initValueImpl(defaultValue, flags);
         this->addConVar();
     }
 
     template <typename Callback>
-    explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, const char *helpString,
-                    Callback &&callback)
+    neverinline explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, const char *helpString,
+                                Callback &&callback)
         requires cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString(helpString) {
         this->initValueImpl(defaultValue, flags);
@@ -190,7 +196,7 @@ class ConVar {
     }
 
     template <typename Callback>
-    explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, Callback &&callback)
+    neverinline explicit ConVar(const char *name, std::string_view defaultValue, uint8_t flags, Callback &&callback)
         requires cv::detail::CallbackAny<Callback>
         : sName(name), sHelpString("") {
         this->initValueImpl(defaultValue, flags);
