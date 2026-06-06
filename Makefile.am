@@ -1,5 +1,9 @@
 AM_MAKEFLAGS := $(MAKEFLAGS)
 
+# third-party m4 macros (e.g. AX_CHECK_COMPILE_FLAG) are vendored in m4/ so that
+# building doesn't require autoconf-archive to be installed on the system
+ACLOCAL_AMFLAGS = -I m4
+
 PATH := $(DEPS_PREFIX):$(shell echo $$PATH)
 export PATH
 

@@ -2,6 +2,7 @@ AC_PREREQ([2.69])
 AC_INIT([neomod], [[43.10]], [], [], [https://github.com/neomodnet/neomod])
 AC_CONFIG_SRCDIR([src/Engine/Engine.cpp])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_HEADERS([src/config.h])
 AC_PREFIX_DEFAULT([dist]) # default `make install`s to ./dist/bin/ (modify with --prefix=)
 
@@ -1153,7 +1154,12 @@ AS_IF([test "x$enable_native" != "xno"], [
 ])
 
 AC_PATH_TOOL([LD], [ld], [AC_MSG_ERROR([ld not found])])
-AS_IF([test "x$enable_clang" = "xyes"], [
+AS_IF([test -n "$WASM_CC"], [
+    AC_PATH_PROG([AR], [emar])
+    AS_IF([test -z "$AR"], [AC_MSG_ERROR([emar not found])])
+    AC_PATH_PROG([RANLIB], [emranlib])
+    AS_IF([test -z "$RANLIB"], [AC_MSG_ERROR([emranlib not found])])
+], [test "x$enable_clang" = "xyes"], [
     AC_PATH_PROG([AR], [llvm-ar], [], [/opt/homebrew/opt/llvm/bin:$PATH])
     AS_IF([test -z "$AR"], [AC_MSG_ERROR([llvm-ar not found])])
     AC_PATH_PROG([RANLIB], [llvm-ranlib], [], [/opt/homebrew/opt/llvm/bin:$PATH])
