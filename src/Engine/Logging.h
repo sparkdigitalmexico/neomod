@@ -47,19 +47,8 @@ using fmt::literals::operator""_a;
     } while(false)
 
 // print the call stack immediately
-// TODO: some portable way to do this
-#if defined(MCENGINE_HAVE_STDSTACKTRACE) && defined(__has_include) && (__has_include(<stacktrace>))
-#include "fmt/ostream.h"
-
-#include <stacktrace>
-#define MC_DO_BACKTRACE logRaw("{}", fmt::streamed(std::stacktrace::current()));
-// do {
-//     for(const auto &line : SString::split_newlines(fmt::format("{}", fmt::streamed(std::stacktrace::current()))))
-//         logRaw(line);
-// } while(false);
-#else
-#define MC_DO_BACKTRACE (void)0;
-#endif
+#include "neotrace/neotrace.h"
+#define MC_DO_BACKTRACE logRaw(neotrace::to_string(neotrace::trace::current()));
 
 // main Logger API
 namespace Logger {

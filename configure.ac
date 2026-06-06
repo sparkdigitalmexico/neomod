@@ -1488,7 +1488,7 @@ AC_SUBST([AUDIO_CFLAGS])
 AC_SUBST([AUDIO_LIBS])
 
 # the source files are also added through autogen.sh to Makefile.sources
-BUNDLED_INCLUDES="-I\$(srcdir)/libraries -I\$(srcdir)/libraries/delegatesv2 -I\$(srcdir)/libraries/unordered_dense -I\$(srcdir)/libraries/glad"
+BUNDLED_INCLUDES="-I\$(srcdir)/libraries -I\$(srcdir)/libraries/delegatesv2 -I\$(srcdir)/libraries/unordered_dense -I\$(srcdir)/libraries/glad -I\$(srcdir)/libraries/neotrace/include"
 AC_SUBST([BUNDLED_INCLUDES])
 
 AC_MSG_CHECKING([for shaders in $srcdir/$ASSETS_DIR/shaders])
@@ -1714,16 +1714,6 @@ AS_IF([test -n "$ubercompat"], [
     AC_SEARCH_LIBS(_set_abort_behavior, [], [], [msvcrt_build=yes])
     AS_IF([test "x$msvcrt_build" = "xyes"], [
         AC_DEFINE([MCENGINE_PLATFORM_WINDOWS_MSVCRT], [1], [Defined if building against the MSVCRT library instead of UCRT.])
-    ])
-])
-
-# not with libc++ because libstdc++ would be incompatible
-AS_IF([test "$host_os" = "linux-gnu" && test -z "$_is_linux_libcpp"], [
-    # somehow this is advertised as being available on mingw-gcc, and then when you go to use it it just prints a bunch of empty lines
-    AC_SEARCH_LIBS([__glibcxx_backtrace_simple], [stdc++exp], [_have_stdstacktrace=yes], [_have_stdstacktrace=no])
-    AS_IF([test "$_have_stdstacktrace" = "yes"], [
-        # AC_SEARCH_LIBS also automatically adds -lstdc++exp to linker flags if found
-        AC_DEFINE([MCENGINE_HAVE_STDSTACKTRACE], [1], [Defined if <stacktrace> is available to print execution backtraces.])
     ])
 ])
 
