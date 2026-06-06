@@ -73,7 +73,7 @@ namespace {
 using NTImpl = NetworkTest::NetworkTestImpl;
 
 // browsers enforce CORS, so the wasm/emrun build can't fetch arbitrary third-party hosts. point the HTTP
-// cases at the local CORS-enabled helper (src/App/Tests/network_test_server.py) so the same suite runs
+// cases at the local CORS-enabled helper (tools/network-test-server/network_test_server.py) so the same suite runs
 // against the same routes from both the native (curl) and browser (fetch) builds. override the base with
 // -testarg:base_url <url> if the server runs on a different port.
 constexpr std::string_view DEFAULT_BASE_URL = "http://127.0.0.1:8423";

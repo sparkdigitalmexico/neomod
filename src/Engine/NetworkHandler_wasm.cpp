@@ -255,6 +255,8 @@ Hash::unstable_stringmap<std::string> NetworkImpl::extractHeaders(emscripten_fet
 
 void NetworkImpl::fetchSuccess(emscripten_fetch_t* fetch) {
     auto* request = static_cast<Request*>(fetch->userData);
+    if(!request) return;        // already handled (see fetchError)
+    fetch->userData = nullptr;  // take ownership: any nested callback for this fetch must no-op
 
     if(!shutting_down) {
         std::erase(request->impl->active_requests, request);
@@ -279,6 +281,13 @@ void NetworkImpl::fetchSuccess(emscripten_fetch_t* fetch) {
 
 void NetworkImpl::fetchError(emscripten_fetch_t* fetch) {
     auto* request = static_cast<Request*>(fetch->userData);
+    // emscripten_fetch_close() on a fetch that isn't DONE re-invokes onerror synchronously
+    // (status "aborted with emscripten_fetch_close()"). that happens for cancellations (update()
+    // closes the transfer) and for the close below after a timeout (ontimeout doesn't mark the
+    // fetch DONE). null userData means whoever called close already owns the Request: don't touch
+    // it, and don't close again (the in-progress close frees the fetch when this returns).
+    if(!request) return;
+    fetch->userData = nullptr;  // take ownership: any nested callback for this fetch must no-op
 
     if(!shutting_down) {
         std::erase(request->impl->active_requests, request);
@@ -545,12 +554,16 @@ std::shared_ptr<WSInstance> NetworkImpl::initWebsocket(std::string_view url, con
 // callbacks are deferred to run here, during the engine update tick
 void NetworkImpl::update() {
     // abort in-flight fetches whose caller asked to cancel: close the transfer and drop the request
-    // without running its callback. emscripten does not fire our callbacks for a closed fetch.
+    // without running its callback. closing an in-flight fetch fires onerror synchronously, so
+    // detach userData first to make that a no-op (we own the Request here, see fetchError).
     for(auto it = this->active_requests.begin(); it != this->active_requests.end();) {
         Request* r = *it;
         if(r->options.cancel_token.stop_requested()) {
             it = this->active_requests.erase(it);
-            if(r->fetch) emscripten_fetch_close(r->fetch);
+            if(r->fetch) {
+                r->fetch->userData = nullptr;
+                emscripten_fetch_close(r->fetch);
+            }
             delete r;
         } else {
             ++it;
