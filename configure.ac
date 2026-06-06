@@ -1226,9 +1226,8 @@ AS_IF([test "$host_os" = "mingw32" && { test -n "$SRCREMAP" || test "x$enable_cl
     ])
 ])
 
-# macOS atos (used by TSan/ASan/lldb) has a DWARFv5 parser bug that drops file:line info
-# from clang output, so default to v4 there. v5 elsewhere (smaller, faster).
-AS_IF([test "$SYSNAME" = "macos"], [_gdwarf_version="-gdwarf-4"], [_gdwarf_version="-gdwarf-5"])
+# gdwarf-5 isn't supported by a lot of tools/debuggers outside linux
+AS_IF([test "$SYSNAME" = "linux"], [_gdwarf_version="-gdwarf-5"], [_gdwarf_version="-gdwarf-4"])
 
 AS_IF([test "x$enable_debug" = "xyes"], [
     AS_IF([test "x$with_mimalloc" != "xyes"], [with_mimalloc=no])
