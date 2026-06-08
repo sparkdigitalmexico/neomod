@@ -822,7 +822,6 @@ EOF
 $CXX_FOUND "\$@"
 EOF
     chmod +x "$PWD/build/$target-$CXX"
-    AC_SUBST([NASMOBJ],[macho64])
 
     cat > "$PWD/build/pkg-config" <<__EOF__
 #!/usr/bin/env bash
@@ -838,6 +837,12 @@ __EOF__
     SYSNAME="macos"
     DLLEXT=".dylib"
     LIBPREFIX="lib"
+
+    AC_SUBST([NASMOBJ],[macho64])
+
+    # fixup linker runtime paths (mirror linux, but macOS uses @loader_path instead of $ORIGIN)
+    NATIVE_LDFLAGS="-Wl,-rpath,@loader_path/lib -Wl,-rpath,@loader_path"
+    AC_SUBST([NATIVE_LDFLAGS])
 
     AC_DEFINE([MCENGINE_PLATFORM_MACOS], [1], [Define if compiling for macOS.])
 ], [*], [ # Windows/mingw32
@@ -1068,6 +1073,12 @@ AS_IF([test -z "$WASM_CC"], [
         COMMON_FLAGS="$COMMON_FLAGS -ftls-model=initial-exec"
     ])
     LDFLAGS="$LDFLAGS -pthread"
+    # --disable-static builds deps as shared libs under $(DEPS_PREFIX)/lib with @rpath/$ORIGIN
+    # install names; add a build-tree rpath so dep configure test programs (and the in-tree
+    # binary) can resolve them at runtime
+    AS_IF([test "x$enable_static" = "xno"], [
+        LDFLAGS="$LDFLAGS -Wl,-rpath,$PWD/build/deps/lib"
+    ])
 ], [
     COMMON_FLAGS="$COMMON_FLAGS -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 -pipe -ffunction-sections -fdata-sections -fwrapv -fno-strict-aliasing"
 ])
@@ -1620,7 +1631,7 @@ CTRE_MIN_VERSION=3.10.0 # regex support that doesn't have exceptions FORCED enab
 CTRE_BUILD_VERSION=6225211806c48230e5d17a1e555ef69e7325051c # git as of Jan 28th, 2026
 
 # always build these from source if we want to use them
-AC_SUBST([SOLOUD_VERSION], [7381a0eeb8c357346daeacc98af55afc16db4f96]) # neoloud fork
+AC_SUBST([SOLOUD_VERSION], [ffa00365f61b903dc5b335023a575564f7bedd4b]) # neoloud fork
 AC_SUBST([SOLOUD_PREFIX],[$DEPS_PREFIX])
 AC_SUBST([SOUNDTOUCH_VERSION], [b8e2a5f3f04483691962ab1a36ffa166abdcd675])
 AC_SUBST([SOUNDTOUCH_PREFIX],[$DEPS_PREFIX])

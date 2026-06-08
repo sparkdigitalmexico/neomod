@@ -1,0 +1,42 @@
+# Builds a shared (dylib) version of libbz2 on macOS, analogous to bzip2's
+# stock Makefile-libbz2_so but using the Mach-O -install_name/-dynamiclib
+# mechanism instead of ELF -soname (which ld64 does not understand).
+#
+# CC/CFLAGS/LDFLAGS are expected to be passed in from the neomod build.
+
+SHELL=/bin/sh
+CC=cc
+BIGFILES=-D_FILE_OFFSET_BITS=64
+CFLAGS=-fpic -fPIC -Wall -Winline -O2 -g $(BIGFILES)
+
+OBJS= blocksort.o  \
+      huffman.o    \
+      crctable.o   \
+      randtable.o  \
+      compress.o   \
+      decompress.o \
+      bzlib.o
+
+all: $(OBJS)
+	$(CC) $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libbz2.1.0.dylib -o libbz2.1.0.8.dylib $(OBJS)
+	rm -f libbz2.1.0.dylib libbz2.dylib
+	ln -s libbz2.1.0.8.dylib libbz2.1.0.dylib
+	ln -s libbz2.1.0.8.dylib libbz2.dylib
+
+clean:
+	rm -f $(OBJS) libbz2.1.0.8.dylib libbz2.1.0.dylib libbz2.dylib
+
+blocksort.o: blocksort.c
+	$(CC) $(CFLAGS) -c blocksort.c
+huffman.o: huffman.c
+	$(CC) $(CFLAGS) -c huffman.c
+crctable.o: crctable.c
+	$(CC) $(CFLAGS) -c crctable.c
+randtable.o: randtable.c
+	$(CC) $(CFLAGS) -c randtable.c
+compress.o: compress.c
+	$(CC) $(CFLAGS) -c compress.c
+decompress.o: decompress.c
+	$(CC) $(CFLAGS) -c decompress.c
+bzlib.o: bzlib.c
+	$(CC) $(CFLAGS) -c bzlib.c

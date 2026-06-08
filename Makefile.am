@@ -379,6 +379,11 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-macosaarch64.source: $(DEPS_CACHE)/curl-
 $(DEPS_PREFIX)/%.built:
 	$(MKDIR_P) $(DEPS_PREFIX) && touch $@
 
+# macos/darwin isn't gnu-ld
+# TODO: support/compatibility for this should be checked in configure!
+LT_GNU_LD_CACHE := $(if $(filter darwin%,$(host_os)),,lt_cv_prog_gnu_ld=yes)
+LT_WITH_GNU_LD := $(if $(filter darwin%,$(host_os)),,--with-gnu-ld)
+
 CACERT_INCDIR := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/
 
 PKG_CONFIG_PLUS_BUNDLED_OSSL = $(PKG_CONFIG)
@@ -498,7 +503,7 @@ $(DEPS_PREFIX)/SDL3-$(SDL3_VERSION).built: $(DEPS_CACHE)/SDL3-$(SDL3_VERSION).ta
 	patch -Np1<$(BUILD_MISCDIR)/SDL3-PR14048-emscripten-clipboard.patch && \
 	patch -Np1<$(BUILD_MISCDIR)/SDL3-WIP-gpu_vulkan-Address-more-defragmentation-related-.patch && \
 	patch -Np1<$(BUILD_MISCDIR)/SDL3-IS15656-D3D12-latency-poc.patch && \
-	PKG_CONFIG="$(PKG_CONFIG)" LDFLAGS="$(LDFLAGS)" CC="$(CC)" CXX="$(CXX)" \
+	PKG_CONFIG="$(PKG_CONFIG)" LDFLAGS="$(LDFLAGS) $(if $(SDL3_STATIC),,$(SDL3_EXTRALIBS))" CC="$(CC)" CXX="$(CXX)" \
 	$(CMAKE_CONF_PFX) $(CMAKE) -S . -B build -G "$(CMAKE_GEN)" \
 		-D CMAKE_BUILD_TYPE="$(if $(ENABLE_DEBUG),Debug,Release)" \
 		$(if $(ENABLE_ASAN),-DSDL_ASAN=ON,) \
@@ -554,7 +559,7 @@ $(DEPS_PREFIX)/mpg123-$(MPG123_VERSION).built: $(DEPS_CACHE)/mpg123-$(MPG123_VER
 	$(if $(ubercompat),$(SED) -i -e 's|.*ThreadErrorMode.*||g' -e 's|mode_ok|0|' src/compat/compat_dl.c,true) && \
 	ACLOCAL_PATH="/opt/homebrew/opt/libtool/share/aclocal:$$ACLOCAL_PATH" autoreconf -fiv && cd $(DEPS_PREFIX)/mpg123/build && \
 	PKG_CONFIG="$(PKG_CONFIG)" \
-		$(CONFIGURE_PFX) ../configure lt_cv_prog_gnu_ld=yes --host=$(host) --prefix="$(DEPS_PREFIX)" $(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
+		$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --prefix="$(DEPS_PREFIX)" $(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		--disable-components --enable-libmpg123 --with-audio=dummy --disable-modules \
 		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
@@ -806,9 +811,9 @@ $(DEPS_PREFIX)/libpng-$(LIBPNG_VERSION).built: $(DEPS_PREFIX)/zlib-$(ZLIB_VERSIO
 	$(MKDIR_P) $(DEPS_PREFIX)/libpng/build $(DEPS_PREFIX)/lib/pkgconfig
 	$(TAR) xf $(DEPS_CACHE)/libpng-$(LIBPNG_VERSION).tar.gz -C $(DEPS_PREFIX)/libpng --strip-components=1 && \
 	cd $(DEPS_PREFIX)/libpng && PKG_CONFIG="$(PKG_CONFIG)" \
-		$(CONFIGURE_PFX) ./configure lt_cv_prog_gnu_ld=yes --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
+		$(CONFIGURE_PFX) ./configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
-		--disable-tools --disable-tests --with-gnu-ld --enable-hardware-optimizations=on \
+		--disable-tools --disable-tests $(LT_WITH_GNU_LD) --enable-hardware-optimizations=on \
 			CC="$(CC) $(ZLIB_CFLAGS)" RANLIB="$(RANLIB)" AR="$(AR)" CXX="$(CXX)" LD="$(LD)" \
 			CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS) $(ZLIB_LIBS)" && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
@@ -826,9 +831,9 @@ $(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built: $(DEPS_CACHE)/bzip2-$(BZIP2_VERSION
 	$(MKDIR_P) $(DEPS_PREFIX)/bzip2/build $(DEPS_PREFIX)/lib/pkgconfig $(DEPS_PREFIX)/include
 	$(TAR) xf $(DEPS_CACHE)/bzip2-$(BZIP2_VERSION).tar.gz -C $(DEPS_PREFIX)/bzip2 --strip-components=1 && \
 	cd $(DEPS_PREFIX)/bzip2 && \
-	$(if $(filter mingw%,$(host_os)),$(if $(STATICBUILD),true,cp $(BUILD_MISCDIR)/libbz2-Makefile-mingw ./),true) && \
+	$(if $(STATICBUILD),true,$(if $(filter mingw%,$(host_os)),cp $(BUILD_MISCDIR)/libbz2-Makefile-mingw ./,$(if $(filter darwin%,$(host_os)),cp $(BUILD_MISCDIR)/libbz2-Makefile-macos ./,true))) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) PREFIX="$(DEPS_PREFIX)" RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS) $(if $(STATICBUILD),,-fPIC)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS) $(if $(STATICBUILD),,-fPIC)" \
-		$(if $(STATICBUILD),"libbz2.a",$(if $(filter mingw%,$(host_os)),-f libbz2-Makefile-mingw install,-f Makefile-libbz2_so)) && \
+		$(if $(STATICBUILD),"libbz2.a",$(if $(filter mingw%,$(host_os)),-f libbz2-Makefile-mingw install,$(if $(filter darwin%,$(host_os)),-f libbz2-Makefile-macos,-f Makefile-libbz2_so))) && \
 	cp -f bzlib.h $(DEPS_PREFIX)/include/ && \
 	test -f $(DEPS_PREFIX)/lib/pkgconfig/bzip2.pc || { cp -f $(if $(STATICBUILD),"libbz2.a",libbz2*$(DLLEXT)*) $(DEPS_PREFIX)/lib/ && \
 	$(MKDIR_P) "$(DEPS_PREFIX)/lib/pkgconfig" && \
@@ -969,7 +974,7 @@ $(DEPS_PREFIX)/nsync-$(NSYNC_VERSION).built: $(DEPS_CACHE)/nsync-$(NSYNC_VERSION
 		-DBUILD_SHARED_LIBS="$(if $(STATICBUILD),OFF,ON)" && \
 	$(CMAKE) --build build "$(CMAKEPAROPT)" --target nsync_cpp && \
 	$(CMAKE) --install build && \
-	test -f $(DEPS_PREFIX)/include/nsync.h && test -f $(DEPS_PREFIX)/lib/libnsync_cpp$(if $(STATICBUILD),.*a,*$(DLLEXT))
+	test -f $(DEPS_PREFIX)/include/nsync.h && test -f $(DEPS_PREFIX)/lib/libnsync_cpp$(if $(STATICBUILD),.*a,$(DLLEXT))
 	touch $@
 INSTALL_LIB_DEPS += $(DEPS_PREFIX)/nsync-$(NSYNC_VERSION).built
 endif # BUILD_NSYNC
@@ -997,7 +1002,7 @@ $(DEPS_PREFIX)/brotli-$(BROTLI_VERSION).built: $(DEPS_CACHE)/brotli-$(BROTLI_VER
 		$(CMAKE_AR_RANLIB_FLAGS) \
 		-D BROTLI_BUILD_TOOLS=OFF \
 		-D BROTLI_DISABLE_TESTS=ON \
-		-D BUILD_SHARED_LIBS=OFF && \
+		-D BUILD_SHARED_LIBS="$(if $(STATICBUILD),OFF,ON)" && \
 	$(CMAKE) --build build $(CMAKEPAROPT) && \
 	$(CMAKE) --install build
 	$(PKG_CONFIG) --exists --print-errors libbrotlidec libbrotlicommon
@@ -1055,7 +1060,7 @@ $(DEPS_PREFIX)/freetype-$(FREETYPE2_VERSION).built: $(DEPS_PREFIX)/brotli-$(BROT
 	$(SED) -i 's|TOP_DIR :=.*||' builds/unix/unix-def.in && \
 	patch -Np1<$(BUILD_MISCDIR)/freetype-win.patch && \
 	PKG_CONFIG="$(PKG_CONFIG)" \
-		$(CONFIGURE_PFX) ./configure lt_cv_prog_gnu_ld=yes --host=$(host) --prefix="$(DEPS_PREFIX)" \
+		$(CONFIGURE_PFX) ./configure $(LT_GNU_LD_CACHE) --host=$(host) --prefix="$(DEPS_PREFIX)" \
 		--with-zlib=yes --with-bzip2=yes --with-png=yes --with-harfbuzz=no --with-brotli=yes --with-librsvg=no \
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
@@ -1207,7 +1212,7 @@ $(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built: $(DEPS_CACHE)/libacl-$(LIBACL_VER
 	cd $(DEPS_PREFIX)/libacl && \
 	cd build && \
 	PKG_CONFIG="$(PKG_CONFIG)" \
-	$(CONFIGURE_PFX) ../configure lt_cv_prog_gnu_ld=yes --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
+	$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		CC="$(CC)" RANLIB="$(RANLIB)" AR="$(AR)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
@@ -1231,9 +1236,9 @@ $(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built: $(DEPS_CACHE)/libarchive-
 	$(SED) -i -e 's|time_t ctime_sec, mtime_sec;|int64_t ctime_sec, mtime_sec;|' libarchive/archive_match.c && \
 	cd build && \
 	PKG_CONFIG="$(PKG_CONFIG_PLUS_BUNDLED_OSSL)" \
-	$(CONFIGURE_PFX) ../configure lt_cv_prog_gnu_ld=yes --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
+	$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
-		--disable-tools --disable-tests --with-gnu-ld --disable-bsdtar --disable-bsdcat --disable-bsdcpio \
+		--disable-tools --disable-tests $(LT_WITH_GNU_LD) --disable-bsdtar --disable-bsdcat --disable-bsdcpio \
 		--disable-bsdunzip --without-xml2 --without-expat $(if $(OPENSSL_CFLAGS),--with-openssl --with-zstd,--without-openssl --without-zstd) \
 		--without-nettle --without-mbedtls --without-lzo2 --without-lz4 --without-libiconv-prefix \
 		--without-iconv --without-libb2 --with-lzma --with-zlib --with-bz2lib \
@@ -1725,9 +1730,6 @@ INSTALL_STAMPS += stamp-install-assets
 
 # --- shared libraries ---
 stamp-install-sharedlibs: $(INSTALL_LIB_DEPS) | install-dirs
-if USE_DISCORDRPC
-	$(if $(STATICBUILD),,@find $(DEPS_PREFIX) '(' -iname '*discord-rpc*'$(DLLEXT) -o -iname '*discord-rpc*''.so.*' ')' -a -not -iname '*.dll.a' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';')
-endif
 if BUILD_MIMALLOC
 if WIN_PLATFORM
 	@$(CP_INSTALL) "$(DEPS_PREFIX)/bin/mimalloc"{,-redirect$(if $(filter x86_64,$(host_cpu)),,32)}".dll" "$(DESTDIR)$(bindir)/$(LIBDEST)"
@@ -1750,49 +1752,54 @@ if USE_FFMPEG
 	@find $(DEPS_PREFIX)/lib $(DEPS_PREFIX)/bin '(' -name '*avutil*' -o -name '*avcodec*' -o -name '*avformat*' -o -name '*swresample*' -o -name '*swscale*' ')' -a '(' -name '*'$(DLLEXT) -o -name '*.so.*' ')' -exec $(CP_INSTALL) '{}' "$(DESTDIR)$(bindir)/" ';' 2>/dev/null || true
 endif
 if BUILD_MPG123
-	$(if $(STATICBUILD),,@`find $(MPG123_PREFIX) '(' -iname '*mpg*'$(DLLEXT) -o -iname '*mpg*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(MPG123_PREFIX) -not -path '*.dSYM/*' '(' -iname '*mpg*'$(DLLEXT) -o -iname '*mpg*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
+endif
+if USE_DISCORDRPC
+	$(if $(STATICBUILD),,@find $(DEPS_PREFIX) -not -path '*.dSYM/*' '(' -iname '*discord-rpc*'$(DLLEXT) -o -iname '*discord-rpc*''.so.*' ')' -a -not -iname '*.dll.a' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';')
 endif
 if BUILD_SDL3
-	$(if $(SDL3_STATIC),,@`find $(SDL3_PREFIX) '(' -iname '*SDL3*'$(DLLEXT) -o -iname '*SDL3*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(SDL3_STATIC),,@`find $(SDL3_PREFIX) -not -path '*.dSYM/*' '(' -iname '*SDL3*'$(DLLEXT) -o -iname '*SDL3*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_LIBJPEG
-	$(if $(STATICBUILD),,@`find $(LIBJPEG_PREFIX) '(' -iname '*libjpeg-*'$(DLLEXT) -o -iname '*libjpeg*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
-	$(if $(STATICBUILD),,@`find $(LIBJPEG_PREFIX) '(' -iname '*libturbojpeg-*'$(DLLEXT) -o -iname '*libturbojpeg''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(LIBJPEG_PREFIX) -not -path '*.dSYM/*' '(' -iname '*libjpeg[.-]*'$(DLLEXT) -o -iname '*libjpeg*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(LIBJPEG_PREFIX) -not -path '*.dSYM/*' '(' -iname '*libturbojpeg[.-]*'$(DLLEXT) -o -iname '*libturbojpeg''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_LIBPNG
-	$(if $(STATICBUILD),,@`find $(LIBPNG_PREFIX) '(' -iname '*libpng*'$(DLLEXT) -o -iname '*libpng*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(LIBPNG_PREFIX) -not -path '*.dSYM/*' '(' -iname '*libpng*'$(DLLEXT) -o -iname '*libpng*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_BZIP2
-	$(if $(STATICBUILD),,@`find $(BZIP2_PREFIX) '(' -iname '*bz2*'$(DLLEXT) -o -iname '*bz2*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(BZIP2_PREFIX) -not -path '*.dSYM/*' '(' -iname '*bz2*'$(DLLEXT) -o -iname '*bz2*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_ZLIB
-	$(if $(STATICBUILD),,@`find $(ZLIB_PREFIX) '(' -iname '*libz-*'$(DLLEXT) -o -iname '*libz*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(ZLIB_PREFIX) -not -path '*.dSYM/*' '(' -iname '*libz[.-]*'$(DLLEXT) -o -iname '*libz*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_BROTLI
-	$(if $(STATICBUILD),,@`find $(BROTLI_PREFIX) '(' -iname '*brotlicommon*'$(DLLEXT) -o -iname '*brotlicommon*''.so.*' -iname '*brotlidec*'$(DLLEXT) -o -iname '*brotlidec*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(BROTLI_PREFIX) -not -path '*.dSYM/*' '(' -iname '*brotlicommon*'$(DLLEXT) -o -iname '*brotlicommon*''.so.*' -o -iname '*brotlidec*'$(DLLEXT) -o -iname '*brotlidec*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_FREETYPE2
-	$(if $(STATICBUILD),,@`find $(FREETYPE2_PREFIX) '(' -iname '*freetype*'$(DLLEXT) -o -iname '*freetype*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(FREETYPE2_PREFIX) -not -path '*.dSYM/*' '(' -iname '*freetype*'$(DLLEXT) -o -iname '*freetype*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_FMT
-	$(if $(STATICBUILD),,@`find $(FMT_PREFIX) '(' -iname '*fmt*'$(DLLEXT) -o -iname '*fmt*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(FMT_PREFIX) -not -path '*.dSYM/*' '(' -iname '*fmt*'$(DLLEXT) -o -iname '*fmt*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_NSYNC
-	$(if $(STATICBUILD),,@`find $(NSYNC_PREFIX) '(' -iname '*nsync*'$(DLLEXT) -o -iname '*nsync*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(NSYNC_PREFIX) -not -path '*.dSYM/*' '(' -iname '*nsync*'$(DLLEXT) -o -iname '*nsync*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_LZMA
-	$(if $(STATICBUILD),,@`find $(LZMA_PREFIX) '(' -iname '*lzma*'$(DLLEXT) -o -iname '*lzma*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(LZMA_PREFIX) -not -path '*.dSYM/*' '(' -iname '*lzma*'$(DLLEXT) -o -iname '*lzma*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_SIMDUTF
-	$(if $(STATICBUILD),,@`find $(SIMDUTF_PREFIX) '(' -iname '*simdutf*'$(DLLEXT) -o -iname '*simdutf*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(SIMDUTF_PREFIX) -not -path '*.dSYM/*' '(' -iname '*simdutf*'$(DLLEXT) -o -iname '*simdutf*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_LIBARCHIVE
-	$(if $(STATICBUILD),,@`find $(LIBARCHIVE_PREFIX) '(' -iname '*archive*'$(DLLEXT) -o -iname '*archive*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+	$(if $(STATICBUILD),,@`find $(LIBARCHIVE_PREFIX) -not -path '*.dSYM/*' '(' -iname '*archive*'$(DLLEXT) -o -iname '*archive*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_LIBACL
 	$(if $(STATICBUILD),,@`find $(LIBACL_PREFIX) -iname '*acl*''.so.*' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
+	@# copy the .dSYM bundles already during dependency builds (TODO: some are missing, like cmake-based builds and ffmpeg)
+	$(if $(STATICBUILD),,@find $(DEPS_PREFIX) -name '*$(DLLEXT).dSYM' -type d -prune -exec $(CP_INSTALL) -R '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)/" ';' 2>/dev/null || true)
 	@touch $@
 
 INSTALL_STAMPS += stamp-install-sharedlibs
@@ -1811,6 +1818,8 @@ endif
 # --- install_name_tool rpath (macos only) ---
 # rewrite absolute build-time install names to @loader_path so dylibs resolve
 # their dependencies from the directory they were installed to, not the build tree
+# also, the executable (not .dylib) lives one level above lib/; rewrite its deps to @rpath (it carries an
+# @loader_path/lib rpath).
 if MACOS_PLATFORM
 stamp-install-rpath: stamp-install-sharedlibs
 	@for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)/lib"; do \
@@ -1823,6 +1832,15 @@ stamp-install-rpath: stamp-install-sharedlibs
 					$(INSTALL_NAME_TOOL) -change "$$dep" "@loader_path/$$depbn" "$$lib" 2>/dev/null; \
 				fi; \
 			done; \
+		done; \
+	done
+	@for prog in $(bin_PROGRAMS); do \
+		test -f "$(DESTDIR)$(bindir)/$$prog" || continue; \
+		otool -L "$(DESTDIR)$(bindir)/$$prog" | $(SED) -n 's/^[[:space:]]*\([^[:space:]]*\).*/\1/p' | while read -r dep; do \
+			depbn=$$(basename "$$dep"); \
+			if test -f "$(DESTDIR)$(bindir)/lib/$$depbn"; then \
+				$(INSTALL_NAME_TOOL) -change "$$dep" "@rpath/$$depbn" "$(DESTDIR)$(bindir)/$$prog" 2>/dev/null; \
+			fi; \
 		done; \
 	done
 	@touch $@
