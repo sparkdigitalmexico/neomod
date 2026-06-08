@@ -463,7 +463,7 @@ $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built: $(DEPS_CACHE)/mimalloc-$(MIMA
 		$(if $(ENABLE_ASAN),-DMI_LOCAL_DYNAMIC_TLS=ON -DMI_TRACK_ASAN=ON -DMI_DEBUG_UBSAN=ON,) \
 		-D MI_INSTALL_TOPLEVEL=ON \
 		-D MI_BUILD_STATIC=OFF \
-		-D MI_BUILD_OBJECT=$(if $(filter win%,$(host_os)),OFF,ON) && \
+		-D MI_BUILD_OBJECT=ON && \
 	$(CMAKE) --build . "$(CMAKEPAROPT)" && \
 	$(CMAKE) --install .
 	cp $(DEPS_PREFIX)/mimalloc/bin/mimalloc-redirect*.lib $(DEPS_PREFIX)/lib/ || true
@@ -826,9 +826,9 @@ $(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built: $(DEPS_CACHE)/bzip2-$(BZIP2_VERSION
 	$(MKDIR_P) $(DEPS_PREFIX)/bzip2/build $(DEPS_PREFIX)/lib/pkgconfig $(DEPS_PREFIX)/include
 	$(TAR) xf $(DEPS_CACHE)/bzip2-$(BZIP2_VERSION).tar.gz -C $(DEPS_PREFIX)/bzip2 --strip-components=1 && \
 	cd $(DEPS_PREFIX)/bzip2 && \
-	$(if $(findstring linux,$(host_os)),true,$(if $(STATICBUILD),true,cp $(BUILD_MISCDIR)/libbz2-Makefile-mingw) ./) && \
+	$(if $(filter mingw%,$(host_os)),$(if $(STATICBUILD),true,cp $(BUILD_MISCDIR)/libbz2-Makefile-mingw ./),true) && \
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) PREFIX="$(DEPS_PREFIX)" RANLIB="$(RANLIB)" AR="$(AR)" CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="$(CFLAGS) $(if $(STATICBUILD),,-fPIC)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS) $(if $(STATICBUILD),,-fPIC)" \
-		$(if $(STATICBUILD),"libbz2.a",$(if $(findstring linux,$(host_os)),-f Makefile-libbz2_so,-f libbz2-Makefile-mingw install)) && \
+		$(if $(STATICBUILD),"libbz2.a",$(if $(filter mingw%,$(host_os)),-f libbz2-Makefile-mingw install,-f Makefile-libbz2_so)) && \
 	cp -f bzlib.h $(DEPS_PREFIX)/include/ && \
 	test -f $(DEPS_PREFIX)/lib/pkgconfig/bzip2.pc || { cp -f $(if $(STATICBUILD),"libbz2.a",libbz2*$(DLLEXT)*) $(DEPS_PREFIX)/lib/ && \
 	$(MKDIR_P) "$(DEPS_PREFIX)/lib/pkgconfig" && \

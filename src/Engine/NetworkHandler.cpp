@@ -395,8 +395,8 @@ void NetworkImpl::processCancelledRequests() {
 }
 
 void NetworkImpl::processCompletedRequests() {
-    CURLMsg* msg;
-    i32 msgs_left;
+    CURLMsg* msg;   // NOLINT(cppcoreguidelines-init-variables)
+    i32 msgs_left;  // NOLINT(cppcoreguidelines-init-variables)
 
     // collect completed requests without holding locks during callback execution
     while((msg = curl_multi_info_read(this->multi_handle, &msgs_left))) {
