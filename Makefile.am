@@ -1817,36 +1817,36 @@ endif
 
 # --- install_name_tool rpath (macos only) ---
 # rewrite absolute build-time install names to @loader_path so dylibs resolve
-# their dependencies from the directory they were installed to, not the build tree
-# also, the executable (not .dylib) lives one level above lib/; rewrite its deps to @rpath (it carries an
-# @loader_path/lib rpath).
+# their dependencies from the directory they were installed to, not the build tree.
 if MACOS_PLATFORM
-stamp-install-rpath: stamp-install-sharedlibs
+stamp-install-librpath: stamp-install-sharedlibs
 	@for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)/lib"; do \
 		test -d "$$dir" || continue; \
 		find "$$dir" -maxdepth 1 -name '*.dylib' | while read -r lib; do \
-			$(INSTALL_NAME_TOOL) -id "@loader_path/$$(basename "$$lib")" "$$lib" 2>/dev/null; \
-			otool -L "$$lib" | $(SED) -n 's/^[[:space:]]*\([^[:space:]]*\).*/\1/p' | while read -r dep; do \
+			args="-id @loader_path/$$(basename "$$lib")"; \
+			for dep in $$(otool -L "$$lib" | $(SED) -n 's/^[[:space:]]*\([^[:space:]]*\).*/\1/p'); do \
 				depbn=$$(basename "$$dep"); \
-				if test -f "$$dir/$$depbn"; then \
-					$(INSTALL_NAME_TOOL) -change "$$dep" "@loader_path/$$depbn" "$$lib" 2>/dev/null; \
-				fi; \
+				test -f "$$dir/$$depbn" && args="$$args -change $$dep @loader_path/$$depbn"; \
 			done; \
-		done; \
-	done
-	@for prog in $(bin_PROGRAMS); do \
-		test -f "$(DESTDIR)$(bindir)/$$prog" || continue; \
-		otool -L "$(DESTDIR)$(bindir)/$$prog" | $(SED) -n 's/^[[:space:]]*\([^[:space:]]*\).*/\1/p' | while read -r dep; do \
-			depbn=$$(basename "$$dep"); \
-			if test -f "$(DESTDIR)$(bindir)/lib/$$depbn"; then \
-				$(INSTALL_NAME_TOOL) -change "$$dep" "@rpath/$$depbn" "$(DESTDIR)$(bindir)/$$prog" 2>/dev/null; \
-			fi; \
+			$(INSTALL_NAME_TOOL) $$args "$$lib" 2>/dev/null || true; \
 		done; \
 	done
 	@touch $@
 
-INSTALL_RPATH_STAMP += stamp-install-rpath
-INSTALL_STAMPS += stamp-install-rpath
+stamp-install-exerpath: stamp-install-sharedlibs $(bin_PROGRAMS)
+	@for prog in $(bin_PROGRAMS); do \
+		test -f "$(DESTDIR)$(bindir)/$$prog" || continue; \
+		args=""; \
+		for dep in $$(otool -L "$(DESTDIR)$(bindir)/$$prog" | $(SED) -n 's/^[[:space:]]*\([^[:space:]]*\).*/\1/p'); do \
+			depbn=$$(basename "$$dep"); \
+			test -f "$(DESTDIR)$(bindir)/lib/$$depbn" && args="$$args -change $$dep @rpath/$$depbn"; \
+		done; \
+		test -n "$$args" && $(INSTALL_NAME_TOOL) $$args "$(DESTDIR)$(bindir)/$$prog" 2>/dev/null || true; \
+	done
+	@touch $@
+
+INSTALL_RPATH_STAMP += stamp-install-librpath stamp-install-exerpath
+INSTALL_STAMPS += stamp-install-librpath stamp-install-exerpath
 endif
 
 # --- generate .dSYM bundle (macos only, when debug info is present) ---
@@ -1899,7 +1899,7 @@ endif
 
 # --- invalidate stamps if the install dir was recreated (new device:inode) ---
 .install-state: FORCE
-	@new=$$(stat -c '%d:%i' "$(DESTDIR)$(bindir)" 2>/dev/null || echo none); \
+	@new=$$(stat -c '%d:%i' "$(DESTDIR)$(bindir)" 2>/dev/null || stat -f '%d:%i' "$(DESTDIR)$(bindir)" 2>/dev/null || echo none); \
 	old=$$(cat $@ 2>/dev/null || echo ""); \
 	if [ "$$old" != "$$new" ]; then \
 		rm -f $(INSTALL_STAMPS); \
@@ -1912,7 +1912,12 @@ install-libs: install-dirs $(INSTALL_STAMPS)
 
 endif # WASM_PLATFORM
 
-CLEANFILES += $(INSTALL_STAMPS) .install-state
+# install stamps and .install-state intentionally persist across `clean` (only
+# distclean wipes them), so a first-party-only rebuild reinstalls just the
+# relinked exe instead of every other install-related step.
+# .install-state invalidates them if the install dir is recreated, and
+# uninstall-local clears them explicitly.
+DISTCLEANFILES = $(INSTALL_STAMPS) .install-state
 
 # install hooks
 # copy pdb (windows), create app bundle (macos)
@@ -1937,6 +1942,7 @@ if MACOS_PLATFORM
 else
 	rm -rf "$(DESTDIR)$(bindir)/"
 endif
+	-rm -f $(INSTALL_STAMPS) .install-state
 
 # cleanup targets
 clean-local:
