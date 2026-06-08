@@ -1847,6 +1847,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
             }
 
             // use the first selected path
+            // NOTE: nothing is preventing people from selecting and importing the neomod folder...
             const std::string &mcosu_path = paths[0];
             const bool imported = SettingsImporter::import_from_mcosu(mcosu_path);
             conclude_import(imported);

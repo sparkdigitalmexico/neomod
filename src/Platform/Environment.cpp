@@ -1674,11 +1674,14 @@ void Environment::sdlFileDialogCallback(void *userdata, const char *const *filel
 
     auto *callback = static_cast<FileDialogCallback *>(userdata);
 
-    // call the callback
-    (*callback)(results);
+    // unfortunately, SDL says it might call the callback off of the main thread, so defer it to the main thread
+    Async::queue_main([results{std::move(results)}, callback]() {
+        // call the callback
+        (*callback)(results);
 
-    // callback no longer needed
-    delete callback;
+        // callback no longer needed
+        delete callback;
+    });
 }
 
 // folder = true means return the canonical filesystem path to the folder containing the given path
