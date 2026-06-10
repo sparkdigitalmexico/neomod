@@ -3,7 +3,6 @@
 #include "noinclude.h"
 #include "Bancho.h"
 #include "BeatmapInterface.h"
-#include "CWindowManager.h"
 #include "Engine.h"
 #include "Graphics.h"
 #include "ModFPoSu.h"
@@ -187,7 +186,6 @@ bool UI::init() {
     this->active_screen = Osu::isKioskMode() ? static_cast<UIScreen *>(this->dummy) : this->mainMenu;
 
     // debug
-    // this->windowManager = std::make_unique<CWindowManager>();
     cv::set_active_ui_screen.setCallback(SA::MakeDelegate<&UI::setScreenByName>(this));
 
     return true;

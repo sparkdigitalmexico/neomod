@@ -12,7 +12,6 @@
 #include <vector>
 #include <string_view>
 
-class CWindowManager;
 class KeyboardEvent;
 class RenderTarget;
 class UIScreen;
@@ -160,9 +159,6 @@ struct UI final {
 
     // additional overlays added by pushOverlay (owned by UI)
     std::vector<UIOverlay*> extra_overlays;
-
-    // interfaces (debugging)
-    // std::unique_ptr<CWindowManager> windowManager{nullptr};
 
     // for idle cursor fade alpha
     f64 lastCursorMoveTime{0.};
