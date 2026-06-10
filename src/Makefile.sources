@@ -276,7 +276,6 @@ neomod_SOURCES = \
 	src/GUI/CBaseUISlider.cpp \
 	src/GUI/CBaseUITextbox.cpp \
 	src/GUI/CBaseUIWindow.cpp \
-	src/GUI/CWindowManager.cpp \
 	src/GUI/Windows/ConsoleBox.cpp \
 	src/GUI/Windows/VisualProfiler.cpp \
 	src/Platform/Environment.cpp \
