@@ -4,9 +4,12 @@
 #include "UIScreen.h"
 
 #include "ConVar.h"
+#include "ConVarHandler.h"
 #include "MakeDelegateWrapper.h"
 
 #include "CBaseUIScrollView.h"
+#include "CBaseUITextbox.h"
+#include "PromptOverlay.h"
 #include "Parsing.h"
 #include "Logging.h"
 #include "Mouse.h"
@@ -24,6 +27,7 @@ static ConVar set_active_ui_screen("set_active_ui_screen", CLIENT | NOLOAD | NOS
 static ConVar ui_screens_cmd("ui_screens", CLIENT | NOLOAD | NOSAVE);
 static ConVar ui_dump_cmd("ui_dump", CLIENT | NOLOAD | NOSAVE);
 static ConVar ui_assert_cmd("ui_assert", CLIENT | NOLOAD | NOSAVE);
+static ConVar ui_prompt_cmd("ui_prompt", CLIENT | NOLOAD | NOSAVE);
 }  // namespace cv
 
 UIScreen *UIDebug::findScreenByName(std::string_view lowerName) const {
@@ -51,20 +55,13 @@ void dumpElementTree(CBaseUIElement *e, int depth) {
     logRaw("{:{}}{} rect=({},{},{},{}) vis={:d} act={:d} busy={:d} en={:d} hover={:d}", "", depth * 2,
            CBaseUIDebug::elemName(e), (int)r.getX(), (int)r.getY(), (int)r.getWidth(), (int)r.getHeight(),
            e->isVisible(), e->isActive(), e->isBusy(), e->isEnabled(), e->isMouseInside());
-    if(auto *sv = dynamic_cast<CBaseUIScrollView *>(e)) {
-        dumpElementTree(&sv->container, depth + 1);
-    } else if(auto *c = dynamic_cast<CBaseUIContainer *>(e)) {
-        for(auto *child : c->getElements()) dumpElementTree(child, depth + 1);
-    }
+    for(auto *c : e->getAllChildren()) dumpElementTree(c, depth + 1);
 }
 
 CBaseUIElement *findElementByName(CBaseUIElement *e, std::string_view name) {
     if(CBaseUIDebug::elemName(e) == name) return e;
-    if(auto *sv = dynamic_cast<CBaseUIScrollView *>(e)) return findElementByName(&sv->container, name);
-    if(auto *c = dynamic_cast<CBaseUIContainer *>(e)) {
-        for(auto *child : c->getElements()) {
-            if(auto *found = findElementByName(child, name)) return found;
-        }
+    for(auto *c : e->getAllChildren()) {
+        if(auto *found = findElementByName(c, name)) return found;
     }
     return nullptr;
 }
@@ -103,6 +100,8 @@ void UIDebug::debugDumpElements(std::string_view screenName) {
 
 void UIDebug::debugAssert(std::string_view args) {
     // ui_assert <exists|visible|hovered|active|screen_active> <name> <0|1>
+    // ui_assert text <name> <expected>
+    // ui_assert convar <name> <expected>
     // ui_assert mouse_at <x> <y> <tolerance>
     auto parts = SString::split(args, ' ');
     std::erase_if(parts, [](std::string_view p) { return p.empty(); });
@@ -128,6 +127,18 @@ void UIDebug::debugAssert(std::string_view args) {
             logRaw("UITEST OK mouse_at ({}, {}) actual={}", x, y, mp);
         else
             logRaw("UITEST FAIL mouse_at expected=({}, {}) tol={} actual={}", x, y, tol, mp);
+        return;
+    }
+
+    if(pred == "convar"sv) {
+        ConVar *var = cvars().getConVarByName(parts[1], false);
+        if(!var) {
+            logRaw("UITEST FAIL convar {} (not found)", parts[1]);
+            return;
+        }
+        const auto &actualVal = var->getString();
+        logRaw("UITEST {} convar {} expected='{}' actual='{}'", actualVal == parts[2] ? "OK" : "FAIL", parts[1],
+               parts[2], actualVal);
         return;
     }
 
@@ -171,6 +182,19 @@ void UIDebug::debugAssert(std::string_view args) {
         return;
     }
 
+    if(pred == "text"sv) {
+        // ui_assert text <name> <expected> (expected may not contain spaces)
+        auto *tb = dynamic_cast<CBaseUITextbox *>(elem);
+        if(!tb) {
+            logRaw("UITEST FAIL text {} (not a textbox)", parts[1]);
+            return;
+        }
+        const std::string_view actualText = tb->getText();
+        logRaw("UITEST {} text {} expected='{}' actual='{}'", actualText == parts[2] ? "OK" : "FAIL", parts[1],
+               parts[2], actualText);
+        return;
+    }
+
     bool actual{};
     if(pred == "visible"sv)
         actual = elem->isVisible();
@@ -187,11 +211,19 @@ void UIDebug::debugAssert(std::string_view args) {
            actual);
 }
 
+void UIDebug::debugPrompt(std::string_view msg) {
+    // scripted stand-in for the (online-only) real prompt() callers; logs the response for trace asserts
+    m_ui->getPromptOverlay()->prompt(std::string{msg}, SA::MakeDelegate([](std::string_view response) -> void {
+                                         logRaw("uiprompt response='{}'", response);
+                                     }));
+}
+
 UIDebug::UIDebug(UI *ui_parent) : m_ui(ui_parent) {
     cv::set_active_ui_screen.setCallback(SA::MakeDelegate<&UIDebug::setScreenByName>(this));
     cv::ui_screens_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugDumpScreens>(this));
     cv::ui_dump_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugDumpElements>(this));
     cv::ui_assert_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugAssert>(this));
+    cv::ui_prompt_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugPrompt>(this));
 }
 
 UIDebug::~UIDebug() {
@@ -199,4 +231,5 @@ UIDebug::~UIDebug() {
     cv::ui_screens_cmd.removeAllCallbacks();
     cv::ui_dump_cmd.removeAllCallbacks();
     cv::ui_assert_cmd.removeAllCallbacks();
+    cv::ui_prompt_cmd.removeAllCallbacks();
 }

@@ -90,6 +90,8 @@ class ModSelector final : public UIScreen {
 
     void close(bool force);
 
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override;
+
    private:
     AnimFloat fAnimation;
     AnimFloat fExperimentalAnimation;
@@ -97,6 +99,8 @@ class ModSelector final : public UIScreen {
     bool bExperimentalVisible{false};
     std::unique_ptr<CBaseUIContainer> overrideSliderContainer;
     std::unique_ptr<CBaseUIScrollView> experimentalContainer;
+    // vElements + the two manual containers above; rebuilt on each getAllChildren() call (debug-only path)
+    mutable std::vector<CBaseUIElement *> allChildren;
 
     bool bWaitForCSChangeFinished{false};
     bool bWaitForSpeedChangeFinished{false};

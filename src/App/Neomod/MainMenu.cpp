@@ -329,25 +329,26 @@ MainMenu::MainMenu() : UIScreen() {
     this->setPos(-1, 0);
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
 
-    this->cube = new CubeButton(this, 0, 0, 1, 1, "", "");
+    this->cube = new CubeButton(this, 0, 0, 1, 1, "mainmenu_cube", "");
     this->cube->setClickCallback(SA::MakeDelegate<&MainMenu::onCubePressed>(this));
     this->addBaseUIElement(this->cube);
 
-    this->addMainMenuButton(_("Singleplayer"))
+    this->addMainMenuButton(_("Singleplayer"), "mainmenu_singleplayer")
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onPlayButtonPressed>(this));
-    this->addMainMenuButton(_("Multiplayer"))
+    this->addMainMenuButton(_("Multiplayer"), "mainmenu_multiplayer")
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onMultiplayerButtonPressed>(this));
-    this->addMainMenuButton(_("Options"))->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
+    this->addMainMenuButton(_("Options"), "mainmenu_options")
+        ->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
 
     std::string lastButtonText = Env::cfg(OS::WASM) ? _("Save") : _("Exit");
-    this->addMainMenuButton(std::move(lastButtonText))
+    this->addMainMenuButton(std::move(lastButtonText), "mainmenu_exit")
         ->setClickCallback(SA::MakeDelegate<&MainMenu::onSaveOrExitButtonPressed>(this));
 
-    this->pauseButton = new PauseButton(0, 0, 0, 0, "", "");
+    this->pauseButton = new PauseButton(0, 0, 0, 0, "mainmenu_pause", "");
     this->pauseButton->setClickCallback(SA::MakeDelegate<&MainMenu::onPausePressed>(this));
     this->addBaseUIElement(this->pauseButton);
 
-    this->onlineBeatmapsButton = new UIButtonVertical(0, 0, 0, 0, "", _("Online Beatmaps"));
+    this->onlineBeatmapsButton = new UIButtonVertical(0, 0, 0, 0, "mainmenu_online_beatmaps", _("Online Beatmaps"));
     this->onlineBeatmapsButton->setFont(osu->getSubTitleFont());
     this->onlineBeatmapsButton->setDrawBackground(false);
     this->onlineBeatmapsButton->setClickCallback(SA::MakeDelegate<&MainMenu::onOnlineBeatmapsButtonPressed>(this));
@@ -1539,8 +1540,8 @@ void MainMenu::writeVersionFile() {
               });
 }
 
-MainMenu::MainButton *MainMenu::addMainMenuButton(std::string text) {
-    auto *button = new MainButton(this, this->vSize.x, 0, 1, 1, "", std::move(text));
+MainMenu::MainButton *MainMenu::addMainMenuButton(std::string text, std::string name) {
+    auto *button = new MainButton(this, this->vSize.x, 0, 1, 1, std::move(name), std::move(text));
     button->setFont(osu->getSubTitleFont());
     button->setVisible(false);
 

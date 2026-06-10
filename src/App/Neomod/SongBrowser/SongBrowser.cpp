@@ -466,11 +466,11 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
     }
 
     // context menu
-    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "");
+    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "songbrowser_contextmenu");
     this->contextMenu->setVisible(true);
 
     // build scorebrowser
-    this->scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "");
+    this->scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "songbrowser_scores");
     this->scoreBrowser->setScrollbarOnLeft(true);
     this->scoreBrowser->setDrawBackground(false);
     this->scoreBrowser->setDrawFrame(false);
@@ -497,7 +497,7 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
     this->fBackgroundFadeInTime = 0.0f;
 
     // search
-    this->search = new UISearchOverlay(0, 0, 0, 0, "");
+    this->search = new UISearchOverlay(0, 0, 0, 0, "songbrowser_search");
     this->search->setOffsetRight(10);
     this->fSearchWaitTime = 0.0f;
     this->bInSearch = (!cv::songbrowser_search_hardcoded_filter.getString().empty());
@@ -1152,6 +1152,18 @@ void SongBrowser::onChar(KeyboardEvent &e) {
 }
 
 void SongBrowser::onResolutionChange(vec2 newResolution) { ScreenBackable::onResolutionChange(newResolution); }
+
+[[nodiscard]] std::span<CBaseUIElement *const> SongBrowser::getAllChildren() const {
+    this->allChildren.assign(this->vElements.begin(), this->vElements.end());
+    for(CBaseUIElement *extra :
+        {static_cast<CBaseUIElement *>(this->topbarLeft), static_cast<CBaseUIElement *>(this->topbarRight),
+         static_cast<CBaseUIElement *>(this->contextMenu), static_cast<CBaseUIElement *>(this->scoreBrowser),
+         static_cast<CBaseUIElement *>(this->carousel.get()),
+         static_cast<CBaseUIElement *>(this->localBestContainer.get()), static_cast<CBaseUIElement *>(this->search)}) {
+        if(extra) this->allChildren.push_back(extra);
+    }
+    return this->allChildren;
+}
 
 CBaseUIContainer *SongBrowser::setVisible(bool visible) {
     if(BanchoState::spectating && visible) return this;  // don't allow song browser to be visible while spectating

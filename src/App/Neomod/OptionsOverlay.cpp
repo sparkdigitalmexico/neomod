@@ -800,14 +800,14 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
 
     parent->setPos(-1, 0);
 
-    this->options = new CBaseUIScrollView(0, -1, 0, 0, "");
+    this->options = new CBaseUIScrollView(0, -1, 0, 0, "options_contents");
     this->options->setDrawFrame(true);
     this->options->setDrawBackground(true);
     this->options->setBackgroundColor(0xdd000000);
     this->options->setHorizontalScrolling(false);
     parent->addBaseUIElement(this->options);
 
-    this->categories = new CBaseUIScrollView(0, -1, 0, 0, "");
+    this->categories = new CBaseUIScrollView(0, -1, 0, 0, "options_categories");
     this->categories->setDrawFrame(true);
     this->categories->setDrawBackground(true);
     this->categories->setBackgroundColor(0xff000000);
@@ -816,11 +816,11 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->categories->setScrollResistance(30);  // since all categories are always visible anyway
     parent->addBaseUIElement(this->categories);
 
-    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "", this->options);
+    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "options_contextmenu", this->options);
     this->contextMenu->setBackgroundColor(argb(200, 36, 36, 48));
     this->contextMenu->setFrameColor(argb(240, 240, 240, 255));
 
-    this->search = new UISearchOverlay(0, 0, 0, 0, "");
+    this->search = new UISearchOverlay(0, 0, 0, 0, "options_search");
     this->search->setOffsetRight(20);
     parent->addBaseUIElement(this->search);
 
@@ -846,6 +846,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     }
 
     this->serverTextbox = this->addTextbox(cv::mp_server.getString(), _("Server address:"), &cv::mp_server);
+    this->serverTextbox->setName("options_server_box");
 
     // Only renders if server submission policy is unknown
     {
@@ -858,9 +859,11 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         this->addSubSection(_("Login details (username/password)"));
         this->elemContainers.back()->render_condition = RenderCondition::PASSWORD_AUTH;
         this->nameTextbox = this->addTextbox(cv::name.getString(), &cv::name);
+        this->nameTextbox->setName("options_name_box");
         this->elemContainers.back()->render_condition = RenderCondition::PASSWORD_AUTH;
         const auto &md5pass = cv::mp_password_md5.getString();
         this->passwordTextbox = this->addTextbox(md5pass.empty() ? "" : md5pass, &cv::mp_password);
+        this->passwordTextbox->setName("options_password_box");
         this->passwordTextbox->is_password = true;
         this->elemContainers.back()->render_condition = RenderCondition::PASSWORD_AUTH;
     }
@@ -912,6 +915,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->addLabel(_("3) Copy paste the full path into the textbox:"))->setTextColor(0xff666666);
     this->addLabel("");
     this->osuFolderTextbox = this->addTextbox(cv::osu_folder.getString(), &cv::osu_folder);
+    this->osuFolderTextbox->setName("options_osufolder_box");
     UIButton *importPeppySettingsButton = this->addButton(_("Import settings from osu!stable"));
     importPeppySettingsButton->setClickCallback(SA::MakeDelegate([]() -> void {
         if(SettingsImporter::import_from_osu_stable()) {
@@ -1322,6 +1326,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
             this->skinLabel = static_cast<CBaseUILabel *>(skinSelect->baseElems[1].get());
         }
 
+        this->skinSelectLocalButton->setName("options_skin_select");
         this->skinSelectLocalButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onSkinSelectOpened>(this));
         this->skinSelectLocalButton->setTooltipText(
             _("Shift-click a skin to set it as fallback.\nMissing elements fall back to it instead of \"default\"."));

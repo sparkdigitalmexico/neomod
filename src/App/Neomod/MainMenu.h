@@ -83,7 +83,7 @@ class MainMenu final : public UIScreen, public MouseListener {
 
     void writeVersionFile();
 
-    MainButton *addMainMenuButton(std::string text);
+    MainButton *addMainMenuButton(std::string text, std::string name);
 
     void onPlayButtonPressed();
     void onMultiplayerButtonPressed();

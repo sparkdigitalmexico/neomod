@@ -297,20 +297,20 @@ Chat::Chat() : UIScreen() {
 
     this->button_container = new CBaseUIContainer(0, 0, 0, 0, "");
 
-    this->join_channel_btn = new UIButton(0, 0, 0, 0, "button", "+");
+    this->join_channel_btn = new UIButton(0, 0, 0, 0, "chat_join_channel", "+");
     this->join_channel_btn->setUseDefaultSkin();
     this->join_channel_btn->setColor(0xffd9d948);
     this->join_channel_btn->setSize(this->button_height + 2, this->button_height + 2);
     this->join_channel_btn->setClickCallback(SA::MakeDelegate<&Chat::askWhatChannelToJoin>(this));
     this->button_container->addBaseUIElement(this->join_channel_btn);
 
-    this->input_box = new CBaseUITextbox(0, 0, 0, 0, "");
+    this->input_box = new CBaseUITextbox(0, 0, 0, 0, "chat_input");
     this->input_box->setDrawFrame(false);
     this->input_box->setDrawBackground(true);
     this->input_box->setBackgroundColor(0xdd000000);
     this->addBaseUIElement(this->input_box);
 
-    this->user_list = new CBaseUIScrollView(0, 0, 0, 0, "");
+    this->user_list = new CBaseUIScrollView(0, 0, 0, 0, "chat_user_list");
     this->user_list->setDrawFrame(false);
     this->user_list->setDrawBackground(true);
     this->user_list->setBackgroundColor(0xcc000000);

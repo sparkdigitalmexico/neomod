@@ -147,13 +147,14 @@ ModSelector::ModSelector() : UIScreen() {
     const vec2 osuScreen = osu->getVirtScreenSize();
 
     this->setSize(osuScreen.x, osuScreen.y);
-    this->overrideSliderContainer = std::make_unique<CBaseUIContainer>(0.f, 0.f, osuScreen.x, osuScreen.y, "");
-    this->experimentalContainer.reset((new CBaseUIScrollView(-1.f, 0.f, osuScreen.x, osuScreen.y, ""))
-                                          ->setHorizontalScrolling(false)
-                                          ->setVerticalScrolling(true)
-                                          ->setDrawFrame(false)
-                                          ->setDrawBackground(false));
-
+    this->overrideSliderContainer =
+        std::make_unique<CBaseUIContainer>(0.f, 0.f, osuScreen.x, osuScreen.y, "modsel_overrides");
+    this->experimentalContainer.reset(
+        (new CBaseUIScrollView(-1.f, 0.f, osuScreen.x, osuScreen.y, "modsel_experimental"))
+            ->setHorizontalScrolling(false)
+            ->setVerticalScrolling(true)
+            ->setDrawFrame(false)
+            ->setDrawBackground(false));
     // build mod grid buttons
     for(auto &button : this->modButtons) {
         auto *imageButton = new UIModSelectorModButton(this, 50, 50, 100, 100, "");
@@ -193,6 +194,11 @@ ModSelector::ModSelector() : UIScreen() {
     this->ARLock = overrideAR.lock;
     this->ODLock = overrideOD.lock;
 
+    this->CSSlider->setName("modsel_cs");
+    this->ARSlider->setName("modsel_ar");
+    this->ODSlider->setName("modsel_od");
+    this->HPSlider->setName("modsel_hp");
+
     OVERRIDE_SLIDER overrideSpeed =
         this->addOverrideSlider(_("Speed/BPM Multiplier"), "x", &cv::speed_override, 0.9f, 2.5f);
 
@@ -202,6 +208,7 @@ ModSelector::ModSelector() : UIScreen() {
     overrideSpeed.slider->setLiveUpdate(false);
 
     this->speedSlider = overrideSpeed.slider;
+    this->speedSlider->setName("modsel_speed");
 
     // build experimental buttons
     this->addExperimentalLabel(_(" Experimental Mods (!)"));
@@ -1516,4 +1523,11 @@ void ModSelector::onResolutionChange(vec2 newResolution) {
     this->experimentalContainer->setSizeY(newResolution.y + 1);
 
     this->updateLayout();
+}
+
+[[nodiscard]] std::span<CBaseUIElement *const> ModSelector::getAllChildren() const {
+    this->allChildren.assign(this->vElements.begin(), this->vElements.end());
+    this->allChildren.push_back(this->overrideSliderContainer.get());
+    this->allChildren.push_back(this->experimentalContainer.get());
+    return this->allChildren;
 }

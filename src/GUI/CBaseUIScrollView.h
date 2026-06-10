@@ -146,7 +146,8 @@ class CBaseUIScrollView : public CBaseUIElement {
         NOCOPY_NOMOVE(CBaseUIScrollViewContainer)
        public:
         using CBaseUIContainer::CBaseUIContainer;
-        CBaseUIScrollViewContainer(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {});
+        CBaseUIScrollViewContainer(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0,
+                                   std::string name = {});
         CBaseUIScrollViewContainer() = delete;
         ~CBaseUIScrollViewContainer() override;
 
@@ -184,6 +185,10 @@ class CBaseUIScrollView : public CBaseUIElement {
     void forceInvalidateClipping() {
         this->bClippingDirty = true;
         this->previousClippingVisibleElements = 0;
+    }
+
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override {
+        return this->container.getAllChildren();
     }
 
    protected:

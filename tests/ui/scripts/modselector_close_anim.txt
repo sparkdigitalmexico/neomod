@@ -1,0 +1,41 @@
+# pins the ModSelector update-while-invisible HACKHACK (ModSelector.cpp): drag the AR
+# override up, click Reset All Mods (animated) then Close while the reset anim is still
+# in flight. the override cvar must settle to -1 (off) even though the screen went
+# invisible mid-anim. verified to FAIL (cvar stuck at 2.4) with the hack disabled.
+# P1's always-on tick() replaces the hack and must keep this green.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+set_active_ui_screen modselector
+@wait 10
+mouse_to 460 79
+@wait 2
+mouse_down
+@wait 2
+mouse_to 850 79
+@wait 3
+mouse_up
+@wait 3
+ui_assert convar ar_override 12.1
+mouse_to 640 559
+@wait 2
+mouse_down
+@wait 2
+mouse_up
+@wait 2
+mouse_to 640 623
+mouse_down
+@wait 2
+mouse_up
+@wait 1
+mouse_to 10 10
+@wait 150
+ui_assert visible modselector 0
+ui_assert convar ar_override -1
+exit

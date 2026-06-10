@@ -7,6 +7,7 @@
 
 #include <string>
 #include <string_view>
+#include <span>
 
 class CBaseUIElement;
 
@@ -119,6 +120,8 @@ class CBaseUIElement : public KeyboardListener {
     virtual void stealFocus();
 
     void dumpElem() const;  // debug
+    [[nodiscard]] virtual std::span<CBaseUIElement *const> getAllChildren() const;
+
    protected:
     friend class CBaseUIContainer;
 

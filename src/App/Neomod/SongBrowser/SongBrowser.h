@@ -137,6 +137,8 @@ class SongBrowser final : public ScreenBackable {
 
     CBaseUIContainer *setVisible(bool visible) override;
 
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override;
+
     bool selectBeatmapset(const BeatmapSet *set);
     void selectSelectedBeatmapSongButton();
     void onPlayEnd(bool quit = true);  // called when a beatmap is finished playing (or the player quit)
@@ -308,6 +310,9 @@ class SongBrowser final : public ScreenBackable {
 
     // song carousel
     std::unique_ptr<BeatmapCarousel> carousel{nullptr};
+    // vElements + the manually-managed containers (topbars, score browser, carousel, ...);
+    // rebuilt on each getAllChildren() call (debug-only path)
+    mutable std::vector<CBaseUIElement *> allChildren;
     CarouselButton *selectedButton = nullptr;
     bool bSongBrowserRightClickScrollCheck;
     bool bSongBrowserRightClickScrolling;

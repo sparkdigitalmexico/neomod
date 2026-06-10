@@ -1547,8 +1547,8 @@ vec2 Environment::getAsyncMousePos() const {
 }
 
 Environment::CursorPosition Environment::consumeCursorPositionCache() {
-    // synthetic cursor position injected via the mouse_to debug command takes priority over real SDL state
-    if(m_bInjectedCursor) {
+    // synthetic cursor position injected via the mouse_to debug command is the only way to control the mouse in headless
+    if(m_bHeadless) {
         dvec2 newRel{m_vInjectedCursorPos - m_vLastInjectedCursorPos};
         // Mouse::update() skips position application on zero relative motion, so report a tiny
         // delta when a freshly injected position equals the previous one

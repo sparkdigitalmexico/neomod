@@ -21,6 +21,7 @@ class UIDebug final {
     void debugDumpScreens();
     void debugDumpElements(std::string_view screenName);
     void debugAssert(std::string_view args);
+    void debugPrompt(std::string_view msg);
 
    private:
     UI* m_ui;

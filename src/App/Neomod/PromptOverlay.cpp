@@ -18,7 +18,7 @@ PromptOverlay::PromptOverlay() : UIScreen() {
     this->prompt_label->setDrawBackground(false);
     this->addBaseUIElement(this->prompt_label);
 
-    this->prompt_input = new CBaseUITextbox(0, 0, 400, 40, "");
+    this->prompt_input = new CBaseUITextbox(0, 0, 400, 40, "prompt_input");
     this->addBaseUIElement(this->prompt_input);
 
     this->ok_btn = new UIButton(0, 0, 110, 35, "ok_btn", _("OK"));

@@ -290,9 +290,8 @@ class Environment {
     inline void setOSMousePos(float x, float y) { setOSMousePos(vec2{x, y}); }
 
     // synthetic cursor position for headless/scripted UI testing (mouse_to command)
-    // once set, real SDL cursor state is ignored for the rest of the session
     inline void setInjectedCursorPos(vec2 pos) {
-        m_bInjectedCursor = m_bInjectedCursorDirty = true;
+        m_bInjectedCursorDirty = true;
         m_vInjectedCursorPos = pos;
     }
 
@@ -420,8 +419,7 @@ class Environment {
     // see setInjectedCursorPos
     vec2 m_vInjectedCursorPos{0.f, 0.f};
     vec2 m_vLastInjectedCursorPos{0.f, 0.f};
-    bool m_bInjectedCursor{false};
-    bool m_bInjectedCursorDirty{false};
+    bool m_bInjectedCursorDirty{true};  // dirty to initialize mouse cursor pos
 
     bool m_bIsCursorInsideWindow;
     bool m_bCursorClipped;

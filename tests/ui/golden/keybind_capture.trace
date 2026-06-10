@@ -1,0 +1,70 @@
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=MainMenu
+uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
+uitrace frame=31 evt=hoverIn elem=mainmenu_cube
+uitrace frame=35 evt=downInside elem=CBaseUIContainer
+uitrace frame=35 evt=downInside elem=CBaseUIContainer
+uitrace frame=35 evt=downInside elem=UIUserContextMenuScreen
+uitrace frame=35 evt=downInside elem=MainMenu
+uitrace frame=35 evt=downInside elem=mainmenu_cube
+uitrace frame=39 evt=upInside elem=CBaseUIContainer
+uitrace frame=39 evt=upInside elem=CBaseUIContainer
+uitrace frame=39 evt=upInside elem=UIUserContextMenuScreen
+uitrace frame=39 evt=upInside elem=MainMenu
+uitrace frame=39 evt=upInside elem=mainmenu_cube
+uitrace frame=60 evt=hoverOut elem=mainmenu_cube
+uitrace frame=79 evt=hoverIn elem=mainmenu_options
+uitrace frame=84 evt=downInside elem=CBaseUIContainer
+uitrace frame=84 evt=downInside elem=CBaseUIContainer
+uitrace frame=84 evt=downInside elem=UIUserContextMenuScreen
+uitrace frame=84 evt=downInside elem=MainMenu
+uitrace frame=84 evt=downInside elem=mainmenu_options
+uitrace frame=88 evt=upInside elem=CBaseUIContainer
+uitrace frame=88 evt=upInside elem=CBaseUIContainer
+uitrace frame=88 evt=upInside elem=UIUserContextMenuScreen
+uitrace frame=88 evt=upInside elem=MainMenu
+uitrace frame=88 evt=upInside elem=mainmenu_options
+uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverIn elem=(anonymous namespace)::CategoryButton
+uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverOut elem=mainmenu_options
+uitrace frame=119 evt=hoverIn elem=OptionsOverlay
+uitrace frame=123 evt=downInside elem=CBaseUIContainer
+uitrace frame=123 evt=downInside elem=CBaseUIContainer
+uitrace frame=123 evt=downInside elem=UIUserContextMenuScreen
+uitrace frame=123 evt=downInside elem=OptionsOverlay
+uitrace frame=123 evt=downInside elem=options_categories
+uitrace frame=123 evt=downInside elem=(anonymous namespace)::CategoryButton
+uitrace frame=123 evt=downInside elem=options_categories
+uitrace frame=127 evt=upInside elem=CBaseUIContainer
+uitrace frame=127 evt=upInside elem=CBaseUIContainer
+uitrace frame=127 evt=upInside elem=UIUserContextMenuScreen
+uitrace frame=127 evt=upInside elem=OptionsOverlay
+uitrace frame=127 evt=upInside elem=options_categories
+uitrace frame=127 evt=upInside elem=(anonymous namespace)::CategoryButton
+uitrace frame=127 evt=upInside elem=options_categories
+uitrace frame=147 evt=hoverIn elem=options_contents
+uitrace frame=147 evt=hoverIn elem=Left Click
+uitrace frame=147 evt=hoverIn elem=options_contents
+uitrace frame=147 evt=hoverOut elem=options_categories
+uitrace frame=147 evt=hoverOut elem=(anonymous namespace)::CategoryButton
+uitrace frame=147 evt=hoverOut elem=options_categories
+uitrace frame=147 evt=hoverIn elem=options_search
+uitrace frame=152 evt=downInside elem=CBaseUIContainer
+uitrace frame=152 evt=downInside elem=CBaseUIContainer
+uitrace frame=152 evt=downInside elem=UIUserContextMenuScreen
+uitrace frame=152 evt=downInside elem=OptionsOverlay
+uitrace frame=152 evt=downInside elem=options_contents
+uitrace frame=152 evt=downInside elem=Left Click
+uitrace frame=152 evt=downInside elem=options_contents
+uitrace frame=156 evt=upInside elem=CBaseUIContainer
+uitrace frame=156 evt=upInside elem=CBaseUIContainer
+uitrace frame=156 evt=upInside elem=UIUserContextMenuScreen
+uitrace frame=156 evt=upInside elem=OptionsOverlay
+uitrace frame=156 evt=upInside elem=options_contents
+uitrace frame=156 evt=upInside elem=Left Click
+uitrace frame=156 evt=upInside elem=options_contents
+uitrace frame=167 evt=keydown consumed_by=NotificationOverlay
+uitrace frame=173 evt=keydown consumed_by=OptionsOverlay
+uitrace frame=173 evt=hoverIn elem=mainmenu_cube

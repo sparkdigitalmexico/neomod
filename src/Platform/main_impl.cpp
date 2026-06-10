@@ -42,7 +42,24 @@ extern char **environ;
 #endif
 
 // for sending keys synthetically from console
-static void sendkey(std::string_view keyName) {
+// usage: sendkey <name> [down|up]  -- without the suffix sends down+up; with it only that
+// half, so modifiers can be held across other commands (e.g. sendkey LCtrl down, sendkey O,
+// sendkey LCtrl up). pushed events carry the accumulated held-modifier mask.
+static void sendkey(std::string_view args) {
+    std::string_view keyName = args;
+    bool sendDown = true, sendUp = true;
+    // only a trailing "down"/"up" token is a suffix; key names may contain spaces ("Left Ctrl")
+    if(const auto spacePos = args.rfind(' '); spacePos != std::string_view::npos) {
+        const std::string_view suffix = args.substr(spacePos + 1);
+        if(suffix == "down") {
+            sendUp = false;
+            keyName = args.substr(0, spacePos);
+        } else if(suffix == "up") {
+            sendDown = false;
+            keyName = args.substr(0, spacePos);
+        }
+    }
+
     SDL_Scancode sc = SDL_GetScancodeFromName(std::string(keyName).c_str());
     if(sc == SDL_SCANCODE_UNKNOWN) {
         // try parsing as numeric scancode
@@ -54,20 +71,44 @@ static void sendkey(std::string_view keyName) {
         }
     }
 
+    static SDL_Keymod heldMods{SDL_KMOD_NONE};
+    SDL_Keymod keyMod{SDL_KMOD_NONE};
+    // clang-format off
+    switch(sc) {
+        case SDL_SCANCODE_LCTRL: keyMod = SDL_KMOD_LCTRL; break;
+        case SDL_SCANCODE_RCTRL: keyMod = SDL_KMOD_RCTRL; break;
+        case SDL_SCANCODE_LSHIFT: keyMod = SDL_KMOD_LSHIFT; break;
+        case SDL_SCANCODE_RSHIFT: keyMod = SDL_KMOD_RSHIFT; break;
+        case SDL_SCANCODE_LALT: keyMod = SDL_KMOD_LALT; break;
+        case SDL_SCANCODE_RALT: keyMod = SDL_KMOD_RALT; break;
+        case SDL_SCANCODE_LGUI: keyMod = SDL_KMOD_LGUI; break;
+        case SDL_SCANCODE_RGUI: keyMod = SDL_KMOD_RGUI; break;
+        default: break;
+    }
+    // clang-format on
+
     SDL_Event ev{};
-    ev.key.type = SDL_EVENT_KEY_DOWN;
     ev.key.timestamp = Timing::getTicksNS();
     ev.key.scancode = sc;
     ev.key.key = SDL_GetKeyFromScancode(sc, SDL_KMOD_NONE, false);
-    ev.key.down = true;
     ev.key.repeat = false;
     ev.key.windowID = SDL_GetWindowID(SDL_GetKeyboardFocus());
-    SDL_PushEvent(&ev);
 
-    ev.key.type = SDL_EVENT_KEY_UP;
-    ev.key.down = false;
-    ev.key.timestamp = ev.key.timestamp + 1;
-    SDL_PushEvent(&ev);
+    if(sendDown) {
+        heldMods |= keyMod;
+        ev.key.type = SDL_EVENT_KEY_DOWN;
+        ev.key.down = true;
+        ev.key.mod = heldMods;
+        SDL_PushEvent(&ev);
+    }
+    if(sendUp) {
+        heldMods &= ~keyMod;
+        ev.key.type = SDL_EVENT_KEY_UP;
+        ev.key.down = false;
+        ev.key.mod = heldMods;
+        ev.key.timestamp = ev.key.timestamp + 1;
+        SDL_PushEvent(&ev);
+    }
 }
 
 static void sendtext(std::string_view text) {

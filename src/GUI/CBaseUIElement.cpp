@@ -322,3 +322,5 @@ mouseUpCheck:       {:02b}
            this->bKeepActive, this->bMouseInside, this->bHandleLeftMouse, this->bHandleRightMouse, this->rect,
            this->relRect, this->mouseInsideCheck, this->mouseUpCheck);
 }
+
+std::span<CBaseUIElement *const> CBaseUIElement::getAllChildren() const { return {}; }

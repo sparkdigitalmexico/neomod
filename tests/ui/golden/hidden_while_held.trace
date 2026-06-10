@@ -25,4 +25,19 @@ uitrace frame=88 evt=upInside elem=CBaseUIContainer
 uitrace frame=88 evt=upInside elem=UIUserContextMenuScreen
 uitrace frame=88 evt=upInside elem=MainMenu
 uitrace frame=88 evt=upInside elem=mainmenu_options
-uitrace frame=119 evt=keydown consumed_by=OptionsOverlay
+uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverIn elem=(anonymous namespace)::CategoryButton
+uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverOut elem=mainmenu_options
+uitrace frame=119 evt=hoverIn elem=OptionsOverlay
+uitrace frame=123 evt=downInside elem=CBaseUIContainer
+uitrace frame=123 evt=downInside elem=CBaseUIContainer
+uitrace frame=123 evt=downInside elem=UIUserContextMenuScreen
+uitrace frame=123 evt=downInside elem=OptionsOverlay
+uitrace frame=123 evt=downInside elem=options_categories
+uitrace frame=123 evt=downInside elem=(anonymous namespace)::CategoryButton
+uitrace frame=123 evt=downInside elem=options_categories
+uitrace frame=127 evt=keydown consumed_by=OptionsOverlay
+uitrace frame=133 evt=upInside elem=CBaseUIContainer
+uitrace frame=133 evt=upInside elem=CBaseUIContainer
+uitrace frame=133 evt=upInside elem=UIUserContextMenuScreen

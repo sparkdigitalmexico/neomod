@@ -360,6 +360,7 @@ void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
             }
 
             if(handledThisFrame) {
+                if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this, "wheel");
                 ++layeredScrollsHandledInFrame;
             }
         }

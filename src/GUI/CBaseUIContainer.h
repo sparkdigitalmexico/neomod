@@ -63,6 +63,10 @@ class CBaseUIContainer : public CBaseUIElement {
         return reinterpret_cast<const std::vector<T *> &>(this->vElements);
     }
 
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override {
+        return {this->vElements.begin(), this->vElements.end()};
+    }
+
    protected:
     std::vector<CBaseUIElement *> vElements;
 };
