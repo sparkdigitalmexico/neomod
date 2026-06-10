@@ -1547,6 +1547,17 @@ vec2 Environment::getAsyncMousePos() const {
 }
 
 Environment::CursorPosition Environment::consumeCursorPositionCache() {
+    // synthetic cursor position injected via the mouse_to debug command takes priority over real SDL state
+    if(m_bInjectedCursor) {
+        dvec2 newRel{m_vInjectedCursorPos - m_vLastInjectedCursorPos};
+        // Mouse::update() skips position application on zero relative motion, so report a tiny
+        // delta when a freshly injected position equals the previous one
+        if(m_bInjectedCursorDirty && vec::length(newRel) == 0.) newRel = {0.001, 0.001};
+        m_bInjectedCursorDirty = false;
+        m_vLastInjectedCursorPos = m_vInjectedCursorPos;
+        return CursorPosition{.rel = newRel, .abs = dvec2{m_vInjectedCursorPos}, .scale = 1.f, .needsClipping = false};
+    }
+
     float xRel{0.f}, yRel{0.f};
     float x{m_vLastAbsMousePos.x}, y{m_vLastAbsMousePos.y};
 

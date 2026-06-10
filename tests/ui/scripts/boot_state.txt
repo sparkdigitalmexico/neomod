@@ -1,0 +1,16 @@
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+mouse_to 10 10
+@wait 30
+ui_assert screen_active mainmenu 1
+ui_assert visible mainmenu 1
+ui_assert visible optionsoverlay 0
+ui_assert visible songbrowser 0
+ui_assert visible chat 0
+ui_assert visible modselector 0
+ui_assert visible promptoverlay 0
+ui_assert visible pauseoverlay 0
+ui_assert visible volumeoverlay 0
+exit

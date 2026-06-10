@@ -88,9 +88,65 @@ static void sendtext(std::string_view text) {
     SDL_PushEvent(&ev);
 }
 
+// for sending synthetic mouse input from console (headless/scripted UI testing)
+// NOTE: position injection latches for the session (real cursor state is ignored from then on),
+// button/wheel events go through the real SDL event queue and are seen by the engine 1 frame later
+static void mouse_to(std::string_view args) {
+    float x{}, y{};
+    if(!Parsing::parse(args, &x, Parsing::SPC, &y)) {
+        debugLog("usage: mouse_to <x> <y>");
+        return;
+    }
+    env->setInjectedCursorPos({x, y});
+}
+
+static void pushMouseButtonEvent(std::string_view btnName, bool down) {
+    u8 sdlButton{};
+    if(btnName.empty() || btnName == "left")
+        sdlButton = SDL_BUTTON_LEFT;
+    else if(btnName == "right")
+        sdlButton = SDL_BUTTON_RIGHT;
+    else if(btnName == "middle")
+        sdlButton = SDL_BUTTON_MIDDLE;
+    else {
+        debugLog("unknown mouse button '{}' (left/right/middle)", btnName);
+        return;
+    }
+
+    SDL_Event ev{};
+    ev.button.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+    ev.button.timestamp = Timing::getTicksNS();
+    ev.button.windowID = SDL_GetWindowID(SDL_GetMouseFocus());
+    ev.button.button = sdlButton;
+    ev.button.down = down;
+    ev.button.clicks = 1;
+    SDL_PushEvent(&ev);
+}
+
+static void mouse_down(std::string_view btn) { pushMouseButtonEvent(btn, true); }
+static void mouse_up(std::string_view btn) { pushMouseButtonEvent(btn, false); }
+
+static void mouse_wheel(std::string_view args) {
+    const int notches = Parsing::strto<int>(args);
+    if(notches == 0) {
+        debugLog("usage: mouse_wheel <notches> (nonzero, positive = scroll up)");
+        return;
+    }
+    SDL_Event ev{};
+    ev.wheel.type = SDL_EVENT_MOUSE_WHEEL;
+    ev.wheel.timestamp = Timing::getTicksNS();
+    ev.wheel.windowID = SDL_GetWindowID(SDL_GetMouseFocus());
+    ev.wheel.y = static_cast<float>(notches);
+    SDL_PushEvent(&ev);
+}
+
 namespace cv {
 static ConVar sendkey_cmd("sendkey", CLIENT | NOLOAD | NOSAVE, CFUNC(sendkey));
 static ConVar sendtext_cmd("sendtext", CLIENT | NOLOAD | NOSAVE, CFUNC(sendtext));
+static ConVar mouse_to_cmd("mouse_to", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_to));
+static ConVar mouse_down_cmd("mouse_down", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_down));
+static ConVar mouse_up_cmd("mouse_up", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_up));
+static ConVar mouse_wheel_cmd("mouse_wheel", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_wheel));
 }  // namespace cv
 
 SDLMain::SDLMain(const Mc::AppDescriptor &appDesc, std::unordered_map<std::string, std::optional<std::string>> argMap,

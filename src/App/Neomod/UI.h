@@ -1,5 +1,5 @@
 #pragma once
-// Copyright (c) 2026, kiwec, All rights reserved.
+// Copyright (c) 2026, kiwec, 2026, WH, All rights reserved.
 
 #include "config.h"
 #include "noinclude.h"
@@ -43,6 +43,7 @@ struct UI;
 extern UI* ui;
 
 // UIScreens, manually created + added to the "overlays" array and destroyed in reverse order in dtor
+class UIDebug;
 
 struct UI final {
     NOCOPY_NOMOVE(UI)
@@ -123,8 +124,7 @@ struct UI final {
 
    private:
     friend UIScreen;
-    // for debugging
-    void setScreenByName(std::string_view screenGetterNameWithoutGet);
+    friend UIDebug;  // see UIDebug.h
 
     UIScreen* dummy;
     NotificationOverlay* notificationOverlay;
@@ -160,6 +160,32 @@ struct UI final {
     // additional overlays added by pushOverlay (owned by UI)
     std::vector<UIOverlay*> extra_overlays;
 
+    // debugging
+    std::unique_ptr<UIDebug> debuglayer{nullptr};
+
     // for idle cursor fade alpha
     f64 lastCursorMoveTime{0.};
+
+    // index-aligned with UI::screens, see the assignment order in UI::init()
+    static constexpr std::array<std::string_view, NUM_SCREENS> SCREEN_NAMES{"dummy",
+                                                                            "notificationoverlay",
+                                                                            "volumeoverlay",
+                                                                            "promptoverlay",
+                                                                            "modselector",
+                                                                            "useractions",
+                                                                            "room",
+                                                                            "chat",
+                                                                            "optionsoverlay",
+                                                                            "rankingscreen",
+                                                                            "userstatsscreen",
+                                                                            "spectatorscreen",
+                                                                            "pauseoverlay",
+                                                                            "hud",
+                                                                            "songbrowser",
+                                                                            "osudirectscreen",
+                                                                            "lobby",
+                                                                            "aboutscreen",
+                                                                            "mainmenu",
+                                                                            "tooltipoverlay",
+                                                                            "beatmapinstalloverlay"};
 };

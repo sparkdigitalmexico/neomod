@@ -8,9 +8,21 @@
 #include <string>
 #include <string_view>
 
-// convar callback to avoid hammering atomic convar reads
+class CBaseUIElement;
+
+// convar callbacks to avoid hammering atomic convar reads
 namespace CBaseUIDebug {
 void onDumpElemsChangeCallback(float newvalue);
+void onTraceChangeCallback(float newvalue);
+
+// element name for debug output: sName if set, demangled type name otherwise
+std::string elemName(const CBaseUIElement *elem);
+
+// ui_trace level (0 = off), see the ui_trace convar
+[[nodiscard]] int traceLevel();
+
+// logs "uitrace frame=N evt=<evt> elem=<name>" for scripted-test golden diffing
+void traceEvent(const CBaseUIElement *elem, std::string_view evt);
 }  // namespace CBaseUIDebug
 
 // Guidelines for avoiding hair pulling:

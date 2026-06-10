@@ -8,12 +8,42 @@
 
 #include <utility>
 #include <memory>
+#include <typeinfo>
+
+#if __has_include(<cxxabi.h>)
+#include <cxxabi.h>
+#include <cstdlib>
+#endif
 
 namespace CBaseUIDebug {
 namespace {
 bool dumpElems{false};
-}
+int traceLvl{0};
+}  // namespace
 void onDumpElemsChangeCallback(float newvalue) { dumpElems = !!static_cast<int>(newvalue); }
+void onTraceChangeCallback(float newvalue) { traceLvl = static_cast<int>(newvalue); }
+
+int traceLevel() { return traceLvl; }
+
+void traceEvent(const CBaseUIElement *elem, std::string_view evt) {
+    logRaw("uitrace frame={} evt={} elem={}", engine->getFrameCount(), evt, elemName(elem));
+}
+
+std::string elemName(const CBaseUIElement *elem) {
+    if(!elem) return "<null>";
+    if(!elem->getName().empty()) return std::string{elem->getName()};
+
+    const char *mangled = typeid(*elem).name();
+#if __has_include(<cxxabi.h>)
+    int status = 0;
+    char *demangled = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
+    std::string ret{(status == 0 && demangled) ? demangled : mangled};
+    free(demangled);
+    return ret;
+#else
+    return std::string{mangled};
+#endif
+}
 }  // namespace CBaseUIDebug
 
 void CBaseUIEventCtx::consume_mouse() { this->propagate_clicks = this->propagate_hover = false; }
@@ -200,6 +230,8 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
         }
 
         if(oldMouseInsideState != this->bMouseInside) {
+            if(unlikely(CBaseUIDebug::traceLevel() > 0))
+                CBaseUIDebug::traceEvent(this, this->bMouseInside ? "hoverIn" : "hoverOut");
             if(this->bMouseInside) {
                 this->onMouseInside();
             } else {
@@ -231,6 +263,7 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
         // onMouseDownOutside
         if(!this->bMouseInside && !(this->mouseInsideCheck & buttonMask)) {
             this->mouseInsideCheck |= buttonMask;
+            if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(this, "downOutside");
             this->onMouseDownOutside((buttonMask & 0b10), (buttonMask & 0b01));
         }
 
@@ -238,6 +271,7 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
         if(this->bMouseInside && !(this->mouseInsideCheck & buttonMask)) {
             this->bActive = true;
             this->mouseInsideCheck |= buttonMask;
+            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this, "downInside");
             this->onMouseDownInside((buttonMask & 0b10), (buttonMask & 0b01));
         }
     }
@@ -245,10 +279,13 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
     // detect which buttons were released for mouse up events
     const u8 releasedButtons = this->mouseUpCheck & ~buttonMask;
     if(releasedButtons && this->bActive) {
-        if(this->bMouseInside)
+        if(this->bMouseInside) {
+            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this, "upInside");
             this->onMouseUpInside((releasedButtons & 0b10), (releasedButtons & 0b01));
-        else
+        } else {
+            if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(this, "upOutside");
             this->onMouseUpOutside((releasedButtons & 0b10), (releasedButtons & 0b01));
+        }
 
         if(!this->bKeepActive) this->bActive = false;
     }

@@ -1,4 +1,6 @@
+// Copyright (c) 2026, kiwec, 2026, WH, All rights reserved.
 #include "UI.h"
+#include "UIDebug.h"
 
 #include "noinclude.h"
 #include "Bancho.h"
@@ -54,65 +56,6 @@ class NullScreen final : public UIScreen {
 };
 }  // namespace
 
-namespace cv {
-// callback only set after initialized
-// for debugging
-static ConVar set_active_ui_screen("set_active_ui_screen", CLIENT | NOLOAD | NOSAVE);
-}  // namespace cv
-
-void UI::setScreenByName(std::string_view screenGetterNameWithoutGet) {
-    UIScreen *toSet = nullptr;
-    const std::string lowerName = SString::to_lower(screenGetterNameWithoutGet);
-
-    if(lowerName == "notificationoverlay"sv) {
-        toSet = this->notificationOverlay;
-    } else if(lowerName == "volumeoverlay"sv) {
-        toSet = this->volumeOverlay;
-    } else if(lowerName == "promptoverlay"sv) {
-        toSet = this->promptOverlay;
-    } else if(lowerName == "modselector"sv) {
-        toSet = this->modSelector;
-    } else if(lowerName == "useractions"sv) {
-        toSet = this->userActionsOverlay;
-    } else if(lowerName == "room"sv) {
-        toSet = this->room;
-    } else if(lowerName == "chat"sv) {
-        toSet = this->chatOverlay;
-    } else if(lowerName == "optionsoverlay"sv) {
-        toSet = this->optionsOverlay;
-    } else if(lowerName == "rankingscreen"sv) {
-        toSet = this->rankingScreen;
-    } else if(lowerName == "userstatsscreen"sv) {
-        toSet = this->userStatsScreen;
-    } else if(lowerName == "spectatorscreen"sv) {
-        toSet = this->spectatorScreen;
-    } else if(lowerName == "pauseoverlay"sv) {
-        toSet = this->pauseOverlay;
-    } else if(lowerName == "hud"sv) {
-        toSet = this->hud;
-    } else if(lowerName == "songbrowser"sv) {
-        toSet = this->songBrowser;
-    } else if(lowerName == "osudirectscreen"sv) {
-        toSet = this->osuDirectScreen;
-    } else if(lowerName == "lobby"sv) {
-        toSet = this->lobby;
-    } else if(lowerName == "changelog"sv) {
-        toSet = this->aboutScreen;
-    } else if(lowerName == "mainmenu"sv) {
-        toSet = this->mainMenu;
-    } else if(lowerName == "tooltipoverlay"sv) {
-        toSet = this->tooltipOverlay;
-    } else if(lowerName == "beatmapinstalloverlay"sv) {
-        toSet = this->beatmapInstallOverlay;
-    }
-
-    if(toSet) {
-        this->setScreen(toSet);
-    } else {
-        debugLog("Invalid screen {}", screenGetterNameWithoutGet);
-    }
-}
-
 UIScreen *UI::getNotificationOverlayBase() const { return this->notificationOverlay; }
 UIScreen *UI::getVolumeOverlayBase() const { return this->volumeOverlay; }
 UIScreen *UI::getPromptOverlayBase() const { return this->promptOverlay; }
@@ -143,7 +86,7 @@ UI::UI() {
 }
 
 UI::~UI() {
-    cv::set_active_ui_screen.removeAllCallbacks();
+    this->debuglayer.reset();
 
     for(auto *overlay : this->extra_overlays) {
         SAFE_DELETE(overlay);
@@ -186,7 +129,7 @@ bool UI::init() {
     this->active_screen = Osu::isKioskMode() ? static_cast<UIScreen *>(this->dummy) : this->mainMenu;
 
     // debug
-    cv::set_active_ui_screen.setCallback(SA::MakeDelegate<&UI::setScreenByName>(this));
+    this->debuglayer = std::make_unique<UIDebug>(this);
 
     return true;
 }
@@ -368,18 +311,33 @@ void UI::draw() {
     }
 }
 
+namespace {
+// for scripted testing: log who consumed a key event (same format family as CBaseUIDebug::traceEvent)
+forceinline void traceKeyConsumed(std::string_view evt, CBaseUIElement *consumer) {
+    if(unlikely(CBaseUIDebug::traceLevel() > 0))
+        logRaw("uitrace frame={} evt={} consumed_by={}", engine->getFrameCount(), evt,
+               CBaseUIDebug::elemName(consumer));
+}
+}  // namespace
+
 void UI::onKeyDown(KeyboardEvent &key) {
     if(key.isConsumed()) return;
 
     // NOLINTNEXTLINE(modernize-loop-convert)
     for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
         this->extra_overlays[i]->onKeyDown(key);
-        if(key.isConsumed()) return;
+        if(key.isConsumed()) {
+            traceKeyConsumed("keydown", this->extra_overlays[i]);
+            return;
+        }
     }
 
     for(auto *screen : this->screens) {
         screen->onKeyDown(key);
-        if(key.isConsumed()) return;
+        if(key.isConsumed()) {
+            traceKeyConsumed("keydown", screen);
+            return;
+        }
     }
 }
 
@@ -389,12 +347,18 @@ void UI::onKeyUp(KeyboardEvent &key) {
     // NOLINTNEXTLINE(modernize-loop-convert)
     for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
         this->extra_overlays[i]->onKeyUp(key);
-        if(key.isConsumed()) return;
+        if(key.isConsumed()) {
+            traceKeyConsumed("keyup", this->extra_overlays[i]);
+            return;
+        }
     }
 
     for(auto *screen : this->screens) {
         screen->onKeyUp(key);
-        if(key.isConsumed()) return;
+        if(key.isConsumed()) {
+            traceKeyConsumed("keyup", screen);
+            return;
+        }
     }
 }
 
@@ -404,12 +368,18 @@ void UI::onChar(KeyboardEvent &e) {
     // NOLINTNEXTLINE(modernize-loop-convert)
     for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
         this->extra_overlays[i]->onChar(e);
-        if(e.isConsumed()) return;
+        if(e.isConsumed()) {
+            traceKeyConsumed("char", this->extra_overlays[i]);
+            return;
+        }
     }
 
     for(auto *screen : this->screens) {
         screen->onChar(e);
-        if(e.isConsumed()) return;
+        if(e.isConsumed()) {
+            traceKeyConsumed("char", screen);
+            return;
+        }
     }
 }
 

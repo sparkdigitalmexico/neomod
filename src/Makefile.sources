@@ -201,6 +201,7 @@ neomod_SOURCES = \
 	src/App/Neomod/UIButtonWithIcon.cpp \
 	src/App/Neomod/UICheckbox.cpp \
 	src/App/Neomod/UIContextMenu.cpp \
+	src/App/Neomod/UIDebug.cpp \
 	src/App/Neomod/UIIcon.cpp \
 	src/App/Neomod/UILabel.cpp \
 	src/App/Neomod/UIModSelectorModButton.cpp \

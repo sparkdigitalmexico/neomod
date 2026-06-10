@@ -1,0 +1,19 @@
+# KNOWN-BAD until phase 2 (event-driven mouse): a press+release arriving in the same
+# frame is silently lost by the polled click synthesis (see Mouse.h "jank at low FPS" TODO).
+# rename to .txt when phase 2 lands; the trace must then contain downInside+upInside
+# on MainMenu::CubeButton and the menu must expand.
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+mouse_to 10 10
+@wait 30
+mouse_to 1280 717
+@wait 2
+mouse_down
+mouse_up
+@wait 30
+mouse_to 1734 803
+@wait 3
+ui_assert hovered MainMenu::MainButton 1
+exit

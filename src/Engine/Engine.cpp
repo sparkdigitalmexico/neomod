@@ -336,10 +336,18 @@ void Engine::onUpdate() {
         VPROF_BUDGET("Timer::update", VPROF_BUDGETGROUP_UPDATE);
 
         // frame time
-        const f64 now = Timing::getTimeReal();
-        const f64 frameTime = this->dFrameTime = std::max<f64>(now - this->dTime, 0.00005);
-        // total engine runtime
-        this->dTime = now;
+        f64 frameTime;
+        if(const f64 fixedDt = cv::debug_fixed_frametime.getDouble(); fixedDt > 0.0) {
+            // deterministic stepping for headless testing: simulation time advances by a fixed
+            // step per frame, decoupled from wall clock (so anims and @wait_secs are reproducible)
+            frameTime = this->dFrameTime = fixedDt;
+            this->dTime += fixedDt;
+        } else {
+            const f64 now = Timing::getTimeReal();
+            frameTime = this->dFrameTime = std::max<f64>(now - this->dTime, 0.00005);
+            // total engine runtime
+            this->dTime = now;
+        }
         if(this->bEngineThrottle) {
             const f64 refreshTime = env->getDisplayRefreshTime();
             // it's more like a crude estimate but it gets the job done for use as a throttle

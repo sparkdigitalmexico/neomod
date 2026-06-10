@@ -1,0 +1,18 @@
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+mouse_to 10 10
+@wait 30
+mouse_to 1280 717
+@wait 3
+ui_assert visible volumeoverlay 0
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 1
+mouse_wheel 1
+@wait 5
+ui_assert visible volumeoverlay 1
+@wait 150
+ui_assert visible volumeoverlay 0
+exit
