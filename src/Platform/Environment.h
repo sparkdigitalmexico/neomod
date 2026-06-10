@@ -289,12 +289,6 @@ class Environment {
     void setOSMousePos(vec2 pos);
     inline void setOSMousePos(float x, float y) { setOSMousePos(vec2{x, y}); }
 
-    // synthetic cursor position for headless/scripted UI testing (mouse_to command)
-    inline void setInjectedCursorPos(vec2 pos) {
-        m_bInjectedCursorDirty = true;
-        m_vInjectedCursorPos = pos;
-    }
-
     // keyboard
     [[nodiscard]] std::string scanCodeToString(SCANCODE scanCode) const;
     [[nodiscard]] std::string keyCodeToString(KEYCODE keyCode) const;
@@ -416,7 +410,11 @@ class Environment {
 
     vec2 m_vLastAbsMousePos{0.f, 0.f};
 
-    // see setInjectedCursorPos
+    // synthetic cursor position for headless/scripted UI testing (mouse_to command)
+    inline void setInjectedCursorPos(vec2 pos) {
+        m_bInjectedCursorDirty = true;
+        m_vInjectedCursorPos = pos;
+    }
     vec2 m_vInjectedCursorPos{0.f, 0.f};
     vec2 m_vLastInjectedCursorPos{0.f, 0.f};
     bool m_bInjectedCursorDirty{true};  // dirty to initialize mouse cursor pos

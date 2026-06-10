@@ -1,7 +1,8 @@
 # pins the bActive/stealFocus textbox model: with two textboxes on screen (options server
 # box + prompt input layered above it), typed chars must reach ONLY the focused box.
 # P4's focus manager replaces the broadcast model and must keep this green.
-# note: each textbox is clicked before its sendtext (starts the SDL text input session).
+# note: each textbox is clicked before its sendtext to direct focus (chars land in the
+# active box; SDL text-session gating no longer applies with direct handleEvent).
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1

@@ -41,11 +41,20 @@ EM_JS(int, js_get_canvas_height, (), { return document.getElementById('canvas').
 extern char **environ;
 #endif
 
+namespace cv {
+static ConVar sendkey_cmd("sendkey", CLIENT | NOLOAD | NOSAVE);
+static ConVar sendtext_cmd("sendtext", CLIENT | NOLOAD | NOSAVE);
+static ConVar mouse_to_cmd("mouse_to", CLIENT | NOLOAD | NOSAVE);
+static ConVar mouse_down_cmd("mouse_down", CLIENT | NOLOAD | NOSAVE);
+static ConVar mouse_up_cmd("mouse_up", CLIENT | NOLOAD | NOSAVE);
+static ConVar mouse_wheel_cmd("mouse_wheel", CLIENT | NOLOAD | NOSAVE);
+}  // namespace cv
+
 // for sending keys synthetically from console
 // usage: sendkey <name> [down|up]  -- without the suffix sends down+up; with it only that
 // half, so modifiers can be held across other commands (e.g. sendkey LCtrl down, sendkey O,
 // sendkey LCtrl up). pushed events carry the accumulated held-modifier mask.
-static void sendkey(std::string_view args) {
+void SDLMain::sendkey(std::string_view args) {
     std::string_view keyName = args;
     bool sendDown = true, sendUp = true;
     // only a trailing "down"/"up" token is a suffix; key names may contain spaces ("Left Ctrl")
@@ -92,14 +101,14 @@ static void sendkey(std::string_view args) {
     ev.key.scancode = sc;
     ev.key.key = SDL_GetKeyFromScancode(sc, SDL_KMOD_NONE, false);
     ev.key.repeat = false;
-    ev.key.windowID = SDL_GetWindowID(SDL_GetKeyboardFocus());
+    ev.key.windowID = m_windowID;
 
     if(sendDown) {
         heldMods |= keyMod;
         ev.key.type = SDL_EVENT_KEY_DOWN;
         ev.key.down = true;
         ev.key.mod = heldMods;
-        SDL_PushEvent(&ev);
+        handleEvent(&ev);
     }
     if(sendUp) {
         heldMods &= ~keyMod;
@@ -107,15 +116,15 @@ static void sendkey(std::string_view args) {
         ev.key.down = false;
         ev.key.mod = heldMods;
         ev.key.timestamp = ev.key.timestamp + 1;
-        SDL_PushEvent(&ev);
+        handleEvent(&ev);
     }
 }
 
-static void sendtext(std::string_view text) {
+void SDLMain::sendtext(std::string_view text) {
     SDL_Event ev{};
     ev.text.type = SDL_EVENT_TEXT_INPUT;
     ev.text.timestamp = Timing::getTicksNS();
-    ev.text.windowID = SDL_GetWindowID(SDL_GetKeyboardFocus());
+    ev.text.windowID = m_windowID;
 
     // SDL_EVENT_TEXT_INPUT expects a null-terminated string
     // (doesn't copy it)
@@ -126,22 +135,21 @@ static void sendtext(std::string_view text) {
     stringsIndex = (stringsIndex + 1) % 16;
 
     ev.text.text = current.c_str();
-    SDL_PushEvent(&ev);
+    handleEvent(&ev);
 }
 
 // for sending synthetic mouse input from console (headless/scripted UI testing)
-// NOTE: position injection latches for the session (real cursor state is ignored from then on),
-// button/wheel events go through the real SDL event queue and are seen by the engine 1 frame later
-static void mouse_to(std::string_view args) {
+// NOTE: position injection latches for the session (real cursor state is ignored from then on)
+void SDLMain::mouse_to(std::string_view args) {
     float x{}, y{};
     if(!Parsing::parse(args, &x, Parsing::SPC, &y)) {
         debugLog("usage: mouse_to <x> <y>");
         return;
     }
-    env->setInjectedCursorPos({x, y});
+    setInjectedCursorPos({x, y});
 }
 
-static void pushMouseButtonEvent(std::string_view btnName, bool down) {
+void SDLMain::pushMouseButtonEvent(std::string_view btnName, bool down) {
     u8 sdlButton{};
     if(btnName.empty() || btnName == "left")
         sdlButton = SDL_BUTTON_LEFT;
@@ -157,17 +165,17 @@ static void pushMouseButtonEvent(std::string_view btnName, bool down) {
     SDL_Event ev{};
     ev.button.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
     ev.button.timestamp = Timing::getTicksNS();
-    ev.button.windowID = SDL_GetWindowID(SDL_GetMouseFocus());
+    ev.button.windowID = m_windowID;
     ev.button.button = sdlButton;
     ev.button.down = down;
     ev.button.clicks = 1;
-    SDL_PushEvent(&ev);
+    handleEvent(&ev);
 }
 
-static void mouse_down(std::string_view btn) { pushMouseButtonEvent(btn, true); }
-static void mouse_up(std::string_view btn) { pushMouseButtonEvent(btn, false); }
+void SDLMain::mouse_down(std::string_view btn) { pushMouseButtonEvent(btn, true); }
+void SDLMain::mouse_up(std::string_view btn) { pushMouseButtonEvent(btn, false); }
 
-static void mouse_wheel(std::string_view args) {
+void SDLMain::mouse_wheel(std::string_view args) {
     const int notches = Parsing::strto<int>(args);
     if(notches == 0) {
         debugLog("usage: mouse_wheel <notches> (nonzero, positive = scroll up)");
@@ -176,19 +184,10 @@ static void mouse_wheel(std::string_view args) {
     SDL_Event ev{};
     ev.wheel.type = SDL_EVENT_MOUSE_WHEEL;
     ev.wheel.timestamp = Timing::getTicksNS();
-    ev.wheel.windowID = SDL_GetWindowID(SDL_GetMouseFocus());
+    ev.wheel.windowID = m_windowID;
     ev.wheel.y = static_cast<float>(notches);
-    SDL_PushEvent(&ev);
+    handleEvent(&ev);
 }
-
-namespace cv {
-static ConVar sendkey_cmd("sendkey", CLIENT | NOLOAD | NOSAVE, CFUNC(sendkey));
-static ConVar sendtext_cmd("sendtext", CLIENT | NOLOAD | NOSAVE, CFUNC(sendtext));
-static ConVar mouse_to_cmd("mouse_to", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_to));
-static ConVar mouse_down_cmd("mouse_down", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_down));
-static ConVar mouse_up_cmd("mouse_up", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_up));
-static ConVar mouse_wheel_cmd("mouse_wheel", CLIENT | NOLOAD | NOSAVE, CFUNC(mouse_wheel));
-}  // namespace cv
 
 SDLMain::SDLMain(const Mc::AppDescriptor &appDesc, std::unordered_map<std::string, std::optional<std::string>> argMap,
                  std::vector<std::string> argVec)
@@ -198,9 +197,25 @@ SDLMain::SDLMain(const Mc::AppDescriptor &appDesc, std::unordered_map<std::strin
     // setup callbacks
     cv::fps_max.setCallback(SA::MakeDelegate<&SDLMain::fps_max_callback>(this));
     cv::fps_max_background.setCallback(SA::MakeDelegate<&SDLMain::fps_max_background_callback>(this));
+
+    cv::sendkey_cmd.setCallback(SA::MakeDelegate<&SDLMain::sendkey>(this));
+    cv::sendtext_cmd.setCallback(SA::MakeDelegate<&SDLMain::sendtext>(this));
+    cv::mouse_to_cmd.setCallback(SA::MakeDelegate<&SDLMain::mouse_to>(this));
+    cv::mouse_down_cmd.setCallback(SA::MakeDelegate<&SDLMain::mouse_down>(this));
+    cv::mouse_up_cmd.setCallback(SA::MakeDelegate<&SDLMain::mouse_up>(this));
+    cv::mouse_wheel_cmd.setCallback(SA::MakeDelegate<&SDLMain::mouse_wheel>(this));
 }
 
 SDLMain::~SDLMain() {
+    cv::fps_max.reset();
+    cv::fps_max_background.reset();
+    cv::sendkey_cmd.reset();
+    cv::sendtext_cmd.reset();
+    cv::mouse_to_cmd.reset();
+    cv::mouse_down_cmd.reset();
+    cv::mouse_up_cmd.reset();
+    cv::mouse_wheel_cmd.reset();
+
     if constexpr(Env::cfg(OS::WINDOWS) && !Env::cfg(FEAT::MAINCB)) {
         SDL_RemoveEventWatch(SDLMain::resizeCallback, this);
     }

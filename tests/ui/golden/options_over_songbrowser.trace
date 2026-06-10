@@ -4,10 +4,10 @@ uitrace frame=0 evt=hoverIn elem=MainMenu
 uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
 uitrace frame=32 evt=hoverIn elem=CBaseUIContainer
 uitrace frame=32 evt=hoverIn elem=InfoLabel
-uitrace frame=333 evt=keydown consumed_by=SongBrowser
-uitrace frame=337 evt=hoverIn elem=options_categories
-uitrace frame=337 evt=hoverIn elem=options_categories
-uitrace frame=338 evt=hoverIn elem=OptionsOverlay
+uitrace frame=332 evt=keydown consumed_by=SongBrowser
+uitrace frame=336 evt=hoverIn elem=options_categories
+uitrace frame=336 evt=hoverIn elem=options_categories
+uitrace frame=337 evt=hoverIn elem=OptionsOverlay
 uitrace frame=346 evt=hoverIn elem=options_contents
 uitrace frame=346 evt=hoverIn elem=options_server_box
 uitrace frame=346 evt=hoverIn elem=options_contents

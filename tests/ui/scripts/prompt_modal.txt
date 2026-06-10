@@ -2,8 +2,8 @@
 # click far away must land only on the prompt overlay (trace shows nothing beneath it),
 # typed text goes only to the prompt input, OK closes it. uses the ui_prompt debug cmd
 # because every real prompt() call site is an online flow (chat join, room/lobby password).
-# note: a textbox must be clicked before sendtext (the click starts the SDL text input
-# session; without it pushed TEXT_INPUT events are dropped).
+# note: the click into the input mirrors the real user flow; since the direct-handleEvent
+# change sendtext is no longer gated on an SDL text session (chars reach the active box).
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1
