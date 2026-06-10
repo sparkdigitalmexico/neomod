@@ -40,7 +40,9 @@ for script in $scripts; do
     log="$OUT_DIR/$name.log"
 
     # binary must run from its install dir (assets are relative)
-    (cd "$(dirname "$BIN")" && "./$(basename "$BIN")" -headless <"$script" >"$log" 2>&1)
+    # ui_validate_ticks is injected into the scripts' frame-0 batch (same frame as the
+    # preamble, so traces don't shift): every screen must be ticked every frame (debug builds)
+    (cd "$(dirname "$BIN")" && { echo "ui_validate_ticks 1"; cat "$script"; } | "./$(basename "$BIN")" -headless >"$log" 2>&1)
     rc=$?
 
     status=ok

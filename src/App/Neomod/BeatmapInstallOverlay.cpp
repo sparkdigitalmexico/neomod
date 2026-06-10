@@ -216,10 +216,14 @@ void BeatmapInstallOverlay::onResolutionChange(vec2 /*newResolution*/) {
     m_impl->last_virt_height = 0;
 }
 
-void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
+void BeatmapInstallOverlay::updateInput(CBaseUIEventCtx& c) { CBaseUIContainer::updateInput(c); }
+
+void BeatmapInstallOverlay::tick() {
+    UIScreen::tick();
+
     // play mode is the broader visibility gate; the matching draw() call lives in UI::draw()'s
-    // "not playing" branch. setting bVisible=false here also prevents child X buttons from
-    // receiving stale click events through CBaseUIContainer::update.
+    // "not playing" branch. tick() runs before the input pass, so the bVisible computed here is
+    // what gates the child X buttons' input in the same frame.
     if(!cv::draw_beatmap_install_overlay.getBool() || osu->isInPlayMode()) {
         this->bVisible = false;
         return;
@@ -315,8 +319,6 @@ void BeatmapInstallOverlay::update(CBaseUIEventCtx& c) {
         m_impl->last_virt_height = virt_h;
         m_impl->last_row_count = rows.size();
     }
-
-    CBaseUIContainer::update(c);
 }
 
 void BeatmapInstallOverlay::draw() {

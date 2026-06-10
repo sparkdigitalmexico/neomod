@@ -80,9 +80,9 @@ void UIModSelectorModButton::draw() {
     }
 }
 
-void UIModSelectorModButton::update(CBaseUIEventCtx &c) {
+void UIModSelectorModButton::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    CBaseUIButton::update(c);
+    CBaseUIButton::updateInput(c);
 
     // handle tooltips
     if(this->isMouseInside() && this->bAvailable && this->states.size() > 0 && !this->bFocusStolenDelay) {

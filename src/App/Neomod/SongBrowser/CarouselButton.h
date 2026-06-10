@@ -37,7 +37,8 @@ class CarouselButton : public CBaseUIButton {
     void deleteAnimations();
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     virtual void updateLayoutEx();
 

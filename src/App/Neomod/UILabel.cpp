@@ -6,9 +6,9 @@
 #include "TooltipOverlay.h"
 #include "UI.h"
 
-void UILabel::update(CBaseUIEventCtx &c) {
+void UILabel::updateInput(CBaseUIEventCtx& c) {
     if(!this->bVisible) return;
-    CBaseUILabel::update(c);
+    CBaseUILabel::updateInput(c);
 
     if(this->isMouseInside() && this->tooltipTextLines.size() > 0 && !this->bFocusStolenDelay) {
         ui->getTooltipOverlay()->begin();
@@ -27,6 +27,8 @@ void UILabel::onFocusStolen() {
     this->bFocusStolenDelay = true;
 }
 
-void UILabel::setTooltipText(std::string_view text) { this->tooltipTextLines = SString::split_newlines<std::string>(text); }
+void UILabel::setTooltipText(std::string_view text) {
+    this->tooltipTextLines = SString::split_newlines<std::string>(text);
+}
 
 std::string UILabel::getTooltipText() const { return SString::join(this->tooltipTextLines, '\n'); }

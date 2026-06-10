@@ -80,7 +80,15 @@ void SongButton::draw() {
     this->drawSubTitle();
 }
 
-void SongButton::update(CBaseUIEventCtx &c) {
+void SongButton::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) {
+        return;
+    }
+    CarouselButton::updateInput(c);
+}
+
+void SongButton::tick() {
+    CarouselButton::tick();
     if(!this->bVisible) {
         return;
     }
@@ -90,8 +98,6 @@ void SongButton::update(CBaseUIEventCtx &c) {
         this->fVisibleFor += engine->getFrameTime();
     else
         this->fVisibleFor = 0.f;
-
-    CarouselButton::update(c);
 
     if(this->children.empty()) return;
 

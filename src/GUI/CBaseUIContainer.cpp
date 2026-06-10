@@ -194,15 +194,25 @@ void CBaseUIContainer::draw_debug() {
     }
 }
 
-void CBaseUIContainer::update(CBaseUIEventCtx &c) {
-    CBaseUIElement::update(c);
+void CBaseUIContainer::tick() {
+    CBaseUIElement::tick();
+
+    // NOTE: do NOT use a range-based for loop here, tick() might invalidate iterators by changing the container contents...
+    const auto &elements = this->vElements;
+    for(size_t i = 0; i < elements.size(); i++) {
+        elements[i]->tick();
+    }
+}
+
+void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
+    CBaseUIElement::updateInput(c);
     if(!this->isVisible()) return;
 
-    // NOTE: do NOT use a range-based for loop here, update() might invalidate iterators by changing the container contents...
+    // NOTE: do NOT use a range-based for loop here, updateInput() might invalidate iterators by changing the container contents...
     const auto &elements = this->vElements;
     for(size_t i = 0; i < elements.size(); i++) {
         auto *e = elements[i];
-        if(e->isVisible()) e->update(c);
+        if(e->isVisible()) e->updateInput(c);
     }
 }
 

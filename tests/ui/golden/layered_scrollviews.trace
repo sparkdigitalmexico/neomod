@@ -85,11 +85,11 @@ uitrace frame=461 evt=hoverIn elem=options_skin_select
 uitrace frame=462 evt=hoverIn elem=options_skin_select
 uitrace frame=463 evt=hoverIn elem=options_skin_select
 uitrace frame=463 evt=wheel elem=options_contents
-uitrace frame=464 evt=hoverIn elem=options_skin_select
-uitrace frame=465 evt=hoverOut elem=options_contextmenu
-uitrace frame=465 evt=hoverOut elem=default
-uitrace frame=465 evt=hoverOut elem=options_contextmenu
-uitrace frame=465 evt=hoverIn elem=Reload Skin
-uitrace frame=467 evt=hoverIn elem=Number Scale:
-uitrace frame=468 evt=hoverIn elem=HitResult Scale:
+uitrace frame=464 evt=hoverOut elem=options_contextmenu
+uitrace frame=464 evt=hoverOut elem=default
+uitrace frame=464 evt=hoverOut elem=options_contextmenu
+uitrace frame=464 evt=hoverIn elem=Reload Skin
+uitrace frame=466 evt=hoverIn elem=Number Scale:
+uitrace frame=467 evt=hoverIn elem=HitResult Scale:
+uitrace frame=468 evt=hoverIn elem=Draw Numbers
 uitrace frame=469 evt=hoverIn elem=Draw Numbers

@@ -70,6 +70,14 @@ class Mouse final : public InputDevice {
     }
     [[nodiscard]] constexpr forceinline MouseButtonFlags getHeldButtons() const { return this->buttonsHeldMask; }
 
+    // buttons that went down during this frame's update (edge, not level; cleared every Mouse::update)
+    [[nodiscard]] constexpr forceinline bool isLeftPressed() const {
+        return flags::has<MouseButtonFlags::MF_LEFT>(this->buttonsPressedMask);
+    }
+    [[nodiscard]] constexpr forceinline bool isRightPressed() const {
+        return flags::has<MouseButtonFlags::MF_RIGHT>(this->buttonsPressedMask);
+    }
+
     [[nodiscard]] constexpr forceinline int getWheelDeltaVertical() const { return this->iWheelDeltaVertical; }
     [[nodiscard]] constexpr forceinline int getWheelDeltaHorizontal() const { return this->iWheelDeltaHorizontal; }
 
@@ -102,9 +110,9 @@ class Mouse final : public InputDevice {
     void onRawInputChanged(float newVal);
 
     // position state
-    vec2 vPos{0.f};                // position with offset applied
+    vec2 vPos{0.f};                 // position with offset applied
     dvec2 vPosWithoutOffsets{0.f};  // position without offset
-    vec2 vDelta{0.f};  // movement delta in the current frame
+    vec2 vDelta{0.f};               // movement delta in the current frame
     vec2 vRawDelta{0.f};  // movement delta in the current frame, without consideration for clipping or sensitivity
 
     // mode tracking
@@ -113,6 +121,7 @@ class Mouse final : public InputDevice {
 
     // button state (using our internal button index)
     MouseButtonFlags buttonsHeldMask{0};
+    MouseButtonFlags buttonsPressedMask{0};
 
     // wheel state
     int iWheelDeltaVertical{0};

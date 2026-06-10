@@ -15,7 +15,7 @@ class LoadingScreen : public UIOverlay {
     LoadingScreen(UIScreen *parent) : UIOverlay(parent) {}
     ~LoadingScreen() override { this->onFinished(); }
 
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
 
     inline void draw() final {
         if(!this->isVisible()) return;

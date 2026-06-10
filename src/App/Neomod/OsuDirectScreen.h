@@ -25,7 +25,8 @@ class OsuDirectScreen final : public ScreenBackable {
 
     CBaseUIContainer* setVisible(bool visible) override;
     void draw() override;
-    void update(CBaseUIEventCtx& c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx& c) override;
     void onBack() override;
     void onResolutionChange(vec2 newResolution) override;
 

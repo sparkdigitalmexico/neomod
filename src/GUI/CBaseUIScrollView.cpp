@@ -59,15 +59,34 @@ void ScrollContainer::invalidate() {
     CBaseUIContainer::invalidate();
 }
 
-void ScrollContainer::update(CBaseUIEventCtx &c) {
+void ScrollContainer::tick() {
+    // intentionally not calling parent: tick only the clipped-visible subset,
+    // carousels hold thousands of elements
+    CBaseUIElement::tick();
+
+    this->invalidateUpdate = false;
+
+    for(auto *e : this->vVisibleElements) {
+        e->tick();
+        if(this->invalidateUpdate) {
+            // iterators have been invalidated!
+            // try again next time.
+            break;
+        }
+    }
+
+    this->invalidateUpdate = false;
+}
+
+void ScrollContainer::updateInput(CBaseUIEventCtx &c) {
     // intentionally not calling parent
-    CBaseUIElement::update(c);
+    CBaseUIElement::updateInput(c);
     if(!this->isVisible()) return;
 
     this->invalidateUpdate = false;
 
     for(auto *e : this->vVisibleElements) {
-        e->update(c);
+        e->updateInput(c);
         if(this->invalidateUpdate) {
             // iterators have been invalidated!
             // try again next time.
@@ -235,7 +254,98 @@ void CBaseUIScrollView::draw() {
     }
 }
 
-void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
+void CBaseUIScrollView::tick() {
+    CBaseUIElement::tick();
+    this->container.tick();
+
+    // kinetic scrolling + rubber banding continue regardless of visibility or input gating;
+    // while drag-scrolling, updateInput() follows the mouse instead
+    if(!(this->bScrolling && this->bActive)) {
+        this->vKineticAverage = dvec2{0., 0.};
+
+        // rubber banding + kinetic scrolling
+
+        // TODO: fix amount being dependent on fps due to double animation time indirection
+
+        // y axis
+        if(!this->bAutoScrollingY && this->bVerticalScrolling) {
+            if(std::round(this->vScrollPos.y) > 1)  // rubber banding, top
+            {
+                // debugLog("y rubber banding, top");
+                this->vVelocity.y.set(1.0, 0.05, anim::QuadOut);
+                this->vScrollPos.y.set(this->vVelocity.y, 0.2, anim::QuadOut);
+            } else if(std::round(std::abs(this->vScrollPos.y) + this->getSize().y) > this->vScrollSize.y &&
+                      std::round(this->vScrollPos.y) < 1)  // rubber banding, bottom
+            {
+                // debugLog("y rubber banding, bottom");
+                this->vVelocity.y.set((this->vScrollSize.y > this->getSize().y ? -this->vScrollSize.y : 1.0) +
+                                          (this->vScrollSize.y > this->getSize().y ? this->getSize().y : 0),
+                                      0.05, anim::QuadOut);
+
+                this->vScrollPos.y.set(this->vVelocity.y, 0.2, anim::QuadOut);
+            } else if(std::round(this->vVelocity.y) != 0 &&
+                      std::round(this->vScrollPos.y) != std::round(this->vVelocity.y)) {  // kinetic scrolling
+                // debugLog("y kinetic scrolling, velocity: {} scrollpos: {} thispos: {}", this->vVelocity.y, this->vScrollPos.y, this->getPos().y);
+                this->vScrollPos.y.set(this->vVelocity.y, 0.35, anim::QuadOut);
+            }
+        }
+
+        // x axis
+        if(!this->bAutoScrollingX && this->bHorizontalScrolling) {
+            if(std::round(this->vScrollPos.x) > 1)  // rubber banding, left
+            {
+                // debugLog("x rubber banding, left");
+                this->vVelocity.x.set(1.0, 0.05, anim::QuadOut);
+                this->vScrollPos.x.set(this->vVelocity.x, 0.2, anim::QuadOut);
+            } else if(std::round(std::abs(this->vScrollPos.x) + this->getSize().x) > this->vScrollSize.x &&
+                      std::round(this->vScrollPos.x) < 1)  // rubber banding, right
+            {
+                // debugLog("x rubber banding, right");
+                this->vVelocity.x.set((this->vScrollSize.x > this->getSize().x ? -this->vScrollSize.x : 1.0) +
+                                          (this->vScrollSize.x > this->getSize().x ? this->getSize().x : 0.0),
+                                      0.05, anim::QuadOut);
+                this->vScrollPos.x.set(this->vVelocity.x, 0.2, anim::QuadOut);
+            } else if(std::round(this->vVelocity.x) != 0 &&
+                      std::round(this->vScrollPos.x) != std::round(this->vVelocity.x)) {  // kinetic scrolling
+                this->vScrollPos.x.set(this->vVelocity.x, 0.35, anim::QuadOut);
+                // debugLog("x rubber banding, kinetic scrolling");
+            }
+        }
+    }
+
+    // position update during scrolling
+    const dvec2 scrollPos{this->vScrollPos};
+    const bool animating =
+        vec::round(dvec2{this->getPos()} + scrollPos) != vec::round(dvec2{this->container.getPos()}) &&
+        (this->vScrollPos.y.animating() || this->vScrollPos.x.animating());
+    if(animating) {
+        this->bClippingDirty = true;
+        // debugLog("hit first condition, frame: {}", engine->getFrameCount());
+        this->container.setPos(vec::round(dvec2{this->getPos()} + scrollPos));
+    }
+
+    // update scrollbars (anim-driven movement only; input-driven movement does its own
+    // maintenance at the end of updateInput())
+    if(animating) {
+        this->bClippingDirty = true;
+        // debugLog("hit second condition, frame: {}", engine->getFrameCount());
+        this->updateScrollbars();
+    }
+
+    // HACKHACK: if an animation was started and ended before any setpos could get fired, manually update the position
+    if(const dvec2 roundedPos = vec::round(dvec2{this->getPos()} + dvec2{this->vScrollPos});
+       roundedPos != vec::round(dvec2{this->container.getPos()})) {
+        this->container.setPos(roundedPos);
+        this->bClippingDirty = true;
+        // debugLog("hit third condition, frame: {}", engine->getFrameCount());
+        this->updateScrollbars();
+    }
+
+    // TODO: make sure this doesn't run twice in 1 frame (after updateInput)
+    if(this->bClippingDirty) this->updateClipping();
+}
+
+void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
     if(!this->isVisible()) return;
 
     if(!c.propagate_clicks) {
@@ -245,8 +355,8 @@ void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
 
     const bool wasContainerBusyBeforeUpdate = this->container.isBusy();
 
-    this->container.update(c);
-    CBaseUIElement::update(c);
+    this->container.updateInput(c);
+    CBaseUIElement::updateInput(c);
 
     const dvec2 curMousePos = mouse->getPos();
 
@@ -374,58 +484,6 @@ void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
             this->vScrollPos.x = this->vScrollPosBackup.x + (curMousePos.x - this->vMouseBackup.x);
 
         this->container.setPos(vec::round(dvec2{this->getPos()} + dvec2{this->vScrollPos}));
-    } else  // no longer scrolling, smooth the remaining velocity
-    {
-        this->vKineticAverage = dvec2{0., 0.};
-
-        // rubber banding + kinetic scrolling
-
-        // TODO: fix amount being dependent on fps due to double animation time indirection
-
-        // y axis
-        if(!this->bAutoScrollingY && this->bVerticalScrolling) {
-            if(std::round(this->vScrollPos.y) > 1)  // rubber banding, top
-            {
-                // debugLog("y rubber banding, top");
-                this->vVelocity.y.set(1.0, 0.05, anim::QuadOut);
-                this->vScrollPos.y.set(this->vVelocity.y, 0.2, anim::QuadOut);
-            } else if(std::round(std::abs(this->vScrollPos.y) + this->getSize().y) > this->vScrollSize.y &&
-                      std::round(this->vScrollPos.y) < 1)  // rubber banding, bottom
-            {
-                // debugLog("y rubber banding, bottom");
-                this->vVelocity.y.set((this->vScrollSize.y > this->getSize().y ? -this->vScrollSize.y : 1.0) +
-                                          (this->vScrollSize.y > this->getSize().y ? this->getSize().y : 0),
-                                      0.05, anim::QuadOut);
-
-                this->vScrollPos.y.set(this->vVelocity.y, 0.2, anim::QuadOut);
-            } else if(std::round(this->vVelocity.y) != 0 &&
-                      std::round(this->vScrollPos.y) != std::round(this->vVelocity.y)) {  // kinetic scrolling
-                // debugLog("y kinetic scrolling, velocity: {} scrollpos: {} thispos: {}", this->vVelocity.y, this->vScrollPos.y, this->getPos().y);
-                this->vScrollPos.y.set(this->vVelocity.y, 0.35, anim::QuadOut);
-            }
-        }
-
-        // x axis
-        if(!this->bAutoScrollingX && this->bHorizontalScrolling) {
-            if(std::round(this->vScrollPos.x) > 1)  // rubber banding, left
-            {
-                // debugLog("x rubber banding, left");
-                this->vVelocity.x.set(1.0, 0.05, anim::QuadOut);
-                this->vScrollPos.x.set(this->vVelocity.x, 0.2, anim::QuadOut);
-            } else if(std::round(std::abs(this->vScrollPos.x) + this->getSize().x) > this->vScrollSize.x &&
-                      std::round(this->vScrollPos.x) < 1)  // rubber banding, right
-            {
-                // debugLog("x rubber banding, right");
-                this->vVelocity.x.set((this->vScrollSize.x > this->getSize().x ? -this->vScrollSize.x : 1.0) +
-                                          (this->vScrollSize.x > this->getSize().x ? this->getSize().x : 0.0),
-                                      0.05, anim::QuadOut);
-                this->vScrollPos.x.set(this->vVelocity.x, 0.2, anim::QuadOut);
-            } else if(std::round(this->vVelocity.x) != 0 &&
-                      std::round(this->vScrollPos.x) != std::round(this->vVelocity.x)) {  // kinetic scrolling
-                this->vScrollPos.x.set(this->vVelocity.x, 0.35, anim::QuadOut);
-                // debugLog("x rubber banding, kinetic scrolling");
-            }
-        }
     }
 
     // handle scrollbar scrolling movement
@@ -451,33 +509,14 @@ void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
         }
     }
 
-    // position update during scrolling
-    const dvec2 scrollPos{this->vScrollPos};
-    const bool animating =
-        vec::round(dvec2{this->getPos()} + scrollPos) != vec::round(dvec2{this->container.getPos()}) &&
-        (this->vScrollPos.y.animating() || this->vScrollPos.x.animating());
-    if(animating) {
+    // input-driven movement (drag-follow / scrollbar drag) must refresh scrollbars + clipping
+    // here: tick() already ran this frame, so deferring to the next tick would draw this frame
+    // with a clip list that is one frame of drag delta stale (elements scrolled into view would
+    // pop in one frame late)
+    if(this->bScrolling || this->bScrollbarScrolling) {
         this->bClippingDirty = true;
-        // debugLog("hit first condition, frame: {}", engine->getFrameCount());
-        this->container.setPos(vec::round(dvec2{this->getPos()} + scrollPos));
-    }
-
-    // update scrollbars
-    if(animating || (this->bScrolling || this->bScrollbarScrolling)) {
-        this->bClippingDirty = true;
-        // debugLog("hit second condition, frame: {}", engine->getFrameCount());
         this->updateScrollbars();
     }
-
-    // HACKHACK: if an animation was started and ended before any setpos could get fired, manually update the position
-    if(const dvec2 roundedPos = vec::round(dvec2{this->getPos()} + dvec2{this->vScrollPos});
-       roundedPos != vec::round(dvec2{this->container.getPos()})) {
-        this->container.setPos(roundedPos);
-        this->bClippingDirty = true;
-        // debugLog("hit third condition, frame: {}", engine->getFrameCount());
-        this->updateScrollbars();
-    }
-
     if(this->bClippingDirty) this->updateClipping();
 }
 

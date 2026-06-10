@@ -408,7 +408,13 @@ void Chat::drawTicker() {
     g->pop3DScene();
 }
 
-void Chat::update(CBaseUIEventCtx &c) {
+void Chat::tick() {
+    UIScreen::tick();
+    this->button_container->tick();
+    if(this->selected_channel) {
+        this->selected_channel->ui->tick();
+    }
+
     if(!this->bVisible) return;
 
     if(this->user_list->isVisible()) {
@@ -436,13 +442,17 @@ void Chat::update(CBaseUIEventCtx &c) {
             }
         }
     }
+}
 
-    UIScreen::update(c);
+void Chat::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    UIScreen::updateInput(c);
 
     // XXX: don't let mouse click through the buttons area
-    this->button_container->update(c);
+    this->button_container->updateInput(c);
     if(this->selected_channel) {
-        this->selected_channel->ui->update(c);
+        this->selected_channel->ui->updateInput(c);
     }
 
     // HACKHACK: MOUSE3 handling

@@ -58,7 +58,8 @@ class NotificationOverlay final : public UIScreen {
     NotificationOverlay();
     ~NotificationOverlay() override;
 
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void draw() override;
     void onResolutionChange(vec2 newResolution) override;
 
@@ -81,7 +82,8 @@ class NotificationOverlay final : public UIScreen {
             {.text = std::move(text), .callback = std::move(callback), .borderColor = borderColor, .type = type});
     }
 
-    void addNotification(std::string text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
+    void addNotification(std::string text, Color textColor = 0xffffffff, bool waitForKey = false,
+                         float duration = -1.0f);
     void setDisallowWaitForKeyLeftClick(bool disallowWaitForKeyLeftClick) {
         this->bWaitForKeyDisallowsLeftClick = disallowWaitForKeyLeftClick;
     }

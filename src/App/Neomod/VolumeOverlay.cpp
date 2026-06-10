@@ -111,12 +111,14 @@ void VolumeOverlay::draw() {
     if(this->fVolumeChangeFade != 1.0f) g->pop3DScene();
 }
 
-void VolumeOverlay::update(CBaseUIEventCtx &c) {
+void VolumeOverlay::tick() {
+    UIScreen::tick();
+
     this->volumeMaster->setEnabled(this->fVolumeChangeTime > engine->getTime());
     this->volumeEffects->setEnabled(this->volumeMaster->isEnabled());
     this->volumeMusic->setEnabled(this->volumeMaster->isEnabled());
     this->volumeSliderOverlayContainer->setSize(osu->getVirtScreenSize());
-    this->volumeSliderOverlayContainer->update(c);
+    this->volumeSliderOverlayContainer->tick();
 
     if(!this->volumeMaster->isBusy()) {
         if(this->volumeMaster->getFloat() != cv::volume_master.getFloat()) {
@@ -183,8 +185,12 @@ void VolumeOverlay::update(CBaseUIEventCtx &c) {
         // check if we're done
         if(this->fVolumeInactiveToActiveAnim == 1.0f) this->bVolumeInactiveToActiveScheduled = false;
     }
+}
 
-    // scroll wheel events (should be separate from update(), but... oh well...)
+void VolumeOverlay::updateInput(CBaseUIEventCtx &c) {
+    this->volumeSliderOverlayContainer->updateInput(c);
+
+    // scroll wheel events
     if(this->canChangeVolume()) {
         if(const int wheelDelta = mouse->getWheelDeltaVertical() / 120; wheelDelta != 0) {
             if(wheelDelta > 0) {

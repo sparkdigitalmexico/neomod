@@ -53,7 +53,12 @@ class CBaseUIElement : public KeyboardListener {
 
     // main
     virtual void draw() = 0;
-    virtual void update(CBaseUIEventCtx &c);
+
+    // logic/animations/async polling; always runs, regardless of visibility or input consumption
+    virtual void tick();
+
+    // mouse input synthesis (hover + click events); gated and priority-ordered by the caller
+    virtual void updateInput(CBaseUIEventCtx &c);
 
     // keyboard input (nothing by default)
     void onKeyUp(KeyboardEvent &e) override;
@@ -155,10 +160,8 @@ class CBaseUIElement : public KeyboardListener {
     // attributes
 
    private:
-    u32 lastUpdateFrame{0};
     u8 mouseInsideCheck : 2 {0};
     u8 mouseUpCheck : 2 {0};
-    u8 staleButtons : 2 {0};
 
    protected:
     bool grabs_clicks : 1 {false};  // TODO: remove this (confusing behavior)

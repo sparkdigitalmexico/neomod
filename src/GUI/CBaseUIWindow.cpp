@@ -225,20 +225,28 @@ void CBaseUIWindow::draw() {
     }
 }
 
-void CBaseUIWindow::update(CBaseUIEventCtx &c) {
+void CBaseUIWindow::tick() {
+    CBaseUIElement::tick();
+    this->titleBarContainer->tick();
+    this->container->tick();
+
     if(!this->bVisible) return;
-    CBaseUIElement::update(c);
 
     // after the close animation is finished, set invisible
     if(this->fAnimation == 0.0f && this->bVisible) this->setVisible(false);
+}
+
+void CBaseUIWindow::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+    CBaseUIElement::updateInput(c);
 
     // window logic comes first
     if(!this->titleBarContainer->isBusy() && !this->container->isBusy() && this->bEnabled && this->isMouseInside())
         this->updateWindowLogic();
 
     // the main two containers
-    this->titleBarContainer->update(c);
-    this->container->update(c);
+    this->titleBarContainer->updateInput(c);
+    this->container->updateInput(c);
 
     // moving
     if(this->bMoving) this->setPos(this->vLastPos + (mouse->getPos() - this->vMousePosBackup));
@@ -485,7 +493,7 @@ CBaseUIWindow *CBaseUIWindow::enableCoherenceMode() {
 void CBaseUIWindow::onMouseDownInside(bool /*left*/, bool /*right*/) {
     this->bBusy = true;
     CBaseUIEventCtx c;
-    this->titleBarContainer->update(c);  // why is this called here lol?
+    this->titleBarContainer->updateInput(c);  // why is this called here lol?
     if(!this->titleBarContainer->isBusy()) this->udpateResizeAndMoveLogic(true);
 }
 

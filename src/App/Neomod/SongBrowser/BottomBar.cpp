@@ -90,13 +90,7 @@ f32 get_height() {
     return std::max(get_min_height(), max);
 }
 
-void update(CBaseUIEventCtx& c) {
-    static bool mouse_was_down = false;
-
-    auto mousePos = mouse->getPos();
-    bool clicked = !mouse_was_down && mouse->isLeftDown();
-    mouse_was_down = mouse->isLeftDown();
-
+void tick() {
     const auto* skin = osu->getSkin();
     const vec2 screen = osu->getVirtScreenSize();
     bool is_widescreen = (screen.x / screen.y) > (4.f / 3.f);
@@ -123,7 +117,17 @@ void update(CBaseUIEventCtx& c) {
     osu->getUserButton()->setSize(SongBrowser::getUIScale(320.f), SongBrowser::getUIScale(75.f));
     osu->getUserButton()->setPos(btns[OPTIONS].rect.getX() + SongBrowser::getUIScale(160.f),
                                  osu->getVirtScreenHeight() - osu->getUserButton()->getSize().y);
-    osu->getUserButton()->update(c);
+    osu->getUserButton()->tick();
+}
+
+void updateInput(CBaseUIEventCtx& c) {
+    static bool mouse_was_down = false;
+
+    auto mousePos = mouse->getPos();
+    bool clicked = !mouse_was_down && mouse->isLeftDown();
+    mouse_was_down = mouse->isLeftDown();
+
+    osu->getUserButton()->updateInput(c);
 
     // Yes, the order looks whack. That's the correct order.
     Button new_hover = BTN_NONE;

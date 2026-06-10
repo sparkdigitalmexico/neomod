@@ -465,10 +465,15 @@ void OsuDirectScreen::draw() {
     // TODO: message if no maps were found or server errored
 }
 
-void OsuDirectScreen::update(CBaseUIEventCtx& c) {
+void OsuDirectScreen::updateInput(CBaseUIEventCtx& c) {
+    if(!this->isVisible()) return;
+    ScreenBackable::updateInput(c);
+}
+
+void OsuDirectScreen::tick() {
+    ScreenBackable::tick();
     if(!this->isVisible()) return;
     if(!BanchoState::is_online() || !db->isFinished() || db->isCancelled()) return this->onBack();
-    ScreenBackable::update(c);
 
     if(this->search_bar->hitEnter()) {
         if(this->current_query == this->search_bar->getText() && this->loading) {

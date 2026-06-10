@@ -52,9 +52,9 @@ class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
                                         std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
-    void update(CBaseUIEventCtx &c) override {
+    void updateInput(CBaseUIEventCtx &c) override {
         if(!this->bVisible) return;
-        CBaseUIButton::update(c);
+        CBaseUIButton::updateInput(c);
 
         if(this->isMouseInside() && this->sTooltipText.length() > 0) {
             TooltipOverlay *ttoverlay = ui->getTooltipOverlay();
@@ -589,13 +589,15 @@ void ModSelector::draw() {
     }
 }
 
-void ModSelector::update(CBaseUIEventCtx &c) {
-    // HACKHACK: updating while invisible is stupid, but the only quick solution for still animating otherwise stuck
-    // sliders while closed
+void ModSelector::tick() {
+    // manual containers are ticked unconditionally: hidden override sliders settle via
+    // CBaseUISlider::tick, which is what used to require updating-while-invisible here
+    // NOTE: this is still a hack and slow!
+    UIScreen::tick();
+    this->experimentalContainer->tick();
+    this->overrideSliderContainer->tick();
+
     if(!this->bVisible) {
-        for(const auto &overrideSlider : this->overrideSliders) {
-            if(overrideSlider.slider->hasChanged()) overrideSlider.slider->update(c);
-        }
         if(this->bScheduledHide) {
             if(this->fAnimation == 0.0f) {
                 this->bScheduledHide = false;
@@ -603,14 +605,6 @@ void ModSelector::update(CBaseUIEventCtx &c) {
         }
         return;
     }
-
-    // update experimental mods, they take focus precedence over everything else
-    if(this->bExperimentalVisible) {
-        this->experimentalContainer->update(c);
-    }
-
-    // update
-    UIScreen::update(c);
 
     this->nonSubmittableWarning->setVisible(BanchoState::can_submit_scores() && !cvars().areAllCvarsSubmittable());
     if(this->nonSubmittableWarning->isVisible() && this->nonSubmittableWarning->isMouseInside()) {
@@ -625,8 +619,50 @@ void ModSelector::update(CBaseUIEventCtx &c) {
         }
     }
 
+    // delayed onModUpdate() triggers when changing some values
+    {
+        // this logic is hard to follow but it's what was here before
+        static const auto modUpdateFunc = [](CBaseUISlider *slider, bool &waitForFinished) {
+            if(slider != nullptr && (slider->isActive() || slider->hasChanged())) {
+                waitForFinished = true;
+            } else if(waitForFinished) {
+                return true;
+            }
+            return false;
+        };
+
+        // handle dynamic CS and slider vertex buffer updates
+        // handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
+        // handle dynamic HP drain updates
+        bool doneWaiting = false;
+        for(auto [slider, boolean] : std::array{std::pair{this->CSSlider, &this->bWaitForCSChangeFinished},
+                                                std::pair{this->speedSlider, &this->bWaitForSpeedChangeFinished},
+                                                std::pair{this->HPSlider, &this->bWaitForHPChangeFinished}}) {
+            if(modUpdateFunc(slider, *boolean)) {
+                this->bWaitForCSChangeFinished = this->bWaitForSpeedChangeFinished = this->bWaitForHPChangeFinished =
+                    false;
+                doneWaiting = true;
+            }
+        }
+
+        if(doneWaiting && osu->isInPlayMode()) {
+            osu->getMapInterface()->onModUpdate();
+        }
+    }
+}
+
+void ModSelector::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    // update experimental mods, they take focus precedence over everything else
+    if(this->bExperimentalVisible) {
+        this->experimentalContainer->updateInput(c);
+    }
+
+    UIScreen::updateInput(c);
+
     if(!BanchoState::is_in_a_multi_room()) {
-        this->overrideSliderContainer->update(c);
+        this->overrideSliderContainer->updateInput(c);
 
         // override slider tooltips (ALT)
         if(this->bShowOverrideSliderALTHint) {
@@ -667,37 +703,6 @@ void ModSelector::update(CBaseUIEventCtx &c) {
                   !this->experimentalContainer->isActive() && !experimentalModEnabled) {
             this->bExperimentalVisible = false;
             this->fExperimentalAnimation.set(0.0f, this->fExperimentalAnimation * 0.11f, anim::QuadIn);
-        }
-    }
-
-    // delayed onModUpdate() triggers when changing some values
-    {
-        // this logic is hard to follow but it's what was here before
-        static const auto modUpdateFunc = [](CBaseUISlider *slider, bool &waitForFinished) {
-            if(slider != nullptr && (slider->isActive() || slider->hasChanged())) {
-                waitForFinished = true;
-            } else if(waitForFinished) {
-                return true;
-            }
-            return false;
-        };
-
-        // handle dynamic CS and slider vertex buffer updates
-        // handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
-        // handle dynamic HP drain updates
-        bool doneWaiting = false;
-        for(auto [slider, boolean] : std::array{std::pair{this->CSSlider, &this->bWaitForCSChangeFinished},
-                                                std::pair{this->speedSlider, &this->bWaitForSpeedChangeFinished},
-                                                std::pair{this->HPSlider, &this->bWaitForHPChangeFinished}}) {
-            if(modUpdateFunc(slider, *boolean)) {
-                this->bWaitForCSChangeFinished = this->bWaitForSpeedChangeFinished = this->bWaitForHPChangeFinished =
-                    false;
-                doneWaiting = true;
-            }
-        }
-
-        if(doneWaiting && osu->isInPlayMode()) {
-            osu->getMapInterface()->onModUpdate();
         }
     }
 }

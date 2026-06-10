@@ -226,16 +226,33 @@ void ConsoleBox::processPendingLogAnimations() {
     }
 }
 
-void ConsoleBox::update(CBaseUIEventCtx &c) {
+void ConsoleBox::updateInput(CBaseUIEventCtx &c) {
     // handle textbox focus first
-    this->textbox->update(c);
+    this->textbox->updateInput(c);
 
-    CBaseUIElement::update(c);
+    CBaseUIElement::updateInput(c);
+
+    const bool mleft = mouse->isLeftDown();
+
+    // handle suggestions
+    if(this->suggestion->isVisible()) this->suggestion->updateInput(c);
+
+    if(mleft) {
+        if(!this->suggestion->isMouseInside() && !this->textbox->isActive() && !this->suggestion->isBusy())
+            this->suggestion->setVisible(false);
+
+        if(this->textbox->isActive() && this->textbox->isMouseInside() && this->iSuggestionCount > 0)
+            this->suggestion->setVisible(true);
+    }
+}
+
+void ConsoleBox::tick() {
+    CBaseUIElement::tick();
+    this->textbox->tick();
+    this->suggestion->tick();
 
     // handle pending animation operations from logging threads
     processPendingLogAnimations();
-
-    const bool mleft = mouse->isLeftDown();
 
     if(this->textbox->hitEnter()) {
         this->processCommand(this->textbox->getText());
@@ -278,9 +295,6 @@ void ConsoleBox::update(CBaseUIEventCtx &c) {
         }
     }
 
-    // handle suggestions
-    if(this->suggestion->isVisible()) this->suggestion->update(c);
-
     if(this->bSuggestionAnimateOut) {
         if(this->fSuggestionAnimation <= this->fSuggestionY) {
             this->suggestion->setPosY(engine->getScreenHeight() - (this->fSuggestionY - this->fSuggestionAnimation));
@@ -302,14 +316,6 @@ void ConsoleBox::update(CBaseUIEventCtx &c) {
             this->fSuggestionAnimation = 0.0f;
             this->suggestion->setPosY(engine->getScreenHeight() - this->fSuggestionY);
         }
-    }
-
-    if(mleft) {
-        if(!this->suggestion->isMouseInside() && !this->textbox->isActive() && !this->suggestion->isBusy())
-            this->suggestion->setVisible(false);
-
-        if(this->textbox->isActive() && this->textbox->isMouseInside() && this->iSuggestionCount > 0)
-            this->suggestion->setVisible(true);
     }
 
     // handle overlay animation and timeout

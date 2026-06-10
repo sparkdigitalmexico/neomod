@@ -138,11 +138,10 @@ void ToastElement::draw() {
     }
 }
 
-void NotificationOverlay::update(CBaseUIEventCtx &c) {
+void NotificationOverlay::tick() {
     Sync::scoped_lock lk(*this->notifMtx);
     this->updateVisibility();
-    if(!this->isVisible() && this->toasts.empty()) return;
-    UIScreen::update(c);
+    UIScreen::tick();
     if(this->toasts.empty()) return;
 
     const bool chat_toasts_visible = should_chat_toasts_be_visible();
@@ -156,7 +155,7 @@ void NotificationOverlay::update(CBaseUIEventCtx &c) {
 
         bottom_y -= TOAST_OUTER_Y_MARGIN + t->getSize().y;
         t->setPos(screen.x - (TOAST_SCREEN_RIGHT_MARGIN + TOAST_WIDTH), bottom_y);
-        t->update(c);
+        t->tick();
         a_toast_is_hovered |= t->isMouseInside();
     }
 
@@ -179,6 +178,20 @@ void NotificationOverlay::update(CBaseUIEventCtx &c) {
             // prevent some toasts from timing out depending on the above conditions
             t->freezeTimeout();
         }
+    }
+}
+
+void NotificationOverlay::updateInput(CBaseUIEventCtx &c) {
+    Sync::scoped_lock lk(*this->notifMtx);
+    if(!this->isVisible() && this->toasts.empty()) return;
+    UIScreen::updateInput(c);
+    if(this->toasts.empty()) return;
+
+    const bool chat_toasts_visible = should_chat_toasts_be_visible();
+    for(auto rtit = this->toasts.rbegin(); rtit != this->toasts.rend(); ++rtit) {
+        const auto &t = *rtit;
+        if(t->type == ToastElement::TYPE::CHAT && !chat_toasts_visible) continue;
+        t->updateInput(c);
     }
 }
 

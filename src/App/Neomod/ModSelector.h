@@ -32,7 +32,8 @@ class ModSelector final : public UIScreen {
     ~ModSelector() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyDown(KeyboardEvent &key) override;
     void onResolutionChange(vec2 newResolution) override;

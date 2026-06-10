@@ -10,7 +10,7 @@ class UIBackButton final : public CBaseUIButton {
     ~UIBackButton() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onMouseDownInside(bool left = true, bool right = false) override;
     void onMouseInside() override;

@@ -423,8 +423,11 @@ void Engine::onUpdate() {
 
         {
             VPROF_BUDGET("GUI::update", VPROF_BUDGETGROUP_UPDATE);
-            CBaseUIEventCtx c;
-            if(this->guiContainer) this->guiContainer->update(c);
+            if(this->guiContainer) {
+                this->guiContainer->tick();
+                CBaseUIEventCtx c;
+                this->guiContainer->updateInput(c);
+            }
         }
     }
 

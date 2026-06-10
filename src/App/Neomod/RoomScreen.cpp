@@ -273,7 +273,9 @@ void RoomScreen::draw() {
     UIScreen::draw();
 }
 
-void RoomScreen::update(CBaseUIEventCtx &c) {
+void RoomScreen::tick() {
+    UIScreen::tick();
+
     if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
 
     // drive the host's current pick through the fetcher (retargeting is implicit when the host
@@ -302,15 +304,22 @@ void RoomScreen::update(CBaseUIEventCtx &c) {
     }
 
     this->pauseButton->setPaused(!osu->getMapInterface()->isPreviewMusicPlaying());
+}
 
-    this->contextMenu->update(c);
+void RoomScreen::updateInput(CBaseUIEventCtx &c) {
+    if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
+
+    this->contextMenu->updateInput(c);
     if(c.mouse_consumed()) return;
 
-    // HACK: disable "slotlist" scrollview when options menu is open, because it somehow takes priority
+    // HACK (input-only since the tick/input split): the options overlay must get input priority
+    // when open, but update order = input priority until the phase 3 layer stack, and room
+    // (screens[6]) receives input before options (screens[8]) -> the slotlist scrollview would eat
+    // its scrolls/clicks. so route input only to the settings panel while options is visible.
     if(ui->getOptionsOverlay()->isVisible()) {
-        this->settings->update(c);
+        this->settings->updateInput(c);
     } else {
-        UIScreen::update(c);
+        UIScreen::updateInput(c);
     }
 }
 

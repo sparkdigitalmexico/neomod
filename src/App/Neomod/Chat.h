@@ -45,7 +45,8 @@ class Chat final : public UIScreen {
 
     void draw() override;
     void drawTicker();
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void onKeyDown(KeyboardEvent &e) override;
     void onKeyUp(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;

@@ -107,7 +107,8 @@ struct OptionsOverlayImpl final {
     ~OptionsOverlayImpl();
 
     void draw();
-    void update(CBaseUIEventCtx &c);
+    void tick();
+    void updateInput(CBaseUIEventCtx &c);
     void onKeyDown(KeyboardEvent &e);
     void onChar(KeyboardEvent &e);
     void onResolutionChange(vec2 newResolution);
@@ -335,7 +336,8 @@ OptionsOverlay::OptionsOverlay() : ScreenBackable(), NotificationOverlayKeyListe
 OptionsOverlay::~OptionsOverlay() = default;
 
 void OptionsOverlay::draw() { return pImpl->draw(); }
-void OptionsOverlay::update(CBaseUIEventCtx &c) { return pImpl->update(c); }
+void OptionsOverlay::tick() { return pImpl->tick(); }
+void OptionsOverlay::updateInput(CBaseUIEventCtx &c) { return pImpl->updateInput(c); }
 void OptionsOverlay::onKeyDown(KeyboardEvent &e) { return pImpl->onKeyDown(e); }
 void OptionsOverlay::onChar(KeyboardEvent &e) { return pImpl->onChar(e); }
 void OptionsOverlay::onResolutionChange(vec2 newResolution) { return pImpl->onResolutionChange(newResolution); }
@@ -413,9 +415,9 @@ class ResetButton final : public CBaseUIButton {
                         middle);
     }
 
-    void update(CBaseUIEventCtx &c) override {
+    void updateInput(CBaseUIEventCtx &c) override {
         if(!this->bVisible || !this->bEnabled) return;
-        CBaseUIButton::update(c);
+        CBaseUIButton::updateInput(c);
 
         if(this->isMouseInside() && this->isAvailable()) {
             ui->getTooltipOverlay()->begin();
@@ -687,9 +689,9 @@ class OptionsMenuKeyBindLabel final : public CBaseUILabel {
         this->textColorUnbound = 0xffbb0000;
     }
 
-    void update(CBaseUIEventCtx &c) override {
+    void tick() override {
+        CBaseUILabel::tick();
         if(!this->bVisible) return;
-        CBaseUILabel::update(c);
 
         const SCANCODE newKeyCode = this->bind->get();
         if(this->scanCode == newKeyCode) return;
@@ -2007,7 +2009,7 @@ void OptionsOverlayImpl::update_login_button(bool loggedIn) {
     this->logInButton->is_loading = BanchoState::is_logging_in();
 }
 
-void OptionsOverlayImpl::update(CBaseUIEventCtx &c) {
+void OptionsOverlayImpl::tick() {
     // handle skin folder loading finish
     if(this->skinFolderEnumHandle.valid() && this->skinFolderEnumHandle.is_ready()) {
         auto skinFolders = this->skinFolderEnumHandle.get();
@@ -2018,6 +2020,10 @@ void OptionsOverlayImpl::update(CBaseUIEventCtx &c) {
         this->updateLayout();
     }
 
+    parent->ScreenBackable::tick();
+}
+
+void OptionsOverlayImpl::updateInput(CBaseUIEventCtx &c) {
     const bool optionsMenuVisible = parent->bVisible;
     const bool contextMenuVisible = this->contextMenu->isVisible();
 
@@ -2025,7 +2031,7 @@ void OptionsOverlayImpl::update(CBaseUIEventCtx &c) {
     const bool onlyContextMenuVisible = contextMenuVisible && !optionsMenuVisible;
 
     // force context menu click handling focus
-    this->contextMenu->update(c);
+    this->contextMenu->updateInput(c);
     if(c.mouse_consumed()) return;
     if(onlyContextMenuVisible) return;  // HACK: not returning early if options menu is hidden, for skins menu dropdown
 
@@ -2041,7 +2047,7 @@ void OptionsOverlayImpl::update(CBaseUIEventCtx &c) {
     // so input handlers + their own tooltip code don't fire for forced settings
     this->applyForcedCvarLocks();
 
-    parent->ScreenBackable::update(c);
+    parent->ScreenBackable::updateInput(c);
     if(c.mouse_consumed()) return;
 
     // and show a single "forced by ..." tooltip when hovering any locked widget

@@ -26,9 +26,9 @@ UIContextMenuButton::UIContextMenuButton(float xPos, float yPos, float xSize, fl
     this->iID = id;
 }
 
-void UIContextMenuButton::update(CBaseUIEventCtx &c) {
+void UIContextMenuButton::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    CBaseUIButton::update(c);
+    CBaseUIButton::updateInput(c);
 
     if(this->isMouseInside() && this->tooltipTextLines.size() > 0) {
         ui->getTooltipOverlay()->begin();
@@ -115,9 +115,14 @@ void UIContextMenu::draw() {
     if(this->fAnimation > 0.0f && this->fAnimation < 1.0f) g->pop3DScene();
 }
 
-void UIContextMenu::update(CBaseUIEventCtx &c) {
+void UIContextMenu::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible2) return;
-    CBaseUIScrollView::update(c);
+    CBaseUIScrollView::updateInput(c);
+}
+
+void UIContextMenu::tick() {
+    if(!this->bVisible2) return;
+    CBaseUIScrollView::tick();
 
     if(this->containedTextbox != nullptr) {
         if(this->containedTextbox->hitEnter()) this->onHitEnter(this->containedTextbox);

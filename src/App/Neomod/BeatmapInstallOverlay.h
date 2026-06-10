@@ -14,7 +14,8 @@ class BeatmapInstallOverlay final : public UIScreen {
     ~BeatmapInstallOverlay() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx& c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx& c) override;
     void onResolutionChange(vec2 newResolution) override;
 
    private:

@@ -86,8 +86,8 @@ void CBaseUISlider::drawBlock() {
                 argb(255, 255, 255, 255), argb(255, 255, 255, 255));
 }
 
-void CBaseUISlider::update(CBaseUIEventCtx &c) {
-    CBaseUIElement::update(c);
+void CBaseUISlider::updateInput(CBaseUIEventCtx &c) {
+    CBaseUIElement::updateInput(c);
     if(!this->bVisible) return;
 
     vec2 mousepos{mouse->getPos()};
@@ -157,8 +157,15 @@ void CBaseUISlider::update(CBaseUIEventCtx &c) {
             }
         }
     }
+}
+
+void CBaseUISlider::tick() {
+    CBaseUIElement::tick();
 
     // handle animation value settings after mouse release
+    // deliberately not gated on visibility: a hidden slider's block animation still settles
+    // (lets e.g. ModSelector close mid-animation without updating-while-invisible)
+    const bool activeMouseMotion{this->bActive && (vec2{mouse->getPos()} != this->vLastMousePos)};
     if(!activeMouseMotion) {
         if(this->vBlockPos.x.animating()) {
             this->fCurPercent =

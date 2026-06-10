@@ -33,13 +33,14 @@ class ScoreButton final : public CBaseUIButton {
     ~ScoreButton() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void highlight();
     void resetHighlight();
 
-    void setScore(const FinishedScore &score, const DatabaseBeatmap *map, int index = 1,
-                  std::string titleString = {}, float weight = 1.0f);
+    void setScore(const FinishedScore &score, const DatabaseBeatmap *map, int index = 1, std::string titleString = {},
+                  float weight = 1.0f);
     void setIndex(int index) { this->iScoreIndexNumber = index; }
 
     [[nodiscard]] inline const FinishedScore &getScore() const { return *this->storedScore; }

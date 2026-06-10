@@ -203,8 +203,11 @@ void CBaseUIElement::stealFocus() {
     this->onFocusStolen();
 }
 
-void CBaseUIElement::update(CBaseUIEventCtx &c) {
+void CBaseUIElement::tick() {
     if(unlikely(CBaseUIDebug::dumpElems)) this->dumpElem();
+}
+
+void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible || !this->bEnabled) return;
 
     // TODO: hover "consumption"
@@ -240,19 +243,8 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
         }
     }
 
-    const u8 rawButtonMask = (u8)((this->bHandleLeftMouse && mouse->isLeftDown()) << 1) |
-                             (u8)(this->bHandleRightMouse && mouse->isRightDown());
-
-    // if update() wasn't called last frame (e.g. element or a parent container was invisible),
-    // treat any already-held buttons as stale and ignore them until released
-    // TODO: this is a stop-gap until mouse handling is separated from update()
-    const u32 currentFrame = (u32)engine->getFrameCount();
-    if(currentFrame - this->lastUpdateFrame > 1) {
-        this->staleButtons = rawButtonMask;
-    }
-    this->lastUpdateFrame = currentFrame;
-    this->staleButtons &= rawButtonMask;
-    const u8 buttonMask = rawButtonMask & ~this->staleButtons;
+    const u8 buttonMask = (u8)((this->bHandleLeftMouse && mouse->isLeftDown()) << 1) |
+                          (u8)(this->bHandleRightMouse && mouse->isRightDown());
 
     if(buttonMask && c.propagate_clicks) {
         this->mouseUpCheck |= buttonMask;
@@ -260,19 +252,26 @@ void CBaseUIElement::update(CBaseUIEventCtx &c) {
             c.propagate_clicks &= !this->grabs_clicks;
         }
 
+        // only synthesize down events on the frame the button actually went down: a press that
+        // started while this element was input-blocked (hidden, or below a consuming screen) must
+        // not fire when the element becomes eligible again mid-hold
+        const u8 edgeMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
+                            (u8)(this->bHandleRightMouse && mouse->isRightPressed());
+        const u8 newButtons = edgeMask & buttonMask & (u8) ~this->mouseInsideCheck;
+
         // onMouseDownOutside
-        if(!this->bMouseInside && !(this->mouseInsideCheck & buttonMask)) {
+        if(!this->bMouseInside && newButtons) {
             this->mouseInsideCheck |= buttonMask;
             if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(this, "downOutside");
-            this->onMouseDownOutside((buttonMask & 0b10), (buttonMask & 0b01));
+            this->onMouseDownOutside((newButtons & 0b10), (newButtons & 0b01));
         }
 
         // onMouseDownInside
-        if(this->bMouseInside && !(this->mouseInsideCheck & buttonMask)) {
+        if(this->bMouseInside && newButtons) {
             this->bActive = true;
             this->mouseInsideCheck |= buttonMask;
             if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this, "downInside");
-            this->onMouseDownInside((buttonMask & 0b10), (buttonMask & 0b01));
+            this->onMouseDownInside((newButtons & 0b10), (newButtons & 0b01));
         }
     }
 

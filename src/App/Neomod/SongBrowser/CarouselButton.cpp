@@ -107,7 +107,15 @@ void CarouselButton::drawMenuButtonBackground() {
     g->popTransform();
 }
 
-void CarouselButton::update(CBaseUIEventCtx &c) {
+void CarouselButton::tick() {
+    CBaseUIButton::tick();
+    if(!this->bVisible) return;
+
+    // animations need constant layout updates while visible
+    this->updateLayoutEx();
+}
+
+void CarouselButton::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
 
     // HACKHACK: absolutely disgusting
@@ -119,14 +127,11 @@ void CarouselButton::update(CBaseUIEventCtx &c) {
         this->rect.setPos(this->getActualPos());
         this->rect.setSize(this->getActualSize());
         {
-            CBaseUIButton::update(c);
+            CBaseUIButton::updateInput(c);
         }
         this->rect.setPos(posBackup);
         this->rect.setSize(sizeBackup);
     }
-
-    // animations need constant layout updates while visible
-    this->updateLayoutEx();
 }
 
 bool CarouselButton::isMouseInside() {

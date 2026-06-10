@@ -16,7 +16,8 @@ class CBaseUIScrollView : public CBaseUIElement {
     void freeElements();
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyUp(KeyboardEvent &e) override;
     void onKeyDown(KeyboardEvent &e) override;
@@ -157,7 +158,8 @@ class CBaseUIScrollView : public CBaseUIElement {
         void freeElements() override;
         void invalidate() override;
 
-        void update(CBaseUIEventCtx &c) override;
+        void tick() override;
+        void updateInput(CBaseUIEventCtx &c) override;
         void draw() override;
 
         bool isBusy() override;

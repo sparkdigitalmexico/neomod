@@ -12,20 +12,21 @@ class UIModSelectorModButton final : public CBaseUIButton {
     NOCOPY_NOMOVE(UIModSelectorModButton);
 
    public:
-    UIModSelectorModButton(ModSelector *osuModSelector, float xPos, float yPos, float xSize, float ySize, std::string name);
+    UIModSelectorModButton(ModSelector *osuModSelector, float xPos, float yPos, float xSize, float ySize,
+                           std::string name);
     ~UIModSelectorModButton() override;
 
     using SkinImageGetter = SA::delegate<const SkinImage *(const Skin *)>;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void onClicked(bool left = true, bool right = false) override;
 
     void resetState();
 
     void setState(int state);
-    void setState(unsigned int state, bool initialState, ConVar *cvar, std::string modName, std::string_view tooltipText,
-                  SkinImageGetter skinImageGetter);
+    void setState(unsigned int state, bool initialState, ConVar *cvar, std::string modName,
+                  std::string_view tooltipText, SkinImageGetter skinImageGetter);
     void setBaseScale(float xScale, float yScale);
     void setAvailable(bool available) { this->bAvailable = available; }
 

@@ -488,9 +488,9 @@ void VisualProfiler::draw() {
     }
 }
 
-void VisualProfiler::update(CBaseUIEventCtx &c) {
-    VPROF_BUDGET("VisualProfiler::update", VPROF_BUDGETGROUP_UPDATE);
-    CBaseUIElement::update(c);
+void VisualProfiler::tick() {
+    VPROF_BUDGET("VisualProfiler::tick", VPROF_BUDGETGROUP_UPDATE);
+    CBaseUIElement::tick();
     if(!cv::vprof.getBool() || !this->bVisible) return;
 
     if(cv::vprof_display_mode.getVal<INFO_BLADE_DISPLAY_MODE>() == INFO_BLADE_DISPLAY_MODE::CPU_RAM_INFO) {

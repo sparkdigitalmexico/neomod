@@ -12,7 +12,6 @@ class CBaseUILabel : public CBaseUIElement {
     ~CBaseUILabel() override = default;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
 
     // cancer
     void setRelSizeX(float x) { this->relRect.setSize({x, this->relRect.getSize().y}); }

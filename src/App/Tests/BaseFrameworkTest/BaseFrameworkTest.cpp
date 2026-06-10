@@ -140,8 +140,9 @@ void BaseFrameworkTest::draw() {
 }
 
 void BaseFrameworkTest::update() {
+    m_testButton->tick();
     CBaseUIEventCtx c;
-    m_testButton->update(c);
+    m_testButton->updateInput(c);
 }
 
 void BaseFrameworkTest::onResolutionChanged(vec2 newResolution) { debugLog("{}", newResolution); }

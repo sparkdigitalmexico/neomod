@@ -894,7 +894,16 @@ bool SongBrowser::selectBeatmapset(const BeatmapSet *set) {
     }
 }
 
-void SongBrowser::update(CBaseUIEventCtx &c) {
+void SongBrowser::tick() {
+    ScreenBackable::tick();
+    this->localBestContainer->tick();
+    this->contextMenu->tick();
+    BottomBar::tick();
+    this->topbarRight->tick();
+    this->scoreBrowser->tick();
+    this->topbarLeft->tick();
+    this->carousel->tick();
+
     // flush diffcalc results to database
     // do this even if not visible, but not during gameplay
     if(!osu->isInGameplay()) {
@@ -913,19 +922,6 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
     }
 
     if(!this->bVisible) return;
-
-    this->localBestContainer->update(c);
-    if(this->localBestButton && this->localBestButton->isVisible() && this->localBestButton->isMouseInside()) {
-        // HACKHACK: don't hover score button list buttons under local best!
-        this->scoreBrowser->stealFocus();
-    }
-    ScreenBackable::update(c);
-
-    // NOTE: This is placed before BottomBar::update(), otherwise the context menu would close
-    //       on a bottombar selector click (yeah, a bit hacky)
-    this->contextMenu->update(c);
-
-    BottomBar::update(c);
 
     // handle changed mods resort
     if(this->lastDiffSortModIndex != StarPrecalc::active_idx) {
@@ -971,13 +967,6 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
         this->rebuildScoreButtons();
         this->score_resort_scheduled = false;
     }
-
-    // update and focus handling
-    this->topbarRight->update(c);
-    this->scoreBrowser->update(c);
-    this->topbarLeft->update(c);
-
-    this->carousel->update(c);
 
     // handle async random beatmap selection
     if(this->bRandomBeatmapScheduled) {
@@ -1025,6 +1014,30 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
         ui->getNotificationOverlay()->addToast(std::move(n.msg), n.success ? SUCCESS_TOAST : ERROR_TOAST,
                                                std::move(n.click_cb));
     }
+}
+
+void SongBrowser::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    this->localBestContainer->updateInput(c);
+    if(this->localBestButton && this->localBestButton->isVisible() && this->localBestButton->isMouseInside()) {
+        // HACKHACK: don't hover score button list buttons under local best!
+        this->scoreBrowser->stealFocus();
+    }
+    ScreenBackable::updateInput(c);
+
+    // NOTE: This is placed before BottomBar::updateInput(), otherwise the context menu would close
+    //       on a bottombar selector click (yeah, a bit hacky)
+    this->contextMenu->updateInput(c);
+
+    BottomBar::updateInput(c);
+
+    // update and focus handling
+    this->topbarRight->updateInput(c);
+    this->scoreBrowser->updateInput(c);
+    this->topbarLeft->updateInput(c);
+
+    this->carousel->updateInput(c);
 }
 
 void SongBrowser::onKeyDown(KeyboardEvent &key) {
@@ -2419,16 +2432,14 @@ void SongBrowser::rebuildScoreButtons() {
         this->scoreBrowser->container.addBaseUIElement(toAdd, this->scoreBrowserScoresStillLoadingElement->getRelPos());
     } else {
         // build
-        CBaseUIEventCtx fakeHack;
-        fakeHack.consume_mouse();
         std::vector<ScoreButton *> scoreButtons;
         for(int i = 0; i < numScores; i++) {
             ScoreButton *button = this->scoreButtonCache[i];
             button->setScore(scores[i], map, i + 1);
             button->setVisible(false);
             // HACKHACK: preload pp immediately (flicker reduction)
-            // ScoreButton::update should not have a side effect of updating the database!
-            button->update(fakeHack);
+            // ScoreButton::tick should not have a side effect of updating the database!
+            button->tick();
             scoreButtons.push_back(button);
         }
 

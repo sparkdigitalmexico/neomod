@@ -401,7 +401,10 @@ void ScoreButton::draw() {
     }
 }
 
-void ScoreButton::update(CBaseUIEventCtx &c) {
+void ScoreButton::tick() {
+    CBaseUIButton::tick();
+    if(this->avatar) this->avatar->tick();
+
     // Update pp
     auto &sc = *this->storedScore;
     if(sc.get_pp() == -1.0) {
@@ -428,7 +431,9 @@ void ScoreButton::update(CBaseUIEventCtx &c) {
                             comboBasedSuffix(sc.perfect, fullCombo));
         }
     }
+}
 
+void ScoreButton::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) {
         return;
     }
@@ -439,11 +444,11 @@ void ScoreButton::update(CBaseUIEventCtx &c) {
     }
 
     if(this->avatar) {
-        this->avatar->update(c);
+        this->avatar->updateInput(c);
         if(c.mouse_consumed()) return;
     }
 
-    CBaseUIButton::update(c);
+    CBaseUIButton::updateInput(c);
 
     // HACKHACK: this should really be part of the UI base
     // right click detection
@@ -473,7 +478,7 @@ void ScoreButton::update(CBaseUIEventCtx &c) {
                     }
                     // debug
                     if(keyboard->isShiftDown()) {
-                        tooltipOverlay->addLine(fmt::format("Client: {:s}", sc.client));
+                        tooltipOverlay->addLine(fmt::format("Client: {:s}", this->storedScore->client));
                     }
                 }
                 tooltipOverlay->end();

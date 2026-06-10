@@ -135,22 +135,52 @@ bool UI::init() {
 }
 
 void UI::update() {
+    // tick pass: logic/animations always run, for every screen, regardless of input consumption
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->tick();
+    }
+
+    bool ticked_active_screen = false;
+    for(auto *screen : this->screens) {
+        screen->tick();
+        if(screen == this->active_screen) ticked_active_screen = true;
+    }
+    if(!ticked_active_screen) this->active_screen->tick();
+
+    // input pass: priority-ordered (update order = input priority until the phase 3 layer stack)
     CBaseUIEventCtx c;
 
     // NOLINTNEXTLINE(modernize-loop-convert)
     for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
-        this->extra_overlays[i]->update(c);
+        this->extra_overlays[i]->updateInput(c);
     }
 
     bool updated_active_screen = false;
     for(auto *screen : this->screens) {
-        screen->update(c);
+        screen->updateInput(c);
         if(screen == this->active_screen) updated_active_screen = true;
-        if(c.mouse_consumed()) break;  // TODO: update() does more than only mouse event handling, should be decoupled
+        if(c.mouse_consumed()) break;
     }
 
     if(!updated_active_screen && !c.mouse_consumed()) {
-        this->active_screen->update(c);
+        this->active_screen->updateInput(c);
+    }
+
+    if constexpr(Env::cfg(BUILD::DEBUG)) {
+        if(unlikely(cv::ui_validate_ticks.getBool())) this->validateTicks();
+    }
+}
+
+void UI::validateTicks() const {
+    const u64 frame = engine->getFrameCount();
+    for(const auto *screen : this->screens) {
+        if(screen->getLastTickFrame() != frame)
+            logRaw("UITEST FAIL tick-skipped screen={}", CBaseUIDebug::elemName(screen));
+    }
+    for(const auto *overlay : this->extra_overlays) {
+        if(overlay->getLastTickFrame() != frame)
+            logRaw("UITEST FAIL tick-skipped overlay={}", CBaseUIDebug::elemName(overlay));
     }
 }
 
@@ -444,8 +474,10 @@ UIOverlay *UI::pushOverlay(std::unique_ptr<UIOverlay> overlay) {
     assert(!std::ranges::contains(this->extra_overlays, raw));
     this->extra_overlays.push_back(raw);
 
-    // set the overlay visible immediately
+    // set the overlay visible immediately, and tick it once so a push during the input pass
+    // doesn't leave it un-ticked this frame (ui_validate_ticks)
     raw->setVisible(true);
+    raw->tick();
     return raw;
 }
 

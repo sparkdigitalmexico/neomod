@@ -197,6 +197,8 @@ CONVAR(debug_ui, false, CLIENT, CFUNC(CBaseUIDebug::onDumpElemsChangeCallback));
 CONVAR(ui_trace, 0, CLIENT | NOLOAD | NOSAVE,
        "log synthesized UI events for scripted testing (1 = inside events + hover, 2 = also outside events)",
        CFUNC(CBaseUIDebug::onTraceChangeCallback));
+CONVAR(ui_validate_ticks, false, CLIENT | NOLOAD | NOSAVE,
+       "log a UITEST FAIL line if a screen was not ticked this frame (debug builds, scripted testing)");
 CONVAR(debug_env, false, CLIENT);
 CONVAR(debug_font, false, CLIENT);
 CONVAR(debug_file, false, CLIENT);

@@ -15,7 +15,8 @@ class CBaseUIContainer : public CBaseUIElement {
 
     void draw_debug();
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyUp(KeyboardEvent &e) override;
     void onKeyDown(KeyboardEvent &e) override;

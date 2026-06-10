@@ -58,10 +58,10 @@ void PromptOverlay::draw() {
     UIScreen::draw();
 }
 
-void PromptOverlay::update(CBaseUIEventCtx &c) {
+void PromptOverlay::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
 
-    UIScreen::update(c);
+    UIScreen::updateInput(c);
     c.consume_mouse();
 }
 

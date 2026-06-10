@@ -140,10 +140,27 @@ void CBaseUITextbox::drawText() {
     g->popTransform();
 }
 
-void CBaseUITextbox::update(CBaseUIEventCtx &c) {
+void CBaseUITextbox::tick() {
+    CBaseUIElement::tick();
+    if(!this->bVisible) return;
+
+    // update caret blinking
+    {
+        if(!this->bActive) {
+            this->tickCaret();
+        } else {
+            const double elapsed = engine->getTime() - this->fCaretBlinkStartTime;
+            const float newAbsAlpha =
+                static_cast<float>((std::cos((elapsed / cv::ui_textbox_caret_blink_time.getDouble()) * PI) + 1.) / 2.);
+            this->caretColor.setA(newAbsAlpha);
+        }
+    }
+}
+
+void CBaseUITextbox::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
     bool was_active = this->bActive;
-    CBaseUIElement::update(c);
+    CBaseUIElement::updateInput(c);
 
     // Steal focus from all other Textboxes
     if(!was_active && this->bActive) {
@@ -162,18 +179,6 @@ void CBaseUITextbox::update(CBaseUIEventCtx &c) {
     if(this->bEnabled && (this->bActive || (!mleft && !mright)) &&
        ((this->bBusy && (mleft || mright)) || this->isMouseInside()))
         env->setCursor(CURSORTYPE::CURSOR_TEXT);
-
-    // update caret blinking
-    {
-        if(!this->bActive) {
-            this->tickCaret();
-        } else {
-            const double elapsed = engine->getTime() - this->fCaretBlinkStartTime;
-            const float newAbsAlpha =
-                static_cast<float>((std::cos((elapsed / cv::ui_textbox_caret_blink_time.getDouble()) * PI) + 1.) / 2.);
-            this->caretColor.setA(newAbsAlpha);
-        }
-    }
 
     // handle mouse input
     {

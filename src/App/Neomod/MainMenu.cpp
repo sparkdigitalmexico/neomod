@@ -101,8 +101,8 @@ class MainMenu::MainButton final : public UIButtonRounded {
     MainButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : UIButtonRounded(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {}
 
-    void update(CBaseUIEventCtx &c) override {
-        UIButtonRounded::update(c);
+    void updateInput(CBaseUIEventCtx &c) override {
+        UIButtonRounded::updateInput(c);
         if(c.mouse_consumed()) {
             this->showSaveTooltip = false;
             return;
@@ -972,7 +972,10 @@ void MainMenu::draw() {
     this->drawMainButton();
 }
 
-void MainMenu::update(CBaseUIEventCtx &c) {
+void MainMenu::tick() {
+    UIScreen::tick();
+    this->updateAvailableButton->tick();
+
     if(!this->bVisible) return;
 
     if(cv::draw_menu_background.getBool()) {
@@ -998,11 +1001,6 @@ void MainMenu::update(CBaseUIEventCtx &c) {
     }
 
     this->updateLayout();
-
-    // update and focus handling
-    UIScreen::update(c);
-
-    this->updateAvailableButton->update(c);
 
     // handle automatic menu closing
     if(this->mainMenuButtonCloseTime != 0.0f && engine->getTime() > this->mainMenuButtonCloseTime) {
@@ -1180,6 +1178,15 @@ void MainMenu::update(CBaseUIEventCtx &c) {
             }
         }
     }
+}
+
+void MainMenu::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    // update and focus handling
+    UIScreen::updateInput(c);
+
+    this->updateAvailableButton->updateInput(c);
 }
 
 void MainMenu::selectRandomBeatmap() {

@@ -126,6 +126,9 @@ struct UI final {
     friend UIScreen;
     friend UIDebug;  // see UIDebug.h
 
+    // ui_validate_ticks support (debug builds): logs UITEST FAIL for screens skipped by the tick pass
+    void validateTicks() const;
+
     UIScreen* dummy;
     NotificationOverlay* notificationOverlay;
     static constexpr const size_t EARLY_SCREENS{2};  // dummy+notificationOverlay
