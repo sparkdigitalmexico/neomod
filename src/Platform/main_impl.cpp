@@ -174,8 +174,8 @@ bool SDLMain::resizeCallback(void *userdata, SDL_Event *event) {
 SDL_AppResult SDLMain::initialize() {
     setupLogging();
 
-    // WASM/macOS: no window, no GL, no events, just engine + app
-    if constexpr(Env::cfg(OS::WASM | OS::MAC)) {
+    // WASM: no window, no GL, no events, just engine + app
+    if constexpr(Env::cfg(OS::WASM)) {
         if(isHeadless()) {
             m_engine = std::make_unique<Engine>();
             if(!m_engine || m_engine->isShuttingDown()) return SDL_APP_FAILURE;
@@ -220,6 +220,8 @@ SDL_AppResult SDLMain::initialize() {
     if(!isHeadless()) {
         SDL_ShowWindow(m_window);
         SDL_RaiseWindow(m_window);
+    } else {
+        SDL_HideWindow(m_window);
     }
 
     syncWindow();

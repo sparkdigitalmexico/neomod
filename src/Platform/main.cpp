@@ -331,13 +331,18 @@ MAIN_FUNC /* int argc, char *argv[] */
     if(headless) {
         // use a video driver that doesn't need a real display
         // (also used for macOS since the offscreen GL driver doesn't work there)
-        if constexpr(Env::cfg(OS::WASM | OS::MAC)) {
+        if constexpr(Env::cfg(OS::WASM)) {
             SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
             SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
         } else {
             // don't use offscreen for SDL_gpu headless, that would attempt to initialize a bunch of
             // offscreen openGL stuff we don't want
-            if(!(Env::cfg(REND::SDLGPU) && (arg_map.contains("-sdlgpu") || arg_map.contains("-gpu")))) {
+            const bool using_opengl =
+                Env::cfg(REND::GL | REND::GLES32) &&
+                !(Env::cfg(REND::SDLGPU) &&
+                  ((arg_map.contains("-sdlgpu") || arg_map.contains("-gpu")) ||
+                   (Env::cfg(OS::MAC) && !(arg_map.contains("-gl") || arg_map.contains("-opengl")))));
+            if(using_opengl) {
                 SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "offscreen", SDL_HINT_OVERRIDE);
             }
         }
