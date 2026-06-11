@@ -365,17 +365,22 @@ bool CBaseUIScrollView::onWheel(int deltaVertical, int deltaHorizontal) {
     // alt-wheel belongs to the app-level volume gesture
     if(this->bBlockScrolling || keyboard->isAltDown()) return false;
 
-    if(this->bVerticalScrolling && deltaVertical != 0)
+    bool consumed = false;
+    if(this->bVerticalScrolling && deltaVertical != 0) {
         this->scrollY(deltaVertical * this->fScrollMouseWheelMultiplier *
                       cv::ui_scrollview_mousewheel_multiplier.getDouble());
-
-    if(this->bHorizontalScrolling && deltaHorizontal != 0)
+        consumed = true;
+    }
+    if(this->bHorizontalScrolling && deltaHorizontal != 0) {
         this->scrollX(-deltaHorizontal * this->fScrollMouseWheelMultiplier *
                       cv::ui_scrollview_mousewheel_multiplier.getDouble());
+        consumed = true;
+    }
 
-    // consume even when nothing moved (axis disabled, content fits): a hovered scroll surface
-    // owns the wheel, e.g. an open dropdown must not let the page scroll beneath it
-    return true;
+    // deltas no enabled axis can take are DECLINED so the wheel chains to the scroll surface
+    // beneath: an anchored dropdown whose content fits (UIContextMenu disables scrolling then)
+    // must not dead-end the gesture - the parent scrolls and the dropdown rides its anchor
+    return consumed;
 }
 
 void CBaseUIScrollView::beginDragScroll(dvec2 pos) {

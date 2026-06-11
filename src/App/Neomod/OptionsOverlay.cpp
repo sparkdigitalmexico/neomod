@@ -2030,10 +2030,20 @@ void OptionsOverlayImpl::updateInput(CBaseUIEventCtx &c) {
     if(!optionsMenuVisible && !contextMenuVisible) return;
     const bool onlyContextMenuVisible = contextMenuVisible && !optionsMenuVisible;
 
-    // force context menu click handling focus
+    // early-update the context menu: it is the whole walk for the standalone case (options
+    // hidden, nested walk below never runs) and keeps close-on-outside working when the
+    // dropdown is scrolled out of the clip list. when the options menu IS visible the menu is
+    // visited AGAIN inside the options scrollview walk, and that registration must win the
+    // hit candidacy (its ancestor path includes options_contents, so the drag-scroll steal can
+    // chain through an unscrollable dropdown). a press-hold inside the hovered menu reads as
+    // consumed right here (hover kills propagate_hover, the scrollview self-grab kills
+    // propagate_clicks), which used to skip the rest of the walk -> restore propagate_clicks
+    // so the nested walk keeps its candidacy and a post-steal captor keeps its input stamp
+    const bool clicksBeforeMenu = c.propagate_clicks;
     this->contextMenu->updateInput(c);
-    if(c.mouse_consumed()) return;
     if(onlyContextMenuVisible) return;  // HACK: not returning early if options menu is hidden, for skins menu dropdown
+    c.propagate_clicks = clicksBeforeMenu;
+    if(c.mouse_consumed()) return;
 
     // force context menu mouse-inside focus
     // NOTE: "propagate_clicks" does not solve the issue of mouse hover focus

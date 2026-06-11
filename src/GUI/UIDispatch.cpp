@@ -170,16 +170,28 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
     const u64 startGeneration = this->elemGeneration;
 
     // wheel before buttons (pre-2.3 it acted during the input walk, ahead of click delivery):
-    // the frame's totals go to ONE consumer. while a capture is held the wheel belongs to the
-    // captor (accepted or dropped); otherwise the top-most wheel-accepting candidate wins -
+    // the frame's totals go to ONE consumer, with decliners falling through (scroll chaining:
+    // a button or a can't-scroll dropdown above its scrollview passes the wheel on). while a
+    // capture is held the chain is the captor then its observing ancestors innermost-first
+    // (mirrors the drag-steal chain); otherwise the top-most wheel-accepting candidate wins -
     // groups in input-priority order, within a group by (tier, latest visit) like the button
-    // targeting, but falling through candidates that decline (a button above its scrollview)
+    // targeting
     if(hasWheel) {
         if(this->captor != nullptr) {
             if(this->captorRoot == root) {
                 this->wheelConsumed = true;
+                CBaseUIElement *acceptor = nullptr;
                 if(this->captor->onWheel(this->wheelVertical, this->wheelHorizontal)) {
-                    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this->captor, "wheel");
+                    acceptor = this->captor;
+                } else {
+                    const std::vector<CBaseUIElement *> path = this->capturePath;
+                    for(auto it = path.rbegin(); it != path.rend() && acceptor == nullptr; ++it) {
+                        if(this->elemGeneration != startGeneration) break;
+                        if((*it)->onWheel(this->wheelVertical, this->wheelHorizontal)) acceptor = *it;
+                    }
+                }
+                if(acceptor != nullptr) {
+                    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(acceptor, "wheel");
                 }
             }
         } else {

@@ -1,10 +1,13 @@
-# pins wheel routing on layered scrollviews (flipped at P2.3, was the "UBER hack" pin):
+# pins wheel SCROLL CHAINING on layered scrollviews (P2.3; was the "UBER hack" pin):
 # with the skin dropdown (a UIContextMenu, i.e. a scrollview nested inside
-# options_contents) open and hovered, one wheel event produces exactly ONE consumer and
-# it is the top-most scroll surface, the DROPDOWN (options_contextmenu) -- even though
-# its content fits (no scrolling enabled), so the page must NOT scroll beneath it (the
-# golden tail has no content-movement hover churn). pre-2.3, update order won over
-# z-order and the parent consumed. needs the UITestSkin fixture (run.sh creates it).
+# options_contents) open and hovered, one wheel event produces exactly ONE consumer:
+# the dropdown gets first refusal (top-most) but DECLINES because its content fits
+# (UIContextMenu disables its own scrolling then), so the wheel chains to the parent
+# options_contents -- the page scrolls and the dropdown rides its anchor (the golden
+# tail shows the content-movement hover churn). a scrollable dropdown would consume
+# instead (pinned by the standalone path, cf. decision log). the trace is identical to
+# the pre-P2.3 golden, but by chaining rather than by update-order accident.
+# needs the UITestSkin fixture (run.sh creates it).
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1
