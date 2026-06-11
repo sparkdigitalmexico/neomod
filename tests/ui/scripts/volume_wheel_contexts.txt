@@ -1,0 +1,59 @@
+# pins the canChangeVolume consumption matrix (VolumeOverlay.cpp:282, the 10-check
+# enumeration) before P3.2 replaces it with the dispatch wheel sink + stack query:
+# wheel over the options scrollview scrolls the page and must NOT touch volume (the
+# app-level poll sees the raw delta even though the dispatcher consumed it; only the
+# enumeration prevents double-handling); alt+wheel over the same spot changes ONLY
+# volume (alt short-circuits canChangeVolume true, the scrollview declines on alt since
+# 2.3); wheel over the empty songbrowser carousel does NOTHING today (browser excluded
+# wholesale, the empty carousel declines the delta). P3.2 consciously flips that last
+# context: empty carousel -> carousel-forward fallback declines -> sink -> volume (a
+# full carousel scrolls instead; needs a beatmap fixture or manual smoke).
+# NOTE: alt is sent as scancode 226 (LALT): SDL3 resolves the name platform-dependently
+# ("Left Option" on macOS, "Left Alt" elsewhere), numbers are portable.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+sendkey Left Ctrl down
+@wait 3
+sendkey O
+@wait 3
+sendkey Left Ctrl up
+@wait 5
+ui_assert visible optionsoverlay 1
+mouse_to 395 288
+@wait 5
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 0
+mouse_wheel 1
+@wait 5
+ui_assert visible volumeoverlay 0
+sendkey 226 down
+@wait 3
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 1
+sendkey 226 up
+@wait 3
+mouse_to 10 10
+@wait 150
+ui_assert visible volumeoverlay 0
+sendkey Escape
+@wait 5
+ui_assert visible optionsoverlay 0
+osu_folder uitest_osu_folder
+set_active_ui_screen songbrowser
+@wait 300
+ui_assert screen_active songbrowser 1
+mouse_to 900 400
+@wait 5
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 0
+exit

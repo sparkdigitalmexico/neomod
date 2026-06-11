@@ -1,0 +1,29 @@
+# pins the ModSelector dual identity, songbrowser side: F1 routes through
+# SongBrowser::onSelectionMods -> ui->setScreen(modSelector), so the browser is HIDDEN
+# behind it (replaced, not layered) and Escape setScreen's it back. P3.3 unifies
+# ModSelector as an overlay everywhere: the browser then stays visible (and active)
+# beneath a 0x88 dim and the songbrowser visibility asserts here consciously flip.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+osu_folder uitest_osu_folder
+set_active_ui_screen songbrowser
+@wait 300
+ui_assert screen_active songbrowser 1
+sendkey F1
+@wait 5
+ui_assert visible modselector 1
+ui_assert screen_active modselector 1
+ui_assert visible songbrowser 0
+sendkey Escape
+@wait 5
+ui_assert visible modselector 0
+ui_assert screen_active songbrowser 1
+ui_assert visible songbrowser 1
+exit

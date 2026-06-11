@@ -1,0 +1,33 @@
+# pins the UI::setScreen force-close HACK (UI.cpp:461): a base-screen swap
+# unconditionally closes the "temporary" overlays (options + prompt exercised here;
+# pause is play-mode-only). P3.2 replaces the hardcoded triple with the
+# closeOnScreenSwitch flag; the observable behavior (and this golden) must survive
+# that refactor unchanged.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+sendkey Left Ctrl down
+@wait 3
+sendkey O
+@wait 3
+sendkey Left Ctrl up
+@wait 5
+ui_assert visible optionsoverlay 1
+ui_assert screen_active mainmenu 1
+ui_prompt uitest
+@wait 3
+ui_assert visible promptoverlay 1
+set_active_ui_screen aboutscreen
+@wait 3
+ui_assert screen_active aboutscreen 1
+ui_assert visible aboutscreen 1
+ui_assert visible optionsoverlay 0
+ui_assert visible promptoverlay 0
+ui_assert visible mainmenu 0
+exit
