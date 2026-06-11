@@ -242,18 +242,4 @@ struct UI final {
     static constexpr size_t PLAY_OVERLAYS_END{16};   // one past options; pause..options render
                                                      // into the FPoSu playfield buffer in play mode
     static constexpr size_t EXTRAS_SPLICE{18};       // extra_overlays walk/draw below this layer
-
-    static_assert(
-        [] {
-            std::array<bool, NUM_SCREENS> seen{};
-            for(const size_t i : LAYER_ORDER) {
-                if(i >= NUM_SCREENS || seen[i]) return false;
-                seen[i] = true;
-            }
-            return true;
-        }(),
-        "LAYER_ORDER must be a permutation of the screen indices");
-    static_assert(SCREEN_NAMES[LAYER_ORDER[OVERLAY_BAND_BEGIN]] == "pauseoverlay");
-    static_assert(SCREEN_NAMES[LAYER_ORDER[PLAY_OVERLAYS_END - 1]] == "optionsoverlay");
-    static_assert(SCREEN_NAMES[LAYER_ORDER[EXTRAS_SPLICE]] == "tooltipoverlay");
 };

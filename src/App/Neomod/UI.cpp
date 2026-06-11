@@ -81,6 +81,20 @@ UIScreen *UI::getBeatmapInstallOverlayBase() const { return this->beatmapInstall
 UI *ui{nullptr};
 
 UI::UI() {
+    static_assert(
+        [] {
+            std::array<bool, NUM_SCREENS> seen{};
+            for(const size_t i : LAYER_ORDER) {
+                if(i >= NUM_SCREENS || seen[i]) return false;
+                seen[i] = true;
+            }
+            return true;
+        }(),
+        "LAYER_ORDER must be a permutation of the screen indices");
+    static_assert(SCREEN_NAMES[LAYER_ORDER[OVERLAY_BAND_BEGIN]] == "pauseoverlay");
+    static_assert(SCREEN_NAMES[LAYER_ORDER[PLAY_OVERLAYS_END - 1]] == "optionsoverlay");
+    static_assert(SCREEN_NAMES[LAYER_ORDER[EXTRAS_SPLICE]] == "tooltipoverlay");
+
     ui = this;
     this->screens[0] = this->active_screen = this->dummy = new NullScreen();
     this->screens[1] = this->notificationOverlay = new NotificationOverlay();
