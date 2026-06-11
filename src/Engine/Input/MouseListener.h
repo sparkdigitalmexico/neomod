@@ -23,6 +23,7 @@ struct ButtonEvent {
     uint64_t timestamp;
     MouseButtonFlags btn;
     bool down;
+    bool consumed;
 };
 
 class MouseListener {
@@ -35,7 +36,7 @@ class MouseListener {
     MouseListener(MouseListener &&) = default;
     MouseListener &operator=(MouseListener &&) = default;
 
-    virtual void onButtonChange(ButtonEvent /*event*/) {}
+    virtual void onButtonChange(ButtonEvent &/*event*/) {}
 
     virtual void onWheelVertical(int /*delta*/) {}
     virtual void onWheelHorizontal(int /*delta*/) {}

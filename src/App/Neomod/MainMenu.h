@@ -56,7 +56,7 @@ class MainMenu final : public UIScreen, public MouseListener {
 
     void onKeyDown(KeyboardEvent &e) override;
 
-    void onButtonChange(ButtonEvent ev) override;
+    void onButtonChange(ButtonEvent &ev) override;
 
     void onResolutionChange(vec2 newResolution) override;
 

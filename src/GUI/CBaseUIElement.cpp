@@ -76,22 +76,17 @@ u64 elemGeneration{0};
 // hit candidates). self-cleans: the first event of a new frame drops the previous frame's.
 class UIMouseEventSink final : public MouseListener {
    public:
-    struct QueuedButtonEvent {
-        ButtonEvent ev;
-        bool consumed;  // a UI root delivered (or deliberately swallowed) this event
-    };
-
-    void onButtonChange(ButtonEvent ev) override {
+    void onButtonChange(ButtonEvent &ev) override {
         const u64 frame = engine->getFrameCount();
         if(frame != this->lastPushFrame) {
             this->queue.clear();
             this->lastPushFrame = frame;
         }
-        this->queue.push_back({.ev = ev, .consumed = false});
+        this->queue.push_back(ev);
     }
     // wheel events stay polled until the phase 2.3 wheel routing
 
-    std::vector<QueuedButtonEvent> queue;
+    std::vector<ButtonEvent> queue;
     u64 lastPushFrame{0};
 };
 UIMouseEventSink uiMouseSink;
@@ -336,7 +331,7 @@ void CBaseUIElement::dispatchMouseEvents(CBaseUIEventCtx &c, UIRoot root) {
     if(mouseCaptor != nullptr) {
         MouseButtonFlags pendingUps{};
         for(const auto &qe : events) {
-            if(!qe.ev.down) pendingUps |= qe.ev.btn;
+            if(!qe.down) pendingUps |= qe.btn;
         }
         mouseCaptorButtons &= (mouse->getHeldButtons() | pendingUps);
         if(!mouseCaptorButtons) mouseCaptor = nullptr;
@@ -347,7 +342,7 @@ void CBaseUIElement::dispatchMouseEvents(CBaseUIEventCtx &c, UIRoot root) {
     for(auto &qe : events) {
         if(qe.consumed) continue;
 
-        const MouseButtonFlags btn = qe.ev.btn;
+        const MouseButtonFlags btn = qe.btn;
         const bool left = (btn == MouseButtonFlags::MF_LEFT);
         const bool right = (btn == MouseButtonFlags::MF_RIGHT);
         if(!left && !right) continue;  // middle/X buttons have no UI semantics (app code polls them)
@@ -361,7 +356,7 @@ void CBaseUIElement::dispatchMouseEvents(CBaseUIEventCtx &c, UIRoot root) {
             CBaseUIElement *elem = mouseCaptor;
             // input-eligible this frame = the updateInput walk reached it (procedural gating)
             const bool eligible = (elem->lastInputFrame == frame);
-            if(qe.ev.down) {
+            if(qe.down) {
                 mouseCaptorButtons |= btn;
                 if(eligible) {
                     if(elem->bMouseInside) {
@@ -389,7 +384,7 @@ void CBaseUIElement::dispatchMouseEvents(CBaseUIEventCtx &c, UIRoot root) {
                 }
                 if(!mouseCaptorButtons) mouseCaptor = nullptr;
             }
-        } else if(qe.ev.down) {
+        } else if(qe.down) {
             // route to the best candidate: groups in input-priority order; within a group the
             // best (tier, latest visit) wins, approximating top-most draw order
             CBaseUIElement *target{nullptr};

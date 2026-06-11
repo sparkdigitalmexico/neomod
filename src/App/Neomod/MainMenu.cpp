@@ -1287,7 +1287,7 @@ void MainMenu::onKeyDown(KeyboardEvent &e) {
     }
 }
 
-void MainMenu::onButtonChange(ButtonEvent ev) {
+void MainMenu::onButtonChange(ButtonEvent &ev) {
     if(!this->bVisible || ev.btn != MouseButtonFlags::MF_MIDDLE ||
        !(ev.down && !this->menuAnim.animating() && !this->menuElementsVisible))
         return;

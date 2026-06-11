@@ -198,7 +198,7 @@ void BaseFrameworkTest::onChar(KeyboardEvent &e) {
     debugLog("charCode: {}", UniString::to_utf8(std::u32string_view{charray}));
 }
 
-void BaseFrameworkTest::onButtonChange(ButtonEvent event) {
+void BaseFrameworkTest::onButtonChange(ButtonEvent &event) {
     debugLog("button: {} down: {} timestamp: {}", static_cast<size_t>(event.btn), event.down, event.timestamp);
 }
 void BaseFrameworkTest::onWheelVertical(int delta) { debugLog("{}", delta); }

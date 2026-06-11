@@ -51,7 +51,7 @@ class BaseFrameworkTest : public App, public MouseListener {
     void onChar(KeyboardEvent &e) override;
 
     // mouse
-    void onButtonChange(ButtonEvent event) override;
+    void onButtonChange(ButtonEvent &event) override;
     void onWheelVertical(int delta) override;
     void onWheelHorizontal(int delta) override;
 

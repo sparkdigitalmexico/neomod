@@ -647,12 +647,12 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
 
         // mouse events
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            mouse->onButtonChange({event->button.timestamp, (MouseButtonFlags)(1 << (event->button.button - 1)), true});
+            mouse->onButtonChange({event->button.timestamp, (MouseButtonFlags)(1 << (event->button.button - 1)), true, false});
             break;
 
         case SDL_EVENT_MOUSE_BUTTON_UP:
             mouse->onButtonChange(
-                {event->button.timestamp, (MouseButtonFlags)(1 << (event->button.button - 1)), false});
+                {event->button.timestamp, (MouseButtonFlags)(1 << (event->button.button - 1)), false, false});
             break;
 
         case SDL_EVENT_MOUSE_WHEEL:
