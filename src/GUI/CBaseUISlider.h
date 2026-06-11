@@ -17,7 +17,6 @@ class CBaseUISlider : public CBaseUIElement {
 
     void draw() override;
     void tick() override;
-    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyDown(KeyboardEvent &e) override;
 
@@ -96,6 +95,7 @@ class CBaseUISlider : public CBaseUIElement {
     void onMouseDownInside(bool left = true, bool right = false) override;
     void onMouseCancel() override;
     void onCapturedMouseMove() override;
+    bool onWheel(int deltaVertical, int deltaHorizontal) override;
     void onResized() override;
 
    protected:

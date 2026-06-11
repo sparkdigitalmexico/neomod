@@ -30,6 +30,26 @@ void UIDispatch::onButtonChange(ButtonEvent &ev) {
     this->queue.push_back(ev);
 }
 
+void UIDispatch::onWheelVertical(int delta) {
+    const u64 frame = engine->getFrameCount();
+    if(frame != this->lastWheelFrame) {
+        this->wheelVertical = this->wheelHorizontal = 0;
+        this->wheelConsumed = false;
+        this->lastWheelFrame = frame;
+    }
+    this->wheelVertical += delta;
+}
+
+void UIDispatch::onWheelHorizontal(int delta) {
+    const u64 frame = engine->getFrameCount();
+    if(frame != this->lastWheelFrame) {
+        this->wheelVertical = this->wheelHorizontal = 0;
+        this->wheelConsumed = false;
+        this->lastWheelFrame = frame;
+    }
+    this->wheelHorizontal += delta;
+}
+
 void UIDispatch::onElementDestroyed(CBaseUIElement *elem) {
     ++this->elemGeneration;
     if(this->captor == elem) {
@@ -143,10 +163,55 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
         }
     }
 
-    if(!hasEvents) return;
-    auto &events = this->queue;
+    const bool hasWheel = (this->lastWheelFrame == frame && !this->wheelConsumed &&
+                           (this->wheelVertical != 0 || this->wheelHorizontal != 0));
+    if(!hasEvents && !hasWheel) return;
 
     const u64 startGeneration = this->elemGeneration;
+
+    // wheel before buttons (pre-2.3 it acted during the input walk, ahead of click delivery):
+    // the frame's totals go to ONE consumer. while a capture is held the wheel belongs to the
+    // captor (accepted or dropped); otherwise the top-most wheel-accepting candidate wins -
+    // groups in input-priority order, within a group by (tier, latest visit) like the button
+    // targeting, but falling through candidates that decline (a button above its scrollview)
+    if(hasWheel) {
+        if(this->captor != nullptr) {
+            if(this->captorRoot == root) {
+                this->wheelConsumed = true;
+                if(this->captor->onWheel(this->wheelVertical, this->wheelHorizontal)) {
+                    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this->captor, "wheel");
+                }
+            }
+        } else {
+            for(uSz g = 0; g < c.hitGroupStarts.size() && !this->wheelConsumed; ++g) {
+                const uSz begin = c.hitGroupStarts[g];
+                const uSz end = (g + 1 < c.hitGroupStarts.size()) ? c.hitGroupStarts[g + 1] : c.hitCandidates.size();
+                if(begin == end) continue;
+
+                std::vector<uSz> order;
+                order.reserve(end - begin);
+                for(uSz i = begin; i < end; ++i) order.push_back(i);
+                std::ranges::sort(order, [&c](uSz a, uSz b) {
+                    return c.hitCandidates[a].tier != c.hitCandidates[b].tier
+                               ? c.hitCandidates[a].tier > c.hitCandidates[b].tier
+                               : a > b;
+                });
+
+                for(const uSz i : order) {
+                    if(this->elemGeneration != startGeneration) return;  // a handler mutated the UI
+                    CBaseUIElement *elem = c.hitCandidates[i].elem;
+                    if(elem->onWheel(this->wheelVertical, this->wheelHorizontal)) {
+                        if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(elem, "wheel");
+                        this->wheelConsumed = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if(!hasEvents) return;
+    auto &events = this->queue;
 
     for(auto &qe : events) {
         if(qe.consumed) continue;

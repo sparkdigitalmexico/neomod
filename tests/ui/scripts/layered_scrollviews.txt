@@ -1,9 +1,10 @@
-# pins the scrollview wheel "UBER hack" (CBaseUIScrollView.cpp): with the skin dropdown
-# (a UIContextMenu, i.e. a scrollview nested inside options_contents) open and hovered,
-# one wheel event produces exactly ONE wheel consumer in the trace -- but it is the
-# PARENT (options_contents), not the hovered dropdown, because update order wins over
-# z-order. P2's hit-tested dispatch flips the consumer to options_contextmenu; re-record
-# the golden consciously then. needs the UITestSkin fixture (run.sh creates it).
+# pins wheel routing on layered scrollviews (flipped at P2.3, was the "UBER hack" pin):
+# with the skin dropdown (a UIContextMenu, i.e. a scrollview nested inside
+# options_contents) open and hovered, one wheel event produces exactly ONE consumer and
+# it is the top-most scroll surface, the DROPDOWN (options_contextmenu) -- even though
+# its content fits (no scrolling enabled), so the page must NOT scroll beneath it (the
+# golden tail has no content-movement hover churn). pre-2.3, update order won over
+# z-order and the parent consumed. needs the UITestSkin fixture (run.sh creates it).
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1

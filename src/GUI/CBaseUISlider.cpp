@@ -86,27 +86,19 @@ void CBaseUISlider::drawBlock() {
                 argb(255, 255, 255, 255), argb(255, 255, 255, 255));
 }
 
-void CBaseUISlider::updateInput(CBaseUIEventCtx &c) {
-    CBaseUIElement::updateInput(c);
-    if(!this->bVisible) return;
+bool CBaseUISlider::onWheel(int deltaVertical, int /*deltaHorizontal*/) {
+    // wheel during a drag would fight the grab (the captured move recomputes the value from
+    // the cursor position every frame)
+    if(!this->bAllowMouseWheel || this->bActive || deltaVertical == 0) return false;
 
-    // block dragging moved to onCapturedMouseMove; this pass only handles the wheel, gated as
-    // before on not actively dragging (stays polled until the phase 2.3 wheel routing)
-    const bool activeMouseMotion{this->bActive && (vec2{mouse->getPos()} != this->vLastMousePos)};
-    if(!activeMouseMotion) {
-        if(this->bAllowMouseWheel && this->isMouseInside()) {
-            int wheelDelta = mouse->getWheelDeltaVertical();
-            if(wheelDelta != 0) {
-                const int multiplier = std::max(1, std::abs(wheelDelta) / 120);
+    const int multiplier = std::max(1, std::abs(deltaVertical) / 120);
 
-                if(wheelDelta > 0) {
-                    this->setValue(this->fCurValue + this->fKeyDelta * multiplier, this->bAnimated);
-                } else {
-                    this->setValue(this->fCurValue - this->fKeyDelta * multiplier, this->bAnimated);
-                }
-            }
-        }
+    if(deltaVertical > 0) {
+        this->setValue(this->fCurValue + this->fKeyDelta * multiplier, this->bAnimated);
+    } else {
+        this->setValue(this->fCurValue - this->fKeyDelta * multiplier, this->bAnimated);
     }
+    return true;
 }
 
 void CBaseUISlider::onCapturedMouseMove() {

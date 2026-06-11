@@ -179,6 +179,11 @@ class CBaseUIElement : public KeyboardListener {
     virtual void onMouseUpInside(bool /*left*/ = true, bool /*right*/ = false);
     virtual void onMouseUpOutside(bool /*left*/ = true, bool /*right*/ = false);
 
+    // wheel routing (dispatch-driven, see UIDispatch): per-frame wheel totals, offered
+    // top-most-first to the hovered hit candidates; return true to consume (stops the
+    // fall-through to elements beneath)
+    virtual bool onWheel(int deltaVertical, int deltaHorizontal);
+
     // mouse capture lifecycle (dispatch-driven, see UIDispatch). a pressed element whose press is
     // taken away (capture steal, hidden/disabled/input-blocked mid-hold) gets onMouseCancel
     // instead of an up: discard pressed state, no click follows.

@@ -18,14 +18,6 @@
 // #include "Logging.h"
 
 namespace {
-// UBER hack for "handling" mousewheel events on layered scrollviews
-// much more proper would be to:
-//  - actually track Z order globally and have a defined order of event handling
-//  - stop doing the insane propagate_clicks thing (you can interact with gui elements in more ways than just clicking!!!)
-// but that takes time and this seems to work in practice for now...
-u64 lastScrollFrame{0};
-u32 layeredScrollsHandledInFrame{0};
-
 using ScrollContainer = CBaseUIScrollView::CBaseUIScrollView::CBaseUIScrollViewContainer;
 }  // namespace
 
@@ -367,36 +359,23 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
         this->container.updateInput(c);
     }
     if(selfGrabbed) c.propagate_clicks = false;
+}
 
-    // handle mouse wheel scrolling
-    if(!this->bBlockScrolling && (this->bVerticalScrolling || this->bHorizontalScrolling) && !keyboard->isAltDown() &&
-       this->isMouseInside() && this->isEnabled()) {
-        const u64 curFrameCount = engine->getFrameCount();
-        if(curFrameCount != lastScrollFrame) {
-            lastScrollFrame = curFrameCount;
-            layeredScrollsHandledInFrame = 0;
-        }
+bool CBaseUIScrollView::onWheel(int deltaVertical, int deltaHorizontal) {
+    // alt-wheel belongs to the app-level volume gesture
+    if(this->bBlockScrolling || keyboard->isAltDown()) return false;
 
-        if(layeredScrollsHandledInFrame == 0) {
-            bool handledThisFrame = false;
-            if(this->bVerticalScrolling && mouse->getWheelDeltaVertical() != 0) {
-                this->scrollY(mouse->getWheelDeltaVertical() * this->fScrollMouseWheelMultiplier *
-                              cv::ui_scrollview_mousewheel_multiplier.getDouble());
-                handledThisFrame = true;
-            }
+    if(this->bVerticalScrolling && deltaVertical != 0)
+        this->scrollY(deltaVertical * this->fScrollMouseWheelMultiplier *
+                      cv::ui_scrollview_mousewheel_multiplier.getDouble());
 
-            if(this->bHorizontalScrolling && mouse->getWheelDeltaHorizontal() != 0) {
-                this->scrollX(-mouse->getWheelDeltaHorizontal() * this->fScrollMouseWheelMultiplier *
-                              cv::ui_scrollview_mousewheel_multiplier.getDouble());
-                handledThisFrame = true;
-            }
+    if(this->bHorizontalScrolling && deltaHorizontal != 0)
+        this->scrollX(-deltaHorizontal * this->fScrollMouseWheelMultiplier *
+                      cv::ui_scrollview_mousewheel_multiplier.getDouble());
 
-            if(handledThisFrame) {
-                if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this, "wheel");
-                ++layeredScrollsHandledInFrame;
-            }
-        }
-    }
+    // consume even when nothing moved (axis disabled, content fits): a hovered scroll surface
+    // owns the wheel, e.g. an open dropdown must not let the page scroll beneath it
+    return true;
 }
 
 void CBaseUIScrollView::beginDragScroll(dvec2 pos) {

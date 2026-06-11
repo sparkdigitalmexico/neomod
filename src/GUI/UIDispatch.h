@@ -32,8 +32,15 @@ class UIDispatch final : public MouseListener {
     // buffers the frame's button events off the regular Mouse listener relay (events arrive
     // during the input-device update, but routing must wait until the updateInput walk has
     // collected the hit candidates). self-cleans: the first event of a new frame drops the
-    // previous frame's. wheel events stay polled until the phase 2.3 wheel routing.
+    // previous frame's.
     void onButtonChange(ButtonEvent &ev) override;
+
+    // wheel deltas off the same relay, accumulated into per-frame totals (same self-cleaning
+    // model); routed in dispatchEvents to the top-most wheel-accepting hit candidate, or to
+    // the captor while a capture is held. consumed-state is shared across both roots like the
+    // button events (the engine root dispatches first).
+    void onWheelVertical(int delta) override;
+    void onWheelHorizontal(int delta) override;
 
     // routes this frame's buffered mouse button events to the candidates collected during the
     // updateInput walk. down -> best candidate + implicit capture, up -> whoever received the
@@ -70,6 +77,12 @@ class UIDispatch final : public MouseListener {
 
     std::vector<ButtonEvent> queue;
     u64 lastPushFrame{0};
+
+    // per-frame wheel totals
+    int wheelVertical{0};
+    int wheelHorizontal{0};
+    u64 lastWheelFrame{0};
+    bool wheelConsumed{false};
 
     // mouse capture: whichever element receives a down receives the matching up(s). one captor
     // globally (there is one pointer device), tagged with the UI root that owns it so the other

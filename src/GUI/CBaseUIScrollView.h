@@ -140,6 +140,7 @@ class CBaseUIScrollView : public CBaseUIElement {
     void onCapturedMouseMove() override;
     void onCapturedMoveThrough() override;
     void onCapturedEndThrough() override;
+    bool onWheel(int deltaVertical, int deltaHorizontal) override;
 
     void onFocusStolen() override;
     void onEnabled() override;
