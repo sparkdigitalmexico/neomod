@@ -3,68 +3,28 @@ uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
 uitrace frame=0 evt=hoverIn elem=MainMenu
 uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
 uitrace frame=31 evt=hoverIn elem=mainmenu_cube
-uitrace frame=34 evt=downInside elem=CBaseUIContainer
-uitrace frame=34 evt=downInside elem=CBaseUIContainer
-uitrace frame=34 evt=downInside elem=UIUserContextMenuScreen
-uitrace frame=34 evt=downInside elem=MainMenu
 uitrace frame=34 evt=downInside elem=mainmenu_cube
-uitrace frame=38 evt=upInside elem=CBaseUIContainer
-uitrace frame=38 evt=upInside elem=CBaseUIContainer
-uitrace frame=38 evt=upInside elem=UIUserContextMenuScreen
-uitrace frame=38 evt=upInside elem=MainMenu
 uitrace frame=38 evt=upInside elem=mainmenu_cube
 uitrace frame=59 evt=hoverOut elem=mainmenu_cube
 uitrace frame=79 evt=hoverIn elem=mainmenu_options
-uitrace frame=83 evt=downInside elem=CBaseUIContainer
-uitrace frame=83 evt=downInside elem=CBaseUIContainer
-uitrace frame=83 evt=downInside elem=UIUserContextMenuScreen
-uitrace frame=83 evt=downInside elem=MainMenu
 uitrace frame=83 evt=downInside elem=mainmenu_options
-uitrace frame=87 evt=upInside elem=CBaseUIContainer
-uitrace frame=87 evt=upInside elem=CBaseUIContainer
-uitrace frame=87 evt=upInside elem=UIUserContextMenuScreen
-uitrace frame=87 evt=upInside elem=MainMenu
 uitrace frame=87 evt=upInside elem=mainmenu_options
 uitrace frame=118 evt=hoverIn elem=options_categories
-uitrace frame=118 evt=hoverIn elem=(anonymous namespace)::CategoryButton
 uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverIn elem=(anonymous namespace)::CategoryButton
 uitrace frame=118 evt=hoverOut elem=mainmenu_options
 uitrace frame=119 evt=hoverIn elem=OptionsOverlay
-uitrace frame=122 evt=downInside elem=CBaseUIContainer
-uitrace frame=122 evt=downInside elem=CBaseUIContainer
-uitrace frame=122 evt=downInside elem=UIUserContextMenuScreen
-uitrace frame=122 evt=downInside elem=OptionsOverlay
-uitrace frame=122 evt=downInside elem=options_categories
 uitrace frame=122 evt=downInside elem=(anonymous namespace)::CategoryButton
-uitrace frame=122 evt=downInside elem=options_categories
-uitrace frame=126 evt=upInside elem=CBaseUIContainer
-uitrace frame=126 evt=upInside elem=CBaseUIContainer
-uitrace frame=126 evt=upInside elem=UIUserContextMenuScreen
-uitrace frame=126 evt=upInside elem=OptionsOverlay
-uitrace frame=126 evt=upInside elem=options_categories
 uitrace frame=126 evt=upInside elem=(anonymous namespace)::CategoryButton
-uitrace frame=126 evt=upInside elem=options_categories
+uitrace frame=147 evt=hoverIn elem=options_contents
 uitrace frame=147 evt=hoverIn elem=options_contents
 uitrace frame=147 evt=hoverIn elem=options_skin_select
-uitrace frame=147 evt=hoverIn elem=options_contents
+uitrace frame=147 evt=hoverOut elem=options_categories
 uitrace frame=147 evt=hoverOut elem=options_categories
 uitrace frame=147 evt=hoverOut elem=(anonymous namespace)::CategoryButton
-uitrace frame=147 evt=hoverOut elem=options_categories
 uitrace frame=147 evt=hoverIn elem=options_search
-uitrace frame=151 evt=downInside elem=CBaseUIContainer
-uitrace frame=151 evt=downInside elem=CBaseUIContainer
-uitrace frame=151 evt=downInside elem=UIUserContextMenuScreen
-uitrace frame=151 evt=downInside elem=OptionsOverlay
-uitrace frame=151 evt=downInside elem=options_contents
 uitrace frame=151 evt=downInside elem=options_skin_select
-uitrace frame=151 evt=downInside elem=options_contents
-uitrace frame=155 evt=upInside elem=CBaseUIContainer
-uitrace frame=155 evt=upInside elem=CBaseUIContainer
-uitrace frame=155 evt=upInside elem=UIUserContextMenuScreen
-uitrace frame=155 evt=upInside elem=OptionsOverlay
-uitrace frame=155 evt=upInside elem=options_contents
 uitrace frame=155 evt=upInside elem=options_skin_select
-uitrace frame=155 evt=upInside elem=options_contents
 uitrace frame=157 evt=hoverIn elem=options_skin_select
 uitrace frame=158 evt=hoverOut elem=options_contents
 uitrace frame=158 evt=hoverOut elem=options_contents
@@ -72,11 +32,11 @@ uitrace frame=158 evt=hoverIn elem=options_categories
 uitrace frame=158 evt=hoverIn elem=options_categories
 uitrace frame=158 evt=hoverOut elem=options_search
 uitrace frame=459 evt=hoverIn elem=options_contextmenu
-uitrace frame=459 evt=hoverIn elem=default
 uitrace frame=459 evt=hoverIn elem=options_contextmenu
+uitrace frame=459 evt=hoverIn elem=default
+uitrace frame=459 evt=hoverIn elem=options_contents
 uitrace frame=459 evt=hoverIn elem=options_contents
 uitrace frame=459 evt=hoverIn elem=options_skin_select
-uitrace frame=459 evt=hoverIn elem=options_contents
 uitrace frame=459 evt=hoverOut elem=options_categories
 uitrace frame=459 evt=hoverOut elem=options_categories
 uitrace frame=459 evt=hoverIn elem=options_search
@@ -86,8 +46,8 @@ uitrace frame=462 evt=hoverIn elem=options_skin_select
 uitrace frame=463 evt=hoverIn elem=options_skin_select
 uitrace frame=463 evt=wheel elem=options_contents
 uitrace frame=464 evt=hoverOut elem=options_contextmenu
-uitrace frame=464 evt=hoverOut elem=default
 uitrace frame=464 evt=hoverOut elem=options_contextmenu
+uitrace frame=464 evt=hoverOut elem=default
 uitrace frame=464 evt=hoverIn elem=Reload Skin
 uitrace frame=466 evt=hoverIn elem=Number Scale:
 uitrace frame=467 evt=hoverIn elem=HitResult Scale:

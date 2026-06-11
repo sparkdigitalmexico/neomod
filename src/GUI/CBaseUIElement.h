@@ -8,8 +8,11 @@
 #include <string>
 #include <string_view>
 #include <span>
+#include <vector>
 
 class CBaseUIElement;
+
+class MouseListener;
 
 // convar callbacks to avoid hammering atomic convar reads
 namespace CBaseUIDebug {
@@ -42,6 +45,22 @@ struct CBaseUIEventCtx {
     void consume_mouse();
 
     [[nodiscard]] bool mouse_consumed() const;
+
+    // pass-A hit-candidate collection: elements under the cursor that may receive this frame's
+    // button events; single-target delivery happens in CBaseUIElement::dispatchMouseEvents after
+    // the walk. groups = top-level screens/overlays in input-priority order; within a group the
+    // best (tier, latest visit) candidate wins, approximating top-most draw order until the
+    // phase 3 layer stack provides real z
+    struct HitCandidate {
+        CBaseUIElement *elem;
+        int tier;
+    };
+    std::vector<HitCandidate> hitCandidates;
+    std::vector<size_t> hitGroupStarts;
+    int currentHitTier{0};  // raised around children that draw above later-visited siblings
+
+    void beginHitGroup();
+    void addHitCandidate(CBaseUIElement *elem);
 };
 
 class CBaseUIElement : public KeyboardListener {
@@ -57,8 +76,22 @@ class CBaseUIElement : public KeyboardListener {
     // logic/animations/async polling; always runs, regardless of visibility or input consumption
     virtual void tick();
 
-    // mouse input synthesis (hover + click events); gated and priority-ordered by the caller
+    // mouse input pass: hover + hit-candidate registration; gated and priority-ordered by the caller
     virtual void updateInput(CBaseUIEventCtx &c);
+
+    // which UI root a dispatch call serves; the engine root (guiContainer) dispatches before the
+    // app root each frame and consumes the events it delivers
+    enum class UIRoot : uint8_t { ENGINE, APP };
+
+    // the UI layer's MouseListener: buffers the frame's button events off the same relay every
+    // other consumer uses (registered once at engine startup, like the keyboard listeners).
+    // Mouse itself knows nothing about UI routing; consumption state lives in the buffer here.
+    static MouseListener &mouseEventSink();
+
+    // pass B: routes this frame's buffered mouse button events to the candidates collected during
+    // the updateInput walk. down -> best candidate + implicit capture, up -> whoever received the
+    // down. call once per root, directly after its updateInput pass.
+    static void dispatchMouseEvents(CBaseUIEventCtx &c, UIRoot root);
 
     // keyboard input (nothing by default)
     void onKeyUp(KeyboardEvent &e) override;
@@ -160,11 +193,15 @@ class CBaseUIElement : public KeyboardListener {
     // attributes
 
    private:
-    u8 mouseInsideCheck : 2 {0};
-    u8 mouseUpCheck : 2 {0};
+    // stamped by every updateInput pass; an element is input-eligible for dispatch only if its
+    // stamp is current (encodes all procedural screen gating without a declarative visibility model)
+    u64 lastInputFrame{0};
 
    protected:
     bool grabs_clicks : 1 {false};  // TODO: remove this (confusing behavior)
+    // transparent wrappers (containers) don't hit-candidate their own rect; real widgets with a
+    // self-rect surface (scrollview, window) opt back in
+    bool bClickThroughSelf : 1 {false};
     bool bVisible : 1 {true};
     bool bActive : 1 {false};  // we are doing something, e.g. textbox is blinking and ready to receive input
     bool bBusy : 1 {false};    // we demand the focus to be kept on us, e.g. click-drag scrolling in a scrollview

@@ -249,6 +249,10 @@ void Engine::loadApp() {
         // (engine hardcoded hotkeys come first, then engine gui)
         keyboard->addListener(this->guiContainer, true);
         keyboard->addListener(this, true);
+
+        // the UI layer receives mouse button events through the same relay as everyone else;
+        // CBaseUIElement::dispatchMouseEvents routes them after each root's updateInput pass
+        mouse->addListener(&CBaseUIElement::mouseEventSink());
     }
 
     debugLog("Engine: Loading app ...");
@@ -427,6 +431,8 @@ void Engine::onUpdate() {
                 this->guiContainer->tick();
                 CBaseUIEventCtx c;
                 this->guiContainer->updateInput(c);
+                // engine root dispatches (and consumes) before the app root: it draws on top
+                CBaseUIElement::dispatchMouseEvents(c, CBaseUIElement::UIRoot::ENGINE);
             }
         }
     }

@@ -4,54 +4,26 @@ uitrace frame=0 evt=hoverIn elem=MainMenu
 uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
 uitrace frame=31 evt=hoverIn elem=modsel_overrides
 uitrace frame=32 evt=hoverIn elem=modsel_experimental
-uitrace frame=32 evt=hoverIn elem= Experimental Mods (!)
 uitrace frame=32 evt=hoverIn elem=modsel_experimental
+uitrace frame=32 evt=hoverIn elem= Experimental Mods (!)
 uitrace frame=32 evt=hoverIn elem=ModSelector
 uitrace frame=42 evt=hoverOut elem=modsel_experimental
-uitrace frame=42 evt=hoverOut elem= Experimental Mods (!)
 uitrace frame=42 evt=hoverOut elem=modsel_experimental
+uitrace frame=42 evt=hoverOut elem= Experimental Mods (!)
 uitrace frame=42 evt=hoverOut elem=ModSelector
 uitrace frame=42 evt=hoverIn elem=modsel_ar
 uitrace frame=43 evt=hoverIn elem=ModSelector
-uitrace frame=45 evt=downInside elem=CBaseUIContainer
-uitrace frame=45 evt=downInside elem=CBaseUIContainer
-uitrace frame=45 evt=downInside elem=ModSelector
-uitrace frame=45 evt=downInside elem=modsel_overrides
 uitrace frame=45 evt=downInside elem=modsel_ar
 uitrace frame=48 evt=hoverOut elem=modsel_ar
 uitrace frame=48 evt=hoverIn elem=AR:
-uitrace frame=52 evt=upInside elem=CBaseUIContainer
-uitrace frame=52 evt=upInside elem=CBaseUIContainer
-uitrace frame=52 evt=upInside elem=ModSelector
-uitrace frame=52 evt=upInside elem=modsel_overrides
 uitrace frame=56 evt=hoverIn elem=1. Reset All Mods
 uitrace frame=56 evt=hoverOut elem=AR:
-uitrace frame=59 evt=downInside elem=CBaseUIContainer
-uitrace frame=59 evt=downInside elem=CBaseUIContainer
-uitrace frame=59 evt=downInside elem=ModSelector
 uitrace frame=59 evt=downInside elem=1. Reset All Mods
-uitrace frame=59 evt=downInside elem=modsel_overrides
-uitrace frame=59 evt=downInside elem=UIUserContextMenuScreen
-uitrace frame=62 evt=upInside elem=CBaseUIContainer
-uitrace frame=62 evt=upInside elem=CBaseUIContainer
-uitrace frame=62 evt=upInside elem=ModSelector
 uitrace frame=62 evt=upInside elem=1. Reset All Mods
-uitrace frame=62 evt=upInside elem=modsel_overrides
-uitrace frame=62 evt=upInside elem=UIUserContextMenuScreen
-uitrace frame=65 evt=downInside elem=CBaseUIContainer
-uitrace frame=65 evt=downInside elem=CBaseUIContainer
-uitrace frame=65 evt=downInside elem=ModSelector
 uitrace frame=65 evt=hoverOut elem=1. Reset All Mods
 uitrace frame=65 evt=hoverIn elem=2. Close
 uitrace frame=65 evt=downInside elem=2. Close
-uitrace frame=65 evt=downInside elem=modsel_overrides
-uitrace frame=65 evt=downInside elem=UIUserContextMenuScreen
-uitrace frame=68 evt=upInside elem=CBaseUIContainer
-uitrace frame=68 evt=upInside elem=CBaseUIContainer
-uitrace frame=68 evt=upInside elem=ModSelector
 uitrace frame=68 evt=upInside elem=2. Close
-uitrace frame=68 evt=upInside elem=modsel_overrides
-uitrace frame=68 evt=upInside elem=UIUserContextMenuScreen
 uitrace frame=69 evt=hoverIn elem=Carousel
 uitrace frame=70 evt=hoverIn elem=CBaseUIContainer
 uitrace frame=70 evt=hoverIn elem=InfoLabel

@@ -9,7 +9,11 @@
 #include "ContainerRanges.h"
 
 CBaseUIContainer::CBaseUIContainer(float Xpos, float Ypos, float Xsize, float Ysize, std::string name)
-    : CBaseUIElement(Xpos, Ypos, Xsize, Ysize, std::move(name)) {}
+    : CBaseUIElement(Xpos, Ypos, Xsize, Ysize, std::move(name)) {
+    // a container is a transparent wrapper: clicks on its rect belong to whatever is beneath,
+    // not to it (widget subclasses with a real self-surface opt back in, e.g. scrollview)
+    this->bClickThroughSelf = true;
+}
 
 CBaseUIContainer::~CBaseUIContainer() { this->freeElements(); }
 
@@ -205,8 +209,14 @@ void CBaseUIContainer::tick() {
 }
 
 void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
+    const bool clicksBeforeSelf = c.propagate_clicks;
     CBaseUIElement::updateInput(c);
     if(!this->isVisible()) return;
+
+    // a self-grab (grabs_clicks) takes effect at subtree exit: our own children draw above us
+    // and must stay click-eligible; only siblings/screens visited later get blocked
+    const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
+    if(selfGrabbed) c.propagate_clicks = true;
 
     // NOTE: do NOT use a range-based for loop here, updateInput() might invalidate iterators by changing the container contents...
     const auto &elements = this->vElements;
@@ -214,6 +224,8 @@ void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
         auto *e = elements[i];
         if(e->isVisible()) e->updateInput(c);
     }
+
+    if(selfGrabbed) c.propagate_clicks = false;
 }
 
 void CBaseUIContainer::update_pos() {

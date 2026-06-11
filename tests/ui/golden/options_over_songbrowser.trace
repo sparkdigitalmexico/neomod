@@ -9,8 +9,8 @@ uitrace frame=336 evt=hoverIn elem=options_categories
 uitrace frame=336 evt=hoverIn elem=options_categories
 uitrace frame=337 evt=hoverIn elem=OptionsOverlay
 uitrace frame=346 evt=hoverIn elem=options_contents
-uitrace frame=346 evt=hoverIn elem=options_server_box
 uitrace frame=346 evt=hoverIn elem=options_contents
+uitrace frame=346 evt=hoverIn elem=options_server_box
 uitrace frame=346 evt=hoverOut elem=options_categories
 uitrace frame=346 evt=hoverOut elem=options_categories
 uitrace frame=346 evt=hoverIn elem=options_search

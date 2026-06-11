@@ -355,8 +355,15 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
 
     const bool wasContainerBusyBeforeUpdate = this->container.isBusy();
 
-    this->container.updateInput(c);
+    // self before children: visit order doubles as hit-candidate priority (latest = top-most),
+    // and the children draw above the scrollview surface. our self-grab (grabs_clicks) takes
+    // effect at subtree exit so the children stay click-eligible.
+    const bool clicksBeforeSelf = c.propagate_clicks;
     CBaseUIElement::updateInput(c);
+    const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
+    if(selfGrabbed) c.propagate_clicks = true;
+    this->container.updateInput(c);
+    if(selfGrabbed) c.propagate_clicks = false;
 
     const dvec2 curMousePos = mouse->getPos();
 

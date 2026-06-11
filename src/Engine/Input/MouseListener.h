@@ -27,7 +27,13 @@ struct ButtonEvent {
 
 class MouseListener {
    public:
+    MouseListener() = default;
     virtual ~MouseListener() = default;
+
+    MouseListener(const MouseListener &) = default;
+    MouseListener &operator=(const MouseListener &) = default;
+    MouseListener(MouseListener &&) = default;
+    MouseListener &operator=(MouseListener &&) = default;
 
     virtual void onButtonChange(ButtonEvent /*event*/) {}
 

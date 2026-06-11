@@ -159,14 +159,7 @@ void CBaseUITextbox::tick() {
 
 void CBaseUITextbox::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    bool was_active = this->bActive;
     CBaseUIElement::updateInput(c);
-
-    // Steal focus from all other Textboxes
-    if(!was_active && this->bActive) {
-        engine->stealUIFocus();
-        this->bActive = true;
-    }
 
     const vec2 mousepos = mouse->getPos();
     const bool mleft = mouse->isLeftDown();
@@ -660,6 +653,10 @@ void CBaseUITextbox::onMouseOutside() {
 
 void CBaseUITextbox::onMouseDownInside(bool left, bool right) {
     CBaseUIElement::onMouseDownInside(left, right);
+
+    // freshly clicked (dispatch sets bActive after this handler): steal focus from all other
+    // textboxes; dispatch re-activates us afterwards
+    if(!this->bActive) engine->stealUIFocus();
 
     // force busy, can't drag scroll release (textbox requires full focus due to text selection)
     this->bBusy = true;

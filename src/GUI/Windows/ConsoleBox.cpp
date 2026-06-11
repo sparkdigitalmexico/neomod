@@ -227,10 +227,10 @@ void ConsoleBox::processPendingLogAnimations() {
 }
 
 void ConsoleBox::updateInput(CBaseUIEventCtx &c) {
-    // handle textbox focus first
-    this->textbox->updateInput(c);
-
+    // self before children: visit order doubles as hit-candidate priority (latest = top-most)
     CBaseUIElement::updateInput(c);
+
+    this->textbox->updateInput(c);
 
     const bool mleft = mouse->isLeftDown();
 

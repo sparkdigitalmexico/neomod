@@ -148,24 +148,30 @@ void UI::update() {
     }
     if(!ticked_active_screen) this->active_screen->tick();
 
-    // input pass: priority-ordered (update order = input priority until the phase 3 layer stack)
+    // input pass: priority-ordered (update order = input priority until the phase 3 layer stack);
+    // each screen/overlay is one hit-candidate priority group for the button dispatch below
     CBaseUIEventCtx c;
 
     // NOLINTNEXTLINE(modernize-loop-convert)
     for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        c.beginHitGroup();
         this->extra_overlays[i]->updateInput(c);
     }
 
     bool updated_active_screen = false;
     for(auto *screen : this->screens) {
+        c.beginHitGroup();
         screen->updateInput(c);
         if(screen == this->active_screen) updated_active_screen = true;
         if(c.mouse_consumed()) break;
     }
 
     if(!updated_active_screen && !c.mouse_consumed()) {
+        c.beginHitGroup();
         this->active_screen->updateInput(c);
     }
+
+    CBaseUIElement::dispatchMouseEvents(c, CBaseUIElement::UIRoot::APP);
 
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         if(unlikely(cv::ui_validate_ticks.getBool())) this->validateTicks();

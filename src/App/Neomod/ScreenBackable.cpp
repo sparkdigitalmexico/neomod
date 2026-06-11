@@ -36,7 +36,13 @@ void ScreenBackable::tick() {
 
 void ScreenBackable::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    if(this->backable) this->backButton->updateInput(c);
+    if(this->backable) {
+        // the back button draws on top of the screen body but is visited first; the raised tier
+        // keeps it the preferred hit candidate where the body overlaps it
+        c.currentHitTier++;
+        this->backButton->updateInput(c);
+        c.currentHitTier--;
+    }
     if(c.mouse_consumed()) return;
     UIScreen::updateInput(c);
 }
