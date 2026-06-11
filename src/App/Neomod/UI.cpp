@@ -161,8 +161,11 @@ void UI::update() {
         if(li < static_cast<sSz>(EXTRAS_SPLICE) && !walked_extras) {
             walked_extras = true;
             for(sSz oi = static_cast<sSz>(this->extra_overlays.size()) - 1; oi >= 0 && !c.mouse_consumed(); --oi) {
+                auto *overlay = this->extra_overlays[oi];
                 c.beginHitGroup();
-                this->extra_overlays[oi]->updateInput(c);
+                overlay->updateInput(c);
+                // a visible modal layer is the floor of the walk: nothing below it sees the mouse
+                if(overlay->isModal() && overlay->isVisible()) c.consume_mouse();
             }
             if(c.mouse_consumed()) break;
         }
@@ -170,6 +173,7 @@ void UI::update() {
         auto *screen = this->screens[LAYER_ORDER[li]];
         c.beginHitGroup();
         screen->updateInput(c);
+        if(screen->isModal() && screen->isVisible()) c.consume_mouse();
         if(screen == this->active_screen) updated_active_screen = true;
     }
 
@@ -368,7 +372,8 @@ forceinline void traceKeyConsumed(std::string_view evt, CBaseUIElement *consumer
 }  // namespace
 
 // key routing walks the same top -> bottom layer order as the input pass; the first
-// consumer ends the walk
+// consumer ends the walk, and a visible modal layer floors it (keys it declined die
+// there instead of reaching the layers beneath)
 void UI::routeKey(KeyboardEvent &e, void (CBaseUIElement::*handler)(KeyboardEvent &), std::string_view traceName) {
     if(e.isConsumed()) return;
 
@@ -377,11 +382,13 @@ void UI::routeKey(KeyboardEvent &e, void (CBaseUIElement::*handler)(KeyboardEven
         if(li < static_cast<sSz>(EXTRAS_SPLICE) && !walked_extras) {
             walked_extras = true;
             for(sSz oi = static_cast<sSz>(this->extra_overlays.size()) - 1; oi >= 0; --oi) {
-                (this->extra_overlays[oi]->*handler)(e);
+                auto *overlay = this->extra_overlays[oi];
+                (overlay->*handler)(e);
                 if(e.isConsumed()) {
-                    traceKeyConsumed(traceName, this->extra_overlays[oi]);
+                    traceKeyConsumed(traceName, overlay);
                     return;
                 }
+                if(overlay->isModal() && overlay->isVisible()) return;
             }
         }
 
@@ -391,6 +398,7 @@ void UI::routeKey(KeyboardEvent &e, void (CBaseUIElement::*handler)(KeyboardEven
             traceKeyConsumed(traceName, screen);
             return;
         }
+        if(screen->isModal() && screen->isVisible()) return;
     }
 }
 
@@ -411,6 +419,13 @@ void UI::onResolutionChange(vec2 newResolution) {
     }
 }
 
+bool UI::arrowKeysClaimed() const {
+    for(auto *screen : this->screens) {
+        if(screen->claimsArrowKeys() && screen->isVisible()) return true;
+    }
+    return false;
+}
+
 void UI::stealFocus() {
     // NOLINTNEXTLINE(modernize-loop-convert)
     for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
@@ -424,10 +439,12 @@ void UI::stealFocus() {
 
 void UI::hide() {
     this->active_screen->setVisible(false);
-    // Close any "temporary" overlays
-    this->promptOverlay->setVisible(false);
-    this->optionsOverlay->setVisible(false);
-    this->pauseOverlay->setVisible(false);
+    // close the "temporary" closeOnScreenSwitch overlays; unconditionally, because a redundant
+    // pauseOverlay->setVisible(false) is load-bearing during play (force-hides the modselector
+    // when the map ends/fails, see the HACKHACK in PauseOverlay::setVisible)
+    for(auto *screen : this->screens) {
+        if(screen->closesOnScreenSwitch()) screen->setVisible(false);
+    }
 }
 
 void UI::show() { this->active_screen->setVisible(true); }
@@ -438,15 +455,10 @@ void UI::setScreen(UIScreen *screen) {
     if(screen != this->active_screen && this->active_screen->isVisible()) {
         this->hide();
     } else {
-        // HACK: close "temporary" overlays unconditionally (we do not set pauseOverlay as the active screen ever)
-        if(screen != this->pauseOverlay && this->pauseOverlay->isVisible()) {
-            this->pauseOverlay->setVisible(false);
-        }
-        if(screen != this->optionsOverlay && this->optionsOverlay->isVisible()) {
-            this->optionsOverlay->setVisible(false);
-        }
-        if(screen != this->promptOverlay && this->promptOverlay->isVisible()) {
-            this->promptOverlay->setVisible(false);
+        // closeOnScreenSwitch sweep (visibility-gated on this path, matching the old
+        // hardcoded pause/options/prompt close; none of those is ever the setScreen target)
+        for(auto *s : this->screens) {
+            if(s != screen && s->closesOnScreenSwitch() && s->isVisible()) s->setVisible(false);
         }
     }
 

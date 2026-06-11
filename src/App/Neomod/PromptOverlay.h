@@ -14,7 +14,6 @@ class PromptOverlay final : public UIScreen {
     void onResolutionChange(vec2 newResolution) override;
 
     void draw() override;
-    void updateInput(CBaseUIEventCtx &c) override;
     void onKeyDown(KeyboardEvent &e) override;
     void onKeyUp(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;

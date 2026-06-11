@@ -29,6 +29,7 @@
 #include "UIPauseMenuButton.h"
 
 PauseOverlay::PauseOverlay() : UIScreen() {
+    this->bCloseOnScreenSwitch = true;
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
     using ImageGetter = UIPauseMenuButton::BasicSkinImageGetter;
 

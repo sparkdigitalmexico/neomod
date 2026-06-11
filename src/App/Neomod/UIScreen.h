@@ -20,6 +20,21 @@ class UIScreen : public CBaseUIContainer {
 
     [[nodiscard]] u64 getLastTickFrame() const { return this->lastTickFrame; }
 
+    // declared layer-stack flags (phase 3.2), constructor-set; the stack reads these instead
+    // of screens sniffing each other:
+    // - modal: while visible, the input/key walk stops below this layer
+    // - closeOnScreenSwitch: hidden on every base-screen swap (UI::setScreen/hide)
+    [[nodiscard]] bool isModal() const { return this->bModal; }
+    [[nodiscard]] bool closesOnScreenSwitch() const { return this->bCloseOnScreenSwitch; }
+
+    // a visible screen returning true reserves the bare arrow keys for its own navigation,
+    // blocking VolumeOverlay's arrow-bound volume binds (see VolumeOverlay::canChangeVolume)
+    [[nodiscard]] virtual bool claimsArrowKeys() { return false; }
+
+   protected:
+    bool bModal{false};
+    bool bCloseOnScreenSwitch{false};
+
    private:
     u64 lastTickFrame{0};
 };

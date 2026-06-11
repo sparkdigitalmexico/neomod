@@ -54,6 +54,7 @@ struct CBaseUIEventCtx {
     struct HitCandidate {
         CBaseUIElement *elem;
         int tier;
+        bool wheelOnly{false};
         std::vector<CBaseUIElement *> path;
     };
     std::vector<HitCandidate> hitCandidates;
@@ -63,6 +64,10 @@ struct CBaseUIEventCtx {
 
     void beginHitGroup();
     void addHitCandidate(CBaseUIElement *elem);
+    // wheel-only candidate, skipped by button targeting: a hover-independent wheel claim
+    // (screen rects are 0x0, so a screen-wide claim cannot come from bMouseInside candidacy);
+    // register it FIRST in the group so every hovered candidate gets first refusal
+    void addWheelClaim(CBaseUIElement *elem);
 
     // RAII: containers wrap their child walk in a scope so candidates registered inside know
     // their ancestor chain

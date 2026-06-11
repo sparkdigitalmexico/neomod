@@ -30,6 +30,8 @@ class OsuDirectScreen final : public ScreenBackable {
     void onBack() override;
     void onResolutionChange(vec2 newResolution) override;
 
+    [[nodiscard]] bool claimsArrowKeys() override { return true; }
+
     void reset();
     void search(std::string_view query);
 

@@ -332,7 +332,9 @@ struct OptionsOverlayImpl final {
 };
 
 // passthroughs
-OptionsOverlay::OptionsOverlay() : ScreenBackable(), NotificationOverlayKeyListener(), pImpl(this) {}
+OptionsOverlay::OptionsOverlay() : ScreenBackable(), NotificationOverlayKeyListener(), pImpl(this) {
+    this->bCloseOnScreenSwitch = true;
+}
 OptionsOverlay::~OptionsOverlay() = default;
 
 void OptionsOverlay::draw() { return pImpl->draw(); }

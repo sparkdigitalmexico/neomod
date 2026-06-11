@@ -24,6 +24,7 @@ uitrace frame=62 evt=hoverIn elem=Log in
 uitrace frame=63 evt=keydown consumed_by=OptionsOverlay
 uitrace frame=64 evt=hoverIn elem=options_server_box
 uitrace frame=64 evt=hoverOut elem=Log in
+uitrace frame=67 evt=wheel elem=VolumeOverlay
 uitrace frame=77 evt=hoverOut elem=options_contents
 uitrace frame=77 evt=hoverOut elem=options_contents
 uitrace frame=77 evt=hoverOut elem=options_server_box
@@ -36,4 +37,4 @@ uitrace frame=235 evt=hoverIn elem=InfoLabel
 uitrace frame=535 evt=hoverOut elem=CBaseUIContainer
 uitrace frame=535 evt=hoverOut elem=InfoLabel
 uitrace frame=535 evt=hoverIn elem=Carousel
-uitrace frame=541 evt=wheel elem=Carousel
+uitrace frame=541 evt=wheel elem=VolumeOverlay

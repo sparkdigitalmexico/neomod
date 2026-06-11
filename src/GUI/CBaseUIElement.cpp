@@ -60,6 +60,12 @@ void CBaseUIEventCtx::addHitCandidate(CBaseUIElement *elem) {
     this->hitCandidates.push_back({.elem = elem, .tier = this->currentHitTier, .path = this->hitPath});
 }
 
+void CBaseUIEventCtx::addWheelClaim(CBaseUIElement *elem) {
+    if(this->hitGroupStarts.empty()) this->hitGroupStarts.push_back(0);
+    // no ancestor path: claims never receive buttons, so they never capture
+    this->hitCandidates.push_back({.elem = elem, .tier = this->currentHitTier, .wheelOnly = true, .path = {}});
+}
+
 CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::nullptr_t /**/)
     : rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
 

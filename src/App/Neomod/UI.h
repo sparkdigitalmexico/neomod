@@ -69,6 +69,10 @@ struct UI final {
     inline void setScreen(std::nullptr_t) { this->hide(); }
     void setScreen(UIScreen* screen);
 
+    // stack query for the arrow-bound volume gesture: true while any visible screen declares
+    // it needs the arrow keys for itself (UIScreen::claimsArrowKeys)
+    [[nodiscard]] bool arrowKeysClaimed() const;
+
     // queryable with peekOverlay or removable with popOverlay
     // when pushed, the pushed overlay is set visible (but the parent is not set invisible)
     UIOverlay* pushOverlay(std::unique_ptr<UIOverlay> overlay);

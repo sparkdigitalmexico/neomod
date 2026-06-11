@@ -366,20 +366,21 @@ bool CBaseUIScrollView::onWheel(int deltaVertical, int deltaHorizontal) {
     if(this->bBlockScrolling || keyboard->isAltDown()) return false;
 
     bool consumed = false;
-    if(this->bVerticalScrolling && deltaVertical != 0) {
+    if(this->bVerticalScrolling && deltaVertical != 0 && this->getSize().y < this->vScrollSize.y) {
         this->scrollY(deltaVertical * this->fScrollMouseWheelMultiplier *
                       cv::ui_scrollview_mousewheel_multiplier.getDouble());
         consumed = true;
     }
-    if(this->bHorizontalScrolling && deltaHorizontal != 0) {
+    if(this->bHorizontalScrolling && deltaHorizontal != 0 && this->getSize().x < this->vScrollSize.x) {
         this->scrollX(-deltaHorizontal * this->fScrollMouseWheelMultiplier *
                       cv::ui_scrollview_mousewheel_multiplier.getDouble());
         consumed = true;
     }
 
     // deltas no enabled axis can take are DECLINED so the wheel chains to the scroll surface
-    // beneath: an anchored dropdown whose content fits (UIContextMenu disables scrolling then)
-    // must not dead-end the gesture - the parent scrolls and the dropdown rides its anchor
+    // beneath (ultimately to the volume sink): an anchored dropdown whose content fits
+    // (UIContextMenu disables scrolling then) or a fits-content surface (empty carousel) must
+    // not dead-end the gesture - the space gates mirror scrollY/scrollX's own no-op guards
     return consumed;
 }
 

@@ -3,3 +3,5 @@ uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
 uitrace frame=0 evt=hoverIn elem=MainMenu
 uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
 uitrace frame=31 evt=hoverIn elem=mainmenu_cube
+uitrace frame=35 evt=wheel elem=VolumeOverlay
+uitrace frame=41 evt=wheel elem=VolumeOverlay

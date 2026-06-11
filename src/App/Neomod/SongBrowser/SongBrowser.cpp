@@ -1019,6 +1019,10 @@ void SongBrowser::tick() {
 void SongBrowser::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
 
+    // registered FIRST = lowest wheel priority in this group: every hovered candidate
+    // (score browser, context menu, the carousel itself) gets first refusal
+    if(c.propagate_clicks) c.addWheelClaim(this);
+
     this->localBestContainer->updateInput(c);
     if(this->localBestButton && this->localBestButton->isVisible() && this->localBestButton->isMouseInside()) {
         // HACKHACK: don't hover score button list buttons under local best!
@@ -1039,6 +1043,12 @@ void SongBrowser::updateInput(CBaseUIEventCtx &c) {
 
     this->carousel->updateInput(c);
 }
+
+bool SongBrowser::onWheel(int deltaVertical, int deltaHorizontal) {
+    return this->carousel->onWheel(deltaVertical, deltaHorizontal);
+}
+
+bool SongBrowser::claimsArrowKeys() { return db->isFinished(); }
 
 void SongBrowser::onKeyDown(KeyboardEvent &key) {
     UIScreen::onKeyDown(key);  // NOLINT(bugprone-parent-virtual-call) only used for options menu

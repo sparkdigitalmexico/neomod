@@ -31,7 +31,6 @@
 #include "MainMenu.h"
 #include "ModSelector.h"
 #include "NotificationOverlay.h"
-#include "OptionsOverlay.h"
 #include "OsuDirectScreen.h"
 #include "PromptOverlay.h"
 #include "RankingScreen.h"
@@ -312,19 +311,11 @@ void RoomScreen::updateInput(CBaseUIEventCtx &c) {
     this->contextMenu->updateInput(c);
     if(c.mouse_consumed()) return;
 
-    // HACK (input-only since the tick/input split): the options overlay must get input priority
-    // when open, but update order = input priority until the phase 3 layer stack, and room
-    // (screens[6]) receives input before options (screens[8]) -> the slotlist scrollview would eat
-    // its scrolls/clicks. so route input only to the settings panel while options is visible.
-    if(ui->getOptionsOverlay()->isVisible()) {
-        this->settings->updateInput(c);
-    } else {
-        UIScreen::updateInput(c);
-    }
+    UIScreen::updateInput(c);
 }
 
 void RoomScreen::onKeyDown(KeyboardEvent &key) {
-    if(!this->bVisible || ui->getOptionsOverlay()->isVisible()) return;
+    if(!this->bVisible) return;
 
     if(key.getScanCode() == KEY_ESCAPE) {
         key.consume();

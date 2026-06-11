@@ -52,6 +52,7 @@ void UIDispatch::onWheelHorizontal(int delta) {
 
 void UIDispatch::onElementDestroyed(CBaseUIElement *elem) {
     ++this->elemGeneration;
+    if(this->wheelSink == elem) this->wheelSink = nullptr;
     if(this->captor == elem) {
         // the captor is mid-destruction: no calls into it, but observers still disarm
         this->captor = nullptr;
@@ -219,6 +220,16 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                     }
                 }
             }
+
+            // nothing wanted it: offer the totals to the fall-through sink. the app root
+            // dispatches last each frame, so the sink sees only deltas neither root's
+            // candidates consumed
+            if(root == Root::APP && !this->wheelConsumed && this->wheelSink != nullptr) {
+                if(this->wheelSink->onWheel(this->wheelVertical, this->wheelHorizontal)) {
+                    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this->wheelSink, "wheel");
+                    this->wheelConsumed = true;
+                }
+            }
         }
     }
 
@@ -290,6 +301,7 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                 int bestTier{0};
                 for(uSz i = begin; i < end; ++i) {
                     const auto &cand = c.hitCandidates[i];
+                    if(cand.wheelOnly) continue;
                     if(left && !cand.elem->bHandleLeftMouse) continue;
                     if(right && !cand.elem->bHandleRightMouse) continue;
                     if(target == nullptr || cand.tier >= bestTier) {

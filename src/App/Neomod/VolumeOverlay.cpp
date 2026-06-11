@@ -17,7 +17,7 @@
 #include "OptionsOverlay.h"
 #include "ModSelector.h"
 #include "UIContextMenu.h"
-#include "Database.h"
+#include "UIDispatch.h"
 #include "Environment.h"
 #include "BeatmapInterface.h"
 #include "Skin.h"
@@ -61,6 +61,10 @@ VolumeOverlay::VolumeOverlay() : UIScreen() {
 
     soundEngine->setMasterVolume(cv::volume_master.getFloat());
     this->updateLayout();
+
+    // the dispatch fall-through wheel sink: offered whatever no hit candidate consumed
+    // (unregistered automatically via the element dtor's onElementDestroyed report)
+    if(auto *dispatch = UIDispatch::get()) dispatch->setWheelSink(this);
 }
 
 VolumeOverlay::~VolumeOverlay() {
@@ -188,18 +192,33 @@ void VolumeOverlay::tick() {
 }
 
 void VolumeOverlay::updateInput(CBaseUIEventCtx &c) {
-    this->volumeSliderOverlayContainer->updateInput(c);
+    // while the user is on the visible sliders (hover/drag), the overlay claims the wheel
+    // outright: continuous adjustment must beat the scroll surfaces beneath (the sliders
+    // themselves decline it, setAllowMouseWheel(false))
+    if(this->isBusy()) c.addWheelClaim(this);
 
-    // scroll wheel events
-    if(this->canChangeVolume()) {
-        if(const int wheelDelta = mouse->getWheelDeltaVertical() / 120; wheelDelta != 0) {
-            if(wheelDelta > 0) {
-                this->volumeUp(wheelDelta);
-            } else {
-                this->volumeDown(-wheelDelta);
-            }
-        }
+    this->volumeSliderOverlayContainer->updateInput(c);
+}
+
+bool VolumeOverlay::onWheel(int deltaVertical, int /*deltaHorizontal*/) {
+    const int notches = deltaVertical / 120;
+    if(notches == 0) return false;
+
+    // the global gates that survived canChangeVolume's screen enumeration (exclusivity is
+    // structural now: this only runs when no candidate consumed the wheel, or as the
+    // hovered-slider claim): on the sliders or with alt held, always allow; otherwise
+    // respect the play-mode mousewheel disable and ignore out-of-screen wheel
+    if(!this->isBusy() && !keyboard->isAltDown()) {
+        if(osu->isInPlayMode() && cv::disable_mousewheel.getBool()) return false;
+        if(!osu->getVirtScreenRect().contains(mouse->getPos())) return false;
     }
+
+    if(notches > 0) {
+        this->volumeUp(notches);
+    } else {
+        this->volumeDown(-notches);
+    }
+    return true;
 }
 
 void VolumeOverlay::updateLayout() {
@@ -278,26 +297,22 @@ bool VolumeOverlay::isBusy() {
 
 bool VolumeOverlay::isVisible() { return engine->getTime() < this->fVolumeChangeTime; }
 
-// needless to say, this is not a good way of doing things
+// keys-only since phase 3.2 (the wheel half lives in onWheel, routed by UIDispatch): may
+// the arrow-bound INCREASE/DECREASE_VOLUME binds act right now? screens that navigate with
+// arrows declare UIScreen::claimsArrowKeys instead of being enumerated here; the remaining
+// hover-qualified checks survive until the phase 4 focus manager
 bool VolumeOverlay::canChangeVolume() {
-    const bool can_scroll =
-        this->isBusy() || keyboard->isAltDown() ||                                                          //
-        (                                                                                                   //
-            !(osu->isInPlayMode() && cv::disable_mousewheel.getBool()) &&                                   //
-            (osu->getVirtScreenRect().contains(mouse->getPos())) &&                                         //
-            !(ui->getPauseOverlayBase()->isVisible()) &&                                                    //
-            !(ui->getSongBrowserBase()->isVisible() && db->isFinished()) &&                                 //
-            !(ui->getOsuDirectScreenBase()->isVisible()) &&                                                 //
-            !(ui->getOptionsOverlayBase()->isVisible() && ui->getOptionsOverlayBase()->isMouseInside()) &&  //
-            !(ui->getOptionsOverlay()->getContextMenu()->isVisible()) &&                                    //
-            !(ui->getAboutScreenBase()->isVisible()) &&                                                     //
-            !(ui->getRankingScreenBase()->isVisible()) &&                                                   //
-            !(ui->getModSelector()->isMouseInScrollView()) &&                                               //
-            !(ui->getChatBase()->isMouseInside()) &&                                                        //
-            !(ui->getUserStatsScreenBase()->isVisible())                                                    //
-        );
+    if(this->isBusy() || keyboard->isAltDown()) return true;
 
-    return can_scroll;
+    if(!osu->getVirtScreenRect().contains(mouse->getPos())) return false;
+    if(ui->arrowKeysClaimed()) return false;
+
+    if(ui->getOptionsOverlayBase()->isVisible() && ui->getOptionsOverlayBase()->isMouseInside()) return false;
+    if(ui->getOptionsOverlay()->getContextMenu()->isVisible()) return false;
+    if(ui->getModSelector()->isMouseInScrollView()) return false;
+    if(ui->getChatBase()->isMouseInside()) return false;
+
+    return true;
 }
 
 void VolumeOverlay::gainFocus() {

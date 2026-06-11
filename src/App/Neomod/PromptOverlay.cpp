@@ -10,9 +10,11 @@
 #include "i18n.h"
 #include "UIButton.h"
 #include "MakeDelegateWrapper.h"
-#include "Mouse.h"
 
 PromptOverlay::PromptOverlay() : UIScreen() {
+    this->bModal = true;  // while visible, nothing below gets input
+    this->bCloseOnScreenSwitch = true;
+
     this->prompt_label = new CBaseUILabel(0, 0, 0, 0, "", "");
     this->prompt_label->setDrawFrame(false);
     this->prompt_label->setDrawBackground(false);
@@ -56,13 +58,6 @@ void PromptOverlay::draw() {
     g->fillRect(0, 0, this->getSize().x, this->getSize().y);
 
     UIScreen::draw();
-}
-
-void PromptOverlay::updateInput(CBaseUIEventCtx &c) {
-    if(!this->bVisible) return;
-
-    UIScreen::updateInput(c);
-    c.consume_mouse();
 }
 
 void PromptOverlay::onKeyDown(KeyboardEvent &e) {

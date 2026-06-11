@@ -72,14 +72,17 @@ void UIDebug::debugDumpScreens() {
     logRaw("engineScreen={} gResolution={} virtScreen={} mousePos={} mouseOffset={} mouseScale={}",
            engine->getScreenSize(), g->getResolution(), osu->getVirtScreenSize(), mouse->getPos(), mouse->getOffset(),
            mouse->getScale());
+    // flags: M = modal, C = closeOnScreenSwitch, A = claimsArrowKeys
     for(size_t i = 0; i < m_ui->screens.size(); ++i) {
         auto *s = m_ui->screens[i];
-        logRaw("[{:2}] {:<22} visible={:d} active_screen={:d}", i, UI::SCREEN_NAMES[i], s ? s->isVisible() : false,
-               s == m_ui->active_screen);
+        logRaw("[{:2}] {:<22} visible={:d} active_screen={:d} flags={}{}{}", i, UI::SCREEN_NAMES[i],
+               s ? s->isVisible() : false, s == m_ui->active_screen, (s && s->isModal()) ? 'M' : '-',
+               (s && s->closesOnScreenSwitch()) ? 'C' : '-', (s && s->claimsArrowKeys()) ? 'A' : '-');
     }
     for(size_t i = 0; i < m_ui->extra_overlays.size(); ++i) {
-        logRaw("[ov{}] {} visible={:d}", i, CBaseUIDebug::elemName(m_ui->extra_overlays[i]),
-               m_ui->extra_overlays[i]->isVisible());
+        auto *o = m_ui->extra_overlays[i];
+        logRaw("[ov{}] {} visible={:d} flags={}{}{}", i, CBaseUIDebug::elemName(o), o->isVisible(),
+               o->isModal() ? 'M' : '-', o->closesOnScreenSwitch() ? 'C' : '-', o->claimsArrowKeys() ? 'A' : '-');
     }
     std::string order;
     for(size_t li = 0; li < UI::NUM_SCREENS; ++li) {

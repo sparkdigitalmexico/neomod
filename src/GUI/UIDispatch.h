@@ -50,6 +50,11 @@ class UIDispatch final : public MouseListener {
     // element dtors report here: bumps the mutation generation and releases a dead captor
     void onElementDestroyed(CBaseUIElement *elem);
 
+    // the fall-through wheel sink: offered the frame's totals when no hit candidate in either
+    // root consumed them (VolumeOverlay; replaces its raw-delta poll, whose exclusivity used
+    // to depend on the canChangeVolume screen enumeration instead of actual consumption)
+    void setWheelSink(CBaseUIElement *sink) { this->wheelSink = sink; }
+
     // a locked capture cannot be stolen (slider grab, scrollbar drag, window drag/resize);
     // only the current captor may lock
     void lockCapture(const CBaseUIElement *who);
@@ -83,6 +88,7 @@ class UIDispatch final : public MouseListener {
     int wheelHorizontal{0};
     u64 lastWheelFrame{0};
     bool wheelConsumed{false};
+    CBaseUIElement *wheelSink{nullptr};
 
     // mouse capture: whichever element receives a down receives the matching up(s). one captor
     // globally (there is one pointer device), tagged with the UI root that owns it so the other
