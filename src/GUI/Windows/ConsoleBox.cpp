@@ -230,6 +230,8 @@ void ConsoleBox::updateInput(CBaseUIEventCtx &c) {
     // self before children: visit order doubles as hit-candidate priority (latest = top-most)
     CBaseUIElement::updateInput(c);
 
+    CBaseUIEventCtx::HitPathScope scope(c, this);
+
     this->textbox->updateInput(c);
 
     const bool mleft = mouse->isLeftDown();

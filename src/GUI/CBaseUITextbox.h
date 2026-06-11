@@ -103,6 +103,10 @@ class CBaseUITextbox : public CBaseUIElement {
     void onMouseDownOutside(bool left = true, bool right = false) override;
     void onMouseUpInside(bool left = true, bool right = false) override;
     void onMouseUpOutside(bool left = true, bool right = false) override;
+    void onMouseCancel() override;
+    void onCapturedMouseMove() override;
+
+    [[nodiscard]] int hitTestCaret(std::string_view vt, int mx) const;
 
     void handleCaretKeyboardMove();
     void handleCaretKeyboardDelete();
@@ -138,10 +142,6 @@ class CBaseUITextbox : public CBaseUIElement {
     TEXT_JUSTIFICATION textJustification{TEXT_JUSTIFICATION::LEFT};
 
     bool bHitenter;
-    bool bContextMouse;
-    bool bBlockMouse;
-    bool bCatchMouse;
     bool bDrawFrame;
     bool bDrawBackground;
-    bool bSelectCheck;
 };

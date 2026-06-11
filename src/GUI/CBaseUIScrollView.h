@@ -136,6 +136,10 @@ class CBaseUIScrollView : public CBaseUIElement {
     void onMouseDownInside(bool left = true, bool right = false) override;
     void onMouseUpInside(bool left = true, bool right = false) override;
     void onMouseUpOutside(bool left = true, bool right = false) override;
+    void onMouseCancel() override;
+    void onCapturedMouseMove() override;
+    void onCapturedMoveThrough() override;
+    void onCapturedEndThrough() override;
 
     void onFocusStolen() override;
     void onEnabled() override;
@@ -199,6 +203,12 @@ class CBaseUIScrollView : public CBaseUIElement {
     void updateClipping();
     void updateScrollbars();
 
+    // drag-scroll gesture pieces shared by the self-press (onMouseDownInside) and the
+    // observed-child steal (onCapturedMoveThrough) paths
+    void beginDragScroll(dvec2 pos);
+    bool tryBeginScrollbarDrag(dvec2 pos);
+    void endDragScroll(bool launchKinetic);
+
     void scrollToYInt(int scrollPosY, bool animated = true, bool slow = true);
     void scrollToXInt(int scrollPosX, bool animated = true, bool slow = true);
 
@@ -234,7 +244,6 @@ class CBaseUIScrollView : public CBaseUIElement {
     bool bAutoScrollingX{false};
     bool bAutoScrollingY{false};
 
-    bool bScrollResistanceCheck{false};
     bool bScrolling{false};
     bool bScrollbarScrolling{false};
     bool bScrollbarIsVerticalScrolling{false};

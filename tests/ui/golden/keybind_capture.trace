@@ -11,17 +11,17 @@ uitrace frame=83 evt=downInside elem=mainmenu_options
 uitrace frame=87 evt=upInside elem=mainmenu_options
 uitrace frame=118 evt=hoverIn elem=options_categories
 uitrace frame=118 evt=hoverIn elem=options_categories
-uitrace frame=118 evt=hoverIn elem=(anonymous namespace)::CategoryButton
+uitrace frame=118 evt=hoverIn elem=options_category_5
 uitrace frame=118 evt=hoverOut elem=mainmenu_options
 uitrace frame=119 evt=hoverIn elem=OptionsOverlay
-uitrace frame=122 evt=downInside elem=(anonymous namespace)::CategoryButton
-uitrace frame=126 evt=upInside elem=(anonymous namespace)::CategoryButton
+uitrace frame=122 evt=downInside elem=options_category_5
+uitrace frame=126 evt=upInside elem=options_category_5
 uitrace frame=147 evt=hoverIn elem=options_contents
 uitrace frame=147 evt=hoverIn elem=options_contents
 uitrace frame=147 evt=hoverIn elem=Left Click
 uitrace frame=147 evt=hoverOut elem=options_categories
 uitrace frame=147 evt=hoverOut elem=options_categories
-uitrace frame=147 evt=hoverOut elem=(anonymous namespace)::CategoryButton
+uitrace frame=147 evt=hoverOut elem=options_category_5
 uitrace frame=147 evt=hoverIn elem=options_search
 uitrace frame=151 evt=downInside elem=Left Click
 uitrace frame=155 evt=upInside elem=Left Click

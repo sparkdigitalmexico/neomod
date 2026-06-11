@@ -245,8 +245,15 @@ void CBaseUIWindow::updateInput(CBaseUIEventCtx &c) {
         this->updateWindowLogic();
 
     // the main two containers
-    this->titleBarContainer->updateInput(c);
-    this->container->updateInput(c);
+    {
+        CBaseUIEventCtx::HitPathScope scope(c, this);
+        this->titleBarContainer->updateInput(c);
+        this->container->updateInput(c);
+    }
+}
+
+void CBaseUIWindow::onCapturedMouseMove() {
+    if(!this->bActive) return;
 
     // moving
     if(this->bMoving) this->setPos(this->vLastPos + (mouse->getPos() - this->vMousePosBackup));
@@ -346,11 +353,6 @@ CBaseUIWindow *CBaseUIWindow::setTitle(std::string text) {
 }
 
 void CBaseUIWindow::updateWindowLogic() {
-    if(!mouse->isLeftDown()) {
-        this->bMoving = false;
-        this->bResizing = false;
-    }
-
     // handle resize & move cursor
     if(!this->titleBarContainer->isBusy() && !this->container->isBusy() && !this->bResizing && !this->bMoving) {
         if(!mouse->isLeftDown()) this->udpateResizeAndMoveLogic(false);
@@ -428,9 +430,6 @@ void CBaseUIWindow::udpateResizeAndMoveLogic(bool captureMouse) {
         McRect titleBarGrab = McRect(this->getPos().x, this->getPos().y, this->getSize().x, this->iTitleBarHeight);
         if(titleBarGrab.contains(this->vMousePosBackup)) this->bMoving = true;
     }
-
-    // resizing and moving have priority over window contents
-    if(this->bResizing || this->bMoving) this->container->stealFocus();
 }
 
 void CBaseUIWindow::close() {
@@ -492,9 +491,9 @@ CBaseUIWindow *CBaseUIWindow::enableCoherenceMode() {
 
 void CBaseUIWindow::onMouseDownInside(bool /*left*/, bool /*right*/) {
     this->bBusy = true;
-    CBaseUIEventCtx c;
-    this->titleBarContainer->updateInput(c);  // why is this called here lol?
-    if(!this->titleBarContainer->isBusy()) this->udpateResizeAndMoveLogic(true);
+    this->udpateResizeAndMoveLogic(true);
+    // a started move/resize follows the cursor via captured moves and may leave the rect freely
+    if(this->bResizing || this->bMoving) this->lockCapture();
 }
 
 void CBaseUIWindow::onMouseUpInside(bool /*left*/, bool /*right*/) {
@@ -504,6 +503,12 @@ void CBaseUIWindow::onMouseUpInside(bool /*left*/, bool /*right*/) {
 }
 
 void CBaseUIWindow::onMouseUpOutside(bool /*left*/, bool /*right*/) {
+    this->bBusy = false;
+    this->bResizing = false;
+    this->bMoving = false;
+}
+
+void CBaseUIWindow::onMouseCancel() {
     this->bBusy = false;
     this->bResizing = false;
     this->bMoving = false;

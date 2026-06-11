@@ -4278,7 +4278,9 @@ SliderPreviewElement *OptionsOverlayImpl::addSliderPreview() {
 }
 
 CategoryButton *OptionsOverlayImpl::addCategory(CBaseUIElement *section, char32_t icon) {
-    auto *button = new CategoryButton(section, 0, 0, 50, 50, "", UniString::to_utf8(std::u32string_view{&icon, 1}));
+    auto *button =
+        new CategoryButton(section, 0, 0, 50, 50, fmt::format("options_category_{}", this->categoryButtons.size()),
+                           UniString::to_utf8(std::u32string_view{&icon, 1}));
     button->setFont(osu->getFontIcons());
     button->setDrawBackground(false);
     button->setDrawFrame(false);

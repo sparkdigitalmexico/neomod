@@ -1,0 +1,31 @@
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=MainMenu
+uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
+uitrace frame=31 evt=hoverIn elem=mainmenu_cube
+uitrace frame=34 evt=downInside elem=mainmenu_cube
+uitrace frame=38 evt=upInside elem=mainmenu_cube
+uitrace frame=59 evt=hoverOut elem=mainmenu_cube
+uitrace frame=79 evt=hoverIn elem=mainmenu_options
+uitrace frame=83 evt=downInside elem=mainmenu_options
+uitrace frame=87 evt=upInside elem=mainmenu_options
+uitrace frame=118 evt=hoverIn elem=options_contents
+uitrace frame=118 evt=hoverIn elem=options_contents
+uitrace frame=118 evt=hoverIn elem=Log in
+uitrace frame=118 evt=hoverIn elem=options_search
+uitrace frame=118 evt=hoverOut elem=mainmenu_options
+uitrace frame=119 evt=hoverIn elem=OptionsOverlay
+uitrace frame=124 evt=hoverOut elem=options_contents
+uitrace frame=124 evt=hoverOut elem=Log in
+uitrace frame=128 evt=downInside elem=options_contents
+uitrace frame=132 evt=captureMove elem=options_contents
+uitrace frame=136 evt=captureMove elem=options_contents
+uitrace frame=140 evt=upInside elem=options_contents
+uitrace frame=141 evt=hoverIn elem=mainmenu_multiplayer
+uitrace frame=146 evt=hoverIn elem=options_contents
+uitrace frame=146 evt=hoverOut elem=mainmenu_multiplayer
+uitrace frame=147 evt=hoverIn elem=Online server
+uitrace frame=148 evt=hoverOut elem=Online server
+uitrace frame=149 evt=hoverIn elem=Server address:
+uitrace frame=151 evt=hoverOut elem=Server address:
+uitrace frame=151 evt=hoverIn elem=options_server_box

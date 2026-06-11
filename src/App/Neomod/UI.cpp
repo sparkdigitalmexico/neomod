@@ -13,6 +13,7 @@
 #include "OsuConVars.h"
 #include "RenderTarget.h"
 #include "ResourceManager.h"
+#include "UIDispatch.h"
 #include "UIScreen.h"
 #include "Logging.h"
 #include "SString.h"
@@ -171,7 +172,7 @@ void UI::update() {
         this->active_screen->updateInput(c);
     }
 
-    CBaseUIElement::dispatchMouseEvents(c, CBaseUIElement::UIRoot::APP);
+    UIDispatch::get()->dispatchEvents(c, UIDispatch::Root::APP);
 
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         if(unlikely(cv::ui_validate_ticks.getBool())) this->validateTicks();

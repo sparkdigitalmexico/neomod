@@ -218,11 +218,15 @@ void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
     const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
     if(selfGrabbed) c.propagate_clicks = true;
 
-    // NOTE: do NOT use a range-based for loop here, updateInput() might invalidate iterators by changing the container contents...
-    const auto &elements = this->vElements;
-    for(size_t i = 0; i < elements.size(); i++) {
-        auto *e = elements[i];
-        if(e->isVisible()) e->updateInput(c);
+    {
+        CBaseUIEventCtx::HitPathScope scope(c, this);
+
+        // NOTE: do NOT use a range-based for loop here, updateInput() might invalidate iterators by changing the container contents...
+        const auto &elements = this->vElements;
+        for(size_t i = 0; i < elements.size(); i++) {
+            auto *e = elements[i];
+            if(e->isVisible()) e->updateInput(c);
+        }
     }
 
     if(selfGrabbed) c.propagate_clicks = false;

@@ -90,60 +90,10 @@ void CBaseUISlider::updateInput(CBaseUIEventCtx &c) {
     CBaseUIElement::updateInput(c);
     if(!this->bVisible) return;
 
-    vec2 mousepos{mouse->getPos()};
-    // ignore unmoving mouse
-    const bool activeMouseMotion{this->bActive && (mousepos != this->vLastMousePos)};
-    this->vLastMousePos = mousepos;
-
-    // handle moving
-    if(activeMouseMotion) {
-        // calculate new values
-        if(!this->bHorizontal) {
-            if(this->bAnimated) {
-                this->vBlockPos.y.set(
-                    std::clamp<float>(mousepos.y - this->vGrabBackup.y, 0.0f, this->getSize().y - this->vBlockSize.y),
-                    0.10f, anim::QuadOut);
-            } else {
-                this->vBlockPos.y =
-                    std::clamp<float>(mousepos.y - this->vGrabBackup.y, 0.0f, this->getSize().y - this->vBlockSize.y);
-            }
-
-            this->fCurPercent = std::round(std::clamp<float>(1.0f - (std::round(this->vBlockPos.y) /
-                                                                     (this->getSize().y - this->vBlockSize.y)),
-                                                             0.0f, 1.0f) *
-                                           1000.f) /
-                                1000.f;
-        } else {
-            if(this->bAnimated) {
-                this->vBlockPos.x.set(
-                    std::clamp<float>(mousepos.x - this->vGrabBackup.x, 0.0f, this->getSize().x - this->vBlockSize.x),
-                    0.10f, anim::QuadOut);
-            } else {
-                this->vBlockPos.x =
-                    std::clamp<float>(mousepos.x - this->vGrabBackup.x, 0.0f, this->getSize().x - this->vBlockSize.x);
-            }
-
-            this->fCurPercent =
-                std::round(std::clamp<float>(std::round(this->vBlockPos.x) / (this->getSize().x - this->vBlockSize.x),
-                                             0.0f, 1.0f) *
-                           1000.f) /
-                1000.f;
-        }
-
-        // set new value
-        if(this->bAnimated) {
-            if(this->bLiveUpdate) {
-                this->setValue(std::lerp(this->fMinValue, this->fMaxValue, this->fCurPercent), false);
-            } else {
-                this->fCurValue = std::lerp(this->fMinValue, this->fMaxValue, this->fCurPercent);
-            }
-        } else {
-            this->setValue(std::lerp(this->fMinValue, this->fMaxValue, this->fCurPercent), false);
-        }
-
-        this->bHasChanged = true;
-    } else {
-        // handle mouse wheel
+    // block dragging moved to onCapturedMouseMove; this pass only handles the wheel, gated as
+    // before on not actively dragging (stays polled until the phase 2.3 wheel routing)
+    const bool activeMouseMotion{this->bActive && (vec2{mouse->getPos()} != this->vLastMousePos)};
+    if(!activeMouseMotion) {
         if(this->bAllowMouseWheel && this->isMouseInside()) {
             int wheelDelta = mouse->getWheelDeltaVertical();
             if(wheelDelta != 0) {
@@ -157,6 +107,59 @@ void CBaseUISlider::updateInput(CBaseUIEventCtx &c) {
             }
         }
     }
+}
+
+void CBaseUISlider::onCapturedMouseMove() {
+    const vec2 mousepos{mouse->getPos()};
+    // ignore unmoving mouse
+    if(mousepos == this->vLastMousePos) return;
+    this->vLastMousePos = mousepos;
+
+    // calculate new values
+    if(!this->bHorizontal) {
+        if(this->bAnimated) {
+            this->vBlockPos.y.set(
+                std::clamp<float>(mousepos.y - this->vGrabBackup.y, 0.0f, this->getSize().y - this->vBlockSize.y),
+                0.10f, anim::QuadOut);
+        } else {
+            this->vBlockPos.y =
+                std::clamp<float>(mousepos.y - this->vGrabBackup.y, 0.0f, this->getSize().y - this->vBlockSize.y);
+        }
+
+        this->fCurPercent = std::round(std::clamp<float>(1.0f - (std::round(this->vBlockPos.y) /
+                                                                 (this->getSize().y - this->vBlockSize.y)),
+                                                         0.0f, 1.0f) *
+                                       1000.f) /
+                            1000.f;
+    } else {
+        if(this->bAnimated) {
+            this->vBlockPos.x.set(
+                std::clamp<float>(mousepos.x - this->vGrabBackup.x, 0.0f, this->getSize().x - this->vBlockSize.x),
+                0.10f, anim::QuadOut);
+        } else {
+            this->vBlockPos.x =
+                std::clamp<float>(mousepos.x - this->vGrabBackup.x, 0.0f, this->getSize().x - this->vBlockSize.x);
+        }
+
+        this->fCurPercent =
+            std::round(std::clamp<float>(std::round(this->vBlockPos.x) / (this->getSize().x - this->vBlockSize.x), 0.0f,
+                                         1.0f) *
+                       1000.f) /
+            1000.f;
+    }
+
+    // set new value
+    if(this->bAnimated) {
+        if(this->bLiveUpdate) {
+            this->setValue(std::lerp(this->fMinValue, this->fMaxValue, this->fCurPercent), false);
+        } else {
+            this->fCurValue = std::lerp(this->fMinValue, this->fMaxValue, this->fCurPercent);
+        }
+    } else {
+        this->setValue(std::lerp(this->fMinValue, this->fMaxValue, this->fCurPercent), false);
+    }
+
+    this->bHasChanged = true;
 }
 
 void CBaseUISlider::tick() {
@@ -313,6 +316,8 @@ bool CBaseUISlider::hasChanged() {
 
 void CBaseUISlider::onFocusStolen() { this->bBusy = false; }
 
+void CBaseUISlider::onMouseCancel() { this->bBusy = false; }
+
 void CBaseUISlider::onMouseUpInside(bool /*left*/, bool /*right*/) {
     this->bBusy = false;
 
@@ -336,6 +341,11 @@ void CBaseUISlider::onMouseDownInside(bool /*left*/, bool /*right*/) {
         this->vGrabBackup = this->getPos() + this->vBlockSize / 2.f;
 
     this->bBusy = true;
+
+    // the grab is not stealable (an enclosing scrollview must not turn it into a drag-scroll);
+    // the block follows on actual motion only, so prime the motion gate with the grab position
+    this->vLastMousePos = mouse->getPos();
+    this->lockCapture();
 }
 
 void CBaseUISlider::onResized() { this->setValue(this->getFloat(), false); }

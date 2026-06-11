@@ -1,7 +1,9 @@
 # pins staleButtons ghost-click prevention (CBaseUIElement.cpp): hold LMB on an options
 # category button, Escape closes the overlay while held, release over the hidden button.
-# the trace must show downInside on the CategoryButton but NO upInside on it after the hide.
-# P1 deletes staleButtons; this must keep passing by design (gated input, not stale tracking).
+# the trace must show downInside on the category button but NO upInside on it after the hide.
+# P1 deletes staleButtons; P2.2 closes the remaining hole: the hidden captor gets an
+# explicit mouseCancel the frame the overlay hides (capture cleared, bActive reset, the
+# late release is a no-op), asserted below via the active predicate.
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1
@@ -30,7 +32,9 @@ mouse_down
 sendkey Escape
 @wait 5
 ui_assert visible optionsoverlay 0
+ui_assert active options_category_0 0
 mouse_up
 @wait 5
 ui_assert visible mainmenu 1
+ui_assert active options_category_0 0
 exit

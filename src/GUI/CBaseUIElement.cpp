@@ -5,6 +5,7 @@
 #include "Logging.h"
 #include "ConVar.h"
 #include "Mouse.h"
+#include "UIDispatch.h"
 
 #include <utility>
 #include <memory>
@@ -56,43 +57,8 @@ void CBaseUIEventCtx::beginHitGroup() { this->hitGroupStarts.push_back(this->hit
 
 void CBaseUIEventCtx::addHitCandidate(CBaseUIElement *elem) {
     if(this->hitGroupStarts.empty()) this->hitGroupStarts.push_back(0);  // implicit single group
-    this->hitCandidates.push_back({.elem = elem, .tier = this->currentHitTier});
+    this->hitCandidates.push_back({.elem = elem, .tier = this->currentHitTier, .path = this->hitPath});
 }
-
-namespace {
-// mouse capture: whichever element receives a down receives the matching up(s). one captor
-// globally (there is one pointer device), tagged with the UI root that owns it so the other
-// root's dispatch leaves its events alone
-CBaseUIElement *mouseCaptor{nullptr};
-CBaseUIElement::UIRoot mouseCaptorRoot{CBaseUIElement::UIRoot::APP};
-MouseButtonFlags mouseCaptorButtons{};
-
-// bumped on every element destruction; dispatch abandons the frame's remaining deliveries when
-// it changes mid-loop (a click handler deleted/rebuilt parts of the UI under the candidate list)
-u64 elemGeneration{0};
-
-// buffers the frame's button events off the regular Mouse listener relay (events arrive during
-// the input-device update, but routing must wait until the updateInput walk has collected the
-// hit candidates). self-cleans: the first event of a new frame drops the previous frame's.
-class UIMouseEventSink final : public MouseListener {
-   public:
-    void onButtonChange(ButtonEvent &ev) override {
-        const u64 frame = engine->getFrameCount();
-        if(frame != this->lastPushFrame) {
-            this->queue.clear();
-            this->lastPushFrame = frame;
-        }
-        this->queue.push_back(ev);
-    }
-    // wheel events stay polled until the phase 2.3 wheel routing
-
-    std::vector<ButtonEvent> queue;
-    u64 lastPushFrame{0};
-};
-UIMouseEventSink uiMouseSink;
-}  // namespace
-
-MouseListener &CBaseUIElement::mouseEventSink() { return uiMouseSink; }
 
 CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::nullptr_t /**/)
     : rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
@@ -101,11 +67,8 @@ CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize,
     : sName(std::move(name)), rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
 
 CBaseUIElement::~CBaseUIElement() {
-    ++elemGeneration;
-    if(mouseCaptor == this) {
-        mouseCaptor = nullptr;
-        mouseCaptorButtons = {};
-    }
+    // null during static teardown (Logger can keep the ConsoleBox alive past Engine shutdown (FIXME))
+    if(auto *dispatch = UIDispatch::get()) dispatch->onElementDestroyed(this);
 }
 
 // keyboard input
@@ -245,6 +208,18 @@ void CBaseUIElement::onMouseDownInside(bool /*left*/, bool /*right*/) { ; }
 void CBaseUIElement::onMouseDownOutside(bool /*left*/, bool /*right*/) { ; }
 void CBaseUIElement::onMouseUpInside(bool /*left*/, bool /*right*/) { ; }
 void CBaseUIElement::onMouseUpOutside(bool /*left*/, bool /*right*/) { ; }
+void CBaseUIElement::onMouseCancel() { ; }
+void CBaseUIElement::onCapturedMouseMove() { ; }
+void CBaseUIElement::onCapturedMoveThrough() { ; }
+void CBaseUIElement::onCapturedEndThrough() { ; }
+
+void CBaseUIElement::lockCapture() {
+    if(auto *dispatch = UIDispatch::get()) dispatch->lockCapture(this);
+}
+
+void CBaseUIElement::stealCapture() {
+    if(auto *dispatch = UIDispatch::get()) dispatch->stealCapture(this);
+}
 
 void CBaseUIElement::stealFocus() {
     this->bActive = false;
@@ -266,8 +241,10 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
 
         // to avoid issues with mouse position right along the boundaries
         if(!oldMouseInsideState) {
-            // going into strictly-contains area from outside
-            if(this->getRect().containsStrict(mouse->getPos())) {
+            // going into strictly-contains area from outside; while a capture is held, nothing
+            // but the captor may GAIN hover (losing it below stays allowed)
+            const CBaseUIElement *captor = UIDispatch::get()->getCaptor();
+            if((captor == nullptr || captor == this) && this->getRect().containsStrict(mouse->getPos())) {
                 this->bMouseInside = true;
             }
         } else {
@@ -295,15 +272,15 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
 
     if(c.propagate_clicks && (this->bHandleLeftMouse || this->bHandleRightMouse)) {
         // hit candidacy: who MAY receive this frame's button events; the single-target delivery
-        // happens in dispatchMouseEvents after the walk
+        // happens in UIDispatch::dispatchEvents after the walk
         if(this->bMouseInside && !this->bClickThroughSelf) c.addHitCandidate(this);
 
         // outside-downs stay a per-element broadcast: they are the "pressed elsewhere" signal
         // (close-on-click-outside, focus loss, ...) until the phase 4 focus manager replaces
-        // them. the captor is excluded, its events are routed in dispatchMouseEvents.
+        // them. the captor is excluded, its events are routed in UIDispatch::dispatchEvents.
         const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
                                (u8)(this->bHandleRightMouse && mouse->isRightPressed());
-        if(pressedMask && !this->bMouseInside && this != mouseCaptor) {
+        if(pressedMask && !this->bMouseInside && this != UIDispatch::get()->getCaptor()) {
             if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(this, "downOutside");
             this->onMouseDownOutside((pressedMask & 0b10), (pressedMask & 0b01));
         }
@@ -313,107 +290,6 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
         const bool buttonHeld =
             (this->bHandleLeftMouse && mouse->isLeftDown()) || (this->bHandleRightMouse && mouse->isRightDown());
         if(buttonHeld && this->bMouseInside) c.propagate_clicks &= !this->grabs_clicks;
-    }
-}
-
-void CBaseUIElement::dispatchMouseEvents(CBaseUIEventCtx &c, UIRoot root) {
-    using namespace flags::operators;
-
-    const u64 frame = engine->getFrameCount();
-
-    // nothing buffered this frame (entries from older frames are leftovers, not events)
-    if(uiMouseSink.lastPushFrame != frame || uiMouseSink.queue.empty()) return;
-    auto &events = uiMouseSink.queue;
-
-    // self-heal: a captured button can be released without an up event ever reaching us (e.g.
-    // released while the window was unfocused; Mouse reconciles buttonsHeldMask on reset).
-    // pending same-frame ups count as held so they still deliver below.
-    if(mouseCaptor != nullptr) {
-        MouseButtonFlags pendingUps{};
-        for(const auto &qe : events) {
-            if(!qe.down) pendingUps |= qe.btn;
-        }
-        mouseCaptorButtons &= (mouse->getHeldButtons() | pendingUps);
-        if(!mouseCaptorButtons) mouseCaptor = nullptr;
-    }
-
-    const u64 startGeneration = elemGeneration;
-
-    for(auto &qe : events) {
-        if(qe.consumed) continue;
-
-        const MouseButtonFlags btn = qe.btn;
-        const bool left = (btn == MouseButtonFlags::MF_LEFT);
-        const bool right = (btn == MouseButtonFlags::MF_RIGHT);
-        if(!left && !right) continue;  // middle/X buttons have no UI semantics (app code polls them)
-
-        if(elemGeneration != startGeneration) break;  // a handler mutated the UI, candidates are stale
-
-        if(mouseCaptor != nullptr) {
-            if(mouseCaptorRoot != root) continue;  // the owning root's dispatch handles these
-            qe.consumed = true;
-
-            CBaseUIElement *elem = mouseCaptor;
-            // input-eligible this frame = the updateInput walk reached it (procedural gating)
-            const bool eligible = (elem->lastInputFrame == frame);
-            if(qe.down) {
-                mouseCaptorButtons |= btn;
-                if(eligible) {
-                    if(elem->bMouseInside) {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(elem, "downInside");
-                        elem->onMouseDownInside(left, right);
-                        elem->bActive = true;
-                    } else {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(elem, "downOutside");
-                        elem->onMouseDownOutside(left, right);
-                    }
-                }
-            } else {
-                mouseCaptorButtons &= ~btn;
-                // bActive gate: stealFocus() during the hold cancels the press (scrollview drag
-                // steal); ineligible = input-blocked/hidden, the release is swallowed for good
-                if(eligible && elem->bActive) {
-                    if(elem->bMouseInside) {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(elem, "upInside");
-                        elem->onMouseUpInside(left, right);
-                    } else {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(elem, "upOutside");
-                        elem->onMouseUpOutside(left, right);
-                    }
-                    if(!elem->bKeepActive) elem->bActive = false;
-                }
-                if(!mouseCaptorButtons) mouseCaptor = nullptr;
-            }
-        } else if(qe.down) {
-            // route to the best candidate: groups in input-priority order; within a group the
-            // best (tier, latest visit) wins, approximating top-most draw order
-            CBaseUIElement *target{nullptr};
-            for(uSz g = 0; g < c.hitGroupStarts.size() && target == nullptr; ++g) {
-                const uSz begin = c.hitGroupStarts[g];
-                const uSz end = (g + 1 < c.hitGroupStarts.size()) ? c.hitGroupStarts[g + 1] : c.hitCandidates.size();
-
-                int bestTier{0};
-                for(uSz i = begin; i < end; ++i) {
-                    const auto &cand = c.hitCandidates[i];
-                    if(left && !cand.elem->bHandleLeftMouse) continue;
-                    if(right && !cand.elem->bHandleRightMouse) continue;
-                    if(target == nullptr || cand.tier >= bestTier) {
-                        target = cand.elem;
-                        bestTier = cand.tier;
-                    }
-                }
-            }
-            if(target == nullptr) continue;  // nothing under the cursor in this root; the other may deliver
-
-            qe.consumed = true;
-            mouseCaptor = target;
-            mouseCaptorRoot = root;
-            mouseCaptorButtons = btn;
-            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(target, "downInside");
-            target->onMouseDownInside(left, right);
-            target->bActive = true;
-        }
-        // up with no captor: nobody received the down (or the captor died); leave it alone
     }
 }
 

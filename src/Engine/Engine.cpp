@@ -12,6 +12,7 @@
 #include "AsyncPool.h"
 #include "AnimationHandler.h"
 #include "CBaseUIContainer.h"
+#include "UIDispatch.h"
 #include "ConVar.h"
 #include "Graphics.h"
 #include "ConsoleBox.h"
@@ -161,6 +162,7 @@ Engine::~Engine() {
     }
     Engine::consoleBox.store(nullptr, std::memory_order_release);
     SAFE_DELETE(this->guiContainer);
+    this->uiDispatch.reset();  // while mouse is still alive (unregisters its listener)
 
     DiscRPC::destroy();
 
@@ -251,8 +253,9 @@ void Engine::loadApp() {
         keyboard->addListener(this, true);
 
         // the UI layer receives mouse button events through the same relay as everyone else;
-        // CBaseUIElement::dispatchMouseEvents routes them after each root's updateInput pass
-        mouse->addListener(&CBaseUIElement::mouseEventSink());
+        // UIDispatch routes them after each root's updateInput pass
+        this->uiDispatch = std::make_unique<UIDispatch>();
+        mouse->addListener(this->uiDispatch.get());
     }
 
     debugLog("Engine: Loading app ...");
@@ -432,7 +435,7 @@ void Engine::onUpdate() {
                 CBaseUIEventCtx c;
                 this->guiContainer->updateInput(c);
                 // engine root dispatches (and consumes) before the app root: it draws on top
-                CBaseUIElement::dispatchMouseEvents(c, CBaseUIElement::UIRoot::ENGINE);
+                this->uiDispatch->dispatchEvents(c, UIDispatch::Root::ENGINE);
             }
         }
     }

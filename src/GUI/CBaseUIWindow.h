@@ -105,6 +105,8 @@ class CBaseUIWindow : public CBaseUIElement {
     void onMouseDownInside(bool left = true, bool right = false) override;
     void onMouseUpInside(bool left = true, bool right = false) override;
     void onMouseUpOutside(bool left = true, bool right = false) override;
+    void onMouseCancel() override;
+    void onCapturedMouseMove() override;
 
     void onMoved() override;
     void onResized() override;

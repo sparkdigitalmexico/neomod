@@ -12,8 +12,6 @@
 
 class CBaseUIElement;
 
-class MouseListener;
-
 // convar callbacks to avoid hammering atomic convar reads
 namespace CBaseUIDebug {
 void onDumpElemsChangeCallback(float newvalue);
@@ -47,20 +45,36 @@ struct CBaseUIEventCtx {
     [[nodiscard]] bool mouse_consumed() const;
 
     // pass-A hit-candidate collection: elements under the cursor that may receive this frame's
-    // button events; single-target delivery happens in CBaseUIElement::dispatchMouseEvents after
-    // the walk. groups = top-level screens/overlays in input-priority order; within a group the
+    // button events; single-target delivery happens in UIDispatch::dispatchEvents after the
+    // walk. groups = top-level screens/overlays in input-priority order; within a group the
     // best (tier, latest visit) candidate wins, approximating top-most draw order until the
-    // phase 3 layer stack provides real z
+    // phase 3 layer stack provides real z. each candidate snapshots the ancestor chain that led
+    // to it (outermost first): if it captures, those ancestors observe the drag and may steal
+    // (scrollview drag resistance).
     struct HitCandidate {
         CBaseUIElement *elem;
         int tier;
+        std::vector<CBaseUIElement *> path;
     };
     std::vector<HitCandidate> hitCandidates;
     std::vector<size_t> hitGroupStarts;
-    int currentHitTier{0};  // raised around children that draw above later-visited siblings
+    std::vector<CBaseUIElement *> hitPath;  // ancestor stack during the walk
+    int currentHitTier{0};                  // raised around children that draw above later-visited siblings
 
     void beginHitGroup();
     void addHitCandidate(CBaseUIElement *elem);
+
+    // RAII: containers wrap their child walk in a scope so candidates registered inside know
+    // their ancestor chain
+    struct HitPathScope {
+        NOCOPY_NOMOVE(HitPathScope)
+       public:
+        HitPathScope(CBaseUIEventCtx &ctx, CBaseUIElement *elem) : c(ctx) { c.hitPath.push_back(elem); }
+        ~HitPathScope() { c.hitPath.pop_back(); }
+
+       private:
+        CBaseUIEventCtx &c;
+    };
 };
 
 class CBaseUIElement : public KeyboardListener {
@@ -78,20 +92,6 @@ class CBaseUIElement : public KeyboardListener {
 
     // mouse input pass: hover + hit-candidate registration; gated and priority-ordered by the caller
     virtual void updateInput(CBaseUIEventCtx &c);
-
-    // which UI root a dispatch call serves; the engine root (guiContainer) dispatches before the
-    // app root each frame and consumes the events it delivers
-    enum class UIRoot : uint8_t { ENGINE, APP };
-
-    // the UI layer's MouseListener: buffers the frame's button events off the same relay every
-    // other consumer uses (registered once at engine startup, like the keyboard listeners).
-    // Mouse itself knows nothing about UI routing; consumption state lives in the buffer here.
-    static MouseListener &mouseEventSink();
-
-    // pass B: routes this frame's buffered mouse button events to the candidates collected during
-    // the updateInput walk. down -> best candidate + implicit capture, up -> whoever received the
-    // down. call once per root, directly after its updateInput pass.
-    static void dispatchMouseEvents(CBaseUIEventCtx &c, UIRoot root);
 
     // keyboard input (nothing by default)
     void onKeyUp(KeyboardEvent &e) override;
@@ -162,6 +162,7 @@ class CBaseUIElement : public KeyboardListener {
 
    protected:
     friend class CBaseUIContainer;
+    friend class UIDispatch;
 
     // events (default implementation does nothing for all of these)
     virtual void onResized();
@@ -177,6 +178,23 @@ class CBaseUIElement : public KeyboardListener {
     virtual void onMouseDownOutside(bool /*left*/ = true, bool /*right*/ = false);
     virtual void onMouseUpInside(bool /*left*/ = true, bool /*right*/ = false);
     virtual void onMouseUpOutside(bool /*left*/ = true, bool /*right*/ = false);
+
+    // mouse capture lifecycle (dispatch-driven, see UIDispatch). a pressed element whose press is
+    // taken away (capture steal, hidden/disabled/input-blocked mid-hold) gets onMouseCancel
+    // instead of an up: discard pressed state, no click follows.
+    virtual void onMouseCancel();
+    // once per frame to the captor while it holds mouse capture (cursor position is polled)
+    virtual void onCapturedMouseMove();
+    // once per frame to each ancestor on the captor's hit path (innermost first) while a
+    // descendant holds capture; the end hook fires when that capture ends or is stolen away
+    virtual void onCapturedMoveThrough();
+    virtual void onCapturedEndThrough();
+
+    // capture control for self-dragging widgets (forward to UIDispatch): lockCapture makes the
+    // current capture unstealable (slider grab, scrollbar drag); stealCapture takes a descendant's
+    // unlocked capture (scrollview past drag resistance), cancelling the descendant's press
+    void lockCapture();
+    void stealCapture();
 
     // vars
     std::string sName;
