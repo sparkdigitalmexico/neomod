@@ -1,0 +1,48 @@
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=MainMenu
+uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
+uitrace frame=31 evt=hoverIn elem=mainmenu_cube
+uitrace frame=34 evt=downInside elem=mainmenu_cube
+uitrace frame=38 evt=upInside elem=mainmenu_cube
+uitrace frame=59 evt=hoverOut elem=mainmenu_cube
+uitrace frame=79 evt=hoverIn elem=mainmenu_options
+uitrace frame=83 evt=downInside elem=mainmenu_options
+uitrace frame=87 evt=upInside elem=mainmenu_options
+uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverIn elem=(anonymous namespace)::CategoryButton
+uitrace frame=118 evt=hoverOut elem=mainmenu_options
+uitrace frame=119 evt=hoverIn elem=OptionsOverlay
+uitrace frame=122 evt=downInside elem=(anonymous namespace)::CategoryButton
+uitrace frame=126 evt=upInside elem=(anonymous namespace)::CategoryButton
+uitrace frame=147 evt=hoverIn elem=options_contents
+uitrace frame=147 evt=hoverIn elem=options_contents
+uitrace frame=147 evt=hoverIn elem=options_skin_select
+uitrace frame=147 evt=hoverOut elem=options_categories
+uitrace frame=147 evt=hoverOut elem=options_categories
+uitrace frame=147 evt=hoverOut elem=(anonymous namespace)::CategoryButton
+uitrace frame=147 evt=hoverIn elem=options_search
+uitrace frame=151 evt=downInside elem=options_skin_select
+uitrace frame=155 evt=hoverIn elem=options_skin_select
+uitrace frame=156 evt=hoverOut elem=options_skin_select
+uitrace frame=157 evt=hoverIn elem=options_skin_select
+uitrace frame=158 evt=hoverIn elem=skincirclenumberhitresultpreview
+uitrace frame=158 evt=hoverOut elem=options_skin_select
+uitrace frame=159 evt=hoverOut elem=skincirclenumberhitresultpreview
+uitrace frame=159 evt=hoverIn elem=options_skin_select
+uitrace frame=160 evt=hoverIn elem=skincirclenumberhitresultpreview
+uitrace frame=160 evt=hoverOut elem=options_skin_select
+uitrace frame=161 evt=hoverOut elem=skincirclenumberhitresultpreview
+uitrace frame=161 evt=hoverIn elem=options_skin_select
+uitrace frame=164 evt=hoverOut elem=options_skin_select
+uitrace frame=164 evt=hoverIn elem=Open current Skin folder
+uitrace frame=166 evt=hoverOut elem=Open current Skin folder
+uitrace frame=167 evt=hoverIn elem=Reload Skin
+uitrace frame=169 evt=hoverOut elem=Reload Skin
+uitrace frame=171 evt=hoverIn elem=Sort Skins Alphabetically
+uitrace frame=175 evt=hoverOut elem=Sort Skins Alphabetically
+uitrace frame=175 evt=hoverIn elem=Number Scale:
+uitrace frame=182 evt=hoverOut elem=Number Scale:
+uitrace frame=183 evt=hoverIn elem=HitResult Scale:
+uitrace frame=218 evt=hoverOut elem=HitResult Scale:

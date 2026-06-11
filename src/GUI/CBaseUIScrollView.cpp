@@ -363,9 +363,28 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
     const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
     if(selfGrabbed) c.propagate_clicks = true;
     this->container.updateInput(c);
+    // the old broadcast synthesis evaluated our press gating here: after the children's writes,
+    // before our own grab applies
+    const bool armAllowed = c.propagate_clicks;
     if(selfGrabbed) c.propagate_clicks = false;
 
     const dvec2 curMousePos = mouse->getPos();
+
+    // the drag-scroll gesture is level-polled, not event-routed: a press anywhere inside us
+    // (usually on a child element, which captures the routed events) may become a drag-scroll,
+    // and the release must be processed in this same pass; one frame later tick() has already
+    // zeroed vKineticAverage and the kinetic launch below would see no velocity. the phase 2.2
+    // capture/steal API replaces this with observed captured-moves.
+    if(armAllowed && this->bHandleLeftMouse && this->bMouseInside && this->isEnabled() && mouse->isLeftPressed()) {
+        this->bActive = true;
+        this->bBusy = true;
+        this->vMouseBackup2 = curMousePos;  // to avoid spastic movement at scroll start
+    } else if(this->bActive && !mouse->isLeftDown()) {
+        // release: the routed up belongs to the child captor (or arrives in pass B, after the
+        // kinetic launch window of this frame has passed)
+        this->bActive = false;
+        this->bBusy = false;
+    }
 
     if(this->bBusy) {
         const dvec2 deltaToAdd = (curMousePos - this->vMouseBackup2);

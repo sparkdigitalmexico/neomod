@@ -1,0 +1,52 @@
+# pins drag-scrolling initiated on a CHILD element (press on options_skin_select, drag past
+# ui_scrollview_resistance): the scrollview steals the press (no click: dropdown stays closed,
+# button press state cancelled), the content drag-follows (skin_select leaves the parked
+# cursor), and releasing mid-motion launches kinetic scrolling (hover transitions continue
+# AFTER the up in the golden). regressed silently at P2.1 (single-target dispatch starved the
+# scrollview's broadcast-armed gesture state); the 2.2 capture/steal API must keep this green.
+# navigation prefix shared with skins_dropdown_hover (UITestSkin fixture).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+mouse_to 640 360
+@wait 2
+mouse_down
+@wait 3
+mouse_up
+@wait 40
+mouse_to 867 401
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 30
+mouse_to 40 267
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 20
+mouse_to 256 492
+@wait 3
+mouse_down
+@wait 2
+mouse_to 256 470
+@wait 1
+mouse_to 256 440
+@wait 1
+mouse_to 256 405
+@wait 1
+mouse_to 256 365
+@wait 1
+mouse_up
+@wait 60
+ui_assert visible options_contextmenu 0
+ui_assert active options_skin_select 0
+ui_assert hovered options_skin_select 0
+exit
