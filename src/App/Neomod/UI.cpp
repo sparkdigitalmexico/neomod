@@ -149,22 +149,28 @@ void UI::update() {
     }
     if(!ticked_active_screen) this->active_screen->tick();
 
-    // input pass: priority-ordered (update order = input priority until the phase 3 layer stack);
-    // each screen/overlay is one hit-candidate priority group for the button dispatch below
+    // input pass: walk LAYER_ORDER top -> bottom (= reverse draw order, with the extra
+    // overlays spliced in last-pushed-first); each screen/overlay is one hit-candidate
+    // priority group for the button dispatch below, first-walked = top-most. consumption
+    // stops the walk exactly as before, only the order changed
     CBaseUIEventCtx c;
 
-    // NOLINTNEXTLINE(modernize-loop-convert)
-    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
-        c.beginHitGroup();
-        this->extra_overlays[i]->updateInput(c);
-    }
-
     bool updated_active_screen = false;
-    for(auto *screen : this->screens) {
+    bool walked_extras = this->extra_overlays.empty();
+    for(sSz li = static_cast<sSz>(NUM_SCREENS) - 1; li >= 0 && !c.mouse_consumed(); --li) {
+        if(li < static_cast<sSz>(EXTRAS_SPLICE) && !walked_extras) {
+            walked_extras = true;
+            for(sSz oi = static_cast<sSz>(this->extra_overlays.size()) - 1; oi >= 0 && !c.mouse_consumed(); --oi) {
+                c.beginHitGroup();
+                this->extra_overlays[oi]->updateInput(c);
+            }
+            if(c.mouse_consumed()) break;
+        }
+
+        auto *screen = this->screens[LAYER_ORDER[li]];
         c.beginHitGroup();
         screen->updateInput(c);
         if(screen == this->active_screen) updated_active_screen = true;
-        if(c.mouse_consumed()) break;
     }
 
     if(!updated_active_screen && !c.mouse_consumed()) {
@@ -191,6 +197,23 @@ void UI::validateTicks() const {
     }
 }
 
+// draws LAYER_ORDER[from, to); the active screen is skipped because it already drew at
+// the bottom of the frame (base band), and every screen self-gates on visibility
+void UI::drawLayerRange(size_t from, size_t to) {
+    for(size_t li = from; li < to; ++li) {
+        auto *screen = this->screens[LAYER_ORDER[li]];
+        if(screen != this->active_screen) screen->draw();
+    }
+}
+
+void UI::drawExtraOverlays() {
+    // first-pushed first = last-pushed draws topmost (matches the reversed input walk)
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
+        this->extra_overlays[i]->draw();
+    }
+}
+
 void UI::draw() {
     // if we are not using the native window resolution, draw into the buffer
     const bool isBufferedDraw = (g->getResolution() != osu->getVirtScreenSize());
@@ -198,14 +221,9 @@ void UI::draw() {
         osu->backBuffer->enable();
     }
 
-    // draw active screen first, any "overlays" after
+    // base band: the active screen draws below every overlay layer (self-gated, so a
+    // no-op during gameplay where no base screen is visible)
     this->active_screen->draw();
-
-    // draw any extra overlays (TODO: draw order, this shouldn't be hardcoded at the start)
-    // NOLINTNEXTLINE(modernize-loop-convert)
-    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
-        this->extra_overlays[i]->draw();
-    }
 
     f32 cursorAlpha = 1.f;
     if(f32 cursorIdleFadeTime = cv::cursor_idle_time_before_fade.getFloat(); cursorIdleFadeTime > 0.f) {
@@ -240,17 +258,13 @@ void UI::draw() {
             g->fillRect(0, 0, osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
         }
 
-        this->pauseOverlay->draw();
-        this->modSelector->draw();
-        this->chatOverlay->draw();
-        this->userActionsOverlay->draw();
-        this->optionsOverlay->draw();
+        // pause..options render into the playfield buffer under FPoSu (3D-projected
+        // with the playfield); the layers above are real-screen
+        this->drawLayerRange(OVERLAY_BAND_BEGIN, PLAY_OVERLAYS_END);
 
         if(!isFPoSu) {
             this->hud->drawFps();
         }
-
-        // this->windowManager->draw();
 
         if(isFPoSu && cv::draw_cursor_ripples.getBool()) {
             this->hud->drawCursorRipples();
@@ -280,22 +294,18 @@ void UI::draw() {
         // draw debug info on top of everything else
         if(cv::debug_draw_timingpoints.getBool()) osu->map_iface->drawDebug();
 
+        this->drawLayerRange(PLAY_OVERLAYS_END, EXTRAS_SPLICE);  // prompt, beatmapinstall (self-gated)
+        this->drawExtraOverlays();
+
     } else {  // if we are not playing
 
-        this->chatOverlay->draw();
-        this->userActionsOverlay->draw();
-        this->optionsOverlay->draw();
-        this->promptOverlay->draw();
-        this->beatmapInstallOverlay->draw();
+        this->drawLayerRange(OVERLAY_BAND_BEGIN, EXTRAS_SPLICE);
+        this->drawExtraOverlays();
 
         this->hud->drawFps();
-
-        // this->windowManager->draw();
     }
 
-    this->tooltipOverlay->draw();
-    this->notificationOverlay->draw();
-    this->volumeOverlay->draw();
+    this->drawLayerRange(EXTRAS_SPLICE, NUM_SCREENS);  // tooltip, volume, notification
 
     // loading spinner for some async tasks
     if((osu->bSkinLoadScheduled && osu->getSkin() != osu->skinScheduledToLoad)) {
@@ -357,68 +367,38 @@ forceinline void traceKeyConsumed(std::string_view evt, CBaseUIElement *consumer
 }
 }  // namespace
 
-void UI::onKeyDown(KeyboardEvent &key) {
-    if(key.isConsumed()) return;
-
-    // NOLINTNEXTLINE(modernize-loop-convert)
-    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
-        this->extra_overlays[i]->onKeyDown(key);
-        if(key.isConsumed()) {
-            traceKeyConsumed("keydown", this->extra_overlays[i]);
-            return;
-        }
-    }
-
-    for(auto *screen : this->screens) {
-        screen->onKeyDown(key);
-        if(key.isConsumed()) {
-            traceKeyConsumed("keydown", screen);
-            return;
-        }
-    }
-}
-
-void UI::onKeyUp(KeyboardEvent &key) {
-    if(key.isConsumed()) return;
-
-    // NOLINTNEXTLINE(modernize-loop-convert)
-    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
-        this->extra_overlays[i]->onKeyUp(key);
-        if(key.isConsumed()) {
-            traceKeyConsumed("keyup", this->extra_overlays[i]);
-            return;
-        }
-    }
-
-    for(auto *screen : this->screens) {
-        screen->onKeyUp(key);
-        if(key.isConsumed()) {
-            traceKeyConsumed("keyup", screen);
-            return;
-        }
-    }
-}
-
-void UI::onChar(KeyboardEvent &e) {
+// key routing walks the same top -> bottom layer order as the input pass; the first
+// consumer ends the walk
+void UI::routeKey(KeyboardEvent &e, void (CBaseUIElement::*handler)(KeyboardEvent &), std::string_view traceName) {
     if(e.isConsumed()) return;
 
-    // NOLINTNEXTLINE(modernize-loop-convert)
-    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
-        this->extra_overlays[i]->onChar(e);
-        if(e.isConsumed()) {
-            traceKeyConsumed("char", this->extra_overlays[i]);
-            return;
+    bool walked_extras = this->extra_overlays.empty();
+    for(sSz li = static_cast<sSz>(NUM_SCREENS) - 1; li >= 0; --li) {
+        if(li < static_cast<sSz>(EXTRAS_SPLICE) && !walked_extras) {
+            walked_extras = true;
+            for(sSz oi = static_cast<sSz>(this->extra_overlays.size()) - 1; oi >= 0; --oi) {
+                (this->extra_overlays[oi]->*handler)(e);
+                if(e.isConsumed()) {
+                    traceKeyConsumed(traceName, this->extra_overlays[oi]);
+                    return;
+                }
+            }
         }
-    }
 
-    for(auto *screen : this->screens) {
-        screen->onChar(e);
+        auto *screen = this->screens[LAYER_ORDER[li]];
+        (screen->*handler)(e);
         if(e.isConsumed()) {
-            traceKeyConsumed("char", screen);
+            traceKeyConsumed(traceName, screen);
             return;
         }
     }
 }
+
+void UI::onKeyDown(KeyboardEvent &key) { this->routeKey(key, &CBaseUIElement::onKeyDown, "keydown"); }
+
+void UI::onKeyUp(KeyboardEvent &key) { this->routeKey(key, &CBaseUIElement::onKeyUp, "keyup"); }
+
+void UI::onChar(KeyboardEvent &e) { this->routeKey(e, &CBaseUIElement::onChar, "char"); }
 
 void UI::onResolutionChange(vec2 newResolution) {
     // NOLINTNEXTLINE(modernize-loop-convert)

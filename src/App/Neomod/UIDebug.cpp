@@ -81,6 +81,13 @@ void UIDebug::debugDumpScreens() {
         logRaw("[ov{}] {} visible={:d}", i, CBaseUIDebug::elemName(m_ui->extra_overlays[i]),
                m_ui->extra_overlays[i]->isVisible());
     }
+    std::string order;
+    for(size_t li = 0; li < UI::NUM_SCREENS; ++li) {
+        if(li == UI::EXTRAS_SPLICE) order += "[extra_overlays] < ";
+        order += UI::SCREEN_NAMES[UI::LAYER_ORDER[li]];
+        if(li + 1 < UI::NUM_SCREENS) order += " < ";
+    }
+    logRaw("layer order (bottom->top): {}", order);
     logRaw("==== END UI SCREENS ====");
 }
 

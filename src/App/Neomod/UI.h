@@ -12,6 +12,7 @@
 #include <vector>
 #include <string_view>
 
+class CBaseUIElement;
 class KeyboardEvent;
 class RenderTarget;
 class UIScreen;
@@ -129,6 +130,12 @@ struct UI final {
     // ui_validate_ticks support (debug builds): logs UITEST FAIL for screens skipped by the tick pass
     void validateTicks() const;
 
+    // walks LAYER_ORDER top -> bottom (with extra_overlays spliced in) until consumed
+    void routeKey(KeyboardEvent& e, void (CBaseUIElement::*handler)(KeyboardEvent&), std::string_view traceName);
+    // draws LAYER_ORDER[from, to), skipping the active screen (drawn at the frame bottom)
+    void drawLayerRange(size_t from, size_t to);
+    void drawExtraOverlays();
+
     UIScreen* dummy;
     NotificationOverlay* notificationOverlay;
     static constexpr const size_t EARLY_SCREENS{2};  // dummy+notificationOverlay
@@ -191,4 +198,58 @@ struct UI final {
                                                                             "mainmenu",
                                                                             "tooltipoverlay",
                                                                             "beatmapinstalloverlay"};
+
+    // canonical layer order (phase 3 layer stack): indices into screens/SCREEN_NAMES,
+    // bottom -> top. draw walks it forward, input + key routing walk it in reverse, so
+    // "input order = reverse draw order" holds by construction (one order replaces the
+    // old screens-array input priority and the two hand-coded draw branches).
+    // [0, OVERLAY_BAND_BEGIN) is the base band: the mutually-exclusive base screens
+    // (exactly one visible, swapped by setScreen; relative order among them is inert)
+    // plus hud, whose drawing belongs to the bespoke gameplay composite. the active
+    // screen always draws at the bottom of the frame and is skipped by the band walk.
+    // extra_overlays sit between LAYER_ORDER[EXTRAS_SPLICE - 1] and tooltip, last-pushed
+    // topmost. notification sits ABOVE volume: VolumeOverlay::onKeyDown is ungated
+    // (KEY_MUTE, volume binds) and must not eat keys ahead of notification's keybind
+    // capture (see the decision log; the reverse of the locked draft's draw-parity pick).
+    static constexpr std::array<size_t, NUM_SCREENS> LAYER_ORDER{
+        0,   // dummy
+        6,   // room
+        9,   // rankingscreen
+        10,  // userstatsscreen
+        11,  // spectatorscreen
+        14,  // songbrowser
+        15,  // osudirectscreen
+        16,  // lobby
+        17,  // aboutscreen
+        18,  // mainmenu
+        13,  // hud (input slot only; drawn by the gameplay composite, not the band)
+        12,  // pauseoverlay
+        4,   // modselector
+        7,   // chat
+        5,   // useractions
+        8,   // optionsoverlay
+        3,   // promptoverlay
+        20,  // beatmapinstalloverlay
+        19,  // tooltipoverlay
+        2,   // volumeoverlay
+        1,   // notificationoverlay
+    };
+    static constexpr size_t OVERLAY_BAND_BEGIN{11};  // pause; first band layer above the base/hud
+    static constexpr size_t PLAY_OVERLAYS_END{16};   // one past options; pause..options render
+                                                     // into the FPoSu playfield buffer in play mode
+    static constexpr size_t EXTRAS_SPLICE{18};       // extra_overlays walk/draw below this layer
+
+    static_assert(
+        [] {
+            std::array<bool, NUM_SCREENS> seen{};
+            for(const size_t i : LAYER_ORDER) {
+                if(i >= NUM_SCREENS || seen[i]) return false;
+                seen[i] = true;
+            }
+            return true;
+        }(),
+        "LAYER_ORDER must be a permutation of the screen indices");
+    static_assert(SCREEN_NAMES[LAYER_ORDER[OVERLAY_BAND_BEGIN]] == "pauseoverlay");
+    static_assert(SCREEN_NAMES[LAYER_ORDER[PLAY_OVERLAYS_END - 1]] == "optionsoverlay");
+    static_assert(SCREEN_NAMES[LAYER_ORDER[EXTRAS_SPLICE]] == "tooltipoverlay");
 };

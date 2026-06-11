@@ -42,6 +42,7 @@ for script in $scripts; do
     # binary must run from its install dir (assets are relative)
     # ui_validate_ticks is injected into the scripts' frame-0 batch (same frame as the
     # preamble, so traces don't shift): every screen must be ticked every frame (debug builds)
+    rm -f "$(dirname "$BIN")/screenshots/uitest_$name.png"
     (cd "$(dirname "$BIN")" && { echo "ui_validate_ticks 1"; cat "$script"; } | "./$(basename "$BIN")" -headless >"$log" 2>&1)
     rc=$?
 
@@ -80,6 +81,26 @@ for script in $scripts; do
         fi
     fi
 
+    # pixel probes (phase 3+ draw-order checks): probes/<name>.probes lines are
+    # "<relx> <rely> <rrggbb> <tol>" (# = comment), checked against the script's
+    # take_screenshot capture at screenshots/uitest_<name>.png; results land in the log
+    probes="$TESTS_DIR/probes/$name.probes"
+    if [ -f "$probes" ]; then
+        shot="$(dirname "$BIN")/screenshots/uitest_$name.png"
+        if [ ! -f "$shot" ]; then
+            status=fail
+            reasons="$reasons no-screenshot"
+        else
+            while read -r px py pcolor ptol; do
+                case "$px" in ''|'#'*) continue ;; esac
+                if ! "$TESTS_DIR/pixelprobe.py" "$shot" "$px" "$py" "$pcolor" "$ptol" >>"$log" 2>&1; then
+                    status=fail
+                    reasons="$reasons probe"
+                fi
+            done <"$probes"
+        fi
+    fi
+
     if [ "$status" = "ok" ]; then
         pass=$((pass + 1))
         echo "PASS $name"
@@ -87,6 +108,7 @@ for script in $scripts; do
         fail=$((fail + 1))
         echo "FAIL $name ($reasons ) -- see $log"
         grep "UITEST FAIL" "$log" | sed 's/^/    /'
+        grep "PROBE FAIL" "$log" | sed 's/^/    /'
         [ -f "$OUT_DIR/$name.trace.diff" ] && head -15 "$OUT_DIR/$name.trace.diff" | sed 's/^/    /'
     fi
 done
