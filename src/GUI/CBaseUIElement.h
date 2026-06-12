@@ -230,6 +230,11 @@ class CBaseUIElement : public KeyboardListener {
     // transparent wrappers (containers) don't hit-candidate their own rect; real widgets with a
     // self-rect surface (scrollview, window) opt back in
     bool bClickThroughSelf : 1 {false};
+    // scroll surfaces (scrollviews) floor the wheel scan: if the hit group of a hovered one
+    // declines the frame's wheel, the layers beneath never see it - a wheel aimed at an opaque
+    // surface must not act on occluded surfaces below (only the fall-through sink may take it).
+    // small non-surface widgets (buttons, toasts, labels) stay wheel-transparent.
+    bool bWheelSurface : 1 {false};
     bool bVisible : 1 {true};
     bool bActive : 1 {false};  // we are doing something, e.g. textbox is blinking and ready to receive input
     bool bBusy : 1 {false};    // we demand the focus to be kept on us, e.g. click-drag scrolling in a scrollview

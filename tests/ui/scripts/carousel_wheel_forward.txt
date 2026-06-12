@@ -1,0 +1,29 @@
+# pins the songbrowser screen-wide carousel-forward wheel claim (P3.2, osu-stable
+# behavior) with a POPULATED carousel: wheel over dead top-bar space (no wheel-accepting
+# candidate there) chains to the claim, which forwards to the carousel - the consumer
+# trace line elem=SongBrowser proves the forward CONSUMED, which (populated, scrollable)
+# means the carousel scrolled. uses the uitest_osu_folder_full fixture: ONE set with 20
+# diffs, so the boot selection is deterministic (selectRandomBeatmap skips prand() for a
+# single set) and no carousel-button hover noise reaches the trace (cursor never enters
+# the carousel; occluded-hover names would be selection-dependent otherwise).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+osu_folder uitest_osu_folder_full
+mouse_to 10 10
+@wait 30
+set_active_ui_screen songbrowser
+@wait 300
+ui_assert screen_active songbrowser 1
+mouse_to 200 60
+@wait 5
+mouse_wheel -1
+@wait 5
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 0
+exit

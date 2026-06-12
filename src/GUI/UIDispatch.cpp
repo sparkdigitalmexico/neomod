@@ -34,7 +34,7 @@ void UIDispatch::onWheelVertical(int delta) {
     const u64 frame = engine->getFrameCount();
     if(frame != this->lastWheelFrame) {
         this->wheelVertical = this->wheelHorizontal = 0;
-        this->wheelConsumed = false;
+        this->wheelConsumed = this->wheelFloored = false;
         this->lastWheelFrame = frame;
     }
     this->wheelVertical += delta;
@@ -44,7 +44,7 @@ void UIDispatch::onWheelHorizontal(int delta) {
     const u64 frame = engine->getFrameCount();
     if(frame != this->lastWheelFrame) {
         this->wheelVertical = this->wheelHorizontal = 0;
-        this->wheelConsumed = false;
+        this->wheelConsumed = this->wheelFloored = false;
         this->lastWheelFrame = frame;
     }
     this->wheelHorizontal += delta;
@@ -196,7 +196,7 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                 }
             }
         } else {
-            for(uSz g = 0; g < c.hitGroupStarts.size() && !this->wheelConsumed; ++g) {
+            for(uSz g = 0; g < c.hitGroupStarts.size() && !this->wheelConsumed && !this->wheelFloored; ++g) {
                 const uSz begin = c.hitGroupStarts[g];
                 const uSz end = (g + 1 < c.hitGroupStarts.size()) ? c.hitGroupStarts[g + 1] : c.hitCandidates.size();
                 if(begin == end) continue;
@@ -210,15 +210,24 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                                : a > b;
                 });
 
+                bool groupHasScrollSurface = false;
                 for(const uSz i : order) {
                     if(this->elemGeneration != startGeneration) return;  // a handler mutated the UI
                     CBaseUIElement *elem = c.hitCandidates[i].elem;
+                    groupHasScrollSurface |= elem->bWheelSurface;
                     if(elem->onWheel(this->wheelVertical, this->wheelHorizontal)) {
                         if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(elem, "wheel");
                         this->wheelConsumed = true;
                         break;
                     }
                 }
+
+                // wheel floor: a hovered scroll surface that declined (fits-content, scrolling
+                // disabled, alt) still visually OWNS the point - the gesture must not act on
+                // surfaces occluded by its layer. in-group chaining above already happened (an
+                // anchored dropdown falls to the scrollview it rides), and the fall-through
+                // sink below stays reachable (a dead wheel is still the global volume gesture).
+                if(groupHasScrollSurface) this->wheelFloored = true;
             }
 
             // nothing wanted it: offer the totals to the fall-through sink. the app root

@@ -6,7 +6,7 @@
 # changes ONLY volume (scrollviews decline on alt, the delta chains to the sink); wheel
 # over the EMPTY songbrowser carousel changes volume (flipped at P3.2: the screen-wide
 # carousel-forward claim declines deltas the empty carousel cannot take, the gesture
-# chains to the sink; a full carousel scrolls instead - manual smoke, needs beatmaps).
+# chains to the sink; a full carousel scrolls instead - pinned by carousel_wheel_forward).
 # NOTE: alt is sent as scancode 226 (LALT): SDL3 resolves the name platform-dependently
 # ("Left Option" on macOS, "Left Alt" elsewhere), numbers are portable.
 options_save_on_back 0

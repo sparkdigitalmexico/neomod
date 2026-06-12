@@ -88,6 +88,10 @@ class UIDispatch final : public MouseListener {
     int wheelHorizontal{0};
     u64 lastWheelFrame{0};
     bool wheelConsumed{false};
+    // a hit group containing a hovered scroll surface (bWheelSurface) declined the wheel:
+    // the scan stops there for the rest of the frame, across both roots - surfaces occluded
+    // by that group never see it; only the fall-through sink may still take it
+    bool wheelFloored{false};
     CBaseUIElement *wheelSink{nullptr};
 
     // mouse capture: whichever element receives a down receives the matching up(s). one captor

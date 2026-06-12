@@ -153,6 +153,7 @@ bool ScrollContainer::isActive() {
 CBaseUIScrollView::CBaseUIScrollView(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, name), container(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setGrabClicks(true);
+    this->bWheelSurface = true;  // scroll surfaces floor the wheel scan (see UIDispatch)
 
     this->iScrollResistance = cv::ui_scrollview_resistance.getInt();  // TODO: dpi handling
 }

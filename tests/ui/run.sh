@@ -24,6 +24,33 @@ mkdir -p "$OUT_DIR"
 mkdir -p "$(dirname "$BIN")/skins/UITestSkin"
 mkdir -p "$(dirname "$BIN")/uitest_osu_folder"
 
+# populated osu folder: ONE beatmapset with 20 diffs makes the carousel scrollable AND
+# keeps the boot selection deterministic (selectRandomBeatmap skips prand() for a single
+# set), so goldens stay stable without seeding the rng. minimal v14 .osu files, metadata
+# only (the referenced audio file deliberately doesn't exist)
+full_songs="$(dirname "$BIN")/uitest_osu_folder_full/Songs/uitest set"
+if [ ! -d "$full_songs" ]; then
+    mkdir -p "$full_songs"
+    i=1
+    while [ "$i" -le 20 ]; do
+        nn=$(printf '%02d' "$i")
+        {
+            printf 'osu file format v14\n\n[General]\nAudioFilename: none.mp3\nMode: 0\n\n'
+            printf '[Metadata]\nTitle:UITest Map\nArtist:UITest\nCreator:uitest\nVersion:diff %s\nBeatmapID:0\nBeatmapSetID:-1\n\n' "$nn"
+            printf '[Difficulty]\nHPDrainRate:5\nCircleSize:4\nOverallDifficulty:5\nApproachRate:5\nSliderMultiplier:1.4\nSliderTickRate:1\n\n'
+            printf '[TimingPoints]\n0,500,4,2,0,100,1,0\n\n[HitObjects]\n'
+            t=1000
+            j=0
+            while [ "$j" -lt "$i" ]; do
+                printf '256,192,%d,1,0,0:0:0:0:\n' "$t"
+                t=$((t + 500))
+                j=$((j + 1))
+            done
+        } > "$full_songs/diff$nn.osu"
+        i=$((i + 1))
+    done
+fi
+
 if [ "$#" -gt 0 ]; then
     scripts=""
     for name in "$@"; do
