@@ -364,6 +364,7 @@ MainMenu::MainMenu() : UIScreen() {
     cv::adblock.setCallback(SA::MakeDelegate<&MainMenu::onAdblockChangeCallback>(this));
 
     this->tipLabel = new mainmenu::WrappedText(engine->getDefaultFont(), 0, 0, 0, 0);
+    this->tipLabel->setName("mainmenu_tip");
     this->tipLabel->setHandleRightMouse(true);
     this->tipLabel->setOnMouseUpInsideCallback(
         [](bool left, bool /*right*/) -> void { mainmenu::cycleTip(left ? 1 : -1); });

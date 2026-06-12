@@ -12,6 +12,8 @@ UIIcon::UIIcon(char32_t icon)
     this->setFont(osu->getFontIcons());
     this->setDrawBackground(false);
     this->setDrawFrame(false);
+    // hover-tooltip decoration: must not win the single-target click over the surface beneath
+    this->setHandleLeftMouse(false);
 }
 
 void UIIcon::updateInput(CBaseUIEventCtx& c) {

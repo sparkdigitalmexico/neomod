@@ -1,0 +1,28 @@
+# pins the container-as-button click surface (CBaseUIContainer with self onMouse*
+# handlers + bClickThroughSelf opt-in). regression class found 2026-06-12: container-self
+# became click-through at 2.1 and OnlineMapListing (osudirect cards), UIButtonWithIcon
+# (mainmenu discord/twitter) and WrappedText (this tip label) silently lost their clicks -
+# none had corpus coverage. the click lands ON a decorative wrapped-line label (handles
+# off) and must route to the tip container itself; the callback cycles
+# main_menu_last_tip_index (pinned to 0 first: boot consumed the machine-local persisted
+# value already, and (0+1) avoids the build-dependent tips-array length). the osudirect
+# cards themselves are online-gated = manual smoke.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+main_menu_last_tip_index 0
+mouse_to 640 682
+@wait 5
+mouse_down
+@wait 3
+mouse_up
+@wait 5
+ui_assert hovered mainmenu_tip 1
+ui_assert convar main_menu_last_tip_index 1
+exit

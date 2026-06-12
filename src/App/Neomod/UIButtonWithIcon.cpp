@@ -6,17 +6,23 @@
 #include "UniString.h"
 
 UIButtonWithIcon::UIButtonWithIcon(std::string text, char32_t icon) : CBaseUIContainer(0, 0, 0, 0, "") {
+    // the container itself is the button: opt back into hit candidacy; the labels are
+    // decoration and must not win the single-target click over it
+    this->bClickThroughSelf = false;
+
     this->icon = new CBaseUILabel(0, 0, 0, 0, "", UniString::to_utf8(std::u32string_view{&icon, 1}));
     this->icon->setDrawBackground(false);
     this->icon->setDrawFrame(false);
     this->icon->setDrawTextShadow(true);
     this->icon->setFont(osu->getFontIcons());
+    this->icon->setHandleLeftMouse(false);
     this->addBaseUIElement(this->icon);
 
     this->text = new CBaseUILabel(0, 0, 0, 0, "", std::move(text));
     this->text->setDrawBackground(false);
     this->text->setDrawFrame(false);
     this->text->setDrawTextShadow(true);
+    this->text->setHandleLeftMouse(false);
     this->addBaseUIElement(this->text);
 
     this->onResized();

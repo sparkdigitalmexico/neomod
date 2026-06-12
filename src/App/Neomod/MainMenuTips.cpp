@@ -91,7 +91,11 @@ int s_currentIdx{-1};
 }  // namespace
 
 WrappedText::WrappedText(McFont *font, float xPos, float yPos, float xSize, float ySize)
-    : CBaseUIContainer(xPos, yPos, xSize, ySize), font(font) {}
+    : CBaseUIContainer(xPos, yPos, xSize, ySize), font(font) {
+    // the container itself is the click surface (onMouseUpInside callback): opt back into
+    // hit candidacy; the wrapped line labels are decoration and must not win the click
+    this->bClickThroughSelf = false;
+}
 
 WrappedText::~WrappedText() = default;
 
@@ -122,7 +126,8 @@ WrappedText *WrappedText::setText(const std::string &text) {
             ->setTextJustification(TEXT_JUSTIFICATION::CENTERED)
             ->setDrawTextShadow(true)
             ->setDrawBackground(false)
-            ->setDrawFrame(false);
+            ->setDrawFrame(false)
+            ->setHandleLeftMouse(false);
         yCounter += lineHeight;
         CBaseUIContainer::addBaseUIElement(label);
     }

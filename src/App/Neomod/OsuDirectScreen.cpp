@@ -86,6 +86,10 @@ OnlineMapListing::OnlineMapListing(Downloader::BeatmapSetMetadata meta)
                fmt::format("b.{}/thumb/{:d}.jpg", BanchoState::endpoint,
                            this->meta.set_id),  // Also valid: "b.{}/thumb/{:d}l.jpg" ("l" stands for "large")
            .id = this->meta.set_id}) {
+    // the card itself is the click surface: opt back into hit candidacy (container-self is
+    // click-through by default since the single-target dispatch)
+    this->bClickThroughSelf = false;
+
     if(this->meta.beatmaps.size() > 1) {
         // reverse
         std::ranges::sort(this->meta.beatmaps, std::ranges::greater{}, [](const auto& bm) { return bm.star_rating; });
