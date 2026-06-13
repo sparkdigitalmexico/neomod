@@ -1,0 +1,5 @@
+# phase-3 draw-restructure pin (1280x720, active gameplay): the gameplay composite + HUD must
+# draw under the P3.1 drawLayerRange segmentation. probes the K1 key-counter green bar (right
+# edge, away from the time-dependent playfield circles, so it is stable regardless of the
+# async-audio-load frame timing the rest of the play state depends on).
+0.968 0.46 48c848 8

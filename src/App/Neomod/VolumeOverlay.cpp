@@ -207,9 +207,11 @@ bool VolumeOverlay::onWheel(int deltaVertical, int /*deltaHorizontal*/) {
     // the global gates that survived canChangeVolume's screen enumeration (exclusivity is
     // structural now: this only runs when no candidate consumed the wheel, or as the
     // hovered-slider claim): on the sliders or with alt held, always allow; otherwise
-    // respect the play-mode mousewheel disable and ignore out-of-screen wheel
+    // respect the play-mode mousewheel disable and ignore out-of-screen wheel. the disable
+    // only applies to ACTIVE gameplay, not while paused (you're not aiming, so let the wheel
+    // adjust volume - the pause menu has no wheel use of its own)
     if(!this->isBusy() && !keyboard->isAltDown()) {
-        if(osu->isInPlayMode() && cv::disable_mousewheel.getBool()) return false;
+        if(osu->isInPlayModeAndNotPaused() && cv::disable_mousewheel.getBool()) return false;
         if(!osu->getVirtScreenRect().contains(mouse->getPos())) return false;
     }
 

@@ -51,6 +51,37 @@ if [ ! -d "$full_songs" ]; then
     done
 fi
 
+# play-mode fixture: ONE set with ONE PLAYABLE map. unlike the carousel fixture above, this
+# has REAL (silent) audio so the map actually starts instead of hanging forever on
+# "Loading..." (a missing/empty AudioFilename never resolves). ~30s of evenly-spaced circles
+# gives a wide mid-play window for the play-mode pins; single set+diff keeps the boot
+# selection deterministic. the pins run mod_nofail 1 so missed circles don't end the map.
+play_songs="$(dirname "$BIN")/uitest_osu_folder_play/Songs/play set"
+if [ ! -d "$play_songs" ]; then
+    mkdir -p "$play_songs"
+    # 35s of 8kHz 16-bit mono PCM silence (covers the whole map; SoLoud decodes WAV).
+    # python3 is already a suite dependency (pixelprobe.py)
+    python3 - "$play_songs/silence.wav" <<'PY'
+import sys, wave
+with wave.open(sys.argv[1], "wb") as w:
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000)
+    w.writeframes(b"\x00\x00" * (8000 * 35))
+PY
+    {
+        printf 'osu file format v14\n\n[General]\nAudioFilename: silence.wav\nMode: 0\n\n'
+        printf '[Metadata]\nTitle:UITest Play\nArtist:UITest\nCreator:uitest\nVersion:play\nBeatmapID:0\nBeatmapSetID:-1\n\n'
+        printf '[Difficulty]\nHPDrainRate:5\nCircleSize:4\nOverallDifficulty:5\nApproachRate:5\nSliderMultiplier:1.4\nSliderTickRate:1\n\n'
+        printf '[TimingPoints]\n0,500,4,2,0,100,1,0\n\n[HitObjects]\n'
+        t=1000
+        j=0
+        while [ "$j" -lt 60 ]; do
+            printf '256,192,%d,1,0,0:0:0:0:\n' "$t"
+            t=$((t + 500))
+            j=$((j + 1))
+        done
+    } > "$play_songs/play.osu"
+fi
+
 if [ "$#" -gt 0 ]; then
     scripts=""
     for name in "$@"; do
