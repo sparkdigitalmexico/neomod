@@ -335,7 +335,7 @@ void RoomScreen::onKeyDown(KeyboardEvent &key) {
     if(key.getScanCode() == KEY_F1) {
         key.consume();
         if(BanchoState::room.freemods || BanchoState::room.is_host()) {
-            ui->setScreen(ui->getModSelector());
+            ui->getModSelector()->setVisible(true);
         }
         return;
     }
@@ -702,7 +702,7 @@ void RoomScreen::on_room_updated(const Room &room) {
 
     if(ui->getModSelector()->isVisible() && !BanchoState::room.is_host() && !BanchoState::room.freemods) {
         // Force close mod selector if host disabled freemods
-        ui->setScreen(ui->getRoom());
+        ui->getModSelector()->close(true);
     }
     ui->getModSelector()->updateButtons();
     ui->getModSelector()->resetMods();
@@ -881,7 +881,7 @@ void RoomScreen::onReadyButtonClick() {
 }
 
 void RoomScreen::onSelectModsClicked() {
-    ui->setScreen(ui->getModSelector());
+    ui->getModSelector()->setVisible(true);
     soundEngine->play(osu->getSkin()->s_menu_hit);
 }
 

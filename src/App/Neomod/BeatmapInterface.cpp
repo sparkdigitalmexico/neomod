@@ -3397,6 +3397,7 @@ void BeatmapInterface::update2() {
                     osu->bIsPlayingASelectedBeatmap = false;
                 } else {
                     ui->getPauseOverlay()->setVisible(true);
+                    ui->getModSelector()->setVisible(false);  // can be open mid-play (live mod changing)
                     osu->updateConfineCursor();
                 }
             }

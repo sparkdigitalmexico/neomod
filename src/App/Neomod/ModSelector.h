@@ -59,6 +59,8 @@ class ModSelector final : public UIScreen {
     void updateLayout();
     void updateExperimentalLayout();
 
+    void close(bool force);
+
    private:
     struct OVERRIDE_SLIDER {
         CBaseUICheckbox *lock{nullptr};
@@ -88,8 +90,6 @@ class ModSelector final : public UIScreen {
     void onCheckboxChange(CBaseUICheckbox *checkbox);
 
     UIButton *addActionButton(const std::string &text);
-
-    void close(bool force);
 
     [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override;
 

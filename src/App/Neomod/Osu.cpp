@@ -714,6 +714,7 @@ void Osu::update() {
                 this->map_iface->restart(true);
                 this->map_iface->update();
                 ui->getPauseOverlay()->setVisible(false);
+                ui->getModSelector()->setVisible(false);
             }
         }
     }
@@ -721,10 +722,7 @@ void Osu::update() {
     // background image cache tick
     // NOTE: must be before the asynchronous ui toggles due to potential 1-frame unloads after invisible songbrowser
     {
-        // songbrowser gets hidden when mod selector opens, so the image can be potentially marked stale and unloaded
-        // which can cause a flicker when exiting mod selector
-        // side TODO: make mod selector partially transparent and don't hide song browser?
-        const bool allowCacheEviction = !this->isInPlayMode() && !this->ui_memb->getModSelector()->isVisible();
+        const bool allowCacheEviction = !this->isInPlayMode();
         this->backgroundImageHandler->update(allowCacheEviction);
     }
 
@@ -1098,8 +1096,9 @@ void Osu::onKeyDown(KeyboardEvent &key) {
                 // quit if we try to 'escape' the pause menu when dead (satisfying ragequit mechanic)
                 this->map_iface->stop(true);
             } else {
-                // else just toggle the pause menu
+                // else just toggle the pause menu (closing a mod selector left open mid-play)
                 ui->getPauseOverlay()->setVisible(!ui->getPauseOverlay()->isVisible());
+                if(ui->getPauseOverlay()->isVisible()) ui->getModSelector()->setVisible(false);
             }
         }
 

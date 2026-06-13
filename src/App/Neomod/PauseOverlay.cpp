@@ -17,7 +17,6 @@
 #include "i18n.h"
 #include "Keyboard.h"
 #include "OsuKeyBinds.h"
-#include "ModSelector.h"
 #include "OptionsOverlay.h"
 #include "Osu.h"
 #include "ResourceManager.h"
@@ -400,9 +399,6 @@ CBaseUIContainer *PauseOverlay::setVisible(bool visible) {
             }
         }
     }
-
-    // HACKHACK: force disable mod selection screen in case it was open and the beatmap ended/failed
-    ui->getModSelector()->setVisible(false);
 
     // reset
     this->selectedButton = nullptr;

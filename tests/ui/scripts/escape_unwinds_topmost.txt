@@ -1,9 +1,10 @@
 # pins layered Escape unwinding under the phase 3 canonical layer order: with options
 # opened OVER the songbrowser modselector (Ctrl+O), Escape closes the TOP-MOST overlay
 # first (consumed_by=OptionsOverlay; modselector stays), the second Escape then closes
-# the modselector back to the songbrowser. pre-3.1 the screens-array key order routed
+# the modselector, revealing the songbrowser. pre-3.1 the screens-array key order routed
 # the first Escape to ModSelector (idx 4 before options at idx 8), closing the screen
-# UNDERNEATH the open options panel.
+# UNDERNEATH the open options panel. since 3.3 the modselector is an overlay over the
+# still-visible-and-active browser (the screen_active asserts flipped accordingly).
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1
@@ -30,7 +31,8 @@ sendkey Escape
 @wait 5
 ui_assert visible optionsoverlay 0
 ui_assert visible modselector 1
-ui_assert screen_active modselector 1
+ui_assert visible songbrowser 1
+ui_assert screen_active songbrowser 1
 sendkey Escape
 @wait 5
 ui_assert visible modselector 0

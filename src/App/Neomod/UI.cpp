@@ -434,8 +434,13 @@ void UI::onResolutionChange(vec2 newResolution) {
 }
 
 bool UI::arrowKeysClaimed() const {
-    for(auto *screen : this->screens) {
-        if(screen->claimsArrowKeys() && screen->isVisible()) return true;
+    // walk top -> bottom like routeKey: layers below a visible modal floor never see the
+    // keys, so their claims must not block the volume binds either
+    for(sSz li = static_cast<sSz>(NUM_SCREENS) - 1; li >= 0; --li) {
+        auto *screen = this->screens[LAYER_ORDER[li]];
+        if(!screen->isVisible()) continue;
+        if(screen->claimsArrowKeys()) return true;
+        if(screen->isModal()) break;
     }
     return false;
 }
@@ -453,11 +458,9 @@ void UI::stealFocus() {
 
 void UI::hide() {
     this->active_screen->setVisible(false);
-    // close the "temporary" closeOnScreenSwitch overlays; unconditionally, because a redundant
-    // pauseOverlay->setVisible(false) is load-bearing during play (force-hides the modselector
-    // when the map ends/fails, see the HACKHACK in PauseOverlay::setVisible)
+    // close the "temporary" closeOnScreenSwitch overlays
     for(auto *screen : this->screens) {
-        if(screen->closesOnScreenSwitch()) screen->setVisible(false);
+        if(screen->closesOnScreenSwitch() && screen->isVisible()) screen->setVisible(false);
     }
 }
 

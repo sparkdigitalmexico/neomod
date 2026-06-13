@@ -379,10 +379,8 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
     this->selectionPreviousSongDiffButton = nullptr;
     this->selectionPreviousCollectionButton = nullptr;
 
-    this->bF1Pressed = false;
     this->bF2Pressed = false;
     this->bF3Pressed = false;
-    this->bShiftPressed = false;
     this->bLeft = false;
     this->bRight = false;
 
@@ -1115,11 +1113,10 @@ void SongBrowser::onKeyDown(KeyboardEvent &key) {
         }
     }
 
-    if(key == KEY_LSHIFT || key == KEY_RSHIFT) this->bShiftPressed = true;
-
     // function hotkeys
-    if((key == KEY_F1 || key == binds::TOGGLE_MODSELECT) && !this->bF1Pressed) {
-        this->bF1Pressed = true;
+    // NOTE: no held-flag for F1: the modal modselector floors our key-ups while it is open,
+    // so a flag set on the opening press could never be cleared (isRepeat is ground truth)
+    if((key == KEY_F1 || key == binds::TOGGLE_MODSELECT) && !key.isRepeat()) {
         BottomBar::press_button(BottomBar::MODS);
     }
     if((key == KEY_F2 || key == binds::RANDOM_BEATMAP) && !this->bF2Pressed) {
@@ -1147,11 +1144,9 @@ void SongBrowser::onKeyUp(KeyboardEvent &key) {
     this->contextMenu->onKeyUp(key);
     if(key.isConsumed()) return;
 
-    if(key == KEY_LSHIFT || key == KEY_RSHIFT) this->bShiftPressed = false;
     if(key == KEY_LEFT) this->bLeft = false;
     if(key == KEY_RIGHT) this->bRight = false;
 
-    if(key == KEY_F1 || key == binds::TOGGLE_MODSELECT) this->bF1Pressed = false;
     if(key == KEY_F2 || key == binds::RANDOM_BEATMAP) this->bF2Pressed = false;
     if(key == KEY_F3) this->bF3Pressed = false;
 }
@@ -1164,7 +1159,7 @@ void SongBrowser::onChar(KeyboardEvent &e) {
     if(e.getCharCode() < 32 || !this->bVisible ||
        (keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown())))
         return;
-    if(this->bF1Pressed || this->bF2Pressed || this->bF3Pressed) return;
+    if(this->bF2Pressed || this->bF3Pressed) return;
 
     // handle searching
     char32_t ch = e.getCharCode();
@@ -1199,7 +1194,6 @@ CBaseUIContainer *SongBrowser::setVisible(bool visible) {
     }
 
     this->bVisible = visible;
-    this->bShiftPressed = false;  // seems to get stuck sometimes otherwise
 
     if(this->bVisible) {
         soundEngine->play(osu->getSkin()->s_expand);
@@ -3137,13 +3131,15 @@ void SongBrowser::onSelectionMode() {
 }
 
 void SongBrowser::onSelectionMods() {
-    ui->setScreen(ui->getModSelector());
+    // overlay, not a base swap (phase 3.3): the browser stays visible (and active) beneath
+    this->contextMenu->setVisible2(false);
+    ui->getModSelector()->setVisible(true);
     soundEngine->play(osu->getSkin()->s_expand);
 }
 
 void SongBrowser::onSelectionRandom() {
     soundEngine->play(osu->getSkin()->s_click_button);
-    if(this->bShiftPressed)
+    if(keyboard->isShiftDown())
         this->selectPreviousRandomBeatmap();
     else
         this->bRandomBeatmapScheduled = true;

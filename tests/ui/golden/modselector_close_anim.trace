@@ -27,7 +27,3 @@ uitrace frame=65 evt=hoverOut elem=1. Reset All Mods
 uitrace frame=65 evt=hoverIn elem=2. Close
 uitrace frame=65 evt=downInside elem=2. Close
 uitrace frame=68 evt=upInside elem=2. Close
-uitrace frame=69 evt=hoverIn elem=Carousel
-uitrace frame=70 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=70 evt=hoverIn elem=InfoLabel
-uitrace frame=70 evt=hoverOut elem=Carousel

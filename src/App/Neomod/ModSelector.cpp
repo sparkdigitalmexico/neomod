@@ -144,6 +144,12 @@ class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
 }  // namespace
 
 ModSelector::ModSelector() : UIScreen() {
+    // overlay everywhere (phase 3.3): opened over the still-visible base screen (songbrowser/
+    // room) instead of replacing it; the modal floor keeps mouse/keys/hover from leaking into
+    // the base beneath, and any base swap force-closes us
+    this->bModal = true;
+    this->bCloseOnScreenSwitch = true;
+
     const vec2 osuScreen = osu->getVirtScreenSize();
 
     this->setSize(osuScreen.x, osuScreen.y);
@@ -449,6 +455,13 @@ void ModSelector::draw() {
 
     const float experimentalModsAnimationTranslation =
         -(this->experimentalContainer->getSize().x + 2.0f) * (1.0f - this->fExperimentalAnimation);
+
+    // outside of play mode the base screen stays visible beneath us (overlay everywhere,
+    // phase 3.3), so dim it osu-style
+    if(!this->isInCompactMode()) {
+        g->setColor(Color(backgroundColor).setA(backgroundColor.Af() * this->fAnimation));
+        g->fillRect(0, 0, osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
+    }
 
     if(BanchoState::is_in_a_multi_room()) {
         // get mod button element bounds
@@ -1244,12 +1257,14 @@ void ModSelector::close(bool force) {
     this->closeButton->animateClickColor();
 
     if(osu->isInPlayMode()) {
+        // the Osu-level F1 toggle owns non-forced open/close during play (it runs before the
+        // key walk reaches us, so closing here too would undo the toggle)
         if(force) this->setVisible(false);
-    } else if(BanchoState::is_in_a_multi_room()) {
-        ui->setScreen(ui->getRoom());
-    } else {
-        ui->setScreen(ui->getSongBrowser());
+        return;
     }
+
+    soundEngine->play(BanchoState::is_in_a_multi_room() ? osu->getSkin()->s_menu_back : osu->getSkin()->s_expand);
+    this->setVisible(false);
 }
 
 void ModSelector::onOverrideSliderChange(CBaseUISlider *slider) {

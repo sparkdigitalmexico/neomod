@@ -369,10 +369,8 @@ class SongBrowser final : public ScreenBackable {
     std::string sLastOsuFolder;
 
     // keys
-    bool bF1Pressed;
     bool bF2Pressed;
     bool bF3Pressed;
-    bool bShiftPressed;
     bool bLeft;
     bool bRight;
     bool bRandomBeatmapScheduled;

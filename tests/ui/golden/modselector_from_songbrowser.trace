@@ -10,4 +10,17 @@ uitrace frame=333 evt=hoverIn elem=modsel_experimental
 uitrace frame=333 evt=hoverIn elem=modsel_experimental
 uitrace frame=333 evt=hoverIn elem= Experimental Mods (!)
 uitrace frame=333 evt=hoverIn elem=ModSelector
-uitrace frame=338 evt=keydown consumed_by=ModSelector
+uitrace frame=354 evt=hoverOut elem=modsel_experimental
+uitrace frame=354 evt=hoverOut elem=modsel_experimental
+uitrace frame=354 evt=hoverOut elem= Experimental Mods (!)
+uitrace frame=354 evt=hoverOut elem=ModSelector
+uitrace frame=370 evt=keydown consumed_by=VolumeOverlay
+uitrace frame=374 evt=keydown consumed_by=ModSelector
+uitrace frame=374 evt=hoverOut elem=CBaseUIContainer
+uitrace frame=374 evt=hoverOut elem=InfoLabel
+uitrace frame=374 evt=hoverIn elem=Carousel
+uitrace frame=374 evt=hoverIn elem=Carousel
+uitrace frame=380 evt=keydown consumed_by=SongBrowser
+uitrace frame=386 evt=keydown consumed_by=ModSelector
+uitrace frame=392 evt=keydown consumed_by=SongBrowser
+uitrace frame=392 evt=hoverIn elem=mainmenu_cube

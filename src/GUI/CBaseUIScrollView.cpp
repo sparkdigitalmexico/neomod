@@ -35,7 +35,7 @@ CBaseUIContainer *ScrollContainer::removeBaseUIElement(CBaseUIElement *element) 
 CBaseUIContainer *ScrollContainer::deleteBaseUIElement(CBaseUIElement *element) {
     this->invalidateUpdate = true;
     std::erase(this->vVisibleElements, element);
-    return CBaseUIContainer::removeBaseUIElement(element);
+    return CBaseUIContainer::deleteBaseUIElement(element);
 }
 
 void ScrollContainer::freeElements() {
