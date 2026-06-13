@@ -1,0 +1,8 @@
+# phase-3 dim pins (1280x720, modselector open over the fake room, open anim settled): room
+# elements must DRAW beneath the overlay and be darkened by the 0x88000000 fullscreen dim
+# (expected = undimmed * 0.467, the alpha-0x88-over-black factor). isInCompactMode() is false
+# outside play mode, so the room gets the osu-style dim, same as the songbrowser modselector.
+# "Win condition" button green fill (undimmed #73b173)
+0.689 0.219 365336 8
+# "Change password" button highlight (undimmed #ffffff)
+0.785 0.032 777777 8

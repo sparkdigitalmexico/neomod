@@ -11,6 +11,8 @@
 #include "CBaseUITextbox.h"
 #include "PromptOverlay.h"
 #include "Parsing.h"
+#include "SString.h"
+#include "Bancho.h"
 #include "Logging.h"
 #include "Mouse.h"
 #include "Engine.h"
@@ -28,6 +30,8 @@ static ConVar ui_screens_cmd("ui_screens", CLIENT | NOLOAD | NOSAVE);
 static ConVar ui_dump_cmd("ui_dump", CLIENT | NOLOAD | NOSAVE);
 static ConVar ui_assert_cmd("ui_assert", CLIENT | NOLOAD | NOSAVE);
 static ConVar ui_prompt_cmd("ui_prompt", CLIENT | NOLOAD | NOSAVE);
+static ConVar debug_fake_online_cmd("debug_fake_online", CLIENT | NOLOAD | NOSAVE);
+static ConVar debug_fake_room_cmd("debug_fake_room", CLIENT | NOLOAD | NOSAVE);
 }  // namespace cv
 
 UIScreen *UIDebug::findScreenByName(std::string_view lowerName) const {
@@ -228,12 +232,24 @@ void UIDebug::debugPrompt(std::string_view msg) {
                                 }));
 }
 
+void UIDebug::debugFakeOnline(std::string_view arg) {
+    // headless stand-in for the (server-dependent) login flow, so online-gated UI is testable.
+    // no arg or non-"0" enables; "0" disables.
+    std::string a{arg};
+    SString::trim_inplace(a);
+    BanchoState::set_fake_online(a.empty() || a != "0");
+}
+
+void UIDebug::debugFakeRoom() { BanchoState::fake_join_room(); }
+
 UIDebug::UIDebug(UI *ui_parent) : m_ui(ui_parent) {
     cv::set_active_ui_screen.setCallback(SA::MakeDelegate<&UIDebug::setScreenByName>(this));
     cv::ui_screens_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugDumpScreens>(this));
     cv::ui_dump_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugDumpElements>(this));
     cv::ui_assert_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugAssert>(this));
     cv::ui_prompt_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugPrompt>(this));
+    cv::debug_fake_online_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugFakeOnline>(this));
+    cv::debug_fake_room_cmd.setCallback(SA::MakeDelegate<&UIDebug::debugFakeRoom>(this));
 }
 
 UIDebug::~UIDebug() {
@@ -242,4 +258,6 @@ UIDebug::~UIDebug() {
     cv::ui_dump_cmd.removeAllCallbacks();
     cv::ui_assert_cmd.removeAllCallbacks();
     cv::ui_prompt_cmd.removeAllCallbacks();
+    cv::debug_fake_online_cmd.removeAllCallbacks();
+    cv::debug_fake_room_cmd.removeAllCallbacks();
 }

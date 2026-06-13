@@ -2,6 +2,7 @@
 
 #include "ThumbnailManager.h"
 #include "AsyncIOHandler.h"
+#include "Bancho.h"
 
 #include "Downloader.h"
 #include "Graphics.h"
@@ -190,6 +191,13 @@ void ThumbnailManager::prune_oldest_entries() {
 }
 
 bool ThumbnailManager::download_image(const ThumbIdentifier& identifier) {
+    // a fake-online session has no server backing it: never hit the network, just give up on
+    // this thumbnail (blacklisted = won't be re-queued) so a default placeholder is shown
+    if(BanchoState::fake_online) {
+        this->id_blacklist.insert(identifier);
+        return false;
+    }
+
     // TODO: only download a single (response_code == 404) result and share it
     auto& dl = this->images[identifier].dl_handle;
     if(!dl) dl = Downloader::download(identifier.download_url);

@@ -1,0 +1,33 @@
+# chat_focus_steal (P4 pinned-known-bad), unblocked by the fake-online path. previously
+# deferred: chat hard-gates on BanchoState::is_online, unreachable offline. debug_fake_online
+# now provides a server-less logged-in session so chat opens.
+# the bug: Chat::onKeyDown consumes EVERY non-alt keystroke while chat is visible
+# (Chat.cpp:792-799), and the FIXME at Chat.cpp:477 focuses the input box on any hover-in -
+# chat grabs the keyboard globally regardless of where the user clicked. proof here: chat is
+# opened over the main menu (F8), then a click FAR from chat (top-centre; the chat input is
+# the bottom strip at y=690) does NOT release the grab - the following 'A' is still
+# consumed_by=Chat. phase 4 (focus manager) flips this: the far click defocuses chat and the
+# key routes to the focused element instead.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+debug_fake_online 1
+@wait 5
+sendkey F8
+@wait 12
+ui_assert visible chat 1
+mouse_to 640 80
+@wait 3
+mouse_down
+@wait 2
+mouse_up
+@wait 5
+sendkey A
+@wait 5
+exit
