@@ -139,8 +139,6 @@ bool UI::init() {
     this->screens[screenit++] = this->beatmapInstallOverlay = new BeatmapInstallOverlay();
     assert(screenit == NUM_SCREENS);
 
-    this->notificationOverlay->addKeyListener(this->optionsOverlay);
-
     this->active_screen = Osu::isKioskMode() ? static_cast<UIScreen *>(this->dummy) : this->mainMenu;
 
     // debug

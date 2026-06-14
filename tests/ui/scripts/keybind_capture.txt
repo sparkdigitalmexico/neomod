@@ -1,8 +1,9 @@
-# pins the keybind capture flow and its NotificationOverlay::addKeyListener side channel
-# (UI.cpp): clicking a KeyBindButton arms capture, the next keydown is consumed by
-# NotificationOverlay (trace) and lands in the bind convar; the Escape AFTER capture goes
-# to OptionsOverlay normally (capture state fully disarmed). P4 reroutes this through the
-# accelerator path and must keep the convar result + consumption identical in spirit.
+# pins the keybind capture flow after P4.3 deleted the NotificationOverlay::addKeyListener
+# side channel: clicking a KeyBindButton arms capture (waitingKey), the next keydown is now
+# consumed by OptionsOverlay's own onKeyDown (trace) and lands in the bind convar; the Escape
+# AFTER capture goes to OptionsOverlay normally (capture state fully disarmed). pre-4.3 the
+# captured keydown was consumed_by=NotificationOverlay (the private key feed forwarded it to
+# OptionsOverlay::onKey); the convar result + post-capture Escape consumption are unchanged.
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1

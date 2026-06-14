@@ -8,7 +8,7 @@
 class UIContextMenu;
 struct OptionsOverlayImpl;
 
-class OptionsOverlay final : public ScreenBackable, public NotificationOverlayKeyListener {
+class OptionsOverlay final : public ScreenBackable {
     NOCOPY_NOMOVE(OptionsOverlay)
    public:
     OptionsOverlay();
@@ -22,8 +22,6 @@ class OptionsOverlay final : public ScreenBackable, public NotificationOverlayKe
     void onChar(KeyboardEvent &e) override;
 
     void onResolutionChange(vec2 newResolution) override;
-
-    void onKey(KeyboardEvent &e) override;
 
     CBaseUIContainer *setVisible(bool visible) override;
 

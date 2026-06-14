@@ -265,42 +265,6 @@ void NotificationOverlay::drawNotificationBackground(const NotificationOverlay::
     g->fillRect(0, osu->getVirtScreenHeight() / 2 - height / 2, osu->getVirtScreenWidth(), height);
 }
 
-void NotificationOverlay::onKeyDown(KeyboardEvent &e) {
-    if(!this->isVisible()) return;
-
-    // escape always stops waiting for a key
-    if(e.getScanCode() == KEY_ESCAPE) {
-        if(this->bWaitForKey) e.consume();
-
-        this->stopWaitingForKey();
-    }
-
-    // key binding logic
-    if(this->bWaitForKey) {
-        // HACKHACK: prevent left mouse click bindings if relevant
-        if(Env::cfg(OS::WINDOWS) && this->bWaitForKeyDisallowsLeftClick &&
-           e.getScanCode() == 0x01)  // 0x01 == VK_LBUTTON
-            this->stopWaitingForKey();
-        else {
-            this->stopWaitingForKey(true);
-
-            debugLog("keyCode = {:d}", e.getScanCode());
-
-            if(this->keyListener != nullptr) this->keyListener->onKey(e);
-        }
-
-        e.consume();
-    }
-
-    if(this->bWaitForKey) e.consume();
-}
-
-void NotificationOverlay::onKeyUp(KeyboardEvent &e) {
-    if(!this->isVisible()) return;
-
-    if(this->bWaitForKey) e.consume();
-}
-
 void NotificationOverlay::onChar(KeyboardEvent &e) {
     if(this->bWaitForKey || this->bConsumeNextChar) e.consume();
 
@@ -385,7 +349,6 @@ void NotificationOverlay::addToast(ToastOpts opts) {
 
 void NotificationOverlay::stopWaitingForKey(bool stillConsumeNextChar) {
     this->bWaitForKey = false;
-    this->bWaitForKeyDisallowsLeftClick = false;
     this->bConsumeNextChar = stillConsumeNextChar;
 }
 

@@ -112,7 +112,6 @@ struct OptionsOverlayImpl final {
     void onKeyDown(KeyboardEvent &e);
     void onChar(KeyboardEvent &e);
     void onResolutionChange(vec2 newResolution);
-    void onKey(KeyboardEvent &e);
     CBaseUIContainer *setVisible(bool visible);
 
     void save();
@@ -297,6 +296,7 @@ struct OptionsOverlayImpl final {
     CBaseUITextbox *osuFolderTextbox{nullptr};
 
     ConVar *waitingKey{nullptr};
+    bool bWaitingKeyDisallowsLeftClick{false};
 
     // custom
     AnimFloat fAnimation;
@@ -332,9 +332,7 @@ struct OptionsOverlayImpl final {
 };
 
 // passthroughs
-OptionsOverlay::OptionsOverlay() : ScreenBackable(), NotificationOverlayKeyListener(), pImpl(this) {
-    this->bCloseOnScreenSwitch = true;
-}
+OptionsOverlay::OptionsOverlay() : ScreenBackable(), pImpl(this) { this->bCloseOnScreenSwitch = true; }
 OptionsOverlay::~OptionsOverlay() = default;
 
 void OptionsOverlay::draw() { return pImpl->draw(); }
@@ -343,7 +341,6 @@ void OptionsOverlay::updateInput(CBaseUIEventCtx &c) { return pImpl->updateInput
 void OptionsOverlay::onKeyDown(KeyboardEvent &e) { return pImpl->onKeyDown(e); }
 void OptionsOverlay::onChar(KeyboardEvent &e) { return pImpl->onChar(e); }
 void OptionsOverlay::onResolutionChange(vec2 newResolution) { return pImpl->onResolutionChange(newResolution); }
-void OptionsOverlay::onKey(KeyboardEvent &e) { return pImpl->onKey(e); }
 CBaseUIContainer *OptionsOverlay::setVisible(bool visible) { return pImpl->setVisible(visible); }
 void OptionsOverlay::save() { return pImpl->save(); }
 void OptionsOverlay::openAndScrollToSkinSection() { return pImpl->openAndScrollToSkinSection(); }
@@ -2230,6 +2227,27 @@ void OptionsOverlayImpl::onKeyDown(KeyboardEvent &e) {
         return;
     }
 
+    // keybind capture: a bind button armed waitingKey, so the next key (or Escape to cancel)
+    // binds into that convar instead of falling through to the normal handling below. this
+    // replaces the old NotificationOverlay::addKeyListener side channel; options is reached by
+    // the normal key walk (it already consumes keys while open) so no focus routing is needed.
+    if(this->waitingKey != nullptr) {
+        const bool cancel = (e.getScanCode() == KEY_ESCAPE) ||
+                            // HACKHACK: prevent left mouse click bindings if relevant
+                            (Env::cfg(OS::WINDOWS) && this->bWaitingKeyDisallowsLeftClick &&
+                             e.getScanCode() == 0x01);  // 0x01 == VK_LBUTTON
+        if(!cancel) {
+            if(e.getScanCode() != this->waitingKey->getVal<SCANCODE>())
+                this->bLayoutUpdateScheduled.store(true, std::memory_order_relaxed);
+            this->waitingKey->setValue(e.getScanCode());
+        }
+        this->waitingKey = nullptr;
+        this->bWaitingKeyDisallowsLeftClick = false;
+        ui->getNotificationOverlay()->stopWaitingForKey();
+        e.consume();
+        return;
+    }
+
     this->contextMenu->onKeyDown(e);
     if(e.isConsumed()) return;
 
@@ -2335,17 +2353,6 @@ void OptionsOverlayImpl::onResolutionChange(vec2 newResolution) {
 
     if(this->resolutionLabel != nullptr)
         this->resolutionLabel->setText(fmt::format("{}x{}", (int)newResolution.x, (int)newResolution.y));
-}
-
-void OptionsOverlayImpl::onKey(KeyboardEvent &e) {
-    // from NotificationOverlay
-    if(this->waitingKey != nullptr) {
-        if(e.getScanCode() != this->waitingKey->getVal<SCANCODE>()) {
-            this->bLayoutUpdateScheduled.store(true, std::memory_order_relaxed);
-        }
-        this->waitingKey->setValue(e.getScanCode());
-        this->waitingKey = nullptr;
-    }
 }
 
 CBaseUIContainer *OptionsOverlayImpl::setVisible(bool visible) {
@@ -3533,12 +3540,12 @@ void OptionsOverlayImpl::onKeyBindingButtonPressed(CBaseUIButton *button) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(button); it != this->uiToOptElemMap.end() && (element = it->second)) {
         this->waitingKey = element->cvar;
+        this->bWaitingKeyDisallowsLeftClick =
+            !(dynamic_cast<KeyBindButton *>(button)->isLeftMouseClickBindingAllowed());
 
         const bool waitForKey = true;
         auto notificationText = tformat("Press new key for {}:", button->getText());
         ui->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, waitForKey);
-        ui->getNotificationOverlay()->setDisallowWaitForKeyLeftClick(
-            !(dynamic_cast<KeyBindButton *>(button)->isLeftMouseClickBindingAllowed()));
     }
 }
 
