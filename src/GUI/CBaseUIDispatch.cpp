@@ -7,9 +7,9 @@
 
 #include <algorithm>
 
-namespace {
-CBaseUIDispatch *liveDispatch{nullptr};
+CBaseUIDispatch *uiDispatcher{nullptr};
 
+namespace {
 // the top-most hit candidate matching pred: groups in input-priority order, within a group the best
 // (tier, then latest visit), the first group with a match winning (= the top-most layer). the single
 // ranking shared by hover resolution and button-down targeting (wheel walks the same order with its
@@ -35,11 +35,9 @@ const CBaseUIEventCtx::HitCandidate *topCandidate(const CBaseUIEventCtx &c, Pred
 }
 }  // namespace
 
-CBaseUIDispatch::CBaseUIDispatch() { liveDispatch = this; }
+CBaseUIDispatch::CBaseUIDispatch() { uiDispatcher = this; }
 
-CBaseUIDispatch::~CBaseUIDispatch() { liveDispatch = nullptr; }
-
-CBaseUIDispatch *CBaseUIDispatch::get() { return liveDispatch; }
+CBaseUIDispatch::~CBaseUIDispatch() { uiDispatcher = nullptr; }
 
 void CBaseUIDispatch::onButtonChange(ButtonEvent &ev) {
     const u64 frame = engine->getFrameCount();

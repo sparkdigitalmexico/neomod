@@ -23,11 +23,6 @@ class CBaseUIDispatch final : public MouseListener {
     CBaseUIDispatch();
     ~CBaseUIDispatch() override;
 
-    // the live instance (owned by Engine); null before engine gui startup and after shutdown
-    // (e.g. Logger can keep the ConsoleBox alive past Engine teardown)
-    // FIXME: avoid the need to ever null-check, ConsoleBox staying alive past shutdown is a hack
-    [[nodiscard]] static CBaseUIDispatch *get();
-
     // buffers the frame's button events off the regular Mouse listener relay (events arrive
     // during the input-device update, but routing must wait until the updateInput walk has
     // collected the hit candidates). self-cleans: the first event of a new frame drops the
@@ -137,3 +132,6 @@ class CBaseUIDispatch final : public MouseListener {
     // when it changes mid-loop (a handler deleted/rebuilt parts of the UI under the candidates)
     u64 elemGeneration{0};
 };
+
+// the live instance (owned by Engine, valid from engine startup->shutdown)
+extern CBaseUIDispatch *uiDispatcher;

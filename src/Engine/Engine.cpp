@@ -160,7 +160,14 @@ Engine::~Engine() {
         // don't allow CBaseUI to delete it, it might still be in use (being flushed) by Logger
         this->guiContainer->removeBaseUIElement(cbox.get());
     }
-    Engine::consoleBox.store(nullptr, std::memory_order_release);
+
+    // sanity, wait until logger has stopped logging messages to console box before continuing to delete uiDispatch
+    // (this is spaghetti but should prevent the need to null-check uiDispatcher)
+    {
+        auto cbox = Engine::consoleBox.load(std::memory_order_acquire);
+        Engine::consoleBox.store(nullptr, std::memory_order_release);
+        while(cbox.use_count() > 1) Timing::sleep(0);
+    }
     SAFE_DELETE(this->guiContainer);
 
     if(mouse) mouse->removeListener(this->uiDispatch.get());
@@ -256,7 +263,7 @@ void Engine::loadApp() {
 
         // the UI layer receives mouse button events through the same relay as everyone else;
         // CBaseUIDispatch routes them after each root's updateInput pass
-        this->uiDispatch = std::make_unique<CBaseUIDispatch>();
+        this->uiDispatch = std::make_unique<CBaseUIDispatch>();  // ctor also sets uiDispatch global
         mouse->addListener(this->uiDispatch.get());
     }
 
