@@ -1,0 +1,43 @@
+# volume arrow-key (INCREASE/DECREASE_VOLUME = Up/Down) suppression matrix. pins the
+# hover-qualified canChangeVolume checks (VolumeOverlay.cpp:312-315) BEFORE 4.4 collapses
+# them into a dispatch query. discriminator: a volume key that ACTS shows the overlay
+# (VolumeOverlay::isVisible() = time-based, :300), one that's suppressed does not - so
+# `ui_assert visible volumeoverlay` reads the behavior directly and survives the 4.2
+# eat-all deletion (only the consumed_by trace re-records then).
+# contexts (the options case is the canonical hover-qualification; chat[4]/contextmenu[2]/
+# modselector[3] follow the identical canChangeVolume collapse, chat is also exercised by
+# chat_focus_steal and modselector by modselector_from_songbrowser):
+#   1. mainmenu dead space         -> Up acts   (visible 1)  consumed_by=VolumeOverlay
+#   2. options open, cursor ON panel  -> suppressed (visible 0)  options eats it today
+#   3. options open, cursor OFF panel -> acts again (visible 1)  hover qualifies the check
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 20
+sendkey Up
+@wait 2
+ui_assert visible volumeoverlay 1
+@wait_secs 3
+sendkey Left Ctrl down
+sendkey O
+sendkey Left Ctrl up
+@wait 30
+ui_assert visible optionsoverlay 1
+mouse_to 400 360
+@wait 3
+sendkey Up
+@wait 2
+ui_assert visible volumeoverlay 0
+@wait_secs 3
+mouse_to 1000 360
+@wait 3
+sendkey Up
+@wait 2
+ui_assert visible volumeoverlay 1
+@wait 2
+exit

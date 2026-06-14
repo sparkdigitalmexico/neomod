@@ -1,0 +1,35 @@
+# Escape precedence on a FOCUSED textbox (locked open (b): defocus-then-close). pins that
+# Escape in a focused textbox defocuses the box FIRST and leaves the enclosing screen open;
+# only a SECOND Escape closes the screen. this is ALREADY today's behavior for options
+# textboxes (the focused box consumes Escape via ScreenBackable::onKeyDown's child broadcast
+# at OptionsOverlay.cpp:2290, setting bActive=false, BEFORE the screen's escape-close fires),
+# so P4 must KEEP it through the focus-manager port (not flip). single textbox: the OAuth
+# login form only renders the server box (name/password are PASSWORD_AUTH-gated, :864).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 20
+sendkey Left Ctrl down
+sendkey O
+sendkey Left Ctrl up
+@wait 30
+mouse_to 395 288
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 3
+ui_assert active options_server_box 1
+sendkey Escape
+@wait 3
+ui_assert active options_server_box 0
+ui_assert visible optionsoverlay 1
+sendkey Escape
+@wait 5
+ui_assert visible optionsoverlay 0
+exit

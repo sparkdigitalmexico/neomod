@@ -1,0 +1,27 @@
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
+uitrace frame=0 evt=hoverIn elem=MainMenu
+uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
+uitrace frame=21 evt=keydown consumed_by=VolumeOverlay
+uitrace frame=21 evt=hoverIn elem=UIVolumeSlider
+uitrace frame=21 evt=hoverIn elem=UIVolumeSlider
+uitrace frame=21 evt=hoverIn elem=UIVolumeSlider
+uitrace frame=22 evt=hoverOut elem=UIVolumeSlider
+uitrace frame=22 evt=hoverOut elem=UIVolumeSlider
+uitrace frame=22 evt=hoverOut elem=UIVolumeSlider
+uitrace frame=204 evt=hoverIn elem=options_categories
+uitrace frame=204 evt=hoverIn elem=options_categories
+uitrace frame=205 evt=hoverIn elem=OptionsOverlay
+uitrace frame=235 evt=hoverIn elem=options_contents
+uitrace frame=235 evt=hoverIn elem=options_contents
+uitrace frame=235 evt=hoverIn elem=Log in
+uitrace frame=235 evt=hoverOut elem=options_categories
+uitrace frame=235 evt=hoverOut elem=options_categories
+uitrace frame=235 evt=hoverIn elem=options_search
+uitrace frame=239 evt=keydown consumed_by=OptionsOverlay
+uitrace frame=422 evt=hoverOut elem=options_contents
+uitrace frame=422 evt=hoverOut elem=options_contents
+uitrace frame=422 evt=hoverOut elem=Log in
+uitrace frame=422 evt=hoverOut elem=options_search
+uitrace frame=423 evt=hoverOut elem=OptionsOverlay
+uitrace frame=426 evt=keydown consumed_by=VolumeOverlay
