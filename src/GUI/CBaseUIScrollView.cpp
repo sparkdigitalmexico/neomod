@@ -343,11 +343,6 @@ void CBaseUIScrollView::tick() {
 void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
     if(!this->isVisible()) return;
 
-    if(!c.propagate_clicks) {
-        // big sigh...
-        this->stealFocus();
-    }
-
     // self before children: visit order doubles as hit-candidate priority (latest = top-most),
     // and the children draw above the scrollview surface. our self-grab (grabs_clicks) takes
     // effect at subtree exit so the children stay click-eligible.

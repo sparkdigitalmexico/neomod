@@ -2,7 +2,9 @@ uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
 uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
 uitrace frame=0 evt=hoverIn elem=MainMenu
 uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=37 evt=keydown consumed_by=Chat
-uitrace frame=37 evt=keyup consumed_by=Chat
-uitrace frame=63 evt=keydown consumed_by=Chat
-uitrace frame=63 evt=keyup consumed_by=Chat
+uitrace frame=50 evt=hoverIn elem=chat_input
+uitrace frame=54 evt=downInside elem=chat_input
+uitrace frame=58 evt=upInside elem=chat_input
+uitrace frame=62 evt=char consumed_by=Chat
+uitrace frame=62 evt=char consumed_by=Chat
+uitrace frame=66 evt=hoverOut elem=chat_input

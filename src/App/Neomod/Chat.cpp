@@ -474,10 +474,12 @@ void Chat::updateInput(CBaseUIEventCtx &c) {
         was_M3_down = is_M3_down;
     }
 
-    // FIXME: steals click focus globally no matter where you click on the screen
-    // why is this here anyways? just handle onMouseDownInside on the chatbox?
-    if(this->isMouseInChat()) {
-        // Focus without placing the cursor at the end of the field
+    // keep the input focused while the user presses anywhere WITHIN the chat panel (messages,
+    // user list, tabs); only a press truly outside chat releases focus, via the input box's
+    // own onMouseDownOutside. scoped to the panel so it does not re-introduce the global grab
+    // (chat_focus_steal): without it, clicking off the input dropped focus and the next
+    // keystroke leaked into the song browser's type-to-search behind the still-open chat.
+    if(mouse->isLeftPressed() && this->isMouseInside()) {
         this->input_box->focus(false);
     }
 }
@@ -789,8 +791,11 @@ void Chat::onKeyDown(KeyboardEvent &key) {
         return;
     }
 
-    // Typing in chat: capture keypresses
-    if(!keyboard->isAltDown()) {
+    // Typing in chat: capture keypresses ONLY while the input box holds keyboard focus.
+    // previously this ate every non-alt key whenever chat was merely visible, stealing the
+    // keyboard globally (chat_focus_steal: a far click did not release the grab; F1 in a room
+    // never reached RoomScreen). focus is now click-driven (the hover-focus FIXME is gone).
+    if(!keyboard->isAltDown() && this->input_box->isFocused()) {
         this->tab_completion_prefix.clear();
         this->tab_completion_match.clear();
         this->input_box->onKeyDown(key);
@@ -800,14 +805,14 @@ void Chat::onKeyDown(KeyboardEvent &key) {
 }
 
 void Chat::onKeyUp(KeyboardEvent &key) {
-    if(!this->bVisible || key.isConsumed()) return;
+    if(!this->bVisible || key.isConsumed() || !this->input_box->isFocused()) return;
 
     this->input_box->onKeyUp(key);
     key.consume();
 }
 
 void Chat::onChar(KeyboardEvent &key) {
-    if(!this->bVisible || key.isConsumed() ||
+    if(!this->bVisible || key.isConsumed() || !this->input_box->isFocused() ||
        (keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown())))
         return;
 

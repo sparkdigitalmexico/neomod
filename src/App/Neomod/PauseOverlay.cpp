@@ -29,6 +29,10 @@
 
 PauseOverlay::PauseOverlay() : UIScreen() {
     this->bCloseOnScreenSwitch = true;
+    // while visible, input below the pause menu is blocked by the modal floor (replaces the
+    // all-except-a-few onKeyDown eat-all). GAME_PAUSE/Escape/offset still reach Osu's
+    // post-ui->onKeyDown handler because the floor returns WITHOUT consuming (!isConsumed).
+    this->bModal = true;
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
     using ImageGetter = UIPauseMenuButton::BasicSkinImageGetter;
 
@@ -273,12 +277,6 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
         if(this->selectedButton != nullptr && (e == KEY_ENTER || e == KEY_NUMPAD_ENTER) && this->areButtonsActive())
             this->selectedButton->click();
     }
-
-    // consume ALL events, except for a few special binds which are allowed through (e.g. for unpause or changing the
-    // local offset in Osu.cpp)
-    if(e != KEY_ESCAPE && e != binds::GAME_PAUSE && e != binds::INCREASE_LOCAL_OFFSET &&
-       e != binds::DECREASE_LOCAL_OFFSET)
-        e.consume();
 }
 
 void PauseOverlay::onKeyUp(KeyboardEvent &e) {
