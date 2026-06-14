@@ -2234,6 +2234,8 @@ void OptionsOverlayImpl::onKeyDown(KeyboardEvent &e) {
     if(this->waitingKey != nullptr) {
         const bool cancel = (e.getScanCode() == KEY_ESCAPE) ||
                             // HACKHACK: prevent left mouse click bindings if relevant
+                            // TODO: no longer relevant since switching to SDL, but keeping this here
+                            // in case we do eventually route mouse buttons through keyboard events
                             (Env::cfg(OS::WINDOWS) && this->bWaitingKeyDisallowsLeftClick &&
                              e.getScanCode() == 0x01);  // 0x01 == VK_LBUTTON
         if(!cancel) {
