@@ -80,6 +80,14 @@ class UIDispatch final : public MouseListener {
     [[nodiscard]] MouseButtonFlags getCaptorButtons() const { return this->captorButtons; }
 
    private:
+    // hover resolved once per frame from the walk's hit candidates: the single top-most candidate
+    // (+ its ancestor path) GAINS hover, everything beneath it is retracted - one resolution that
+    // reuses the click-targeting ranking, so occlusion is automatic instead of hand-rolled per
+    // widget. runs for both roots every frame regardless of events (the engine console draws on top:
+    // if it hovers something it suppresses the app root). hover LOSS on rect-leave stays
+    // element-local (CBaseUIElement::updateInput); a held capture freezes gains for its own root.
+    void resolveHover(CBaseUIEventCtx &c, Root root);
+
     // capture ends without an up: onMouseCancel to the captor + observation end (cancelCapture),
     // or observation end alone (endObservation, captor handled separately by the caller)
     void cancelCapture();
@@ -105,6 +113,11 @@ class UIDispatch final : public MouseListener {
 
     // the single focused element across both roots; element dtors and stealFocus() clear it
     CBaseUIElement *focused{nullptr};
+
+    // per-frame hover resolution: hoverClaimed is set by whichever root hovered something first
+    // (engine before app), so a lower root suppresses its hover when an upper root already has it
+    u64 lastHoverFrame{0};
+    bool hoverClaimed{false};
 
     // mouse capture: whichever element receives a down receives the matching up(s). one captor
     // globally (there is one pointer device), tagged with the UI root that owns it so the other

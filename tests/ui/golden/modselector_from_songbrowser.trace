@@ -9,7 +9,7 @@ uitrace frame=332 evt=hoverIn elem=modsel_overrides
 uitrace frame=333 evt=hoverIn elem=modsel_experimental
 uitrace frame=333 evt=hoverIn elem=modsel_experimental
 uitrace frame=333 evt=hoverIn elem= Experimental Mods (!)
-uitrace frame=333 evt=hoverIn elem=ModSelector
+uitrace frame=334 evt=hoverIn elem=ModSelector
 uitrace frame=354 evt=hoverOut elem=modsel_experimental
 uitrace frame=354 evt=hoverOut elem=modsel_experimental
 uitrace frame=354 evt=hoverOut elem= Experimental Mods (!)

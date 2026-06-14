@@ -19,9 +19,6 @@ class BeatmapCarousel final : public CBaseUIScrollView {
     void tick() override;
     void updateInput(CBaseUIEventCtx &c) override;
 
-    // checks for context menu visibility
-    bool isMouseInside() override;
-
     // if we are actually scrolling at a "noticeable" velocity, so that we can skip
     // drawing some things for elements which the user will probably not notice anyways (backgrounds)
     [[nodiscard]] inline bool isScrollingFast() const { return this->bIsScrollingFast; }

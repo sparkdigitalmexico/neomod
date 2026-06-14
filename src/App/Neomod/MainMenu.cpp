@@ -85,11 +85,13 @@ class MainMenu::CubeButton final : public CBaseUIButton {
         CBaseUIButton::onMouseOutside();
     }
 
-    bool isMouseInside() override {
-        // more terrible workarounds for lack of Z-ordering
-        return CBaseUIButton::isMouseInside() &&
-               !(ui->getOptionsOverlay()->isMouseInside() || ui->getChat()->isMouseInside() ||
-                 ui->getAboutScreen()->isMouseInside());
+    void updateInput(CBaseUIEventCtx &c) override {
+        // the cube/logo draws on top of the expanded menu buttons, so it must win hover/click where
+        // they overlap; raise the hit tier (the buttons are added later = visited later, so without
+        // this they would out-rank the earlier-visited cube at the same base tier)
+        c.currentHitTier++;
+        CBaseUIButton::updateInput(c);
+        c.currentHitTier--;
     }
 
    private:
@@ -120,7 +122,8 @@ class MainMenu::MainButton final : public UIButtonRounded {
     }
 
     bool isMouseInside() override {
-        return this->isEnabled() && UIButtonRounded::isMouseInside() && !this->mm->cube->isMouseInside();
+        // occlusion vs the cube is resolved by the dispatcher now (single top-most hover candidate)
+        return this->isEnabled() && UIButtonRounded::isMouseInside();
     }
 
     void onMouseDownInside(bool left = true, bool right = false) override {

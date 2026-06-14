@@ -6,7 +6,7 @@ uitrace frame=31 evt=hoverIn elem=modsel_overrides
 uitrace frame=32 evt=hoverIn elem=modsel_experimental
 uitrace frame=32 evt=hoverIn elem=modsel_experimental
 uitrace frame=32 evt=hoverIn elem= Experimental Mods (!)
-uitrace frame=32 evt=hoverIn elem=ModSelector
+uitrace frame=33 evt=hoverIn elem=ModSelector
 uitrace frame=42 evt=hoverOut elem=modsel_experimental
 uitrace frame=42 evt=hoverOut elem=modsel_experimental
 uitrace frame=42 evt=hoverOut elem= Experimental Mods (!)
@@ -22,4 +22,4 @@ uitrace frame=54 evt=captureMove elem=modsel_ar
 uitrace frame=70 evt=hoverIn elem=modsel_experimental
 uitrace frame=70 evt=hoverIn elem=modsel_experimental
 uitrace frame=70 evt=hoverIn elem= Experimental Mods (!)
-uitrace frame=70 evt=hoverIn elem=ModSelector
+uitrace frame=71 evt=hoverIn elem=ModSelector

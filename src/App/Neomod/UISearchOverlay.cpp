@@ -13,6 +13,11 @@
 
 UISearchOverlay::UISearchOverlay(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
+    // pure-draw decoration spanning the panel: hit-transparent so it never wins the single top-most
+    // hover/click/wheel over the real widgets beneath it (handle-off alone is not enough now that
+    // candidacy is rect-based and no longer handle-gated)
+    this->bClickThroughSelf = true;
+
     this->font = engine->getDefaultFont();
 
     this->iOffsetRight = 0;

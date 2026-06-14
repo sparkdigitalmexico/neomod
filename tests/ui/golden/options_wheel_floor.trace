@@ -7,6 +7,7 @@ uitrace frame=32 evt=hoverIn elem=InfoLabel
 uitrace frame=332 evt=keydown consumed_by=SongBrowser
 uitrace frame=336 evt=hoverIn elem=options_categories
 uitrace frame=336 evt=hoverIn elem=options_categories
+uitrace frame=336 evt=hoverOut elem=InfoLabel
 uitrace frame=337 evt=hoverIn elem=OptionsOverlay
 uitrace frame=346 evt=char consumed_by=OptionsOverlay
 uitrace frame=346 evt=char consumed_by=OptionsOverlay
@@ -31,12 +32,10 @@ uitrace frame=346 evt=char consumed_by=OptionsOverlay
 uitrace frame=346 evt=char consumed_by=OptionsOverlay
 uitrace frame=346 evt=char consumed_by=OptionsOverlay
 uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=357 evt=hoverIn elem=options_contents
 uitrace frame=357 evt=hoverOut elem=options_categories
 uitrace frame=357 evt=hoverOut elem=options_categories
 uitrace frame=357 evt=hoverIn elem=options_search
 uitrace frame=357 evt=hoverIn elem=songbrowser_scores
-uitrace frame=357 evt=hoverIn elem=songbrowser_scores
 uitrace frame=357 evt=hoverOut elem=CBaseUIContainer
-uitrace frame=357 evt=hoverOut elem=InfoLabel
+uitrace frame=357 evt=hoverIn elem=options_contents
 uitrace frame=363 evt=wheel elem=VolumeOverlay

@@ -10,18 +10,18 @@ uitrace frame=79 evt=hoverIn elem=mainmenu_options
 uitrace frame=83 evt=downInside elem=mainmenu_options
 uitrace frame=87 evt=upInside elem=mainmenu_options
 uitrace frame=118 evt=hoverIn elem=options_contents
-uitrace frame=118 evt=hoverIn elem=options_contents
-uitrace frame=118 evt=hoverIn elem=options_server_box
 uitrace frame=118 evt=hoverIn elem=options_search
 uitrace frame=118 evt=hoverOut elem=mainmenu_options
+uitrace frame=118 evt=hoverIn elem=options_contents
+uitrace frame=118 evt=hoverIn elem=options_server_box
 uitrace frame=119 evt=hoverIn elem=OptionsOverlay
 uitrace frame=122 evt=downInside elem=options_server_box
 uitrace frame=126 evt=upInside elem=options_server_box
 uitrace frame=130 evt=char consumed_by=OptionsOverlay
 uitrace frame=130 evt=char consumed_by=OptionsOverlay
 uitrace frame=130 evt=char consumed_by=OptionsOverlay
-uitrace frame=131 evt=hoverIn elem=CBaseUILabel
 uitrace frame=131 evt=hoverOut elem=options_server_box
+uitrace frame=131 evt=hoverIn elem=CBaseUILabel
 uitrace frame=134 evt=hoverIn elem=PromptOverlay
 uitrace frame=134 evt=hoverOut elem=prompt_input
 uitrace frame=138 evt=hoverIn elem=prompt_input
@@ -36,4 +36,3 @@ uitrace frame=156 evt=downInside elem=cancel_btn
 uitrace frame=160 evt=upInside elem=cancel_btn
 uitrace frame=161 evt=hoverOut elem=options_contents
 uitrace frame=161 evt=hoverOut elem=CBaseUILabel
-uitrace frame=161 evt=hoverIn elem=mainmenu_options

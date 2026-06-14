@@ -8,5 +8,5 @@ uitrace frame=36 evt=hoverIn elem=OptionsOverlay
 uitrace frame=45 evt=hoverIn elem=PromptOverlay
 uitrace frame=45 evt=hoverOut elem=prompt_input
 uitrace frame=49 evt=hoverIn elem=AboutScreen
-uitrace frame=49 evt=hoverIn elem=CBaseUIScrollView
 uitrace frame=49 evt=hoverIn elem=CBaseUIScrollView::CBaseUIScrollViewContainer
+uitrace frame=49 evt=hoverIn elem=CBaseUIScrollView

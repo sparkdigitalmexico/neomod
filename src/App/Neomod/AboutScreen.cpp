@@ -1108,10 +1108,6 @@ class ChangelogLabel final : public CBaseUIButton {
         }
         g->popTransform();
     }
-
-    bool isMouseInside() override {
-        return CBaseUIButton::isMouseInside() && !ui->getAboutScreen()->backButton->isMouseInside();
-    }
 };
 
 class ChangelogTitleLabel final : public CBaseUILabel {
@@ -1173,10 +1169,6 @@ class ChangelogTitleLabel final : public CBaseUILabel {
         if(!this->clickableURL.empty()) {
             env->openURLInDefaultBrowser(this->clickableURL);
         }
-    }
-
-    bool isMouseInside() override {
-        return CBaseUILabel::isMouseInside() && !ui->getAboutScreen()->backButton->isMouseInside();
     }
 
    private:

@@ -7,14 +7,13 @@ uitrace frame=32 evt=hoverIn elem=InfoLabel
 uitrace frame=332 evt=keydown consumed_by=SongBrowser
 uitrace frame=336 evt=hoverIn elem=options_categories
 uitrace frame=336 evt=hoverIn elem=options_categories
+uitrace frame=336 evt=hoverOut elem=InfoLabel
 uitrace frame=337 evt=hoverIn elem=OptionsOverlay
 uitrace frame=346 evt=hoverIn elem=options_contents
-uitrace frame=346 evt=hoverIn elem=options_contents
-uitrace frame=346 evt=hoverIn elem=options_server_box
 uitrace frame=346 evt=hoverOut elem=options_categories
 uitrace frame=346 evt=hoverOut elem=options_categories
 uitrace frame=346 evt=hoverIn elem=options_search
 uitrace frame=346 evt=hoverOut elem=CBaseUIContainer
-uitrace frame=346 evt=hoverOut elem=InfoLabel
 uitrace frame=346 evt=hoverIn elem=Carousel
-uitrace frame=346 evt=hoverIn elem=Carousel
+uitrace frame=346 evt=hoverIn elem=options_contents
+uitrace frame=346 evt=hoverIn elem=options_server_box

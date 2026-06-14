@@ -6,11 +6,11 @@ uitrace frame=21 evt=hoverIn elem=options_categories
 uitrace frame=21 evt=hoverIn elem=options_categories
 uitrace frame=22 evt=hoverIn elem=OptionsOverlay
 uitrace frame=52 evt=hoverIn elem=options_contents
-uitrace frame=52 evt=hoverIn elem=options_contents
-uitrace frame=52 evt=hoverIn elem=options_server_box
 uitrace frame=52 evt=hoverOut elem=options_categories
 uitrace frame=52 evt=hoverOut elem=options_categories
 uitrace frame=52 evt=hoverIn elem=options_search
+uitrace frame=52 evt=hoverIn elem=options_contents
+uitrace frame=52 evt=hoverIn elem=options_server_box
 uitrace frame=56 evt=downInside elem=options_server_box
 uitrace frame=60 evt=upInside elem=options_server_box
 uitrace frame=64 evt=keydown consumed_by=OptionsOverlay

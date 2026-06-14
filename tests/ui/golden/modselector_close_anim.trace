@@ -6,7 +6,7 @@ uitrace frame=31 evt=hoverIn elem=modsel_overrides
 uitrace frame=32 evt=hoverIn elem=modsel_experimental
 uitrace frame=32 evt=hoverIn elem=modsel_experimental
 uitrace frame=32 evt=hoverIn elem= Experimental Mods (!)
-uitrace frame=32 evt=hoverIn elem=ModSelector
+uitrace frame=33 evt=hoverIn elem=ModSelector
 uitrace frame=42 evt=hoverOut elem=modsel_experimental
 uitrace frame=42 evt=hoverOut elem=modsel_experimental
 uitrace frame=42 evt=hoverOut elem= Experimental Mods (!)
@@ -19,8 +19,8 @@ uitrace frame=48 evt=captureMove elem=modsel_ar
 uitrace frame=49 evt=hoverOut elem=ModSelector
 uitrace frame=53 evt=hoverIn elem=AR:
 uitrace frame=54 evt=hoverIn elem=ModSelector
-uitrace frame=56 evt=hoverIn elem=1. Reset All Mods
 uitrace frame=56 evt=hoverOut elem=AR:
+uitrace frame=56 evt=hoverIn elem=1. Reset All Mods
 uitrace frame=59 evt=downInside elem=1. Reset All Mods
 uitrace frame=62 evt=upInside elem=1. Reset All Mods
 uitrace frame=65 evt=hoverOut elem=1. Reset All Mods

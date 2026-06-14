@@ -117,7 +117,13 @@ void UIContextMenu::draw() {
 
 void UIContextMenu::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible2) return;
+    // a context menu draws on top of its group; raise the hit tier so it out-ranks same-group
+    // siblings for hover/click/wheel regardless of visit order (the songbrowser menu, for one, is
+    // visited before the carousel beneath it). replaces the per-widget !contextMenu->isMouseInside()
+    // occlusion overrides now that hit candidacy is rect-based rather than bMouseInside-gated.
+    c.currentHitTier++;
     CBaseUIScrollView::updateInput(c);
+    c.currentHitTier--;
 }
 
 void UIContextMenu::tick() {

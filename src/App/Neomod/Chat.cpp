@@ -1387,7 +1387,10 @@ bool Chat::isMouseInChat() {
 }
 
 bool Chat::isMouseInside() {
-    return this->isVisible() && UIScreen::isMouseInside() &&
+    // the child/region checks are all within the chat panel, so they already imply the screen rect;
+    // don't also require the screen's own bMouseInside, which the dispatcher does not set for a
+    // clickthrough container that loses the top-most hover resolution to its own children
+    return this->isVisible() &&
            (this->button_container->isMouseInside() || this->isMouseInChat() || this->isMouseInUserList());
 }
 

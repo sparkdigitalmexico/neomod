@@ -134,11 +134,6 @@ void CarouselButton::updateInput(CBaseUIEventCtx &c) {
     }
 }
 
-bool CarouselButton::isMouseInside() {
-    return CBaseUIButton::isMouseInside() && !g_songbrowser->contextMenu->isMouseInside() &&
-           static_cast<int>(mouse->getPos().x) <= osu->getVirtScreenWidth();
-}
-
 void CarouselButton::updateLayoutEx() {
     // these should barely ever change but we have no way to detect that as of now
     {

@@ -10,9 +10,9 @@ uitrace frame=79 evt=hoverIn elem=mainmenu_options
 uitrace frame=83 evt=downInside elem=mainmenu_options
 uitrace frame=87 evt=upInside elem=mainmenu_options
 uitrace frame=118 evt=hoverIn elem=options_categories
+uitrace frame=118 evt=hoverOut elem=mainmenu_options
 uitrace frame=118 evt=hoverIn elem=options_categories
 uitrace frame=118 evt=hoverIn elem=options_category_0
-uitrace frame=118 evt=hoverOut elem=mainmenu_options
 uitrace frame=119 evt=hoverIn elem=OptionsOverlay
 uitrace frame=122 evt=downInside elem=options_category_0
 uitrace frame=126 evt=keydown consumed_by=OptionsOverlay

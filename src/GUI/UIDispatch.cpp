@@ -9,6 +9,30 @@
 
 namespace {
 UIDispatch *liveDispatch{nullptr};
+
+// the top-most hit candidate matching pred: groups in input-priority order, within a group the best
+// (tier, then latest visit), the first group with a match winning (= the top-most layer). the single
+// ranking shared by hover resolution and button-down targeting (wheel walks the same order with its
+// own per-group floor), so the three pickers cannot disagree on what is "on top".
+template <typename Pred>
+const CBaseUIEventCtx::HitCandidate *topCandidate(const CBaseUIEventCtx &c, Pred pred) {
+    for(uSz g = 0; g < c.hitGroupStarts.size(); ++g) {
+        const uSz begin = c.hitGroupStarts[g];
+        const uSz end = (g + 1 < c.hitGroupStarts.size()) ? c.hitGroupStarts[g + 1] : c.hitCandidates.size();
+        const CBaseUIEventCtx::HitCandidate *best = nullptr;
+        int bestTier = 0;
+        for(uSz i = begin; i < end; ++i) {
+            const auto &cand = c.hitCandidates[i];
+            if(!pred(cand)) continue;
+            if(best == nullptr || cand.tier >= bestTier) {
+                best = &cand;
+                bestTier = cand.tier;
+            }
+        }
+        if(best != nullptr) return best;
+    }
+    return nullptr;
+}
 }  // namespace
 
 UIDispatch::UIDispatch() { liveDispatch = this; }
@@ -141,6 +165,52 @@ void UIDispatch::observeCapturedFrame() {
     }
 }
 
+void UIDispatch::resolveHover(CBaseUIEventCtx &c, Root root) {
+    const u64 frame = engine->getFrameCount();
+    if(frame != this->lastHoverFrame) {
+        this->hoverClaimed = false;
+        this->lastHoverFrame = frame;
+    }
+
+    // a held capture freezes hover GAINS for its own root: nothing beneath the captor gains (the
+    // captor keeps the hover it had at the down; losing-on-rect-leave is handled in updateInput).
+    // leaving the candidates untouched keeps the gesture's hover state from churning.
+    if(this->captor != nullptr && this->captorRoot == root) return;
+
+    // the hovered set = the top-most candidate (+ its ancestor path), the same ranking the button
+    // targeting uses. an upper root that already claimed hover (the engine console draws on top)
+    // suppresses this root entirely (empty set -> everything beneath retracts).
+    std::vector<CBaseUIElement *> set;
+    if(!(root == Root::APP && this->hoverClaimed)) {
+        const CBaseUIEventCtx::HitCandidate *top =
+            topCandidate(c, [](const CBaseUIEventCtx::HitCandidate &cand) { return !cand.wheelOnly; });
+        if(top != nullptr) {
+            set = top->path;
+            set.push_back(top->elem);
+            this->hoverClaimed = true;
+        }
+    }
+
+    // GAIN the set members not already hovered (a candidate's hover GAIN happens ONLY here, so an
+    // occluded one never briefly gains it during the walk and plays a spurious hover sound), and
+    // RETRACT candidates that fell out of the set (occluded by a higher candidate, or this root
+    // suppressed by an upper one).
+    for(const auto &cand : c.hitCandidates) {
+        if(cand.wheelOnly) continue;
+        CBaseUIElement *e = cand.elem;
+        const bool want = std::ranges::find(set, e) != set.end();
+        if(want && !e->bMouseInside) {
+            e->bMouseInside = true;
+            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(e, "hoverIn");
+            e->onMouseInside();
+        } else if(!want && e->bMouseInside) {
+            e->bMouseInside = false;
+            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(e, "hoverOut");
+            e->onMouseOutside();
+        }
+    }
+}
+
 void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
     using namespace flags::operators;
 
@@ -173,6 +243,10 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
             this->observeCapturedFrame();
         }
     }
+
+    // hover is resolved every frame, independent of button/wheel events (the cursor moves without
+    // them); must run before the early-out below
+    this->resolveHover(c, root);
 
     const bool hasWheel = (this->lastWheelFrame == frame && !this->wheelConsumed &&
                            (this->wheelVertical != 0 || this->wheelHorizontal != 0));
@@ -310,25 +384,15 @@ void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                 }
             }
         } else if(qe.down) {
-            // route to the best candidate: groups in input-priority order; within a group the
-            // best (tier, latest visit) wins, approximating top-most draw order
-            const CBaseUIEventCtx::HitCandidate *target{nullptr};
-            for(uSz g = 0; g < c.hitGroupStarts.size() && target == nullptr; ++g) {
-                const uSz begin = c.hitGroupStarts[g];
-                const uSz end = (g + 1 < c.hitGroupStarts.size()) ? c.hitGroupStarts[g + 1] : c.hitCandidates.size();
-
-                int bestTier{0};
-                for(uSz i = begin; i < end; ++i) {
-                    const auto &cand = c.hitCandidates[i];
-                    if(cand.wheelOnly) continue;
-                    if(left && !cand.elem->bHandleLeftMouse) continue;
-                    if(right && !cand.elem->bHandleRightMouse) continue;
-                    if(target == nullptr || cand.tier >= bestTier) {
-                        target = &cand;
-                        bestTier = cand.tier;
-                    }
-                }
-            }
+            // route to the best candidate (the shared top-most ranking, filtered to handlers of
+            // this button): groups in input-priority order, within a group by (tier, latest visit)
+            const CBaseUIEventCtx::HitCandidate *target =
+                topCandidate(c, [left, right](const CBaseUIEventCtx::HitCandidate &cand) {
+                    if(cand.wheelOnly) return false;
+                    if(left && !cand.elem->bHandleLeftMouse) return false;
+                    if(right && !cand.elem->bHandleRightMouse) return false;
+                    return true;
+                });
             if(target == nullptr) continue;  // nothing under the cursor in this root; the other may deliver
 
             qe.consumed = true;

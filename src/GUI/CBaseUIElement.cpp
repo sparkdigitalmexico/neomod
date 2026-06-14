@@ -252,52 +252,63 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
 
     this->lastInputFrame = engine->getFrameCount();
 
-    // TODO: hover "consumption"
-    {
-        const bool oldMouseInsideState = this->bMouseInside;
+    const bool oldMouseInsideState = this->bMouseInside;
 
-        // to avoid issues with mouse position right along the boundaries
+    // rect membership with enter-strict / leave-loose hysteresis, recomputed FRESH every frame
+    // (there is no stored occlusion bit that could get stuck): the single basis for both hit
+    // candidacy and hover.
+    const bool rectInside = oldMouseInsideState ? this->getRect().contains(mouse->getPos())
+                                                : this->getRect().containsStrict(mouse->getPos());
+
+    // hover. a hit candidate (!bClickThroughSelf) GAINS hover only in UIDispatch::resolveHover after
+    // the whole walk: only the single top-most candidate (+ its ancestor path) gains, so an element
+    // occluded by a higher one never briefly gains hover (and plays a hover sound). LOSS on
+    // rect-leave stays local here. transparent wrappers/screens (bClickThroughSelf) are never
+    // candidates, so they self-determine here as before; their isMouseInside() override aggregates
+    // their children, whose hover the dispatcher resolves.
+    if(!this->bClickThroughSelf) {
+        if(oldMouseInsideState && !rectInside) this->bMouseInside = false;
+    } else {
+        // while a capture is held, nothing but the captor may GAIN hover (losing it stays allowed)
+        const CBaseUIElement *captor = UIDispatch::get()->getCaptor();
         if(!oldMouseInsideState) {
-            // going into strictly-contains area from outside; while a capture is held, nothing
-            // but the captor may GAIN hover (losing it below stays allowed)
-            const CBaseUIElement *captor = UIDispatch::get()->getCaptor();
-            if((captor == nullptr || captor == this) && this->getRect().containsStrict(mouse->getPos())) {
-                this->bMouseInside = true;
-            }
-        } else {
-            // leaving deadzone area from inside
-            if(!this->getRect().contains(mouse->getPos())) {
-                this->bMouseInside = false;
-            }
-        }
-
-        // re-check to account for possible isMouseInside override
-        if((this->bMouseInside = this->isMouseInside())) {
-            c.propagate_hover = false;  // doesn't really do anything much atm
-        }
-
-        if(oldMouseInsideState != this->bMouseInside) {
-            if(unlikely(CBaseUIDebug::traceLevel() > 0))
-                CBaseUIDebug::traceEvent(this, this->bMouseInside ? "hoverIn" : "hoverOut");
-            if(this->bMouseInside) {
-                this->onMouseInside();
-            } else {
-                this->onMouseOutside();
-            }
+            if((captor == nullptr || captor == this) && rectInside) this->bMouseInside = true;
+        } else if(!rectInside) {
+            this->bMouseInside = false;
         }
     }
 
-    if(c.propagate_clicks && (this->bHandleLeftMouse || this->bHandleRightMouse)) {
-        // hit candidacy: who MAY receive this frame's button events; the single-target delivery
-        // happens in UIDispatch::dispatchEvents after the walk
-        if(this->bMouseInside && !this->bClickThroughSelf) c.addHitCandidate(this);
+    // re-check to account for a possible isMouseInside() override (aggregate screens). for a plain
+    // candidate widget isMouseInside() == bMouseInside, so this is a no-op and its gain comes from
+    // the dispatcher.
+    if((this->bMouseInside = this->isMouseInside())) {
+        c.propagate_hover = false;  // doesn't really do anything much atm
+    }
 
+    if(oldMouseInsideState != this->bMouseInside) {
+        if(unlikely(CBaseUIDebug::traceLevel() > 0))
+            CBaseUIDebug::traceEvent(this, this->bMouseInside ? "hoverIn" : "hoverOut");
+        if(this->bMouseInside) {
+            this->onMouseInside();
+        } else {
+            this->onMouseOutside();
+        }
+    }
+
+    // hit candidacy: who MAY receive this frame's button/wheel events, and the set the dispatcher
+    // ranks to pick the single hovered element. rect-based (NOT bMouseInside: the gain is deferred)
+    // and NOT handle-gated (clicks filter on bHandleLeftMouse/Right, wheel on onWheel, at dispatch
+    // time); only a transparent wrapper (bClickThroughSelf) opts out. gated on propagate_clicks so a
+    // click-blocked element is not a candidate and the dispatcher never grants it hover.
+    if(c.propagate_clicks && rectInside && !this->bClickThroughSelf) c.addHitCandidate(this);
+
+    if(c.propagate_clicks && (this->bHandleLeftMouse || this->bHandleRightMouse)) {
         // outside-downs stay a per-element broadcast: they are the "pressed elsewhere" signal
         // (close-on-click-outside, focus loss, ...) until the phase 4 focus manager replaces
         // them. the captor is excluded, its events are routed in UIDispatch::dispatchEvents.
         const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
                                (u8)(this->bHandleRightMouse && mouse->isRightPressed());
-        if(pressedMask && !this->bMouseInside && this != UIDispatch::get()->getCaptor()) {
+        if(pressedMask && !rectInside && this != UIDispatch::get()->getCaptor()) {
             if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(this, "downOutside");
             this->onMouseDownOutside((pressedMask & 0b10), (pressedMask & 0b01));
         }
@@ -306,7 +317,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
         // (cross-screen input-blocking idioms depend on it; the phase 3 layer stack replaces it)
         const bool buttonHeld =
             (this->bHandleLeftMouse && mouse->isLeftDown()) || (this->bHandleRightMouse && mouse->isRightDown());
-        if(buttonHeld && this->bMouseInside) c.propagate_clicks &= !this->grabs_clicks;
+        if(buttonHeld && rectInside) c.propagate_clicks &= !this->grabs_clicks;
     }
 }
 

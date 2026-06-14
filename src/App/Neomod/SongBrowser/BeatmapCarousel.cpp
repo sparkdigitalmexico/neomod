@@ -119,10 +119,6 @@ void BeatmapCarousel::updateInput(CBaseUIEventCtx &c) {
     }
 }
 
-bool BeatmapCarousel::isMouseInside() {
-    return CBaseUIScrollView::isMouseInside() && !g_songbrowser->contextMenu->isMouseInside();
-}
-
 void BeatmapCarousel::onKeyUp(KeyboardEvent & /*e*/) { /*this->container.onKeyUp(e);*/ ; }
 
 // don't consume keys, we are not a keyboard listener, but called from SongBrowser::onKeyDown manually

@@ -2044,14 +2044,6 @@ void OptionsOverlayImpl::updateInput(CBaseUIEventCtx &c) {
     c.propagate_clicks = clicksBeforeMenu;
     if(c.mouse_consumed()) return;
 
-    // force context menu mouse-inside focus
-    // NOTE: "propagate_clicks" does not solve the issue of mouse hover focus
-    // this hack is still required, otherwise hovering underneath e.g. skin dropdown will play duplicate sounds for
-    // each element selected (at all z-orders!)
-    if(contextMenuVisible) {
-        parent->backButton->stealFocus();
-    }
-
     // disable widgets bound to a server/skin-forced cvar before their update runs,
     // so input handlers + their own tooltip code don't fire for forced settings
     this->applyForcedCvarLocks();
@@ -2061,14 +2053,6 @@ void OptionsOverlayImpl::updateInput(CBaseUIEventCtx &c) {
 
     // and show a single "forced by ..." tooltip when hovering any locked widget
     this->pushForcedCvarTooltipIfHovered();
-
-    if(contextMenuVisible) {
-        // eyes are bleeding...
-        for(auto e : this->options->container.getElements()) {
-            if(e == this->contextMenu) continue;
-            e->stealFocus();
-        }
-    }
 
     if(this->bDPIScalingScrollToSliderScheduled) {
         this->bDPIScalingScrollToSliderScheduled = false;
