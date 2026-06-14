@@ -10,8 +10,8 @@ struct Packet;
 #define NEOMOD_DOMAIN PACKAGE_NAME ".net"
 
 // NOTE: Full version can be something like "b20200201.2cuttingedge"
-#define OSU_VERSION_DATEONLY 20260412
-#define OSU_VERSION "b20260412.1"
+#define OSU_VERSION_DATEONLY 20260612
+#define OSU_VERSION "b20260612.3"
 
 namespace BANCHO::Net {
 

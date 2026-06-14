@@ -63,15 +63,15 @@ AboutScreen::AboutScreen() : ScreenBackable() {
     v43_10.changes = {
         R"(- Added credits and license info below changelog)",
         R"(- Added support for UI translations. Please contribute if you can!)",
+        R"(- Fixed broken slider bodies during slider snaking with the SDL_gpu renderer)",
+        R"(- Fixed restart-after-update sometimes not working on Linux)",
         R"(- Settings forced by a skin or a server are now grayed out in the options menu)",
         R"(- Improved beatmap importing:)",
         R"(  - Online beatmap downloads now continue in the background even if navigating away from download)",
         R"(  - Added import progress indicators)",
         R"(  - Imports are now done mostly asynchronously instead of freezing the game)",
-        R"(- Fixed broken slider bodies during slider snaking with the SDL_gpu renderer)",
-        R"(- Updated osu! version to b20260412.1)",
+        R"(- Updated osu! version to b20260612.3)",
         R"(- (Web) URL now updates to match current page)",
-        R"(- Fixed restart-after-update sometimes not working on Linux)",
     };
     changelogs.push_back(v43_10);
 
