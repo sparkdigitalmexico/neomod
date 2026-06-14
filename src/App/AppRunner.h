@@ -41,7 +41,6 @@ class AppRunner final : public App, public MouseListener {
     void onMinimized() override;
     void onRestored() override;
 
-    void stealFocus() override;
     bool onShutdown() override;
 
     [[nodiscard]] bool isInGameplay() const override;

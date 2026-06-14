@@ -445,17 +445,6 @@ bool UI::arrowKeysClaimed() const {
     return false;
 }
 
-void UI::stealFocus() {
-    // NOLINTNEXTLINE(modernize-loop-convert)
-    for(uSz i = 0; i < this->extra_overlays.size(); ++i) {
-        this->extra_overlays[i]->stealFocus();
-    }
-
-    for(auto *screen : this->screens) {
-        screen->stealFocus();
-    }
-}
-
 void UI::hide() {
     this->active_screen->setVisible(false);
     // close the "temporary" closeOnScreenSwitch overlays

@@ -160,7 +160,12 @@ class CBaseUIElement : public KeyboardListener {
     virtual CBaseUIElement *setGrabClicks(bool grabClicks);
 
     // actions
+    // focus: requestFocus() makes this the single keyboard target across both roots
+    // (relinquishing the previous holder); stealFocus() gives it up; isFocused() queries.
+    // backed by the UIDispatch focus pointer.
     virtual void stealFocus();
+    void requestFocus();
+    bool isFocused();
 
     void dumpElem() const;  // debug
     [[nodiscard]] virtual std::span<CBaseUIElement *const> getAllChildren() const;

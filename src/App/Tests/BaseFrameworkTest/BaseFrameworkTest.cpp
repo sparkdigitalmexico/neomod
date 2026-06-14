@@ -160,8 +160,6 @@ bool BaseFrameworkTest::isInUnpausedGameplay() const {
     return false;
 }
 
-void BaseFrameworkTest::stealFocus() { debugLog(""); }
-
 bool BaseFrameworkTest::onShutdown() {
     debugLog("");
     return true;

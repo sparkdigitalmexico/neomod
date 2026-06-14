@@ -63,7 +63,6 @@ struct UI final {
     void onKeyUp(KeyboardEvent& key);
     void onChar(KeyboardEvent& e);
     void onResolutionChange(vec2 newResolution);
-    void stealFocus();
 
     [[nodiscard]] inline UIScreen* getActiveScreen() const { return this->active_screen; }
     inline void setScreen(std::nullptr_t) { this->hide(); }

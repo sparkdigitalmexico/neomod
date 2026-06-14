@@ -236,7 +236,10 @@ void CBaseUITextbox::onCapturedMouseMove() {
     this->updateCaretX();
 }
 
-void CBaseUITextbox::onFocusStolen() { this->deselectText(); }
+void CBaseUITextbox::onFocusStolen() {
+    this->bBusy = false;
+    this->deselectText();
+}
 
 void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
     if(!this->bActive || !this->bVisible) return;
@@ -265,7 +268,7 @@ void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
             break;
 
         case KEY_ESCAPE:
-            this->bActive = false;
+            this->stealFocus();
             break;
 
         case KEY_BACKSPACE:
@@ -474,6 +477,7 @@ void CBaseUITextbox::clear() {
 }
 
 void CBaseUITextbox::focus(bool move_caret) {
+    this->requestFocus();
     this->bActive = true;
     this->bBusy = true;
     this->bMouseInside = true;
@@ -623,9 +627,9 @@ void CBaseUITextbox::onMouseOutside() {
 void CBaseUITextbox::onMouseDownInside(bool left, bool right) {
     CBaseUIElement::onMouseDownInside(left, right);
 
-    // freshly clicked (dispatch sets bActive after this handler): steal focus from all other
-    // textboxes; dispatch re-activates us afterwards
-    if(!this->bActive) engine->stealUIFocus();
+    // take keyboard focus: relinquishes any other focused textbox (in either root); the
+    // dispatch sets bActive on us after this handler returns
+    this->requestFocus();
 
     // force busy + lock: a drag on a textbox is a text selection, an enclosing scrollview must
     // not steal it into a drag-scroll (textbox requires full focus due to text selection)
@@ -655,10 +659,9 @@ void CBaseUITextbox::onMouseCancel() { this->bBusy = false; }
 void CBaseUITextbox::onMouseDownOutside(bool left, bool right) {
     CBaseUIElement::onMouseDownOutside(left, right);
 
-    this->bBusy = false;
-    this->bActive = false;
-
-    this->deselectText();
+    // pressed elsewhere: relinquish focus (bActive=false + clears the focus pointer +
+    // onFocusStolen does bBusy=false + deselect)
+    this->stealFocus();
 }
 
 void CBaseUITextbox::onMouseUpInside(bool left, bool right) {

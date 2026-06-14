@@ -50,9 +50,19 @@ void UIDispatch::onWheelHorizontal(int delta) {
     this->wheelHorizontal += delta;
 }
 
+void UIDispatch::setFocus(CBaseUIElement *elem) {
+    if(this->focused == elem) return;
+    CBaseUIElement *old = this->focused;
+    this->focused = elem;
+    // the old holder loses focus (bActive=false + onFocusStolen); its own clearFocusIf is a
+    // no-op now that focused already moved, so this does not recurse
+    if(old != nullptr) old->stealFocus();
+}
+
 void UIDispatch::onElementDestroyed(CBaseUIElement *elem) {
     ++this->elemGeneration;
     if(this->wheelSink == elem) this->wheelSink = nullptr;
+    if(this->focused == elem) this->focused = nullptr;
     if(this->captor == elem) {
         // the captor is mid-destruction: no calls into it, but observers still disarm
         this->captor = nullptr;

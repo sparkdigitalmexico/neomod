@@ -55,6 +55,15 @@ class UIDispatch final : public MouseListener {
     // to depend on the canChangeVolume screen enumeration instead of actual consumption)
     void setWheelSink(CBaseUIElement *sink) { this->wheelSink = sink; }
 
+    // the single focused element across BOTH roots (the keyboard-target authority; replaces
+    // the engine->stealUIFocus() cascade). setFocus(x) relinquishes the previous holder via
+    // its stealFocus(); clearFocusIf is the non-recursive drop stealFocus() itself calls.
+    void setFocus(CBaseUIElement *elem);
+    [[nodiscard]] CBaseUIElement *getFocus() const { return this->focused; }
+    void clearFocusIf(const CBaseUIElement *elem) {
+        if(this->focused == elem) this->focused = nullptr;
+    }
+
     // a locked capture cannot be stolen (slider grab, scrollbar drag, window drag/resize);
     // only the current captor may lock
     void lockCapture(const CBaseUIElement *who);
@@ -93,6 +102,9 @@ class UIDispatch final : public MouseListener {
     // by that group never see it; only the fall-through sink may still take it
     bool wheelFloored{false};
     CBaseUIElement *wheelSink{nullptr};
+
+    // the single focused element across both roots; element dtors and stealFocus() clear it
+    CBaseUIElement *focused{nullptr};
 
     // mouse capture: whichever element receives a down receives the matching up(s). one captor
     // globally (there is one pointer device), tagged with the UI root that owns it so the other

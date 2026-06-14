@@ -1165,8 +1165,6 @@ void Osu::onKeyUp(KeyboardEvent &key) {
     this->fposu->onKeyUp(key);
 }
 
-void Osu::stealFocus() { this->UIReady() ? ui->stealFocus() : (void)0; }
-
 void Osu::onChar(KeyboardEvent &e) { this->UIReady() ? ui->onChar(e) : (void)0; }
 
 void Osu::onButtonChange(ButtonEvent &ev) {

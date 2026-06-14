@@ -208,10 +208,6 @@ void AppRunner::onRestored() {
     if(m_activeApp) m_activeApp->onRestored();
 }
 
-void AppRunner::stealFocus() {
-    if(m_activeApp) m_activeApp->stealFocus();
-}
-
 bool AppRunner::onShutdown() {
     if(m_activeApp) return m_activeApp->onShutdown();
     return true;

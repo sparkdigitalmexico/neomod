@@ -230,7 +230,17 @@ void CBaseUIElement::stealCapture() {
 
 void CBaseUIElement::stealFocus() {
     this->bActive = false;
+    if(auto *dispatch = UIDispatch::get()) dispatch->clearFocusIf(this);
     this->onFocusStolen();
+}
+
+void CBaseUIElement::requestFocus() {
+    if(auto *dispatch = UIDispatch::get()) dispatch->setFocus(this);
+}
+
+bool CBaseUIElement::isFocused() {
+    auto *dispatch = UIDispatch::get();
+    return dispatch != nullptr && dispatch->getFocus() == this;
 }
 
 void CBaseUIElement::tick() {

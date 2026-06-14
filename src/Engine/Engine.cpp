@@ -541,14 +541,6 @@ void Engine::onShutdown() {
     env->shutdown();
 }
 
-void Engine::stealUIFocus() {
-    logIfCV(debug_engine, "(Engine) called");
-
-    // HACKHACK for textboxes
-    this->guiContainer->stealFocus();
-    app->stealFocus();
-}
-
 // hardcoded engine hotkeys
 void Engine::onKeyDown(KeyboardEvent &e) {
     auto keyCode = e.getScanCode();

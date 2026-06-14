@@ -1066,7 +1066,6 @@ void AudioTester::onResolutionChanged(vec2 newResolution) { debugLog("{}", newRe
 void AudioTester::onDPIChanged() { debugLog(""); }
 bool AudioTester::isInGameplay() const { return false; }
 bool AudioTester::isInUnpausedGameplay() const { return false; }
-void AudioTester::stealFocus() { debugLog(""); }
 bool AudioTester::onShutdown() {
     debugLog("");
     return true;

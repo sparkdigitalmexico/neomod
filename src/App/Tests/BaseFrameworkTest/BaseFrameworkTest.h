@@ -36,8 +36,6 @@ class BaseFrameworkTest : public App, public MouseListener {
     [[nodiscard]] bool isInGameplay() const override;
     [[nodiscard]] bool isInUnpausedGameplay() const override;
 
-    void stealFocus() override;
-
     bool onShutdown() override;
 
     [[nodiscard]] Sound *getSound(ActionSound action) const override;
