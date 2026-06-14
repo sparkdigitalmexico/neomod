@@ -7,14 +7,11 @@
 #include "Mouse.h"
 #include "UIDispatch.h"
 
+#include "neotrace/neotrace.h"  // demangling
+
 #include <utility>
 #include <memory>
 #include <typeinfo>
-
-#if __has_include(<cxxabi.h>)
-#include <cxxabi.h>
-#include <cstdlib>
-#endif
 
 namespace CBaseUIDebug {
 namespace {
@@ -34,16 +31,7 @@ std::string elemName(const CBaseUIElement *elem) {
     if(!elem) return "<null>";
     if(!elem->getName().empty()) return std::string{elem->getName()};
 
-    const char *mangled = typeid(*elem).name();
-#if __has_include(<cxxabi.h>)
-    int status = 0;
-    char *demangled = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
-    std::string ret{(status == 0 && demangled) ? demangled : mangled};
-    free(demangled);
-    return ret;
-#else
-    return std::string{mangled};
-#endif
+    return neotrace::demangle(typeid(*elem).name());
 }
 }  // namespace CBaseUIDebug
 

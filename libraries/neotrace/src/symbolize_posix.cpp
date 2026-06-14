@@ -10,26 +10,10 @@
 
 #include <neotrace/neotrace.h>
 
-#include <cxxabi.h>
 #include <dlfcn.h>
-
-#include <cstdlib>
 
 namespace neotrace
 {
-
-namespace
-{
-
-void assign_demangled(frame_info &info, const char *mangled) noexcept
-{
-	int status = 0;
-	char *demangled = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
-	info.symbol = (status == 0 && demangled != nullptr) ? demangled : mangled; // non-c++ names don't demangle; keep them raw
-	std::free(demangled);
-}
-
-} // namespace
 
 frame_info symbolize(void *address) noexcept
 {
@@ -48,7 +32,7 @@ frame_info symbolize(void *address) noexcept
 
 		if (dl.dli_sname != nullptr)
 		{
-			assign_demangled(info, dl.dli_sname);
+			info.symbol = demangle(dl.dli_sname);
 			if (dl.dli_saddr != nullptr)
 				info.offset = reinterpret_cast<uintptr_t>(address) - reinterpret_cast<uintptr_t>(dl.dli_saddr);
 		}
@@ -62,7 +46,7 @@ frame_info symbolize(void *address) noexcept
 	uintptr_t symtab_offset = 0;
 	if (detail::elf_symtab_lookup(address, symtab_name, symtab_offset))
 	{
-		assign_demangled(info, symtab_name.c_str());
+		info.symbol = demangle(symtab_name.c_str());
 		info.offset = symtab_offset;
 	}
 #endif
