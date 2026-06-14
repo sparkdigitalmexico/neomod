@@ -53,6 +53,8 @@ class Chat final : public UIScreen {
     void onResolutionChange(vec2 newResolution) override;
 
     bool isMouseInside() override;
+    // claim the arrow keys whenever the chat panel is hovered (don't change volume over it)
+    [[nodiscard]] bool claimsArrowKeys() override { return this->isMouseInside(); }
     bool isMouseInChat();
     bool isMouseInUserList();
 

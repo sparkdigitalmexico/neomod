@@ -16,7 +16,7 @@ class AboutScreen final : public ScreenBackable {
 
     CBaseUIContainer *setVisible(bool visible) override;
 
-    [[nodiscard]] bool claimsArrowKeys() override { return true; }
+    [[nodiscard]] bool claimsArrowKeys() override { return this->isVisible(); }
 
    private:
     void updateLayout() override;

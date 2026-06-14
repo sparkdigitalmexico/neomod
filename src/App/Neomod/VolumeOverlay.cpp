@@ -299,20 +299,18 @@ bool VolumeOverlay::isBusy() {
 
 bool VolumeOverlay::isVisible() { return engine->getTime() < this->fVolumeChangeTime; }
 
-// keys-only since phase 3.2 (the wheel half lives in onWheel, routed by UIDispatch): may
-// the arrow-bound INCREASE/DECREASE_VOLUME binds act right now? screens that navigate with
-// arrows declare UIScreen::claimsArrowKeys instead of being enumerated here; the remaining
-// hover-qualified checks survive until the phase 4 focus manager
+// keys-only since phase 3.2 (the wheel half lives in onWheel, routed by UIDispatch): may the
+// arrow-bound INCREASE/DECREASE_VOLUME binds act right now? every layer that wants the arrows (menu
+// navigation, a hovered scroll view, an open dropdown) declares UIScreen::claimsArrowKeys();
+// VolumeOverlay no longer enumerates them - the options/modselector/chat hover checks moved into
+// those screens' claimsArrowKeys() once phase 4.4 made isMouseInside() occlusion-correct.
 bool VolumeOverlay::canChangeVolume() {
     if(this->isBusy() || keyboard->isAltDown()) return true;
 
+    // no arrow-volume during active play, mirroring the wheel sink so both volume-input paths gate identically
+    if(osu->isInPlayModeAndNotPaused() && cv::disable_mousewheel.getBool()) return false;
     if(!osu->getVirtScreenRect().contains(mouse->getPos())) return false;
     if(ui->arrowKeysClaimed()) return false;
-
-    if(ui->getOptionsOverlayBase()->isVisible() && ui->getOptionsOverlayBase()->isMouseInside()) return false;
-    if(ui->getOptionsOverlay()->getContextMenu()->isVisible()) return false;
-    if(ui->getModSelector()->isMouseInScrollView()) return false;
-    if(ui->getChatBase()->isMouseInside()) return false;
 
     return true;
 }

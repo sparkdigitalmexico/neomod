@@ -303,9 +303,11 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
     if(c.propagate_clicks && rectInside && !this->bClickThroughSelf) c.addHitCandidate(this);
 
     if(c.propagate_clicks && (this->bHandleLeftMouse || this->bHandleRightMouse)) {
-        // outside-downs stay a per-element broadcast: they are the "pressed elsewhere" signal
-        // (close-on-click-outside, focus loss, ...) until the phase 4 focus manager replaces
-        // them. the captor is excluded, its events are routed in UIDispatch::dispatchEvents.
+        // outside-downs stay a per-element broadcast: the rect-based "pressed elsewhere" signal
+        // (popup close-on-outside, contextmenu/textbox deactivation). KEPT deliberately - it is a
+        // mouse concept, not keyboard focus: a context menu holding clickable items cannot be the
+        // focus holder (cf. phase 4.3), so the broadcast is the right tool, not the focus pointer.
+        // the captor is excluded; its events are routed in UIDispatch::dispatchEvents.
         const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
                                (u8)(this->bHandleRightMouse && mouse->isRightPressed());
         if(pressedMask && !rectInside && this != UIDispatch::get()->getCaptor()) {

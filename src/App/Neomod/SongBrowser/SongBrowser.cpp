@@ -1046,7 +1046,7 @@ bool SongBrowser::onWheel(int deltaVertical, int deltaHorizontal) {
     return this->carousel->onWheel(deltaVertical, deltaHorizontal);
 }
 
-bool SongBrowser::claimsArrowKeys() { return db->isFinished(); }
+bool SongBrowser::claimsArrowKeys() { return this->isVisible() && db->isFinished(); }
 
 void SongBrowser::onKeyDown(KeyboardEvent &key) {
     UIScreen::onKeyDown(key);  // NOLINT(bugprone-parent-virtual-call) only used for options menu

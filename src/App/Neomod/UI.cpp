@@ -432,13 +432,14 @@ void UI::onResolutionChange(vec2 newResolution) {
 }
 
 bool UI::arrowKeysClaimed() const {
-    // walk top -> bottom like routeKey: layers below a visible modal floor never see the
-    // keys, so their claims must not block the volume binds either
+    // walk top -> bottom like routeKey. each layer's claimsArrowKeys() fully self-reports whether it
+    // wants the arrow keys right now, INCLUDING its own visibility - so VolumeOverlay no longer
+    // enumerates screens, and a layer whose screen is hidden but whose popup is shown (the options
+    // skin dropdown) can still claim. a VISIBLE modal floor stops the walk below it.
     for(sSz li = static_cast<sSz>(NUM_SCREENS) - 1; li >= 0; --li) {
         auto *screen = this->screens[LAYER_ORDER[li]];
-        if(!screen->isVisible()) continue;
         if(screen->claimsArrowKeys()) return true;
-        if(screen->isModal()) break;
+        if(screen->isVisible() && screen->isModal()) break;
     }
     return false;
 }

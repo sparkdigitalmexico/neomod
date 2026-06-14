@@ -21,7 +21,7 @@ class RankingScreen final : public ScreenBackable {
 
     CBaseUIContainer *setVisible(bool visible) override;
 
-    [[nodiscard]] bool claimsArrowKeys() override { return true; }
+    [[nodiscard]] bool claimsArrowKeys() override { return this->isVisible(); }
 
     void onRetryClicked();
     void onWatchClicked();

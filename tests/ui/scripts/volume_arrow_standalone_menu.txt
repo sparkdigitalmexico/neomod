@@ -1,0 +1,13 @@
+options_save_on_back 0
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+key_open_skin_select_menu 14
+mouse_to 10 10
+@wait 30
+sendkey K
+@wait_secs 2
+sendkey Up
+@wait_secs 0.5
+ui_assert visible volumeoverlay 0
+@wait 2
+exit
