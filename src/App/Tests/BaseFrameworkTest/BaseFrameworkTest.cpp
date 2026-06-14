@@ -13,7 +13,7 @@
 #include "VertexArrayObject.h"
 
 #include "CBaseUIButton.h"
-#include "UIDispatch.h"
+#include "CBaseUIDispatch.h"
 
 namespace Mc::Tests {
 class FrameworkTestButton : public CBaseUIButton {
@@ -144,7 +144,7 @@ void BaseFrameworkTest::update() {
     m_testButton->tick();
     CBaseUIEventCtx c;
     m_testButton->updateInput(c);
-    UIDispatch::get()->dispatchEvents(c, UIDispatch::Root::APP);
+    CBaseUIDispatch::get()->dispatchEvents(c, CBaseUIDispatch::Root::APP);
 }
 
 void BaseFrameworkTest::onResolutionChanged(vec2 newResolution) { debugLog("{}", newResolution); }

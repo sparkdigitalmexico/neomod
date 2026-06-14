@@ -10,7 +10,7 @@
 #include "Logging.h"
 #include "Mouse.h"
 #include "Graphics.h"
-#include "UIDispatch.h"
+#include "CBaseUIDispatch.h"
 
 #include <unordered_set>
 
@@ -491,7 +491,7 @@ void CBaseUIScrollView::onCapturedMouseMove() {
 
 void CBaseUIScrollView::onCapturedMoveThrough() {
     // the drag-scroll gesture is a left-button gesture
-    if(!flags::has<MouseButtonFlags::MF_LEFT>(UIDispatch::get()->getCaptorButtons())) return;
+    if(!flags::has<MouseButtonFlags::MF_LEFT>(CBaseUIDispatch::get()->getCaptorButtons())) return;
 
     const dvec2 curMousePos = mouse->getPos();
 
@@ -508,7 +508,7 @@ void CBaseUIScrollView::onCapturedMoveThrough() {
         if(!this->bBlockScrolling && (this->bVerticalScrolling || this->bHorizontalScrolling) &&
            (this->verticalScrollbar.contains(curMousePos) || this->horizontalScrollbar.contains(curMousePos))) {
             this->stealCapture();
-            if(UIDispatch::get()->getCaptor() == this) this->tryBeginScrollbarDrag(curMousePos);
+            if(CBaseUIDispatch::get()->getCaptor() == this) this->tryBeginScrollbarDrag(curMousePos);
             return;
         }
     }
@@ -529,7 +529,7 @@ void CBaseUIScrollView::onCapturedMoveThrough() {
 
         if(diff > this->iScrollResistance) {
             this->stealCapture();
-            if(UIDispatch::get()->getCaptor() == this) this->beginDragScroll(curMousePos);
+            if(CBaseUIDispatch::get()->getCaptor() == this) this->beginDragScroll(curMousePos);
         }
     }
 }

@@ -1,6 +1,5 @@
 #pragma once
 // Copyright (c) 2026, WH, All rights reserved.
-// TODO: rename to CBaseUIDispatch for consistency
 
 #include "MouseListener.h"
 #include "Vectors.h"
@@ -14,20 +13,20 @@ struct CBaseUIEventCtx;
 // pass-B mouse routing + capture state for the CBaseUI layer. one instance, owned by Engine
 // alongside the engine gui root; it listens on the same Mouse relay as every other consumer
 // (Mouse itself knows nothing about UI routing; consumption state lives in the buffer here).
-class UIDispatch final : public MouseListener {
-    NOCOPY_NOMOVE(UIDispatch)
+class CBaseUIDispatch final : public MouseListener {
+    NOCOPY_NOMOVE(CBaseUIDispatch)
    public:
     // which UI root a dispatch call serves; the engine root (guiContainer) dispatches before the
     // app root each frame and consumes the events it delivers
     enum class Root : uint8_t { ENGINE, APP };
 
-    UIDispatch();
-    ~UIDispatch() override;
+    CBaseUIDispatch();
+    ~CBaseUIDispatch() override;
 
     // the live instance (owned by Engine); null before engine gui startup and after shutdown
     // (e.g. Logger can keep the ConsoleBox alive past Engine teardown)
     // FIXME: avoid the need to ever null-check, ConsoleBox staying alive past shutdown is a hack
-    [[nodiscard]] static UIDispatch *get();
+    [[nodiscard]] static CBaseUIDispatch *get();
 
     // buffers the frame's button events off the regular Mouse listener relay (events arrive
     // during the input-device update, but routing must wait until the updateInput walk has

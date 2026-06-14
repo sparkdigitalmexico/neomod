@@ -1,6 +1,6 @@
 # cross-root textbox focus exclusivity (engine guiContainer root <-> app UI root), pinned
 # before 4.1 replaces engine->stealUIFocus()'s two-root stealFocus cascade (Engine.cpp:544,
-# sole caller CBaseUITextbox.cpp:628) with ONE global focus pointer in UIDispatch. observed
+# sole caller CBaseUITextbox.cpp:628) with ONE global focus pointer in CBaseUIDispatch. observed
 # via WHERE CHARS LAND (the console textbox lives in the engine root, which ui_assert does
 # not traverse; the engine root is dispatched BEFORE the app root, so an active console
 # textbox eats chars first). the behavior must hold across the mechanism swap:

@@ -17,7 +17,7 @@
 #include "OptionsOverlay.h"
 #include "ModSelector.h"
 #include "UIContextMenu.h"
-#include "UIDispatch.h"
+#include "CBaseUIDispatch.h"
 #include "Environment.h"
 #include "BeatmapInterface.h"
 #include "Skin.h"
@@ -64,7 +64,7 @@ VolumeOverlay::VolumeOverlay() : UIScreen() {
 
     // the dispatch fall-through wheel sink: offered whatever no hit candidate consumed
     // (unregistered automatically via the element dtor's onElementDestroyed report)
-    if(auto *dispatch = UIDispatch::get()) dispatch->setWheelSink(this);
+    if(auto *dispatch = CBaseUIDispatch::get()) dispatch->setWheelSink(this);
 }
 
 VolumeOverlay::~VolumeOverlay() {

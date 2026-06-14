@@ -1,5 +1,5 @@
 // Copyright (c) 2026, WH, All rights reserved.
-#include "UIDispatch.h"
+#include "CBaseUIDispatch.h"
 
 #include "CBaseUIElement.h"
 #include "Engine.h"
@@ -8,7 +8,7 @@
 #include <algorithm>
 
 namespace {
-UIDispatch *liveDispatch{nullptr};
+CBaseUIDispatch *liveDispatch{nullptr};
 
 // the top-most hit candidate matching pred: groups in input-priority order, within a group the best
 // (tier, then latest visit), the first group with a match winning (= the top-most layer). the single
@@ -35,17 +35,13 @@ const CBaseUIEventCtx::HitCandidate *topCandidate(const CBaseUIEventCtx &c, Pred
 }
 }  // namespace
 
-UIDispatch::UIDispatch() { liveDispatch = this; }
+CBaseUIDispatch::CBaseUIDispatch() { liveDispatch = this; }
 
-UIDispatch::~UIDispatch() {
-    // TODO: why is it removed in the destructor but added outside of it
-    if(mouse) mouse->removeListener(this);
-    liveDispatch = nullptr;
-}
+CBaseUIDispatch::~CBaseUIDispatch() { liveDispatch = nullptr; }
 
-UIDispatch *UIDispatch::get() { return liveDispatch; }
+CBaseUIDispatch *CBaseUIDispatch::get() { return liveDispatch; }
 
-void UIDispatch::onButtonChange(ButtonEvent &ev) {
+void CBaseUIDispatch::onButtonChange(ButtonEvent &ev) {
     const u64 frame = engine->getFrameCount();
     if(frame != this->lastPushFrame) {
         this->queue.clear();
@@ -54,7 +50,7 @@ void UIDispatch::onButtonChange(ButtonEvent &ev) {
     this->queue.push_back(ev);
 }
 
-void UIDispatch::onWheelVertical(int delta) {
+void CBaseUIDispatch::onWheelVertical(int delta) {
     const u64 frame = engine->getFrameCount();
     if(frame != this->lastWheelFrame) {
         this->wheelVertical = this->wheelHorizontal = 0;
@@ -64,7 +60,7 @@ void UIDispatch::onWheelVertical(int delta) {
     this->wheelVertical += delta;
 }
 
-void UIDispatch::onWheelHorizontal(int delta) {
+void CBaseUIDispatch::onWheelHorizontal(int delta) {
     const u64 frame = engine->getFrameCount();
     if(frame != this->lastWheelFrame) {
         this->wheelVertical = this->wheelHorizontal = 0;
@@ -74,7 +70,7 @@ void UIDispatch::onWheelHorizontal(int delta) {
     this->wheelHorizontal += delta;
 }
 
-void UIDispatch::setFocus(CBaseUIElement *elem) {
+void CBaseUIDispatch::setFocus(CBaseUIElement *elem) {
     if(this->focused == elem) return;
     CBaseUIElement *old = this->focused;
     this->focused = elem;
@@ -83,7 +79,7 @@ void UIDispatch::setFocus(CBaseUIElement *elem) {
     if(old != nullptr) old->stealFocus();
 }
 
-void UIDispatch::onElementDestroyed(CBaseUIElement *elem) {
+void CBaseUIDispatch::onElementDestroyed(CBaseUIElement *elem) {
     ++this->elemGeneration;
     if(this->wheelSink == elem) this->wheelSink = nullptr;
     if(this->focused == elem) this->focused = nullptr;
@@ -98,11 +94,11 @@ void UIDispatch::onElementDestroyed(CBaseUIElement *elem) {
     }
 }
 
-void UIDispatch::lockCapture(const CBaseUIElement *who) {
+void CBaseUIDispatch::lockCapture(const CBaseUIElement *who) {
     if(this->captor == who) this->captorLocked = true;
 }
 
-void UIDispatch::stealCapture(CBaseUIElement *thief) {
+void CBaseUIDispatch::stealCapture(CBaseUIElement *thief) {
     if(this->captor == nullptr || this->captor == thief || this->captorLocked) return;
 
     const auto thiefIt = std::ranges::find(this->capturePath, thief);
@@ -125,7 +121,7 @@ void UIDispatch::stealCapture(CBaseUIElement *thief) {
     for(auto it = detached.rbegin(); it != detached.rend(); ++it) (*it)->onCapturedEndThrough();
 }
 
-void UIDispatch::cancelCapture() {
+void CBaseUIDispatch::cancelCapture() {
     if(this->captor == nullptr) return;
 
     CBaseUIElement *old = this->captor;
@@ -139,14 +135,14 @@ void UIDispatch::cancelCapture() {
     this->endObservation();
 }
 
-void UIDispatch::endObservation() {
+void CBaseUIDispatch::endObservation() {
     // move out: end handlers may start new captures or destroy elements
     const std::vector<CBaseUIElement *> path = std::move(this->capturePath);
     this->capturePath.clear();
     for(auto it = path.rbegin(); it != path.rend(); ++it) (*it)->onCapturedEndThrough();
 }
 
-void UIDispatch::observeCapturedFrame() {
+void CBaseUIDispatch::observeCapturedFrame() {
     const vec2 pos = mouse->getPos();
     if(pos != this->lastCaptureMovePos) {
         this->lastCaptureMovePos = pos;
@@ -165,7 +161,7 @@ void UIDispatch::observeCapturedFrame() {
     }
 }
 
-void UIDispatch::resolveHover(CBaseUIEventCtx &c, Root root) {
+void CBaseUIDispatch::resolveHover(CBaseUIEventCtx &c, Root root) {
     const u64 frame = engine->getFrameCount();
     if(frame != this->lastHoverFrame) {
         this->hoverClaimed = false;
@@ -211,7 +207,7 @@ void UIDispatch::resolveHover(CBaseUIEventCtx &c, Root root) {
     }
 }
 
-void UIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
+void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
     using namespace flags::operators;
 
     const u64 frame = engine->getFrameCount();

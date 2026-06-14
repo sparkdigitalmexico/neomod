@@ -162,7 +162,7 @@ class CBaseUIElement : public KeyboardListener {
     // actions
     // focus: requestFocus() makes this the single keyboard target across both roots
     // (relinquishing the previous holder); stealFocus() gives it up; isFocused() queries.
-    // backed by the UIDispatch focus pointer.
+    // backed by the CBaseUIDispatch focus pointer.
     virtual void stealFocus();
     void requestFocus();
     bool isFocused();
@@ -172,7 +172,7 @@ class CBaseUIElement : public KeyboardListener {
 
    protected:
     friend class CBaseUIContainer;
-    friend class UIDispatch;
+    friend class CBaseUIDispatch;
 
     // events (default implementation does nothing for all of these)
     virtual void onResized();

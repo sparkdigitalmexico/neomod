@@ -41,7 +41,7 @@ class AsyncIOHandler;
 class DirectoryWatcher;
 
 class CBaseUIContainer;
-class UIDispatch;
+class CBaseUIDispatch;
 class VisualProfiler;
 class ConsoleBox;
 class Console;
@@ -159,7 +159,7 @@ class Engine final : public KeyboardListener {
     static Mc::atomic_sharedptr<ConsoleBox> consoleBox;
 
     // pass-B mouse routing + capture state shared by the engine and app UI roots
-    std::unique_ptr<UIDispatch> uiDispatch{nullptr};
+    std::unique_ptr<CBaseUIDispatch> uiDispatch{nullptr};
 
     McFont *consoleFont{nullptr};
     McFont *defaultFont{nullptr};

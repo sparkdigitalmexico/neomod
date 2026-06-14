@@ -1,5 +1,5 @@
 # pins the wheel consumption matrix across volume contexts. since P3.2 exclusivity is
-# STRUCTURAL: VolumeOverlay is the UIDispatch fall-through sink (plus a hovered-slider
+# STRUCTURAL: VolumeOverlay is the CBaseUIDispatch fall-through sink (plus a hovered-slider
 # claim), offered only deltas no hit candidate consumed - the old canChangeVolume screen
 # enumeration is gone. wheel over the options scrollview scrolls the page and must NOT
 # touch volume (options consumes, the sink never sees it); alt+wheel over the same spot

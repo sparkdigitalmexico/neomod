@@ -17,7 +17,7 @@
 #include "Mouse.h"
 #include "ResourceManager.h"
 #include "SoundEngine.h"
-#include "UIDispatch.h"
+#include "CBaseUIDispatch.h"
 #include "Font.h"
 #include "Graphics.h"
 #include "SString.h"
@@ -187,7 +187,7 @@ int CBaseUITextbox::hitTestCaret(std::string_view vt, int mx) const {
 
 void CBaseUITextbox::onCapturedMouseMove() {
     // selecting and scrolling: the selection was begun at the down, captured moves extend it
-    const MouseButtonFlags held = UIDispatch::get()->getCaptorButtons();
+    const MouseButtonFlags held = CBaseUIDispatch::get()->getCaptorButtons();
     const bool mleft = flags::has<MouseButtonFlags::MF_LEFT>(held);
     const bool mright = flags::has<MouseButtonFlags::MF_RIGHT>(held);
     if((!mleft && !mright) || this->text.length() == 0) return;
