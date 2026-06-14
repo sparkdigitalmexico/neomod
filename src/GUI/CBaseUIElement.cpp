@@ -265,8 +265,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
     }
 
     if(oldMouseInsideState != this->bMouseInside) {
-        if(unlikely(CBaseUIDebug::traceLevel() > 0))
-            CBaseUIDebug::traceEvent(this, this->bMouseInside ? "hoverIn" : "hoverOut");
+        UI_TRACE_EVENT(0, this, this->bMouseInside ? "hoverIn" : "hoverOut");
         if(this->bMouseInside) {
             this->onMouseInside();
         } else {
@@ -290,7 +289,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
         const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
                                (u8)(this->bHandleRightMouse && mouse->isRightPressed());
         if(pressedMask && !rectInside && this != uiDispatcher->getCaptor()) {
-            if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(this, "downOutside");
+            UI_TRACE_EVENT(1, this, "downOutside");
             this->onMouseDownOutside((pressedMask & 0b10), (pressedMask & 0b01));
         }
 

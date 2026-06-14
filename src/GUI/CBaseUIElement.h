@@ -25,6 +25,10 @@ std::string elemName(const CBaseUIElement *elem);
 
 // logs "uitrace frame=N evt=<evt> elem=<name>" for scripted-test golden diffing
 void traceEvent(const CBaseUIElement *elem, std::string_view evt);
+
+// helper to trace if traceLevel is > given debug_level
+#define UI_TRACE_EVENT(debug_level, elem_to_trace, evt_txt) \
+    if(unlikely(CBaseUIDebug::traceLevel() > (debug_level))) CBaseUIDebug::traceEvent((elem_to_trace), (evt_txt))
 }  // namespace CBaseUIDebug
 
 // Guidelines for avoiding hair pulling:

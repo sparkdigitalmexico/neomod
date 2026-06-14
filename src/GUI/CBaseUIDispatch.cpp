@@ -111,10 +111,10 @@ void CBaseUIDispatch::stealCapture(CBaseUIElement *thief) {
     this->captor = thief;
     this->captorLocked = true;
     thief->bActive = true;
-    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(thief, "captureSteal");
+    UI_TRACE_EVENT(0, thief, "captureSteal");
 
     old->bActive = false;
-    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(old, "mouseCancel");
+    UI_TRACE_EVENT(0, old, "mouseCancel");
     old->onMouseCancel();
     for(auto it = detached.rbegin(); it != detached.rend(); ++it) (*it)->onCapturedEndThrough();
 }
@@ -128,7 +128,7 @@ void CBaseUIDispatch::cancelCapture() {
     this->captorLocked = false;
 
     old->bActive = false;
-    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(old, "mouseCancel");
+    UI_TRACE_EVENT(0, old, "mouseCancel");
     old->onMouseCancel();
     this->endObservation();
 }
@@ -144,7 +144,7 @@ void CBaseUIDispatch::observeCapturedFrame() {
     const vec2 pos = mouse->getPos();
     if(pos != this->lastCaptureMovePos) {
         this->lastCaptureMovePos = pos;
-        if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this->captor, "captureMove");
+        UI_TRACE_EVENT(0, this->captor, "captureMove");
     }
     this->captor->onCapturedMouseMove();
 
@@ -195,11 +195,11 @@ void CBaseUIDispatch::resolveHover(CBaseUIEventCtx &c, Root root) {
         const bool want = std::ranges::find(set, e) != set.end();
         if(want && !e->bMouseInside) {
             e->bMouseInside = true;
-            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(e, "hoverIn");
+            UI_TRACE_EVENT(0, e, "hoverIn");
             e->onMouseInside();
         } else if(!want && e->bMouseInside) {
             e->bMouseInside = false;
-            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(e, "hoverOut");
+            UI_TRACE_EVENT(0, e, "hoverOut");
             e->onMouseOutside();
         }
     }
@@ -270,7 +270,7 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                     }
                 }
                 if(acceptor != nullptr) {
-                    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(acceptor, "wheel");
+                    UI_TRACE_EVENT(0, acceptor, "wheel");
                 }
             }
         } else {
@@ -294,7 +294,7 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                     CBaseUIElement *elem = c.hitCandidates[i].elem;
                     groupHasScrollSurface |= elem->bWheelSurface;
                     if(elem->onWheel(this->wheelVertical, this->wheelHorizontal)) {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(elem, "wheel");
+                        UI_TRACE_EVENT(0, elem, "wheel");
                         this->wheelConsumed = true;
                         break;
                     }
@@ -313,7 +313,7 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
             // candidates consumed
             if(root == Root::APP && !this->wheelConsumed && this->wheelSink != nullptr) {
                 if(this->wheelSink->onWheel(this->wheelVertical, this->wheelHorizontal)) {
-                    if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(this->wheelSink, "wheel");
+                    UI_TRACE_EVENT(0, this->wheelSink, "wheel");
                     this->wheelConsumed = true;
                 }
             }
@@ -344,11 +344,11 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                 this->captorButtons |= btn;
                 if(eligible) {
                     if(elem->bMouseInside) {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(elem, "downInside");
+                        UI_TRACE_EVENT(0, elem, "downInside");
                         elem->onMouseDownInside(left, right);
                         elem->bActive = true;
                     } else {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(elem, "downOutside");
+                        UI_TRACE_EVENT(1, elem, "downOutside");
                         elem->onMouseDownOutside(left, right);
                     }
                 }
@@ -357,10 +357,10 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                 // bActive gate: a capture steal during the hold cancelled the press already
                 if(eligible && elem->bActive) {
                     if(elem->bMouseInside) {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(elem, "upInside");
+                        UI_TRACE_EVENT(0, elem, "upInside");
                         elem->onMouseUpInside(left, right);
                     } else {
-                        if(unlikely(CBaseUIDebug::traceLevel() > 1)) CBaseUIDebug::traceEvent(elem, "upOutside");
+                        UI_TRACE_EVENT(1, elem, "upOutside");
                         elem->onMouseUpOutside(left, right);
                     }
                     if(!elem->bKeepActive) elem->bActive = false;
@@ -396,7 +396,7 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
             this->captorLocked = false;
             this->capturePath = target->path;
             this->lastCaptureMovePos = mouse->getPos();
-            if(unlikely(CBaseUIDebug::traceLevel() > 0)) CBaseUIDebug::traceEvent(target->elem, "downInside");
+            UI_TRACE_EVENT(0, target->elem, "downInside");
             target->elem->onMouseDownInside(left, right);
             target->elem->bActive = true;
             // ancestors observe from the press frame (a scrollview arms its drag gesture here)
