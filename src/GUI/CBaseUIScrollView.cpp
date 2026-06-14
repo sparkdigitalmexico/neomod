@@ -336,8 +336,9 @@ void CBaseUIScrollView::tick() {
         this->updateScrollbars();
     }
 
-    // TODO: make sure this doesn't run twice in 1 frame (after updateInput)
-    if(this->bClippingDirty) this->updateClipping();
+    // while drag-/scrollbar-scrolling, onCapturedMouseMove() applies the move and rebuilds clipping
+    // later this frame (in dispatch, after updateInput), don't redundantly update clipping here
+    if(this->bClippingDirty && !(this->bScrolling || this->bScrollbarScrolling)) this->updateClipping();
 }
 
 void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
@@ -636,13 +637,19 @@ void CBaseUIScrollView::scrollToY(int scrollPosY, bool animated) { this->scrollT
 
 void CBaseUIScrollView::scrollToYInt(int scrollPosY, bool animated, bool slow) {
     if(!this->bVerticalScrolling || this->bScrolling) return;
-    this->bClippingDirty = true;
 
     f64 upperBounds = 1;
     f64 lowerBounds = -this->vScrollSize.y + this->getSize().y;
     if(lowerBounds >= upperBounds) lowerBounds = upperBounds;
 
     const f64 targetY = std::clamp<f64>(scrollPosY, lowerBounds, upperBounds);
+
+    // a scroll to where we already sit (and aren't animating away from) is a no-op: don't re-dirty
+    // clipping. the songbrowser's left-edge auto-recenter calls this every frame, and a full O(n)
+    // clip rebuild over thousands of carousel elements that changes nothing is pure waste
+    if(!this->vScrollPos.y.animating() && std::round(this->vScrollPos.y) == std::round(targetY)) return;
+
+    this->bClippingDirty = true;
 
     this->vVelocity.y.stop();
     this->vVelocity.y = targetY;
@@ -658,13 +665,17 @@ void CBaseUIScrollView::scrollToYInt(int scrollPosY, bool animated, bool slow) {
 
 void CBaseUIScrollView::scrollToXInt(int scrollPosX, bool animated, bool slow) {
     if(!this->bHorizontalScrolling || this->bScrolling) return;
-    this->bClippingDirty = true;
 
     f64 upperBounds = 1;
     f64 lowerBounds = -this->vScrollSize.x + this->getSize().x;
     if(lowerBounds >= upperBounds) lowerBounds = upperBounds;
 
     const f64 targetX = std::clamp<f64>(scrollPosX, lowerBounds, upperBounds);
+
+    // no-op scroll (already at target, not animating): don't re-dirty clipping (see scrollToYInt)
+    if(!this->vScrollPos.x.animating() && std::round(this->vScrollPos.x) == std::round(targetX)) return;
+
+    this->bClippingDirty = true;
 
     this->vVelocity.x = targetX;
 
@@ -743,13 +754,13 @@ void CBaseUIScrollView::updateClipping() {
                     // need to call isVisible instead of just directly setting "true" because
                     // it may be overridden
                     nowVisible = e->isVisible();
-                    ++numChangedElements;
                 }
             } else if(eVisible) {
                 e->setVisible(false);
                 nowVisible = e->isVisible();
-                ++numChangedElements;
             }
+
+            if(nowVisible != eVisible) ++numChangedElements;
 
             if(nowVisible) {
                 visElements.push_back(e);
