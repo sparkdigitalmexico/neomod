@@ -445,7 +445,6 @@ void ScoreButton::updateInput(CBaseUIEventCtx &c) {
 
     if(this->avatar) {
         this->avatar->updateInput(c);
-        if(c.mouse_consumed()) return;
     }
 
     CBaseUIButton::updateInput(c);

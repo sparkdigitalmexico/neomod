@@ -101,10 +101,6 @@ class MainMenu::MainButton final : public UIButtonRounded {
 
     void updateInput(CBaseUIEventCtx &c) override {
         UIButtonRounded::updateInput(c);
-        if(c.mouse_consumed()) {
-            this->showSaveTooltip = false;
-            return;
-        }
         if(!this->isVisible() || !this->isEnabled()) return;
         if(this->showSaveTooltip) {
             auto *ttoverlay = ui->getTooltipOverlay();

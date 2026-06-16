@@ -145,7 +145,7 @@ SpectatorScreen::SpectatorScreen() {
     this->background->container.addBaseUIElement(this->status);
 
     this->stop_btn = new UIButton(0, 0, 190, 40, "stop_spec_btn", _("Stop spectating"));
-    this->stop_btn->setGrabClicks(true);
+    this->stop_btn->setDrawsOnTop(true);
     this->stop_btn->setColor(0xff00d900);
     this->stop_btn->setUseDefaultSkin();
     this->stop_btn->setClickCallback(SA::MakeDelegate<&SpectatorScreen::onStopSpectatingClicked>(this));

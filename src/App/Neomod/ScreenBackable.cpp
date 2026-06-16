@@ -40,7 +40,6 @@ void ScreenBackable::updateInput(CBaseUIEventCtx &c) {
         // back button ranks above the body it draws over via its bDrawsOnTop flag (set in its ctor)
         this->backButton->updateInput(c);
     }
-    if(c.mouse_consumed()) return;
     UIScreen::updateInput(c);
 }
 

@@ -41,9 +41,9 @@ enum class TEXT_JUSTIFICATION : u8 { LEFT, CENTERED, RIGHT };
 class CBaseUIContainer;
 
 struct CBaseUIEventCtx {
-    // candidacy suppression carried along the walk: an element grabbing clicks (or the bottom bar)
-    // clears this so elements visited LATER don't register as hit candidates. this is NOT
-    // consumption - the walk keeps going; see bConsumed below.
+    // candidacy suppression carried along the walk: the bottom bar clears this on a click so the
+    // carousel (a full-height surface visited after it) doesn't also register as a hit candidate.
+    // this is NOT consumption - the walk keeps going; see bConsumed below.
     bool propagate_clicks{true};
 
     // the walk floor: a visible modal layer calls consume_mouse() and the LAYER_ORDER walk stops
@@ -202,9 +202,6 @@ class CBaseUIElement : public KeyboardListener {
     // see bDrawsOnTop). dedicated widget subclasses set bDrawsOnTop in their ctor instead.
     CBaseUIElement *setDrawsOnTop(bool drawsOnTop);
 
-    // TODO: remove this, changes behavior in more ways than just mouse handling
-    virtual CBaseUIElement *setGrabClicks(bool grabClicks);
-
     // actions
     // focus: requestFocus() makes this the single keyboard target across both roots
     // (relinquishing the previous holder); stealFocus() gives it up; isFocused() queries.
@@ -277,7 +274,6 @@ class CBaseUIElement : public KeyboardListener {
     u64 lastInputFrame{0};
 
    protected:
-    bool grabs_clicks : 1 {false};  // TODO: remove this (confusing behavior)
     // transparent wrappers (containers) don't hit-candidate their own rect; real widgets with a
     // self-rect surface (scrollview, window) opt back in
     bool bClickThroughSelf : 1 {false};

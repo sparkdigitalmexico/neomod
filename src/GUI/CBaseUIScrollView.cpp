@@ -152,7 +152,6 @@ bool ScrollContainer::isActive() {
 
 CBaseUIScrollView::CBaseUIScrollView(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, name), container(xPos, yPos, xSize, ySize, std::move(name)) {
-    this->setGrabClicks(true);
     this->bWheelSurface = true;  // scroll surfaces floor the wheel scan (see UIDispatch)
 
     this->iScrollResistance = cv::ui_scrollview_resistance.getInt();  // TODO: dpi handling
@@ -345,12 +344,8 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
     if(!this->isVisible()) return;
 
     // self before children: visit order doubles as hit-candidate priority (latest = top-most),
-    // and the children draw above the scrollview surface. our self-grab (grabs_clicks) takes
-    // effect at subtree exit so the children stay click-eligible.
-    const bool clicksBeforeSelf = c.propagate_clicks;
+    // and the children draw above the scrollview surface.
     CBaseUIElement::updateInput(c);
-    const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
-    if(selfGrabbed) c.propagate_clicks = true;
     // our content inherits our draws-on-top bias (e.g. UIContextMenu items out-rank the carousel)
     c.currentHitTier += this->bDrawsOnTop;
     {
@@ -358,7 +353,6 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
         this->container.updateInput(c);
     }
     c.currentHitTier -= this->bDrawsOnTop;
-    if(selfGrabbed) c.propagate_clicks = false;
 }
 
 bool CBaseUIScrollView::onWheel(int deltaVertical, int deltaHorizontal) {

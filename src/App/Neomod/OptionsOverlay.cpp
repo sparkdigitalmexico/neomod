@@ -2035,21 +2035,15 @@ void OptionsOverlayImpl::updateInput(CBaseUIEventCtx &c) {
     // dropdown is scrolled out of the clip list. when the options menu IS visible the menu is
     // visited AGAIN inside the options scrollview walk, and that registration must win the
     // hit candidacy (its ancestor path includes options_contents, so the drag-scroll steal can
-    // chain through an unscrollable dropdown). a press-hold inside the menu clears propagate_clicks
-    // (the scrollview self-grab) -> restore it so the nested walk keeps its candidacy and a
-    // post-steal captor keeps its input stamp
-    const bool clicksBeforeMenu = c.propagate_clicks;
+    // chain through an unscrollable dropdown).
     this->contextMenu->updateInput(c);
     if(onlyContextMenuVisible) return;  // HACK: not returning early if options menu is hidden, for skins menu dropdown
-    c.propagate_clicks = clicksBeforeMenu;
-    if(c.mouse_consumed()) return;
 
     // disable widgets bound to a server/skin-forced cvar before their update runs,
     // so input handlers + their own tooltip code don't fire for forced settings
     this->applyForcedCvarLocks();
 
     parent->ScreenBackable::updateInput(c);
-    if(c.mouse_consumed()) return;
 
     // and show a single "forced by ..." tooltip when hovering any locked widget
     this->pushForcedCvarTooltipIfHovered();

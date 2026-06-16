@@ -186,12 +186,6 @@ CBaseUIElement *CBaseUIElement::setDrawsOnTop(bool drawsOnTop) {
     return this;
 }
 
-// TODO: remove this, changes behavior in more ways than just mouse handling
-CBaseUIElement *CBaseUIElement::setGrabClicks(bool grabClicks) {
-    this->grabs_clicks = grabClicks;
-    return this;
-}
-
 void CBaseUIElement::onResized() { ; }
 void CBaseUIElement::onMoved() { ; }
 
@@ -301,12 +295,6 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
             UI_TRACE_EVENT(1, this, "downOutside");
             this->onMouseDownOutside((pressedMask & 0b10), (pressedMask & 0b01));
         }
-
-        // preserve the click-blocking flag for elements/screens visited later in the walk
-        // (cross-screen input-blocking idioms depend on it; the phase 3 layer stack replaces it)
-        const bool buttonHeld =
-            (this->bHandleLeftMouse && mouse->isLeftDown()) || (this->bHandleRightMouse && mouse->isRightDown());
-        if(buttonHeld && rectInside) c.propagate_clicks &= !this->grabs_clicks;
     }
 
     c.currentHitTier -= this->bDrawsOnTop;

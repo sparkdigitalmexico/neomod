@@ -31,8 +31,6 @@ CBaseUITextbox::CBaseUITextbox(float xPos, float yPos, float xSize, float ySize,
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
     this->setKeepActive(true);
 
-    this->setGrabClicks(true);
-
     this->font = engine->getDefaultFont();
 
     this->textColor = this->frameColor = this->caretColor = 0xffffffff;

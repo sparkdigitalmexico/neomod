@@ -309,7 +309,6 @@ void RoomScreen::updateInput(CBaseUIEventCtx &c) {
     if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
 
     this->contextMenu->updateInput(c);
-    if(c.mouse_consumed()) return;
 
     UIScreen::updateInput(c);
 }

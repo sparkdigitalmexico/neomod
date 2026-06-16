@@ -209,14 +209,8 @@ void CBaseUIContainer::tick() {
 }
 
 void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
-    const bool clicksBeforeSelf = c.propagate_clicks;
     CBaseUIElement::updateInput(c);
     if(!this->isVisible()) return;
-
-    // a self-grab (grabs_clicks) takes effect at subtree exit: our own children draw above us
-    // and must stay click-eligible; only siblings/screens visited later get blocked
-    const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
-    if(selfGrabbed) c.propagate_clicks = true;
 
     // descendants inherit our draws-on-top bias (CBaseUIElement::updateInput already applied it to
     // our own candidacy, but balanced it back before returning here)
@@ -232,8 +226,6 @@ void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
         }
     }
     c.currentHitTier -= this->bDrawsOnTop;
-
-    if(selfGrabbed) c.propagate_clicks = false;
 }
 
 void CBaseUIContainer::update_pos() {

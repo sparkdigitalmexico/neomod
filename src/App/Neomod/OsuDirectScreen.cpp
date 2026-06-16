@@ -405,7 +405,6 @@ OsuDirectScreen::OsuDirectScreen() {
     this->results->setBackgroundColor(0xaa000000);
     this->results->setHorizontalScrolling(false);
     this->results->setVerticalScrolling(true);
-    this->results->setGrabClicks(false);
     this->addBaseUIElement(this->results);
 }
 

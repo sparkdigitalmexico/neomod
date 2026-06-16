@@ -85,7 +85,7 @@ static f32 TOAST_SCREEN_RIGHT_MARGIN{DEF_TOAST_SCREEN_RIGHT_MARGIN};
 
 ToastElement::ToastElement(std::string text, Color borderColor, ToastElement::TYPE type)
     : CBaseUIButton(0.f, 0.f, 0.f, 0.f, "", std::move(text)), type(type) {
-    this->setGrabClicks(true);
+    this->setDrawsOnTop(true);
 
     // TODO: animations
 

@@ -415,12 +415,12 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
                                ->setDrawFrame(false)
                                ->setText(_("Group:"))  // setting text later so string metrics get applied...
                                ->setSizeToContent(-1, 0);
-        this->groupLabel->setGrabClicks(true);
+        this->groupLabel->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupLabel);
 
         this->groupButton = new UIButtonRounded(0, 0, 0, 0, "", _("No Grouping"), 5);
         this->groupButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onGroupClicked>(this));
-        this->groupButton->setGrabClicks(true);
+        this->groupButton->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupButton);
 
         this->sortLabel = (new CBaseUILabel(0, 0, 0, 0, "SongBrowser::sortLabel", ""))
@@ -432,34 +432,34 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
                               ->setDrawFrame(false)
                               ->setText(_("Sort:"))
                               ->setSizeToContent(-1, 0);
-        this->sortLabel->setGrabClicks(true);
+        this->sortLabel->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->sortLabel);
 
         this->sortButton = new UIButtonRounded(0, 0, 0, 0, "", _("By Date Added"), 5);
         this->sortButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortClicked>(this));
-        this->sortButton->setGrabClicks(true);
+        this->sortButton->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->sortButton);
 
         // "hardcoded" grouping tabs
         this->groupByCollectionBtn = new UIButtonRounded(0, 0, 0, 0, "", _("Collections"), 5);
         this->groupByCollectionBtn->setHandleRightMouse(true);
         this->groupByCollectionBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByCollectionBtn->setGrabClicks(true);
+        this->groupByCollectionBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByCollectionBtn);
         this->groupByArtistBtn = new UIButtonRounded(0, 0, 0, 0, "", _("By Artist"), 5);
         this->groupByArtistBtn->setHandleRightMouse(true);
         this->groupByArtistBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByArtistBtn->setGrabClicks(true);
+        this->groupByArtistBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByArtistBtn);
         this->groupByDifficultyBtn = new UIButtonRounded(0, 0, 0, 0, "", _("By Difficulty"), 5);
         this->groupByDifficultyBtn->setHandleRightMouse(true);
         this->groupByDifficultyBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByDifficultyBtn->setGrabClicks(true);
+        this->groupByDifficultyBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByDifficultyBtn);
         this->groupByNothingBtn = new UIButtonRounded(0, 0, 0, 0, "", _("No Grouping"), 5);
         this->groupByNothingBtn->setHandleRightMouse(true);
         this->groupByNothingBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByNothingBtn->setGrabClicks(true);
+        this->groupByNothingBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByNothingBtn);
     }
 
@@ -2376,7 +2376,7 @@ void SongBrowser::rebuildScoreButtons() {
                     this->localBestButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onScoreClicked>(this));
                     this->localBestButton->setScore(*local_best, map);
                     this->localBestButton->resetHighlight();
-                    this->localBestButton->setGrabClicks(true);
+                    this->localBestButton->setDrawsOnTop(true);
                     this->localBestContainer->addBaseUIElement(this->localBestLabel);
                     this->localBestContainer->addBaseUIElement(this->localBestButton);
                     this->localBestContainer->setVisible(true);
@@ -2397,7 +2397,7 @@ void SongBrowser::rebuildScoreButtons() {
                     this->localBestButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onScoreClicked>(this));
                     this->localBestButton->setScore(*local_best, map);
                     this->localBestButton->resetHighlight();
-                    this->localBestButton->setGrabClicks(true);
+                    this->localBestButton->setDrawsOnTop(true);
                     this->localBestContainer->addBaseUIElement(this->localBestLabel);
                     this->localBestContainer->addBaseUIElement(this->localBestButton);
                     this->localBestContainer->setVisible(true);

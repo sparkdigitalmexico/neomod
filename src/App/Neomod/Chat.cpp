@@ -69,7 +69,7 @@ ChatChannel::ChatChannel(Chat *chat, std::string name_arg) {
 
     if(chat != nullptr) {
         this->btn = new UIButton(0, 0, 0, 0, "button", this->name);
-        this->btn->setGrabClicks(true);
+        this->btn->setDrawsOnTop(true);
         this->btn->setUseDefaultSkin();
         this->btn->setClickCallback(SA::MakeDelegate<&ChatChannel::onChannelButtonClick>(this));
         this->chat->button_container->addBaseUIElement(this->btn);

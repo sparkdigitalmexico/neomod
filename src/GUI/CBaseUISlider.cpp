@@ -13,8 +13,6 @@
 
 CBaseUISlider::CBaseUISlider(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
-    this->setGrabClicks(true);
-
     this->bDrawFrame = true;
     this->bDrawBackground = true;
     this->bHorizontal = false;
