@@ -80,6 +80,11 @@ UIContextMenu::UIContextMenu(float xPos, float yPos, float xSize, float ySize, s
     this->setDrawFrame(false);
     this->setScrollbarSizeMultiplier(0.5f);
 
+    // a context menu draws on top of its group, so its (sub)tree out-ranks same-group siblings for
+    // hover/click/wheel regardless of visit order (the songbrowser menu is visited before the
+    // carousel beneath it)
+    this->bDrawsOnTop = true;
+
     // HACHACK: this->bVisible is always true, since we want to be able to put a context menu in a scrollview.
     //          When scrolling, scrollviews call setVisible(false) to clip items, and that breaks the menu.
     this->bVisible = true;
@@ -116,14 +121,8 @@ void UIContextMenu::draw() {
 }
 
 void UIContextMenu::updateInput(CBaseUIEventCtx &c) {
-    if(!this->bVisible2) return;
-    // a context menu draws on top of its group; raise the hit tier so it out-ranks same-group
-    // siblings for hover/click/wheel regardless of visit order (the songbrowser menu, for one, is
-    // visited before the carousel beneath it). replaces the per-widget !contextMenu->isMouseInside()
-    // occlusion overrides now that hit candidacy is rect-based rather than bMouseInside-gated.
-    c.currentHitTier++;
+    if(!this->bVisible2) return;  // bDrawsOnTop (set in the ctor) handles the menu's z-priority
     CBaseUIScrollView::updateInput(c);
-    c.currentHitTier--;
 }
 
 void UIContextMenu::tick() {

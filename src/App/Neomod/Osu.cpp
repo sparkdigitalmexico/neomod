@@ -372,6 +372,8 @@ Osu::Osu()
 
     // (finish) loading ui
     this->userButton = std::make_unique<UserCard>(BanchoState::get_uid());
+    // the songbrowser bottom bar draws this over the full-height carousel, so it must win clicks there
+    this->userButton->setDrawsOnTop(true);
     this->bUILoaded = ui->init();
 }
 

@@ -128,11 +128,9 @@ void updateInput(CBaseUIEventCtx& c) {
     mouse_was_down = mouse->isLeftDown();
 
     // the user card draws on top of the carousel at the bottom of the screen, so it must win the
-    // click there; raise the hit tier (the carousel scrollview is a full-height candidate visited
-    // later in the songbrowser walk, so without this it out-ranks the user card and eats the click)
-    c.currentHitTier++;
+    // click there; its bDrawsOnTop flag (set after construction) ranks it above the full-height
+    // carousel scrollview that is visited later in the songbrowser walk
     osu->getUserButton()->updateInput(c);
-    c.currentHitTier--;
 
     // Yes, the order looks whack. That's the correct order.
     Button new_hover = BTN_NONE;

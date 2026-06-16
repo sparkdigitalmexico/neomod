@@ -351,10 +351,13 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
     CBaseUIElement::updateInput(c);
     const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
     if(selfGrabbed) c.propagate_clicks = true;
+    // our content inherits our draws-on-top bias (e.g. UIContextMenu items out-rank the carousel)
+    c.currentHitTier += this->bDrawsOnTop;
     {
         CBaseUIEventCtx::HitPathScope scope(c, this);
         this->container.updateInput(c);
     }
+    c.currentHitTier -= this->bDrawsOnTop;
     if(selfGrabbed) c.propagate_clicks = false;
 }
 

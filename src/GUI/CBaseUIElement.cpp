@@ -183,6 +183,11 @@ CBaseUIElement *CBaseUIElement::setHandleRightMouse(bool handle) {
     return this;
 }
 
+CBaseUIElement *CBaseUIElement::setDrawsOnTop(bool drawsOnTop) {
+    this->bDrawsOnTop = drawsOnTop;
+    return this;
+}
+
 // TODO: remove this, changes behavior in more ways than just mouse handling
 CBaseUIElement *CBaseUIElement::setGrabClicks(bool grabClicks) {
     this->grabs_clicks = grabClicks;
@@ -226,10 +231,18 @@ void CBaseUIElement::tick() {
     if(unlikely(CBaseUIDebug::dumpElems)) this->dumpElem();
 }
 
+// pass A of the two-pass mouse model (pass B is CBaseUIDispatch::dispatchEvents): this walk does NOT
+// deliver clicks. it registers hit candidates, resolves hover LOSS (gain is deferred to pass B) and
+// broadcasts outside-downs. see the model overview atop CBaseUIDispatch.h.
 void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible || !this->bEnabled) return;
 
     this->lastInputFrame = engine->getFrameCount();
+
+    // raise the hit tier for the duration of this element's candidacy (and, via the container/
+    // scrollview child walkers, its descendants') when it draws on top; balanced -= below so
+    // later-visited siblings are unaffected
+    c.currentHitTier += this->bDrawsOnTop;
 
     const bool oldMouseInsideState = this->bMouseInside;
 
@@ -299,6 +312,8 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
             (this->bHandleLeftMouse && mouse->isLeftDown()) || (this->bHandleRightMouse && mouse->isRightDown());
         if(buttonHeld && rectInside) c.propagate_clicks &= !this->grabs_clicks;
     }
+
+    c.currentHitTier -= this->bDrawsOnTop;
 }
 
 void CBaseUIElement::dumpElem() const {

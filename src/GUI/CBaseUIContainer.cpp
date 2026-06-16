@@ -218,6 +218,9 @@ void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
     const bool selfGrabbed = clicksBeforeSelf && !c.propagate_clicks;
     if(selfGrabbed) c.propagate_clicks = true;
 
+    // descendants inherit our draws-on-top bias (CBaseUIElement::updateInput already applied it to
+    // our own candidacy, but balanced it back before returning here)
+    c.currentHitTier += this->bDrawsOnTop;
     {
         CBaseUIEventCtx::HitPathScope scope(c, this);
 
@@ -228,6 +231,7 @@ void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
             if(e->isVisible()) e->updateInput(c);
         }
     }
+    c.currentHitTier -= this->bDrawsOnTop;
 
     if(selfGrabbed) c.propagate_clicks = false;
 }

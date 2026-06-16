@@ -64,7 +64,10 @@ struct CBaseUIEventCtx {
     std::vector<HitCandidate> hitCandidates;
     std::vector<size_t> hitGroupStarts;
     std::vector<CBaseUIElement *> hitPath;  // ancestor stack during the walk
-    int currentHitTier{0};                  // raised around children that draw above later-visited siblings
+    // within a hit group candidacy ranks by (tier, then latest visit); an element raises this for its
+    // own subtree by declaring bDrawsOnTop (see CBaseUIElement), so "draws on top" beats "visited
+    // later" automatically instead of each call site bracketing the walk by hand
+    int currentHitTier{0};
 
     void beginHitGroup();
     void addHitCandidate(CBaseUIElement *elem);
@@ -160,6 +163,11 @@ class CBaseUIElement : public KeyboardListener {
     virtual CBaseUIElement *setHandleLeftMouse(bool handle);
     virtual CBaseUIElement *setHandleRightMouse(bool handle);
 
+    // declare that this element's (sub)tree draws above later-visited same-group siblings, so it
+    // out-ranks them for hover/click/wheel hit-testing (the declarative form of raising the hit tier;
+    // see bDrawsOnTop). dedicated widget subclasses set bDrawsOnTop in their ctor instead.
+    CBaseUIElement *setDrawsOnTop(bool drawsOnTop);
+
     // TODO: remove this, changes behavior in more ways than just mouse handling
     virtual CBaseUIElement *setGrabClicks(bool grabClicks);
 
@@ -239,6 +247,10 @@ class CBaseUIElement : public KeyboardListener {
     // transparent wrappers (containers) don't hit-candidate their own rect; real widgets with a
     // self-rect surface (scrollview, window) opt back in
     bool bClickThroughSelf : 1 {false};
+    // this (sub)tree draws above later-visited same-group siblings, so rank its hit candidacy above
+    // them regardless of visit order (cube over the menu buttons, back button / context menu / user
+    // card over the screen body beneath). applied as a balanced += around the walk, see updateInput.
+    bool bDrawsOnTop : 1 {false};
     // scroll surfaces (scrollviews) floor the wheel scan: if the hit group of a hovered one
     // declines the frame's wheel, the layers beneath never see it - a wheel aimed at an opaque
     // surface must not act on occluded surfaces below (only the fall-through sink may take it).

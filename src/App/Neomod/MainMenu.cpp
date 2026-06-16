@@ -62,7 +62,12 @@ using namespace neomod;
 class MainMenu::CubeButton final : public CBaseUIButton {
    public:
     CubeButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
-        : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {}
+        : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {
+        // the cube/logo draws on top of the expanded menu buttons, so it must win hover/click where
+        // they overlap (the buttons are added later = visited later, so they would otherwise out-rank
+        // the earlier-visited cube at the same base tier)
+        this->bDrawsOnTop = true;
+    }
 
     void draw() override {
         // draw nothing
@@ -83,15 +88,6 @@ class MainMenu::CubeButton final : public CBaseUIButton {
         this->mm->sizeAddAnim.set(0.0f, 0.15f, anim::QuadInOut);
 
         CBaseUIButton::onMouseOutside();
-    }
-
-    void updateInput(CBaseUIEventCtx &c) override {
-        // the cube/logo draws on top of the expanded menu buttons, so it must win hover/click where
-        // they overlap; raise the hit tier (the buttons are added later = visited later, so without
-        // this they would out-rank the earlier-visited cube at the same base tier)
-        c.currentHitTier++;
-        CBaseUIButton::updateInput(c);
-        c.currentHitTier--;
     }
 
    private:

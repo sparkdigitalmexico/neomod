@@ -10,6 +10,40 @@
 class CBaseUIElement;
 struct CBaseUIEventCtx;
 
+// ============================================================================================
+//  CBaseUI input model (read this first)
+// ============================================================================================
+//  Two ROOTS dispatch every frame in a fixed order: the engine gui root (guiContainer = console/
+//  debug, drawn on top) then the app UI root. They share one consumed-state buffer, so the engine
+//  root gets first claim on each event and the app root sees only what is left.
+//
+//  Each root runs in TWO PASSES per frame:
+//
+//    Pass A - the updateInput walk (CBaseUIElement::updateInput, driven top-most-first by the
+//             caller, e.g. UI::update over LAYER_ORDER). It does NOT deliver clicks: each visible+
+//             enabled element under the cursor registers as a HIT CANDIDATE on the ctx
+//             (CBaseUIEventCtx), snapshots its ancestor path, resolves hover LOSS locally, and
+//             broadcasts outside-downs. Transparent wrappers (bClickThroughSelf: containers,
+//             screens) register no candidacy of their own.
+//
+//    Pass B - dispatchEvents (this object). The frame's buffered button/wheel events (collected
+//             off the Mouse relay) are routed to those candidates, hover GAIN is resolved, and
+//             capture is advanced. One delivery per event, to one element.
+//
+//  ONE candidate set feeds hover, clicks AND wheel, ranked by ONE function (topCandidate):
+//    1. group  - layer/screen order (beginHitGroup per layer; first group walked = top-most)
+//    2. tier   - bDrawsOnTop raises an element's (sub)tree above later-visited same-group siblings
+//    3. visit  - latest visited within a tier wins (= later sibling draws on top)
+//  so the three pickers (hover, click-down, wheel) can never disagree on "what is on top".
+//
+//  Four routing concerns live in this one object, all keyed off that candidate set:
+//    - hover   : the single top-most candidate + its ancestors gain hover (resolveHover)
+//    - capture : a down implicitly captures its target; all further buttons + the matching up go
+//                to the captor until release (lock/steal/cancel serve the drag widgets)
+//    - wheel   : top-most wheel-accepting candidate, else the fall-through sink (VolumeOverlay)
+//    - focus   : a single focused element across both roots (the keyboard target)
+// ============================================================================================
+
 // pass-B mouse routing + capture state for the CBaseUI layer. one instance, owned by Engine
 // alongside the engine gui root; it listens on the same Mouse relay as every other consumer
 // (Mouse itself knows nothing about UI routing; consumption state lives in the buffer here).
