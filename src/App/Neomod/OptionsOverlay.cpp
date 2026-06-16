@@ -2232,12 +2232,12 @@ void OptionsOverlayImpl::onKeyDown(KeyboardEvent &e) {
     if(e.isConsumed()) return;
 
     if(e.getScanCode() == KEY_TAB) {
-        if(this->serverTextbox->isActive()) {
+        if(this->serverTextbox->isFocused()) {
             this->serverTextbox->stealFocus();
             this->nameTextbox->focus();
             e.consume();
             return;
-        } else if(this->nameTextbox->isActive()) {
+        } else if(this->nameTextbox->isFocused()) {
             this->nameTextbox->stealFocus();
             this->passwordTextbox->focus();
             e.consume();

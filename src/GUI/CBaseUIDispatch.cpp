@@ -363,7 +363,7 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                         UI_TRACE_EVENT(1, elem, "upOutside");
                         elem->onMouseUpOutside(left, right);
                     }
-                    if(!elem->bKeepActive) elem->bActive = false;
+                    elem->bActive = false;
                 } else if(!eligible) {
                     // captor went hidden/blocked between the captured-phase check and this event
                     // (mid-event-loop mutation): same cancel semantics, no click

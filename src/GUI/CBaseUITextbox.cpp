@@ -29,8 +29,6 @@
 
 CBaseUITextbox::CBaseUITextbox(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
-    this->setKeepActive(true);
-
     this->font = engine->getDefaultFont();
 
     this->textColor = this->frameColor = this->caretColor = 0xffffffff;
@@ -111,7 +109,7 @@ void CBaseUITextbox::draw() {
         this->drawText();
 
         // draw caret
-        if(this->bActive) {
+        if(this->isFocused()) {
             const int caretWidth = std::round((float)this->iCaretWidth * dpiScale);
             const int height = std::round(this->getSize().y - 2 * 3 * dpiScale);
             const float yadd = std::round(height / 2.0f);
@@ -141,7 +139,7 @@ void CBaseUITextbox::tick() {
 
     // update caret blinking
     {
-        if(!this->bActive) {
+        if(!this->isFocused()) {
             this->tickCaret();
         } else {
             const double elapsed = engine->getTime() - this->fCaretBlinkStartTime;
@@ -161,9 +159,9 @@ void CBaseUITextbox::updateInput(CBaseUIEventCtx &c) {
 
     // HACKHACK: should do this with the proper events! this will only work properly though if we can event.consume()
     // charDown's
-    if(!this->bEnabled && this->bActive && mleft && !this->isMouseInside()) this->bActive = false;
+    if(!this->bEnabled && this->isFocused() && mleft && !this->isMouseInside()) this->stealFocus();
 
-    if(this->bEnabled && (this->bActive || (!mleft && !mright)) &&
+    if(this->bEnabled && (this->isFocused() || (!mleft && !mright)) &&
        ((this->bBusy && (mleft || mright)) || this->isMouseInside()))
         env->setCursor(CURSORTYPE::CURSOR_TEXT);
 }
@@ -234,13 +232,15 @@ void CBaseUITextbox::onCapturedMouseMove() {
     this->updateCaretX();
 }
 
+bool CBaseUITextbox::isActive() { return CBaseUIElement::isActive() || this->isFocused(); }
+
 void CBaseUITextbox::onFocusStolen() {
     this->bBusy = false;
     this->deselectText();
 }
 
 void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
-    if(!this->bActive || !this->bVisible) return;
+    if(!this->isFocused() || !this->bVisible) return;
 
     e.consume();
 
@@ -400,7 +400,7 @@ void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
 }
 
 void CBaseUITextbox::onChar(KeyboardEvent &e) {
-    if(!this->bActive || !this->bVisible) return;
+    if(!this->isFocused() || !this->bVisible) return;
 
     e.consume();
 
@@ -476,7 +476,6 @@ void CBaseUITextbox::clear() {
 
 void CBaseUITextbox::focus(bool move_caret) {
     this->requestFocus();
-    this->bActive = true;
     this->bBusy = true;
     this->bMouseInside = true;
 

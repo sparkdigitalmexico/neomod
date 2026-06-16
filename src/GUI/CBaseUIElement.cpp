@@ -149,10 +149,6 @@ CBaseUIElement *CBaseUIElement::setActive(bool active) {
     this->bActive = active;
     return this;
 }
-CBaseUIElement *CBaseUIElement::setKeepActive(bool keepActive) {
-    this->bKeepActive = keepActive;
-    return this;
-}
 CBaseUIElement *CBaseUIElement::setEnabled(bool enabled) {
     if(enabled != this->bEnabled) {
         this->bEnabled = enabled;
@@ -310,7 +306,6 @@ bVisible:           {}
 bActive:            {}
 bBusy:              {}
 bEnabled:           {}
-bKeepActive:        {}
 bMouseInside:       {}
 bHandleLeftMouse:   {}
 bHandleRightMouse:  {}
@@ -318,8 +313,7 @@ rect:               {}
 relRect:            {}
 ==== END UI ELEMENT DEBUG ====)",
            fmt::ptr(this), currentFrame, this->getName(), this->bVisible, this->bActive, this->bBusy, this->bEnabled,
-           this->bKeepActive, this->bMouseInside, this->bHandleLeftMouse, this->bHandleRightMouse, this->rect,
-           this->relRect);
+           this->bMouseInside, this->bHandleLeftMouse, this->bHandleRightMouse, this->rect, this->relRect);
 }
 
 std::span<CBaseUIElement *const> CBaseUIElement::getAllChildren() const { return {}; }

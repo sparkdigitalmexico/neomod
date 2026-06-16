@@ -240,7 +240,7 @@ UIContextMenuTextbox *UIContextMenu::addTextbox(const std::string &text, int id)
 
         if(this->bBigStyle) textbox->setFont(osu->getSubTitleFont());
 
-        textbox->setActive(true);
+        textbox->requestFocus();
     }
     this->container.addBaseUIElement(textbox);
 

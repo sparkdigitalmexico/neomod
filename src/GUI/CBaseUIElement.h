@@ -117,8 +117,9 @@ struct CBaseUIEventCtx {
 //     requestFocus() on press and gate the handlers on isFocused() - the dispatcher keeps one
 //     focused element across both UI roots.
 //
-//  Read but don't set: bMouseInside (hover), bActive (pressed/held; also a textbox's focus). Do
-//  set: bVisible, bEnabled, and bBusy for "mid-gesture" (queried via isBusy()). How the walk
+//  Read but don't set: bMouseInside (hover), bActive (pressed/held while a button is down on us).
+//  Do set: bVisible, bEnabled, and bBusy for "mid-gesture" (queried via isBusy()). The keyboard
+//  target is the dispatcher focus pointer (requestFocus/isFocused), NOT bActive. How the walk
 //  routes all of this is documented atop CBaseUIDispatch.h.
 // ============================================================================================
 
@@ -189,7 +190,6 @@ class CBaseUIElement : public KeyboardListener {
 
     virtual CBaseUIElement *setVisible(bool visible);
     virtual CBaseUIElement *setActive(bool active);
-    virtual CBaseUIElement *setKeepActive(bool keepActive);
     virtual CBaseUIElement *setEnabled(bool enabled);
     virtual CBaseUIElement *setBusy(bool busy);
     virtual CBaseUIElement *setName(std::string name);
@@ -286,11 +286,10 @@ class CBaseUIElement : public KeyboardListener {
     // small non-surface widgets (buttons, toasts, labels) stay wheel-transparent.
     bool bWheelSurface : 1 {false};
     bool bVisible : 1 {true};
-    bool bActive : 1 {false};  // we are doing something, e.g. textbox is blinking and ready to receive input
+    bool bActive : 1 {false};  // pressed/held: set while a mouse button is down on us, cleared on release
     bool bBusy : 1 {false};    // we demand the focus to be kept on us, e.g. click-drag scrolling in a scrollview
     bool bEnabled : 1 {true};
 
-    bool bKeepActive : 1 {false};  // once clicked, don't lose m_bActive, we have to manually release it (e.g. textbox)
     bool bMouseInside : 1 {false};
 
     bool bHandleLeftMouse : 1 {true};

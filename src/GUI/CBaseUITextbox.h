@@ -18,6 +18,10 @@ class CBaseUITextbox : public CBaseUIElement {
     void onFocusStolen() override;
     void onResized() override;
 
+    // a textbox is "active" while it holds the keyboard focus, on top of the base pressed/busy
+    // states (focus is the dispatcher pointer now; bActive is only the transient press)
+    bool isActive() override;
+
     void onChar(KeyboardEvent &e) override;
     void onKeyDown(KeyboardEvent &e) override;
 
