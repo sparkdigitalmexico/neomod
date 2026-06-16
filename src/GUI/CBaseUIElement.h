@@ -59,10 +59,9 @@ struct CBaseUIEventCtx {
     // pass-A hit-candidate collection: elements under the cursor that may receive this frame's
     // button events; single-target delivery happens in UIDispatch::dispatchEvents after the
     // walk. groups = top-level screens/overlays in input-priority order; within a group the
-    // best (tier, latest visit) candidate wins, approximating top-most draw order until the
-    // phase 3 layer stack provides real z. each candidate snapshots the ancestor chain that led
-    // to it (outermost first): if it captures, those ancestors observe the drag and may steal
-    // (scrollview drag resistance).
+    // best (tier, latest visit) candidate wins. each candidate snapshots the ancestor chain that led
+    // to it (outermost first): if it captures, those ancestors observe the drag and may steal (scrollview drag resistance).
+    // TODO: approximating top-most draw order until we have a real layer stack (providing Z-order)
     struct HitCandidate {
         CBaseUIElement *elem;
         int tier;

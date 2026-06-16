@@ -144,7 +144,7 @@ class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
 }  // namespace
 
 ModSelector::ModSelector() : UIScreen() {
-    // overlay everywhere (phase 3.3): opened over the still-visible base screen (songbrowser/
+    // overlay everywhere: opened over the still-visible base screen (songbrowser/
     // room) instead of replacing it; the modal floor keeps mouse/keys/hover from leaking into
     // the base beneath, and any base swap force-closes us
     this->bModal = true;
@@ -456,8 +456,7 @@ void ModSelector::draw() {
     const float experimentalModsAnimationTranslation =
         -(this->experimentalContainer->getSize().x + 2.0f) * (1.0f - this->fExperimentalAnimation);
 
-    // outside of play mode the base screen stays visible beneath us (overlay everywhere,
-    // phase 3.3), so dim it osu-style
+    // outside of play mode the base screen stays visible beneath us, so dim it osu-style
     if(!this->isInCompactMode()) {
         g->setColor(Color(backgroundColor).setA(backgroundColor.Af() * this->fAnimation));
         g->fillRect(0, 0, osu->getVirtScreenWidth(), osu->getVirtScreenHeight());

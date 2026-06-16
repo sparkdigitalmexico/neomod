@@ -20,7 +20,7 @@ class UIScreen : public CBaseUIContainer {
 
     [[nodiscard]] u64 getLastTickFrame() const { return this->lastTickFrame; }
 
-    // declared layer-stack flags (phase 3.2), constructor-set; the stack reads these instead
+    // declared layer-stack flags, constructor-set; the stack reads these instead
     // of screens sniffing each other:
     // - modal: while visible, the input/key walk stops below this layer
     // - closeOnScreenSwitch: hidden on every base-screen swap (UI::setScreen/hide)

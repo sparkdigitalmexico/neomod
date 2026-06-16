@@ -248,7 +248,7 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
 
     const u64 startGeneration = this->elemGeneration;
 
-    // wheel before buttons (pre-2.3 it acted during the input walk, ahead of click delivery):
+    // wheel before buttons:
     // the frame's totals go to ONE consumer, with decliners falling through (scroll chaining:
     // a button or a can't-scroll dropdown above its scrollview passes the wheel on). while a
     // capture is held the chain is the captor then its observing ancestors innermost-first

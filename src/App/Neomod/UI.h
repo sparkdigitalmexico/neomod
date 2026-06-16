@@ -202,7 +202,8 @@ struct UI final {
                                                                             "tooltipoverlay",
                                                                             "beatmapinstalloverlay"};
 
-    // canonical layer order (phase 3 layer stack): indices into screens/SCREEN_NAMES,
+    // TODO: think of a better/more readable way to do this
+    // canonical layer order: indices into screens/SCREEN_NAMES,
     // bottom -> top. draw walks it forward, input + key routing walk it in reverse, so
     // "input order = reverse draw order" holds by construction (one order replaces the
     // old screens-array input priority and the two hand-coded draw branches).

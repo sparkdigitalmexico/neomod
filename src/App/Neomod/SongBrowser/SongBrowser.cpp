@@ -3131,7 +3131,7 @@ void SongBrowser::onSelectionMode() {
 }
 
 void SongBrowser::onSelectionMods() {
-    // overlay, not a base swap (phase 3.3): the browser stays visible (and active) beneath
+    // mod selector is an overlay, so the browser stays visible (and active) beneath
     this->contextMenu->setVisible2(false);
     ui->getModSelector()->setVisible(true);
     soundEngine->play(osu->getSkin()->s_expand);

@@ -287,7 +287,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
         // outside-downs stay a per-element broadcast: the rect-based "pressed elsewhere" signal
         // (popup close-on-outside, contextmenu/textbox deactivation). KEPT deliberately - it is a
         // mouse concept, not keyboard focus: a context menu holding clickable items cannot be the
-        // focus holder (cf. phase 4.3), so the broadcast is the right tool, not the focus pointer.
+        // focus holder, so the broadcast is the right tool, not the focus pointer.
         // the captor is excluded; its events are routed in UIDispatch::dispatchEvents.
         const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
                                (u8)(this->bHandleRightMouse && mouse->isRightPressed());
