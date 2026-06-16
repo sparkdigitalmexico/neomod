@@ -83,9 +83,6 @@ class MainMenu final : public UIScreen, public MouseListener {
     void setMenuElementsVisible(bool visible, bool animate = true);
 
     void writeVersionFile();
-
-    MainButton *addMainMenuButton(std::string text, std::string name);
-
     void onPlayButtonPressed();
     void onMultiplayerButtonPressed();
     void onOptionsButtonPressed();
