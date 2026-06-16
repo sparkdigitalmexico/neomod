@@ -35,11 +35,9 @@ std::string elemName(const CBaseUIElement *elem) {
 }
 }  // namespace CBaseUIDebug
 
-void CBaseUIEventCtx::consume_mouse() { this->propagate_clicks = this->propagate_hover = false; }
+void CBaseUIEventCtx::consume_mouse() { this->bConsumed = true; }
 
-bool CBaseUIEventCtx::mouse_consumed() const {
-    return this->propagate_clicks == this->propagate_hover && (this->propagate_hover == false);
-}
+bool CBaseUIEventCtx::mouse_consumed() const { return this->bConsumed; }
 
 void CBaseUIEventCtx::beginHitGroup() { this->hitGroupStarts.push_back(this->hitCandidates.size()); }
 
@@ -273,9 +271,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
     // re-check to account for a possible isMouseInside() override (aggregate screens). for a plain
     // candidate widget isMouseInside() == bMouseInside, so this is a no-op and its gain comes from
     // the dispatcher.
-    if((this->bMouseInside = this->isMouseInside())) {
-        c.propagate_hover = false;  // doesn't really do anything much atm
-    }
+    this->bMouseInside = this->isMouseInside();
 
     if(oldMouseInsideState != this->bMouseInside) {
         UI_TRACE_EVENT(0, this, this->bMouseInside ? "hoverIn" : "hoverOut");

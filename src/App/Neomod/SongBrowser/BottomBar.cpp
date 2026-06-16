@@ -159,7 +159,6 @@ void updateInput(CBaseUIEventCtx& c) {
 
     if(clicked && c.propagate_clicks) {
         c.propagate_clicks = false;
-        c.propagate_hover = false;
         press_button(hovered_btn);
     }
 

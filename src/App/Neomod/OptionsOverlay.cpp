@@ -2035,10 +2035,9 @@ void OptionsOverlayImpl::updateInput(CBaseUIEventCtx &c) {
     // dropdown is scrolled out of the clip list. when the options menu IS visible the menu is
     // visited AGAIN inside the options scrollview walk, and that registration must win the
     // hit candidacy (its ancestor path includes options_contents, so the drag-scroll steal can
-    // chain through an unscrollable dropdown). a press-hold inside the hovered menu reads as
-    // consumed right here (hover kills propagate_hover, the scrollview self-grab kills
-    // propagate_clicks), which used to skip the rest of the walk -> restore propagate_clicks
-    // so the nested walk keeps its candidacy and a post-steal captor keeps its input stamp
+    // chain through an unscrollable dropdown). a press-hold inside the menu clears propagate_clicks
+    // (the scrollview self-grab) -> restore it so the nested walk keeps its candidacy and a
+    // post-steal captor keeps its input stamp
     const bool clicksBeforeMenu = c.propagate_clicks;
     this->contextMenu->updateInput(c);
     if(onlyContextMenuVisible) return;  // HACK: not returning early if options menu is hidden, for skins menu dropdown

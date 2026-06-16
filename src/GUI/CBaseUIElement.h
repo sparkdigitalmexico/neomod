@@ -41,8 +41,16 @@ enum class TEXT_JUSTIFICATION : u8 { LEFT, CENTERED, RIGHT };
 class CBaseUIContainer;
 
 struct CBaseUIEventCtx {
+    // candidacy suppression carried along the walk: an element grabbing clicks (or the bottom bar)
+    // clears this so elements visited LATER don't register as hit candidates. this is NOT
+    // consumption - the walk keeps going; see bConsumed below.
     bool propagate_clicks{true};
-    bool propagate_hover{true};  // TODO: does not work quite right yet
+
+    // the walk floor: a visible modal layer calls consume_mouse() and the LAYER_ORDER walk stops
+    // below it. this is the ONE meaning of "consumed" now - it used to be inferred from a
+    // propagate_clicks == propagate_hover == false coincidence (a grab COINCIDING with a hover),
+    // which conflated an incidental grab with a real modal floor.
+    bool bConsumed{false};
 
     void consume_mouse();
 
@@ -88,6 +96,32 @@ struct CBaseUIEventCtx {
         CBaseUIEventCtx &c;
     };
 };
+
+// ============================================================================================
+//  Authoring a UI element (the part you actually touch)
+// ============================================================================================
+//  Most subclasses override draw() + tick() and one or two on*() handlers; the flags and the rest
+//  of the virtuals are framework-managed. Recipes:
+//
+//   - Plain widget (button/label/icon): override draw(); handle a click in onMouseUpInside() (it
+//     fires only if the cursor is still inside on release). Hover (onMouseInside/onMouseOutside)
+//     is automatic - the dispatcher grants it to the single top-most element under the cursor.
+//   - Pure container (no surface of its own): derive from CBaseUIContainer; it sets
+//     bClickThroughSelf, so it is never a hit candidate itself, only its children are. Put a child
+//     widget where you want a click rather than overriding the container's own onMouse*.
+//   - Draws over a sibling visited later in the same screen (logo over the menu buttons, back
+//     button over the body): set bDrawsOnTop. Otherwise the later sibling out-ranks you for hits.
+//     Do not bump the hit tier by hand.
+//   - Scrollable surface: derive from CBaseUIScrollView (sets bWheelSurface so it owns the wheel
+//     over its area); drag / kinetic / scrollbar come for free via mouse capture.
+//   - Keyboard: override onKeyDown/onKeyUp/onChar. To be THE keyboard target (textbox), call
+//     requestFocus() on press and gate the handlers on isFocused() - the dispatcher keeps one
+//     focused element across both UI roots.
+//
+//  Read but don't set: bMouseInside (hover), bActive (pressed/held; also a textbox's focus). Do
+//  set: bVisible, bEnabled, and bBusy for "mid-gesture" (queried via isBusy()). How the walk
+//  routes all of this is documented atop CBaseUIDispatch.h.
+// ============================================================================================
 
 class CBaseUIElement : public KeyboardListener {
     NOCOPY_NOMOVE(CBaseUIElement)
