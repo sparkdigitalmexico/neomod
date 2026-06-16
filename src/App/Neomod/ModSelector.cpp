@@ -144,12 +144,10 @@ class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
 }  // namespace
 
 ModSelector::ModSelector() : UIScreen() {
-    // overlay everywhere: opened over the still-visible base screen (songbrowser/
-    // room) instead of replacing it; the modal floor keeps mouse/keys/hover from leaking into
-    // the base beneath, and any base swap force-closes us
-    this->bModal = true;
-    this->bCloseOnScreenSwitch = true;
-
+    // overlay everywhere: opened over the still-visible base screen (songbrowser/room) instead of
+    // replacing it. its modal + closeOnScreenSwitch flags (declared in UI.h's screen registry) keep
+    // the modal floor from leaking mouse/keys/hover into the base beneath, and force-close it on any
+    // base swap.
     const vec2 osuScreen = osu->getVirtScreenSize();
 
     this->setSize(osuScreen.x, osuScreen.y);

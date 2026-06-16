@@ -28,11 +28,10 @@
 #include "UIPauseMenuButton.h"
 
 PauseOverlay::PauseOverlay() : UIScreen() {
-    this->bCloseOnScreenSwitch = true;
-    // while visible, input below the pause menu is blocked by the modal floor (replaces the
-    // all-except-a-few onKeyDown eat-all). GAME_PAUSE/Escape/offset still reach Osu's
-    // post-ui->onKeyDown handler because the floor returns WITHOUT consuming (!isConsumed).
-    this->bModal = true;
+    // modal + closeOnScreenSwitch are declared in UI.h's screen registry. while visible, input
+    // below the pause menu is blocked by the modal floor (replaces the all-except-a-few onKeyDown
+    // eat-all). GAME_PAUSE/Escape/offset still reach Osu's post-ui->onKeyDown handler because the
+    // floor returns WITHOUT consuming (!isConsumed).
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
     using ImageGetter = UIPauseMenuButton::BasicSkinImageGetter;
 

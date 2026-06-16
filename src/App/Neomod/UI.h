@@ -46,6 +46,42 @@ extern UI* ui;
 // UIScreens, manually created + added to the "overlays" array and destroyed in reverse order in dtor
 class UIDebug;
 
+// The screen registry: one row per always-alive screen, in STORAGE order (= construction order =
+// SCREEN_NAMES order, NOT layer order). This single list derives the member fields, the typed
+// getX()/getXBase() accessors, SCREEN_NAMES, SCREEN_RANK, NUM_SCREENS, the init() construction
+// ladder, and the per-screen modal/closeOnScreenSwitch flags. Adding a screen = one row here.
+//   Acc    : getAcc()/getAccBase() accessor names
+//   Type   : concrete class -> member field type + `new Type` in init()
+//   member : the typed pointer; its slot in screens[] is this row's position
+//   name   : SCREEN_NAMES entry (set_active_ui_screen / ui_screens / findScreenByName)
+//   rank   : bottom->top draw position, dense 0..NUM_SCREENS-1 (see SCREEN_RANK/LAYER_ORDER)
+//   M / C  : bModal / bCloseOnScreenSwitch
+// dummy (storage index 0, the file-local NullScreen active-screen sentinel) is the one row NOT
+// here: its member type differs from its ctor type, it has no accessor, and it is built first.
+// clang-format off
+#define UI_SCREEN_REGISTRY(X)                                                                            \
+    X(NotificationOverlay,   NotificationOverlay,     notificationOverlay,   "notificationoverlay",   20, 0, 0) \
+    X(VolumeOverlay,         VolumeOverlay,           volumeOverlay,         "volumeoverlay",         19, 0, 0) \
+    X(PromptOverlay,         PromptOverlay,           promptOverlay,         "promptoverlay",         16, 1, 1) \
+    X(ModSelector,           ModSelector,             modSelector,           "modselector",           12, 1, 1) \
+    X(UserActions,           UIUserContextMenuScreen, userActionsOverlay,    "useractions",           14, 0, 0) \
+    X(Room,                  RoomScreen,              room,                  "room",                   1, 0, 0) \
+    X(Chat,                  Chat,                    chatOverlay,           "chat",                  13, 0, 0) \
+    X(OptionsOverlay,        OptionsOverlay,          optionsOverlay,        "optionsoverlay",        15, 0, 1) \
+    X(RankingScreen,         RankingScreen,           rankingScreen,         "rankingscreen",          2, 0, 0) \
+    X(UserStatsScreen,       UserStatsScreen,         userStatsScreen,       "userstatsscreen",        3, 0, 0) \
+    X(SpectatorScreen,       SpectatorScreen,         spectatorScreen,       "spectatorscreen",        4, 0, 0) \
+    X(PauseOverlay,          PauseOverlay,            pauseOverlay,          "pauseoverlay",          11, 1, 1) \
+    X(HUD,                   HUD,                     hud,                   "hud",                   10, 0, 0) \
+    X(SongBrowser,           SongBrowser,             songBrowser,           "songbrowser",            5, 0, 0) \
+    X(OsuDirectScreen,       OsuDirectScreen,         osuDirectScreen,       "osudirectscreen",        6, 0, 0) \
+    X(Lobby,                 Lobby,                   lobby,                 "lobby",                  7, 0, 0) \
+    X(AboutScreen,           AboutScreen,             aboutScreen,           "aboutscreen",            8, 0, 0) \
+    X(MainMenu,              MainMenu,                mainMenu,              "mainmenu",               9, 0, 0) \
+    X(TooltipOverlay,        TooltipOverlay,          tooltipOverlay,        "tooltipoverlay",        18, 0, 0) \
+    X(BeatmapInstallOverlay, BeatmapInstallOverlay,   beatmapInstallOverlay, "beatmapinstalloverlay", 17, 0, 0)
+// clang-format on
+
 struct UI final {
     NOCOPY_NOMOVE(UI)
 
@@ -82,49 +118,18 @@ struct UI final {
     // when popped, the parent is set visible/active
     std::unique_ptr<UIOverlay> popOverlay(UIOverlay* overlay);
 
-    // created early, in ctor, for error notifications
-    [[nodiscard]] inline NotificationOverlay* getNotificationOverlay() const { return this->notificationOverlay; }
-    [[nodiscard]] UIScreen* getNotificationOverlayBase() const;
-
-    // rest are created on init()
-    [[nodiscard]] inline VolumeOverlay* getVolumeOverlay() const { return this->volumeOverlay; }
-    [[nodiscard]] UIScreen* getVolumeOverlayBase() const;
-    [[nodiscard]] inline PromptOverlay* getPromptOverlay() const { return this->promptOverlay; }
-    [[nodiscard]] UIScreen* getPromptOverlayBase() const;
-    [[nodiscard]] inline ModSelector* getModSelector() const { return this->modSelector; }
-    [[nodiscard]] UIScreen* getModSelectorBase() const;
-    [[nodiscard]] inline UIUserContextMenuScreen* getUserActions() const { return this->userActionsOverlay; }
-    [[nodiscard]] UIScreen* getUserActionsBase() const;
-    [[nodiscard]] inline RoomScreen* getRoom() const { return this->room; }
-    [[nodiscard]] UIScreen* getRoomBase() const;
-    [[nodiscard]] inline Chat* getChat() const { return this->chatOverlay; }
-    [[nodiscard]] UIScreen* getChatBase() const;
-    [[nodiscard]] inline OptionsOverlay* getOptionsOverlay() const { return this->optionsOverlay; }
-    [[nodiscard]] UIScreen* getOptionsOverlayBase() const;
-    [[nodiscard]] inline RankingScreen* getRankingScreen() const { return this->rankingScreen; }
-    [[nodiscard]] UIScreen* getRankingScreenBase() const;
-    [[nodiscard]] inline UserStatsScreen* getUserStatsScreen() const { return this->userStatsScreen; }
-    [[nodiscard]] UIScreen* getUserStatsScreenBase() const;
-    [[nodiscard]] inline SpectatorScreen* getSpectatorScreen() const { return this->spectatorScreen; }
-    [[nodiscard]] UIScreen* getSpectatorScreenBase() const;
-    [[nodiscard]] inline PauseOverlay* getPauseOverlay() const { return this->pauseOverlay; }
-    [[nodiscard]] UIScreen* getPauseOverlayBase() const;
-    [[nodiscard]] inline HUD* getHUD() const { return this->hud; }
-    [[nodiscard]] UIScreen* getHUDBase() const;
-    [[nodiscard]] inline SongBrowser* getSongBrowser() const { return this->songBrowser; }
-    [[nodiscard]] UIScreen* getSongBrowserBase() const;
-    [[nodiscard]] inline OsuDirectScreen* getOsuDirectScreen() const { return this->osuDirectScreen; }
-    [[nodiscard]] UIScreen* getOsuDirectScreenBase() const;
-    [[nodiscard]] inline Lobby* getLobby() const { return this->lobby; }
-    [[nodiscard]] UIScreen* getLobbyBase() const;
-    [[nodiscard]] inline AboutScreen* getAboutScreen() const { return this->aboutScreen; }
-    [[nodiscard]] UIScreen* getAboutScreenBase() const;
-    [[nodiscard]] inline MainMenu* getMainMenu() const { return this->mainMenu; }
-    [[nodiscard]] UIScreen* getMainMenuBase() const;
-    [[nodiscard]] inline TooltipOverlay* getTooltipOverlay() const { return this->tooltipOverlay; }
-    [[nodiscard]] UIScreen* getTooltipOverlayBase() const;
-    [[nodiscard]] inline BeatmapInstallOverlay* getBeatmapInstallOverlay() const { return this->beatmapInstallOverlay; }
-    [[nodiscard]] UIScreen* getBeatmapInstallOverlayBase() const;
+    // typed accessors generated from the registry: getX() returns the concrete type (a forward
+    // declaration suffices for a pointer return), getXBase() returns the UIScreen* base and is
+    // defined out-of-line in UI.cpp because the derived->base pointer conversion needs the
+    // complete type. (getNotificationOverlay is the one created early, in the ctor, for error
+    // notifications; the rest are created in init().)
+    // NOLINTBEGIN(bugprone-macro-parentheses): Type is a type name, can't be parenthesized
+#define X(Acc, Type, member, name, rank, M, C)                           \
+    [[nodiscard]] inline Type* get##Acc() const { return this->member; } \
+    [[nodiscard]] UIScreen* get##Acc##Base() const;
+    UI_SCREEN_REGISTRY(X)
+#undef X
+    // NOLINTEND(bugprone-macro-parentheses)
 
    private:
     friend UIScreen;
@@ -139,31 +144,21 @@ struct UI final {
     void drawLayerRange(size_t from, size_t to);
     void drawExtraOverlays();
 
-    UIScreen* dummy;
-    NotificationOverlay* notificationOverlay;
-    static constexpr const size_t EARLY_SCREENS{2};  // dummy+notificationOverlay
+    // dummy is the one screen not in UI_SCREEN_REGISTRY: storage index 0, a file-local NullScreen
+    // (member type UIScreen* differs from its ctor type), no accessor, the active_screen sentinel,
+    // built first in the ctor.
+    UIScreen* dummy{nullptr};
+    static constexpr const size_t EARLY_SCREENS{2};  // dummy + notificationOverlay, built in the ctor
 
-    VolumeOverlay* volumeOverlay{nullptr};
-    PromptOverlay* promptOverlay{nullptr};
-    ModSelector* modSelector{nullptr};
-    UIUserContextMenuScreen* userActionsOverlay{nullptr};
-    RoomScreen* room{nullptr};
-    Chat* chatOverlay{nullptr};
-    OptionsOverlay* optionsOverlay{nullptr};
-    RankingScreen* rankingScreen{nullptr};
-    UserStatsScreen* userStatsScreen{nullptr};
-    SpectatorScreen* spectatorScreen{nullptr};
-    PauseOverlay* pauseOverlay{nullptr};
-    HUD* hud{nullptr};
-    SongBrowser* songBrowser{nullptr};
-    OsuDirectScreen* osuDirectScreen{nullptr};
-    Lobby* lobby{nullptr};
-    AboutScreen* aboutScreen{nullptr};
-    MainMenu* mainMenu{nullptr};
-    TooltipOverlay* tooltipOverlay{nullptr};
-    BeatmapInstallOverlay* beatmapInstallOverlay{nullptr};
+    // one typed pointer per registry row (notificationOverlay is row 0, built early in the ctor)
+#define X(Acc, Type, member, name, rank, M, C) Type* member{nullptr};  // NOLINT(bugprone-macro-parentheses)
+    UI_SCREEN_REGISTRY(X)
+#undef X
 
-    static constexpr const size_t NUM_SCREENS{21};  // update this when adding screens
+    // dummy + one per registry row, so adding a row updates the count automatically
+#define X(...) +1  // NOLINT(bugprone-macro-parentheses)
+    static constexpr size_t NUM_SCREENS{1 UI_SCREEN_REGISTRY(X)};
+#undef X
 
     UIScreen* active_screen{nullptr};
 
@@ -179,34 +174,26 @@ struct UI final {
     // for idle cursor fade alpha
     f64 lastCursorMoveTime{0.};
 
-    // index-aligned with UI::screens, see the assignment order in UI::init()
-    static constexpr std::array<std::string_view, NUM_SCREENS> SCREEN_NAMES{"dummy",
-                                                                            "notificationoverlay",
-                                                                            "volumeoverlay",
-                                                                            "promptoverlay",
-                                                                            "modselector",
-                                                                            "useractions",
-                                                                            "room",
-                                                                            "chat",
-                                                                            "optionsoverlay",
-                                                                            "rankingscreen",
-                                                                            "userstatsscreen",
-                                                                            "spectatorscreen",
-                                                                            "pauseoverlay",
-                                                                            "hud",
-                                                                            "songbrowser",
-                                                                            "osudirectscreen",
-                                                                            "lobby",
-                                                                            "aboutscreen",
-                                                                            "mainmenu",
-                                                                            "tooltipoverlay",
-                                                                            "beatmapinstalloverlay"};
+    // index-aligned with screens[]/SCREEN_RANK; the lookup table for set_active_ui_screen /
+    // ui_screens / findScreenByName (dummy is index 0, then one per registry row)
+#define X(Acc, Type, member, name, rank, M, C) name,
+    static constexpr std::array<std::string_view, NUM_SCREENS> SCREEN_NAMES{"dummy", UI_SCREEN_REGISTRY(X)};
+#undef X
 
-    // TODO: think of a better/more readable way to do this
-    // canonical layer order: indices into screens/SCREEN_NAMES,
-    // bottom -> top. draw walks it forward, input + key routing walk it in reverse, so
-    // "input order = reverse draw order" holds by construction (one order replaces the
-    // old screens-array input priority and the two hand-coded draw branches).
+    // bottom -> top draw rank for each screen, index-aligned with SCREEN_NAMES/screens. layering is
+    // DECLARED in the registry rows (each screen owns its rank there); this is the storage-order
+    // projection of those ranks. LAYER_ORDER below is its inverse, derived; a duplicate or
+    // out-of-range rank is a compile error (the permutation static_assert in UI.cpp + the constexpr
+    // OOB in the inverse), never a silent mis-layer. dense 0..NUM_SCREENS-1: rank IS the bottom->top
+    // walk position. (dummy is the base of the base band, rank 0.)
+#define X(Acc, Type, member, name, rank, M, C) rank,
+    static constexpr std::array<size_t, NUM_SCREENS> SCREEN_RANK{0, UI_SCREEN_REGISTRY(X)};
+#undef X
+
+    // canonical layer order, bottom -> top = the inverse of SCREEN_RANK (LAYER_ORDER[rank] =
+    // storage index). draw walks it forward, input + key routing walk it in reverse, so
+    // "input order = reverse draw order" holds by construction (one order replaces the old
+    // screens-array input priority and the two hand-coded draw branches).
     // [0, OVERLAY_BAND_BEGIN) is the base band: the mutually-exclusive base screens
     // (exactly one visible, swapped by setScreen; relative order among them is inert)
     // plus hud, whose drawing belongs to the bespoke gameplay composite. the active
@@ -215,31 +202,26 @@ struct UI final {
     // topmost. notification sits ABOVE volume: VolumeOverlay::onKeyDown is ungated
     // (KEY_MUTE, volume binds) and must not eat keys ahead of notification's keybind
     // capture (see the decision log; the reverse of the locked draft's draw-parity pick).
-    static constexpr std::array<size_t, NUM_SCREENS> LAYER_ORDER{
-        0,   // dummy
-        6,   // room
-        9,   // rankingscreen
-        10,  // userstatsscreen
-        11,  // spectatorscreen
-        14,  // songbrowser
-        15,  // osudirectscreen
-        16,  // lobby
-        17,  // aboutscreen
-        18,  // mainmenu
-        13,  // hud (input slot only; drawn by the gameplay composite, not the band)
-        12,  // pauseoverlay
-        4,   // modselector
-        7,   // chat
-        5,   // useractions
-        8,   // optionsoverlay
-        3,   // promptoverlay
-        20,  // beatmapinstalloverlay
-        19,  // tooltipoverlay
-        2,   // volumeoverlay
-        1,   // notificationoverlay
-    };
-    static constexpr size_t OVERLAY_BAND_BEGIN{11};  // pause; first band layer above the base/hud
-    static constexpr size_t PLAY_OVERLAYS_END{16};   // one past options; pause..options render
-                                                     // into the FPoSu playfield buffer in play mode
-    static constexpr size_t EXTRAS_SPLICE{18};       // extra_overlays walk/draw below this layer
+    static constexpr std::array<size_t, NUM_SCREENS> LAYER_ORDER = [] {
+        std::array<size_t, NUM_SCREENS> order{};
+        for(size_t i = 0; i < NUM_SCREENS; ++i) order[SCREEN_RANK[i]] = i;
+        return order;
+    }();
+
+    // the band boundaries are the ranks of named screens, not magic integers: change a screen's
+    // SCREEN_RANK and these follow. the matching name-anchor static_asserts in UI.cpp prove the
+    // derivation still lands on the intended screens. (computed in one IIFE so the name->rank
+    // lookup is shared; a member helper can't be used in a sibling static-member initializer.)
+    static constexpr std::array<size_t, 3> BAND_RANKS = [] {
+        auto rankOf = [](std::string_view name) {
+            for(size_t i = 0; i < NUM_SCREENS; ++i)
+                if(SCREEN_NAMES[i] == name) return SCREEN_RANK[i];
+            return NUM_SCREENS;  // unreachable for a valid name; an OOB use below is a hard compile error
+        };
+        return std::array<size_t, 3>{rankOf("pauseoverlay"), rankOf("optionsoverlay") + 1, rankOf("tooltipoverlay")};
+    }();
+    static constexpr size_t OVERLAY_BAND_BEGIN{BAND_RANKS[0]};  // first overlay-band layer above base/hud
+    static constexpr size_t PLAY_OVERLAYS_END{BAND_RANKS[1]};   // one past options; pause..options render
+                                                                // into the FPoSu playfield buffer in play mode
+    static constexpr size_t EXTRAS_SPLICE{BAND_RANKS[2]};       // extra_overlays walk/draw below this layer
 };

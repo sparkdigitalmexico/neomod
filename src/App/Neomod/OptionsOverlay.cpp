@@ -332,7 +332,8 @@ struct OptionsOverlayImpl final {
 };
 
 // passthroughs
-OptionsOverlay::OptionsOverlay() : ScreenBackable(), pImpl(this) { this->bCloseOnScreenSwitch = true; }
+OptionsOverlay::OptionsOverlay()
+    : ScreenBackable(), pImpl(this) {}  // closeOnScreenSwitch is declared in UI.h's screen registry
 OptionsOverlay::~OptionsOverlay() = default;
 
 void OptionsOverlay::draw() { return pImpl->draw(); }

@@ -9,6 +9,7 @@ class KeyboardEvent;
 struct UI;
 class UIScreen : public CBaseUIContainer {
     NOCOPY_NOMOVE(UIScreen)
+    friend struct UI;  // UI::init() sets the declared bModal/bCloseOnScreenSwitch from its screen registry
    public:
     UIScreen() { this->bVisible = false; }
     ~UIScreen() override = default;

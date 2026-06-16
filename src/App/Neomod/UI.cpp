@@ -57,26 +57,12 @@ class NullScreen final : public UIScreen {
 };
 }  // namespace
 
-UIScreen *UI::getNotificationOverlayBase() const { return this->notificationOverlay; }
-UIScreen *UI::getVolumeOverlayBase() const { return this->volumeOverlay; }
-UIScreen *UI::getPromptOverlayBase() const { return this->promptOverlay; }
-UIScreen *UI::getModSelectorBase() const { return this->modSelector; }
-UIScreen *UI::getUserActionsBase() const { return this->userActionsOverlay; }
-UIScreen *UI::getRoomBase() const { return this->room; }
-UIScreen *UI::getChatBase() const { return this->chatOverlay; }
-UIScreen *UI::getOptionsOverlayBase() const { return this->optionsOverlay; }
-UIScreen *UI::getRankingScreenBase() const { return this->rankingScreen; }
-UIScreen *UI::getUserStatsScreenBase() const { return this->userStatsScreen; }
-UIScreen *UI::getSpectatorScreenBase() const { return this->spectatorScreen; }
-UIScreen *UI::getPauseOverlayBase() const { return this->pauseOverlay; }
-UIScreen *UI::getHUDBase() const { return this->hud; }
-UIScreen *UI::getSongBrowserBase() const { return this->songBrowser; }
-UIScreen *UI::getOsuDirectScreenBase() const { return this->osuDirectScreen; }
-UIScreen *UI::getLobbyBase() const { return this->lobby; }
-UIScreen *UI::getAboutScreenBase() const { return this->aboutScreen; }
-UIScreen *UI::getMainMenuBase() const { return this->mainMenu; }
-UIScreen *UI::getTooltipOverlayBase() const { return this->tooltipOverlay; }
-UIScreen *UI::getBeatmapInstallOverlayBase() const { return this->beatmapInstallOverlay; }
+// out-of-line getXBase definitions: the derived->UIScreen* conversion needs the complete type, so
+// these live here (where the concrete headers are included) rather than inline in UI.h.
+#define X(Acc, Type, member, name, rank, M, C) \
+    UIScreen *UI::get##Acc##Base() const { return this->member; }
+UI_SCREEN_REGISTRY(X)
+#undef X
 
 UI *ui{nullptr};
 
@@ -94,6 +80,9 @@ UI::UI() {
     static_assert(SCREEN_NAMES[LAYER_ORDER[OVERLAY_BAND_BEGIN]] == "pauseoverlay");
     static_assert(SCREEN_NAMES[LAYER_ORDER[PLAY_OVERLAYS_END - 1]] == "optionsoverlay");
     static_assert(SCREEN_NAMES[LAYER_ORDER[EXTRAS_SPLICE]] == "tooltipoverlay");
+    // EARLY_SCREENS assumes dummy + notificationOverlay are the first two storage slots (built in
+    // the ctor; the init() registry walk skips notificationOverlay via its null-guard)
+    static_assert(SCREEN_NAMES[0] == "dummy" && SCREEN_NAMES[1] == "notificationoverlay");
 
     ui = this;
     this->screens[0] = this->active_screen = this->dummy = new NullScreen();
@@ -117,26 +106,19 @@ UI::~UI() {
 }
 
 bool UI::init() {
-    int screenit = EARLY_SCREENS;
-    this->screens[screenit++] = this->volumeOverlay = new VolumeOverlay();
-    this->screens[screenit++] = this->promptOverlay = new PromptOverlay();
-    this->screens[screenit++] = this->modSelector = new ModSelector();
-    this->screens[screenit++] = this->userActionsOverlay = new UIUserContextMenuScreen();
-    this->screens[screenit++] = this->room = new RoomScreen();
-    this->screens[screenit++] = this->chatOverlay = new Chat();
-    this->screens[screenit++] = this->optionsOverlay = new OptionsOverlay();
-    this->screens[screenit++] = this->rankingScreen = new RankingScreen();
-    this->screens[screenit++] = this->userStatsScreen = new UserStatsScreen();
-    this->screens[screenit++] = this->spectatorScreen = new SpectatorScreen();
-    this->screens[screenit++] = this->pauseOverlay = new PauseOverlay();
-    this->screens[screenit++] = this->hud = new HUD();
-    this->screens[screenit++] = this->songBrowser = new SongBrowser();
-    this->screens[screenit++] = this->osuDirectScreen = new OsuDirectScreen();
-    this->screens[screenit++] = this->lobby = new Lobby();
-    this->screens[screenit++] = this->aboutScreen = new AboutScreen();
-    this->screens[screenit++] = this->mainMenu = new MainMenu();
-    this->screens[screenit++] = this->tooltipOverlay = new TooltipOverlay();
-    this->screens[screenit++] = this->beatmapInstallOverlay = new BeatmapInstallOverlay();
+    // construct the non-early screens (the ctor already built dummy + notificationOverlay) and apply
+    // each screen's declared stack flags, all from UI_SCREEN_REGISTRY. storage index = registry row
+    // order; the null-guard skips the rows the ctor already built (notificationOverlay). flags are
+    // applied unconditionally so an early screen could still declare one.
+    size_t screenit = EARLY_SCREENS;
+#define X(Acc, Type, member, name, rank, M, C)                 \
+    if(this->member == nullptr) {                              \
+        this->screens[screenit++] = this->member = new Type(); \
+    }                                                          \
+    this->member->bModal = (M);                                \
+    this->member->bCloseOnScreenSwitch = (C);
+    UI_SCREEN_REGISTRY(X)
+#undef X
     assert(screenit == NUM_SCREENS);
 
     this->active_screen = Osu::isKioskMode() ? static_cast<UIScreen *>(this->dummy) : this->mainMenu;

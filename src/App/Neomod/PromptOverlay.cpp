@@ -12,9 +12,7 @@
 #include "MakeDelegateWrapper.h"
 
 PromptOverlay::PromptOverlay() : UIScreen() {
-    this->bModal = true;  // while visible, nothing below gets input
-    this->bCloseOnScreenSwitch = true;
-
+    // modal + closeOnScreenSwitch are declared in UI.h's screen registry
     this->prompt_label = new CBaseUILabel(0, 0, 0, 0, "", "");
     this->prompt_label->setDrawFrame(false);
     this->prompt_label->setDrawBackground(false);
