@@ -57,9 +57,8 @@ class NullScreen final : public UIScreen {
 };
 }  // namespace
 
-// out-of-line getXBase definitions: the derived->UIScreen* conversion needs the complete type, so
-// these live here (where the concrete headers are included) rather than inline in UI.h.
-#define X(Acc, Type, member, name, rank, M, C) \
+// getXBase is out-of-line here (not inline in UI.h): the derived->UIScreen* conversion needs complete types
+#define X(rank, F, Acc, Type, member) \
     UIScreen *UI::get##Acc##Base() const { return this->member; }
 UI_SCREEN_REGISTRY(X)
 #undef X
@@ -80,13 +79,12 @@ UI::UI() {
     static_assert(SCREEN_NAMES[LAYER_ORDER[OVERLAY_BAND_BEGIN]] == "pauseoverlay");
     static_assert(SCREEN_NAMES[LAYER_ORDER[PLAY_OVERLAYS_END - 1]] == "optionsoverlay");
     static_assert(SCREEN_NAMES[LAYER_ORDER[EXTRAS_SPLICE]] == "tooltipoverlay");
-    // EARLY_SCREENS assumes dummy + notificationOverlay are the first two storage slots (built in
-    // the ctor; the init() registry walk skips notificationOverlay via its null-guard)
+    // EARLY_SCREENS: dummy + notification are the first two slots, built in the ctor below
     static_assert(SCREEN_NAMES[0] == "dummy" && SCREEN_NAMES[1] == "notificationoverlay");
 
     ui = this;
     this->screens[0] = this->active_screen = this->dummy = new NullScreen();
-    this->screens[1] = this->notificationOverlay = new NotificationOverlay();
+    this->screens[1] = this->notificationoverlay = new NotificationOverlay();
 }
 
 UI::~UI() {
@@ -106,22 +104,20 @@ UI::~UI() {
 }
 
 bool UI::init() {
-    // construct the non-early screens (the ctor already built dummy + notificationOverlay) and apply
-    // each screen's declared stack flags, all from UI_SCREEN_REGISTRY. storage index = registry row
-    // order; the null-guard skips the rows the ctor already built (notificationOverlay). flags are
-    // applied unconditionally so an early screen could still declare one.
+    // construct the non-early screens and apply each screen's flags from the registry; the
+    // null-guard skips the rows the ctor already built (dummy/notification).
     size_t screenit = EARLY_SCREENS;
-#define X(Acc, Type, member, name, rank, M, C)                 \
+#define X(rank, F, Acc, Type, member)                          \
     if(this->member == nullptr) {                              \
         this->screens[screenit++] = this->member = new Type(); \
     }                                                          \
-    this->member->bModal = (M);                                \
-    this->member->bCloseOnScreenSwitch = (C);
-    UI_SCREEN_REGISTRY(X)
+    this->member->bModal = !!((F) & UIF_MODAL);                \
+    this->member->bCloseOnScreenSwitch = !!((F) & UIF_CLOSE);
+    UI_SCREEN_REGISTRY(X)  // NOLINT(misc-redundant-expression)
 #undef X
     assert(screenit == NUM_SCREENS);
 
-    this->active_screen = Osu::isKioskMode() ? static_cast<UIScreen *>(this->dummy) : this->mainMenu;
+    this->active_screen = Osu::isKioskMode() ? static_cast<UIScreen *>(this->dummy) : this->mainmenu;
 
     // debug
     this->debuglayer = std::make_unique<UIDebug>(this);
@@ -269,7 +265,7 @@ void UI::draw() {
         }
 
         // apply fading cursor alpha multiplier
-        if(!(this->pauseOverlay->isVisible() || osu->map_iface->isContinueScheduled() ||
+        if(!(this->pauseoverlay->isVisible() || osu->map_iface->isContinueScheduled() ||
              !cv::mod_fadingcursor.getBool())) {
             cursorAlpha *=
                 1.0f -

@@ -58,10 +58,7 @@ CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize,
 CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::string name)
     : sName(std::move(name)), rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
 
-CBaseUIElement::~CBaseUIElement() {
-    // null during static teardown (Logger can keep the ConsoleBox alive past Engine shutdown (FIXME))
-    uiDispatcher->onElementDestroyed(this);
-}
+CBaseUIElement::~CBaseUIElement() { uiDispatcher->onElementDestroyed(this); }
 
 // keyboard input
 void CBaseUIElement::onKeyUp(KeyboardEvent &e) { (void)e; }
@@ -240,7 +237,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
     const bool rectInside = oldMouseInsideState ? this->getRect().contains(mouse->getPos())
                                                 : this->getRect().containsStrict(mouse->getPos());
 
-    // hover. a hit candidate (!bClickThroughSelf) GAINS hover only in UIDispatch::resolveHover after
+    // hover. a hit candidate (!bClickThroughSelf) GAINS hover only in CBaseUIDispatch::resolveHover after
     // the whole walk: only the single top-most candidate (+ its ancestor path) gains, so an element
     // occluded by a higher one never briefly gains hover (and plays a hover sound). LOSS on
     // rect-leave stays local here. transparent wrappers/screens (bClickThroughSelf) are never
@@ -284,7 +281,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
         // (popup close-on-outside, contextmenu/textbox deactivation). KEPT deliberately - it is a
         // mouse concept, not keyboard focus: a context menu holding clickable items cannot be the
         // focus holder, so the broadcast is the right tool, not the focus pointer.
-        // the captor is excluded; its events are routed in UIDispatch::dispatchEvents.
+        // the captor is excluded; its events are routed in CBaseUIDispatch::dispatchEvents.
         const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
                                (u8)(this->bHandleRightMouse && mouse->isRightPressed());
         if(pressedMask && !rectInside && this != uiDispatcher->getCaptor()) {

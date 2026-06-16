@@ -299,7 +299,7 @@ bool VolumeOverlay::isBusy() {
 
 bool VolumeOverlay::isVisible() { return engine->getTime() < this->fVolumeChangeTime; }
 
-// keys-only (the wheel half lives in onWheel, routed by UIDispatch): may the
+// keys-only (the wheel half lives in onWheel, routed by CBaseUIDispatch): may the
 // arrow-bound INCREASE/DECREASE_VOLUME binds act right now? every layer that wants the arrows (menu
 // navigation, a hovered scroll view, an open dropdown) declares UIScreen::claimsArrowKeys()
 bool VolumeOverlay::canChangeVolume() {

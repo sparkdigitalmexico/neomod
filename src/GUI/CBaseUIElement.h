@@ -44,12 +44,10 @@ struct CBaseUIEventCtx {
     // candidacy suppression carried along the walk: the bottom bar clears this on a click so the
     // carousel (a full-height surface visited after it) doesn't also register as a hit candidate.
     // this is NOT consumption - the walk keeps going; see bConsumed below.
+    // TODO: this is still dirty (also CBaseUIEventCtx still holds a lot of possibly redundant state with CBaseUIDispatch)
     bool propagate_clicks{true};
 
-    // the walk floor: a visible modal layer calls consume_mouse() and the LAYER_ORDER walk stops
-    // below it. this is the ONE meaning of "consumed" now - it used to be inferred from a
-    // propagate_clicks == propagate_hover == false coincidence (a grab COINCIDING with a hover),
-    // which conflated an incidental grab with a real modal floor.
+    // the walk floor: a visible modal layer calls consume_mouse() and the LAYER_ORDER walk stops below it.
     bool bConsumed{false};
 
     void consume_mouse();
@@ -57,7 +55,7 @@ struct CBaseUIEventCtx {
     [[nodiscard]] bool mouse_consumed() const;
 
     // pass-A hit-candidate collection: elements under the cursor that may receive this frame's
-    // button events; single-target delivery happens in UIDispatch::dispatchEvents after the
+    // button events; single-target delivery happens in CBaseUIDispatch::dispatchEvents after the
     // walk. groups = top-level screens/overlays in input-priority order; within a group the
     // best (tier, latest visit) candidate wins. each candidate snapshots the ancestor chain that led
     // to it (outermost first): if it captures, those ancestors observe the drag and may steal (scrollview drag resistance).
@@ -231,12 +229,12 @@ class CBaseUIElement : public KeyboardListener {
     virtual void onMouseUpInside(bool /*left*/ = true, bool /*right*/ = false);
     virtual void onMouseUpOutside(bool /*left*/ = true, bool /*right*/ = false);
 
-    // wheel routing (dispatch-driven, see UIDispatch): per-frame wheel totals, offered
+    // wheel routing (dispatch-driven, see CBaseUIDispatch): per-frame wheel totals, offered
     // top-most-first to the hovered hit candidates; return true to consume (stops the
     // fall-through to elements beneath)
     virtual bool onWheel(int deltaVertical, int deltaHorizontal);
 
-    // mouse capture lifecycle (dispatch-driven, see UIDispatch). a pressed element whose press is
+    // mouse capture lifecycle (dispatch-driven, see CBaseUIDispatch). a pressed element whose press is
     // taken away (capture steal, hidden/disabled/input-blocked mid-hold) gets onMouseCancel
     // instead of an up: discard pressed state, no click follows.
     virtual void onMouseCancel();
@@ -247,7 +245,7 @@ class CBaseUIElement : public KeyboardListener {
     virtual void onCapturedMoveThrough();
     virtual void onCapturedEndThrough();
 
-    // capture control for self-dragging widgets (forward to UIDispatch): lockCapture makes the
+    // capture control for self-dragging widgets (forward to CBaseUIDispatch): lockCapture makes the
     // current capture unstealable (slider grab, scrollbar drag); stealCapture takes a descendant's
     // unlocked capture (scrollview past drag resistance), cancelling the descendant's press
     void lockCapture();
