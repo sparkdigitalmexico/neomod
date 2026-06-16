@@ -25,9 +25,6 @@ class PauseOverlay final : public UIScreen {
 
     CBaseUIContainer *setVisible(bool visible) override;
 
-    // menu button selection moves with the arrow keys
-    [[nodiscard]] bool claimsArrowKeys() override { return this->isVisible(); }
-
     void setContinueEnabled(bool continueEnabled);
 
    private:

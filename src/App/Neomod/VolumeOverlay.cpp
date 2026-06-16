@@ -5,7 +5,6 @@
 #include "MakeDelegateWrapper.h"
 #include "AnimationHandler.h"
 #include "UIVolumeSlider.h"
-#include "UI.h"
 #include "Engine.h"
 #include "Sound.h"
 #include "SoundEngine.h"
@@ -241,52 +240,59 @@ void VolumeOverlay::updateLayout() {
 
 void VolumeOverlay::onResolutionChange(vec2 /*newResolution*/) { this->updateLayout(); }
 
+// regular screen walk-ordered keydown handler
 void VolumeOverlay::onKeyDown(KeyboardEvent &key) {
     if(key == KEY_MUTE) {
         osu->getMapInterface()->pausePreviewMusic(true);
         key.consume();
-    } else {
-        // avoid conflicting focus with e.g. songbrowser up/down
-        const bool volIncreaseIsUp = binds::INCREASE_VOLUME == KEY_UP;
-        const bool volDecreaseIsDown = binds::DECREASE_VOLUME == KEY_DOWN;
-
-        if(key == KEY_VOLUMEUP ||
-           (key == binds::INCREASE_VOLUME && (!volIncreaseIsUp || this->isVisible() || this->canChangeVolume()))) {
-            this->volumeUp();
-            key.consume();
-        } else if(key == KEY_VOLUMEDOWN || (key == binds::DECREASE_VOLUME &&
-                                            (!volDecreaseIsDown || this->isVisible() || this->canChangeVolume()))) {
-            this->volumeDown();
-            key.consume();
-        }
+        return;
     }
 
-    if(this->isVisible() && this->canChangeVolume()) {
-        if(key == KEY_LEFT) {
-            const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
-            for(int i = 0; i < elements.size(); i++) {
-                if(elements[i]->isSelected()) {
-                    const int nextIndex = (i == elements.size() - 1 ? 0 : i + 1);
-                    elements[i]->setSelected(false);
-                    elements[nextIndex]->setSelected(true);
-                    break;
-                }
+    const bool volIncreaseIsUp = binds::INCREASE_VOLUME == KEY_UP;
+    const bool volDecreaseIsDown = binds::DECREASE_VOLUME == KEY_DOWN;
+    if(key == KEY_VOLUMEUP || (key == binds::INCREASE_VOLUME && (!volIncreaseIsUp || this->isVisible()))) {
+        this->volumeUp();
+        key.consume();
+    } else if(key == KEY_VOLUMEDOWN || (key == binds::DECREASE_VOLUME && (!volDecreaseIsDown || this->isVisible()))) {
+        this->volumeDown();
+        key.consume();
+    }
+}
+
+// the global arrow-volume key sink
+void VolumeOverlay::onArrowVolumeFallback(KeyboardEvent &key) {
+    if(!this->canChangeVolume()) return;
+
+    if(key == binds::INCREASE_VOLUME) {
+        this->volumeUp();
+        key.consume();
+    } else if(key == binds::DECREASE_VOLUME) {
+        this->volumeDown();
+        key.consume();
+    } else if(this->isVisible() && key == KEY_LEFT) {
+        const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
+        for(int i = 0; i < elements.size(); i++) {
+            if(elements[i]->isSelected()) {
+                const int nextIndex = (i == elements.size() - 1 ? 0 : i + 1);
+                elements[i]->setSelected(false);
+                elements[nextIndex]->setSelected(true);
+                break;
             }
-            this->animate();
-            key.consume();
-        } else if(key == KEY_RIGHT) {
-            const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
-            for(int i = 0; i < elements.size(); i++) {
-                if(elements[i]->isSelected()) {
-                    const int prevIndex = (i == 0 ? elements.size() - 1 : i - 1);
-                    elements[i]->setSelected(false);
-                    elements[prevIndex]->setSelected(true);
-                    break;
-                }
-            }
-            this->animate();
-            key.consume();
         }
+        this->animate();
+        key.consume();
+    } else if(this->isVisible() && key == KEY_RIGHT) {
+        const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
+        for(int i = 0; i < elements.size(); i++) {
+            if(elements[i]->isSelected()) {
+                const int prevIndex = (i == 0 ? elements.size() - 1 : i - 1);
+                elements[i]->setSelected(false);
+                elements[prevIndex]->setSelected(true);
+                break;
+            }
+        }
+        this->animate();
+        key.consume();
     }
 }
 
@@ -299,16 +305,16 @@ bool VolumeOverlay::isBusy() {
 
 bool VolumeOverlay::isVisible() { return engine->getTime() < this->fVolumeChangeTime; }
 
-// keys-only (the wheel half lives in onWheel, routed by CBaseUIDispatch): may the
-// arrow-bound INCREASE/DECREASE_VOLUME binds act right now? every layer that wants the arrows (menu
-// navigation, a hovered scroll view, an open dropdown) declares UIScreen::claimsArrowKeys()
+// the play-mode / on-screen gate shared by both volume-input paths (onWheel and the arrow
+// fallback): may the volume gesture act right now? exclusivity vs other consumers is structural
+// (the wheel sink and onArrowVolumeFallback only run when nothing else consumed), so there is no
+// screen enumeration here anymore.
 bool VolumeOverlay::canChangeVolume() {
     if(this->isBusy() || keyboard->isAltDown()) return true;
 
-    // no arrow-volume during active play, mirroring the wheel sink so both volume-input paths gate identically
+    // no volume gesture during active play, only while paused (you're not aiming then), mirroring onWheel
     if(osu->isInPlayModeAndNotPaused() && cv::disable_mousewheel.getBool()) return false;
     if(!osu->getVirtScreenRect().contains(mouse->getPos())) return false;
-    if(ui->arrowKeysClaimed()) return false;
 
     return true;
 }

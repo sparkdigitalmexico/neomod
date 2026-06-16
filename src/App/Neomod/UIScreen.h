@@ -28,10 +28,6 @@ class UIScreen : public CBaseUIContainer {
     [[nodiscard]] bool isModal() const { return this->bModal; }
     [[nodiscard]] bool closesOnScreenSwitch() const { return this->bCloseOnScreenSwitch; }
 
-    // a visible screen returning true reserves the bare arrow keys for its own navigation,
-    // blocking VolumeOverlay's arrow-bound volume binds (see VolumeOverlay::canChangeVolume)
-    [[nodiscard]] virtual bool claimsArrowKeys() { return false; }
-
    protected:
     bool bModal{false};
     bool bCloseOnScreenSwitch{false};

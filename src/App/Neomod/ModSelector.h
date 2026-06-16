@@ -49,10 +49,7 @@ class ModSelector final : public UIScreen {
 
     [[nodiscard]] bool isInCompactMode() const;
     [[nodiscard]] bool isCSOverrideSliderActive() const;
-    [[nodiscard]] bool isMouseInScrollView() const;
     bool isMouseInside() override;
-    // the mod scroll view navigates with arrow keys; claim them so they don't change volume
-    [[nodiscard]] bool claimsArrowKeys() override { return this->isMouseInScrollView(); }
 
     void updateButtons(bool initial = false);
     void updateExperimentalButtons();

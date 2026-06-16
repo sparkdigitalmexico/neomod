@@ -753,7 +753,10 @@ void ModSelector::onKeyDown(KeyboardEvent &key) {
         else if(scanCode == binds::MOD_DOUBLETIME) this->modButtonDT->click();
         // clang-format on
     }
-    key.consume();
+    // leave the bare arrow keys unconsumed so the global volume sink still gets them: arrow-volume
+    // must keep working over the open (modal) modselector. hovered override sliders already took
+    // their left/right above; everything else this modal absorbs.
+    if(scanCode != KEY_UP && scanCode != KEY_DOWN && scanCode != KEY_LEFT && scanCode != KEY_RIGHT) key.consume();
 }
 
 CBaseUIContainer *ModSelector::setVisible(bool visible) {
@@ -809,11 +812,6 @@ CBaseUIContainer *ModSelector::setVisible(bool visible) {
 bool ModSelector::isInCompactMode() const { return osu->isInPlayMode(); }
 
 bool ModSelector::isCSOverrideSliderActive() const { return this->CSSlider->isActive(); }
-
-bool ModSelector::isMouseInScrollView() const {
-    // isVisible is not const due to bad ui framework design, but it is const (it's not even overridden in this case)
-    return this->experimentalContainer->isMouseInside() && const_cast<ModSelector *>(this)->isVisible();
-}
 
 bool ModSelector::isMouseInside() {
     return this->isVisible()                                                                                      //

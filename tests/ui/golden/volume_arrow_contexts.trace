@@ -20,4 +20,4 @@ uitrace frame=422 evt=hoverOut elem=options_contents
 uitrace frame=422 evt=hoverOut elem=Log in
 uitrace frame=422 evt=hoverOut elem=options_search
 uitrace frame=423 evt=hoverOut elem=OptionsOverlay
-uitrace frame=426 evt=keydown consumed_by=VolumeOverlay
+uitrace frame=426 evt=keydown consumed_by=OptionsOverlay

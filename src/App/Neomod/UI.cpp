@@ -392,7 +392,18 @@ void UI::routeKey(KeyboardEvent &e, void (CBaseUIElement::*handler)(KeyboardEven
     }
 }
 
-void UI::onKeyDown(KeyboardEvent &key) { this->routeKey(key, &CBaseUIElement::onKeyDown, "keydown"); }
+void UI::onKeyDown(KeyboardEvent &key) {
+    this->routeKey(key, &CBaseUIElement::onKeyDown, "keydown");
+    // arrow-bound volume is the global fallback gesture (mirrors the dispatch wheel sink): offered
+    // the keydown only when no layer above consumed it - a hovered slider's left/right, a screen
+    // navigating with arrows. volume's always-on half (mute/media keys, the arrow binds while the
+    // bar shows) is handled in VolumeOverlay::onKeyDown up in the walk.
+    // TODO: remove dispatcher wheel sink complexity and do something similar for mouse wheel here
+    if(!key.isConsumed()) {
+        this->volumeoverlay->onArrowVolumeFallback(key);
+        if(key.isConsumed()) traceKeyConsumed("keydown", this->volumeoverlay);
+    }
+}
 
 void UI::onKeyUp(KeyboardEvent &key) { this->routeKey(key, &CBaseUIElement::onKeyUp, "keyup"); }
 
@@ -407,19 +418,6 @@ void UI::onResolutionChange(vec2 newResolution) {
     for(auto *screen : this->screens) {
         screen->onResolutionChange(newResolution);
     }
-}
-
-bool UI::arrowKeysClaimed() const {
-    // walk top -> bottom like routeKey. each layer's claimsArrowKeys() fully self-reports whether it
-    // wants the arrow keys right now, INCLUDING its own visibility - so VolumeOverlay no longer
-    // enumerates screens, and a layer whose screen is hidden but whose popup is shown (the options
-    // skin dropdown) can still claim. a VISIBLE modal floor stops the walk below it.
-    for(sSz li = static_cast<sSz>(NUM_SCREENS) - 1; li >= 0; --li) {
-        auto *screen = this->screens[LAYER_ORDER[li]];
-        if(screen->claimsArrowKeys()) return true;
-        if(screen->isVisible() && screen->isModal()) break;
-    }
-    return false;
 }
 
 void UI::hide() {

@@ -134,9 +134,6 @@ class SongBrowser final : public ScreenBackable {
     // scroll surfaces win first, and an empty/fits carousel declines down to the volume sink
     bool onWheel(int deltaVertical, int deltaHorizontal) override;
 
-    // carousel navigation needs the bare arrow keys once the db is loaded
-    [[nodiscard]] bool claimsArrowKeys() override;
-
     void onKeyDown(KeyboardEvent &e) override;
     void onKeyUp(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;

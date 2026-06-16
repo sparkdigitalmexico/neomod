@@ -387,11 +387,8 @@ void CBaseUIScrollView::beginDragScroll(dvec2 pos) {
     this->bAutoScrollingX = false;
     this->bAutoScrollingY = false;
 
-    this->vScrollPos.x.stop();
-    this->vScrollPos.y.stop();
-
-    this->vVelocity.x.stop();
-    this->vVelocity.y.stop();
+    this->vScrollPos.stop();
+    this->vVelocity.stop();
 }
 
 bool CBaseUIScrollView::tryBeginScrollbarDrag(dvec2 pos) {

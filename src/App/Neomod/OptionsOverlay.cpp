@@ -358,7 +358,6 @@ void OptionsOverlay::askForLoginDetails() { return pImpl->askForLoginDetails(); 
 void OptionsOverlay::update_login_button(bool loggedIn) { return pImpl->update_login_button(loggedIn); }
 void OptionsOverlay::updateSkinNameLabel() { return pImpl->updateSkinNameLabel(); }
 UIContextMenu *OptionsOverlay::getContextMenu() { return pImpl->getContextMenu(); }
-bool OptionsOverlay::claimsArrowKeys() { return this->isMouseInside() || this->getContextMenu()->isVisible(); }
 void OptionsOverlay::updateLayout() { return pImpl->updateLayout(); }
 void OptionsOverlay::onBack() { return pImpl->onBack(); }
 

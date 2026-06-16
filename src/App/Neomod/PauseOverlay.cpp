@@ -245,6 +245,7 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
             }
             this->selectedButton = nextSelectedButton;
             this->onSelectionChange();
+            e.consume();  // arrows that navigate the pause menu must not also fall to the volume sink
         }
 
         if(!keyboard->isAltDown() && e == KEY_UP) {
@@ -271,6 +272,7 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
             }
             this->selectedButton = nextSelectedButton;
             this->onSelectionChange();
+            e.consume();
         }
 
         if(this->selectedButton != nullptr && (e == KEY_ENTER || e == KEY_NUMPAD_ENTER) && this->areButtonsActive())

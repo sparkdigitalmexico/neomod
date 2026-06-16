@@ -33,9 +33,6 @@ class OptionsOverlay final : public ScreenBackable {
 
     bool isMouseInside() override;
     bool isBusy() override;
-    // claim arrow keys when hovered, or whenever the options context menu / standalone skin dropdown
-    // is open (it can be visible while this screen itself is hidden) - so they don't change volume
-    [[nodiscard]] bool claimsArrowKeys() override;
 
     void scheduleLayoutUpdate();
 
