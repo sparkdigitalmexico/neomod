@@ -12,6 +12,11 @@
 
 class CBaseUIElement;
 
+// see CBaseUIDispatch.h
+namespace CBaseUIDispatch {
+struct State;
+}
+
 // convar callbacks to avoid hammering atomic convar reads
 namespace CBaseUIDebug {
 void onDumpElemsChangeCallback(float newvalue);
@@ -212,7 +217,7 @@ class CBaseUIElement : public KeyboardListener {
 
    protected:
     friend class CBaseUIContainer;
-    friend class CBaseUIDispatch;
+    friend CBaseUIDispatch::State;
 
     // events (default implementation does nothing for all of these)
     virtual void onResized();
@@ -250,6 +255,8 @@ class CBaseUIElement : public KeyboardListener {
     // unlocked capture (scrollview past drag resistance), cancelling the descendant's press
     void lockCapture();
     void stealCapture();
+
+    [[nodiscard]] bool isCaptor() const;
 
     // vars
     std::string sName;

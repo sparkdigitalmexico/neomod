@@ -6,10 +6,117 @@
 #include "Mouse.h"
 
 #include <algorithm>
+#include <array>
+#include <span>
+#include <cassert>
 
-CBaseUIDispatch *uiDispatcher{nullptr};
+namespace CBaseUIDispatch {
+
+struct State final {
+    // routes this frame's buffered mouse button events to the candidates collected during the
+    // updateInput walk. down -> best candidate + implicit capture, up -> whoever received the
+    // down. call once per root, directly after its updateInput pass.
+    void dispatchEvents(CBaseUIEventCtx &c, Root root);
+
+    // element dtors report here: bumps the mutation generation and releases a dead captor
+    void onElementDestroyed(CBaseUIElement *elem);
+
+    // the fall-through wheel sink: offered the frame's totals when no hit candidate in either
+    // root consumed them (VolumeOverlay; replaces its raw-delta poll, whose exclusivity used
+    // to depend on the canChangeVolume screen enumeration instead of actual consumption)
+    void setWheelSink(CBaseUIElement *sink) { this->wheelSink = sink; }
+
+    // the single focused element across BOTH roots (the keyboard-target authority; replaces
+    // the engine->stealUIFocus() cascade). setFocus(x) relinquishes the previous holder via
+    // its stealFocus(); clearFocusIf is the non-recursive drop stealFocus() itself calls.
+    void setFocus(CBaseUIElement *elem);
+    [[nodiscard]] CBaseUIElement *getFocus() const { return this->focused; }
+    void clearFocusIf(const CBaseUIElement *elem) {
+        if(this->focused == elem) this->focused = nullptr;
+    }
+
+    // a locked capture cannot be stolen (slider grab, scrollbar drag, window drag/resize);
+    // only the current captor may lock
+    void lockCapture(const CBaseUIElement *who);
+
+    // an ancestor on the captured hit path takes an unlocked descendant capture (scrollview past
+    // drag resistance): the old captor gets onMouseCancel (its press dies, no click), ancestors
+    // below the thief get onCapturedEndThrough, the thief becomes the locked captor
+    void stealCapture(CBaseUIElement *thief);
+
+    [[nodiscard]] CBaseUIElement *getCaptor() const { return this->captor; }
+    [[nodiscard]] bool isCaptureLocked() const { return this->captorLocked; }
+    // which buttons the current capture holds (for captured-move/observe handlers; reconciled
+    // against the device state every dispatch)
+    [[nodiscard]] MouseButtonFlags getCaptorButtons() const { return this->captorButtons; }
+
+    // hover resolved once per frame from the walk's hit candidates: the single top-most candidate
+    // (+ its ancestor path) GAINS hover, everything beneath it is retracted - one resolution that
+    // reuses the click-targeting ranking, so occlusion is automatic instead of hand-rolled per
+    // widget. runs for both roots every frame regardless of events (the engine console draws on top:
+    // if it hovers something it suppresses the app root). hover LOSS on rect-leave stays
+    // element-local (CBaseUIElement::updateInput); a held capture freezes gains for its own root.
+    void resolveHover(CBaseUIEventCtx &c, Root root);
+
+    // capture ends without an up: onMouseCancel to the captor + observation end (cancelCapture),
+    // or observation end alone (endObservation, captor handled separately by the caller)
+    void cancelCapture();
+    void endObservation();
+
+    // one captured frame: move to the captor, then observation through its ancestors
+    // (innermost first; an observer may steal or mutate the UI mid-loop)
+    void observeCapturedFrame();
+
+    static constexpr const uSz MAX_QUEUED_BUTTONS{1024};
+    std::array<ButtonEvent, MAX_QUEUED_BUTTONS> queue{};
+    u64 qSize{0};
+    u64 lastPushFrame{0};
+
+    // per-frame wheel totals
+    int wheelVertical{0};
+    int wheelHorizontal{0};
+    u64 lastWheelFrame{0};
+    bool wheelConsumed{false};
+    // a hit group containing a hovered scroll surface (bWheelSurface) declined the wheel:
+    // the scan stops there for the rest of the frame, across both roots - surfaces occluded
+    // by that group never see it; only the fall-through sink may still take it
+    bool wheelFloored{false};
+    CBaseUIElement *wheelSink{nullptr};
+
+    // the single focused element across both roots; element dtors and stealFocus() clear it
+    CBaseUIElement *focused{nullptr};
+
+    // per-frame hover resolution: hoverClaimed is set by whichever root hovered something first
+    // (engine before app), so a lower root suppresses its hover when an upper root already has it
+    u64 lastHoverFrame{0};
+    bool hoverClaimed{false};
+
+    // mouse capture: whichever element receives a down receives the matching up(s). one captor
+    // globally (there is one pointer device), tagged with the UI root that owns it so the other
+    // root's dispatch leaves its events alone
+    CBaseUIElement *captor{nullptr};
+    Root captorRoot{Root::APP};
+    MouseButtonFlags captorButtons{};
+    bool captorLocked{false};
+
+    // the captor's ancestor chain at down time (outermost first): observes the drag once per
+    // frame and may steal; element dtors prune themselves out
+    static constexpr const uSz MAX_CAPTURE_PATH_DEPTH{128};
+    std::vector<CBaseUIElement *> capturePath{};
+
+    // last cursor position delivered as a captured move (for move-edge trace gating)
+    vec2 lastCaptureMovePos{0.f};
+
+    // bumped on every element destruction; dispatch abandons the frame's remaining deliveries
+    // when it changes mid-loop (a handler deleted/rebuilt parts of the UI under the candidates)
+    u64 elemGeneration{0};
+};
 
 namespace {
+
+// per-frame buffer lives here
+inline constinit State state{};
+
 // the top-most hit candidate matching pred: groups in input-priority order, within a group the best
 // (tier, then latest visit), the first group with a match winning (= the top-most layer). the single
 // ranking shared by hover resolution and button-down targeting (wheel walks the same order with its
@@ -35,40 +142,40 @@ const CBaseUIEventCtx::HitCandidate *topCandidate(const CBaseUIEventCtx &c, Pred
 }
 }  // namespace
 
-CBaseUIDispatch::CBaseUIDispatch() { uiDispatcher = this; }
+void clear() { state = {}; }
 
-CBaseUIDispatch::~CBaseUIDispatch() { uiDispatcher = nullptr; }
-
-void CBaseUIDispatch::onButtonChange(ButtonEvent &ev) {
+// MouseSink implementation
+void MouseSink::onButtonChange(ButtonEvent &ev) {
     const u64 frame = engine->getFrameCount();
-    if(frame != this->lastPushFrame) {
-        this->queue.clear();
-        this->lastPushFrame = frame;
+    if(frame != state.lastPushFrame) {
+        state.qSize = 0;
+        state.lastPushFrame = frame;
     }
-    this->queue.push_back(ev);
+    assert(state.qSize < state.queue.size());
+    state.queue[state.qSize++] = ev;
 }
 
-void CBaseUIDispatch::onWheelVertical(int delta) {
+void MouseSink::onWheelVertical(int delta) {
     const u64 frame = engine->getFrameCount();
-    if(frame != this->lastWheelFrame) {
-        this->wheelVertical = this->wheelHorizontal = 0;
-        this->wheelConsumed = this->wheelFloored = false;
-        this->lastWheelFrame = frame;
+    if(frame != state.lastWheelFrame) {
+        state.wheelVertical = state.wheelHorizontal = 0;
+        state.wheelConsumed = state.wheelFloored = false;
+        state.lastWheelFrame = frame;
     }
-    this->wheelVertical += delta;
+    state.wheelVertical += delta;
 }
 
-void CBaseUIDispatch::onWheelHorizontal(int delta) {
+void MouseSink::onWheelHorizontal(int delta) {
     const u64 frame = engine->getFrameCount();
-    if(frame != this->lastWheelFrame) {
-        this->wheelVertical = this->wheelHorizontal = 0;
-        this->wheelConsumed = this->wheelFloored = false;
-        this->lastWheelFrame = frame;
+    if(frame != state.lastWheelFrame) {
+        state.wheelVertical = state.wheelHorizontal = 0;
+        state.wheelConsumed = state.wheelFloored = false;
+        state.lastWheelFrame = frame;
     }
-    this->wheelHorizontal += delta;
+    state.wheelHorizontal += delta;
 }
 
-void CBaseUIDispatch::setFocus(CBaseUIElement *elem) {
+void State::setFocus(CBaseUIElement *elem) {
     if(this->focused == elem) return;
     CBaseUIElement *old = this->focused;
     this->focused = elem;
@@ -77,7 +184,9 @@ void CBaseUIDispatch::setFocus(CBaseUIElement *elem) {
     if(old != nullptr) old->stealFocus();
 }
 
-void CBaseUIDispatch::onElementDestroyed(CBaseUIElement *elem) {
+void State::onElementDestroyed(CBaseUIElement *elem) {
+    assert(elem != nullptr);
+
     ++this->elemGeneration;
     if(this->wheelSink == elem) this->wheelSink = nullptr;
     if(this->focused == elem) this->focused = nullptr;
@@ -92,11 +201,11 @@ void CBaseUIDispatch::onElementDestroyed(CBaseUIElement *elem) {
     }
 }
 
-void CBaseUIDispatch::lockCapture(const CBaseUIElement *who) {
+void State::lockCapture(const CBaseUIElement *who) {
     if(this->captor == who) this->captorLocked = true;
 }
 
-void CBaseUIDispatch::stealCapture(CBaseUIElement *thief) {
+void State::stealCapture(CBaseUIElement *thief) {
     if(this->captor == nullptr || this->captor == thief || this->captorLocked) return;
 
     const auto thiefIt = std::ranges::find(this->capturePath, thief);
@@ -119,7 +228,7 @@ void CBaseUIDispatch::stealCapture(CBaseUIElement *thief) {
     for(auto it = detached.rbegin(); it != detached.rend(); ++it) (*it)->onCapturedEndThrough();
 }
 
-void CBaseUIDispatch::cancelCapture() {
+void State::cancelCapture() {
     if(this->captor == nullptr) return;
 
     CBaseUIElement *old = this->captor;
@@ -133,14 +242,14 @@ void CBaseUIDispatch::cancelCapture() {
     this->endObservation();
 }
 
-void CBaseUIDispatch::endObservation() {
+void State::endObservation() {
     // move out: end handlers may start new captures or destroy elements
     const std::vector<CBaseUIElement *> path = std::move(this->capturePath);
     this->capturePath.clear();
     for(auto it = path.rbegin(); it != path.rend(); ++it) (*it)->onCapturedEndThrough();
 }
 
-void CBaseUIDispatch::observeCapturedFrame() {
+void State::observeCapturedFrame() {
     const vec2 pos = mouse->getPos();
     if(pos != this->lastCaptureMovePos) {
         this->lastCaptureMovePos = pos;
@@ -159,7 +268,7 @@ void CBaseUIDispatch::observeCapturedFrame() {
     }
 }
 
-void CBaseUIDispatch::resolveHover(CBaseUIEventCtx &c, Root root) {
+void State::resolveHover(CBaseUIEventCtx &c, Root root) {
     const u64 frame = engine->getFrameCount();
     if(frame != this->lastHoverFrame) {
         this->hoverClaimed = false;
@@ -205,11 +314,11 @@ void CBaseUIDispatch::resolveHover(CBaseUIEventCtx &c, Root root) {
     }
 }
 
-void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
+void State::dispatchEvents(CBaseUIEventCtx &c, Root root) {
     using namespace flags::operators;
 
     const u64 frame = engine->getFrameCount();
-    const bool hasEvents = (this->lastPushFrame == frame && !this->queue.empty());
+    const bool hasEvents = (this->lastPushFrame == frame && this->qSize != 0);
 
     if(this->captor != nullptr && this->captorRoot == root) {
         // self-heal: a captured button can be released without an up event ever reaching us (e.g.
@@ -217,7 +326,8 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
         // pending same-frame ups count as held so they still deliver below.
         MouseButtonFlags pendingUps{};
         if(hasEvents) {
-            for(const auto &qe : this->queue) {
+            for(uSz i = 0; i < this->qSize; ++i) {
+                auto &qe = this->queue[i];
                 if(!qe.down) pendingUps |= qe.btn;
             }
         }
@@ -321,9 +431,9 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
     }
 
     if(!hasEvents) return;
-    auto &events = this->queue;
 
-    for(auto &qe : events) {
+    for(uSz qi = 0; qi < this->qSize; ++qi) {
+        auto &qe = this->queue[qi];
         if(qe.consumed) continue;
 
         const MouseButtonFlags btn = qe.btn;
@@ -405,3 +515,18 @@ void CBaseUIDispatch::dispatchEvents(CBaseUIEventCtx &c, Root root) {
         // up with no captor: nobody received the down (or the captor died); leave it alone
     }
 }
+
+// passthroughs for public functionality
+void dispatchEvents(CBaseUIEventCtx &c, Root root) { return state.dispatchEvents(c, root); }
+void onElementDestroyed(CBaseUIElement *elem) { return state.onElementDestroyed(elem); }
+void setWheelSink(CBaseUIElement *sink) { return state.setWheelSink(sink); }
+void setFocus(CBaseUIElement *elem) { return state.setFocus(elem); }
+CBaseUIElement *getFocus() { return state.getFocus(); }
+void clearFocusIf(const CBaseUIElement *elem) { return state.clearFocusIf(elem); }
+void lockCapture(const CBaseUIElement *who) { return state.lockCapture(who); }
+void stealCapture(CBaseUIElement *thief) { return state.stealCapture(thief); }
+CBaseUIElement *getCaptor() { return state.getCaptor(); }
+bool isCaptureLocked() { return state.isCaptureLocked(); }
+MouseButtonFlags getCaptorButtons() { return state.getCaptorButtons(); }
+
+}  // namespace CBaseUIDispatch

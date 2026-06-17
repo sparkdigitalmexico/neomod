@@ -144,7 +144,7 @@ void BaseFrameworkTest::update() {
     m_testButton->tick();
     CBaseUIEventCtx c;
     m_testButton->updateInput(c);
-    uiDispatcher->dispatchEvents(c, CBaseUIDispatch::Root::APP);
+    CBaseUIDispatch::dispatchEvents(c, CBaseUIDispatch::Root::APP);
 }
 
 void BaseFrameworkTest::onResolutionChanged(vec2 newResolution) { debugLog("{}", newResolution); }

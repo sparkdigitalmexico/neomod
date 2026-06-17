@@ -172,7 +172,7 @@ void UI::update() {
         this->active_screen->updateInput(c);
     }
 
-    uiDispatcher->dispatchEvents(c, CBaseUIDispatch::Root::APP);
+    CBaseUIDispatch::dispatchEvents(c, CBaseUIDispatch::Root::APP);
 
     if constexpr(Env::cfg(BUILD::DEBUG)) {
         if(unlikely(cv::ui_validate_ticks.getBool())) this->validateTicks();

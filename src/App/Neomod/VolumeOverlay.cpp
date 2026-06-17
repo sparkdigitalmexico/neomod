@@ -63,7 +63,7 @@ VolumeOverlay::VolumeOverlay() : UIScreen() {
 
     // the dispatch fall-through wheel sink: offered whatever no hit candidate consumed
     // (unregistered automatically via the element dtor's onElementDestroyed report)
-    uiDispatcher->setWheelSink(this);
+    CBaseUIDispatch::setWheelSink(this);
 }
 
 VolumeOverlay::~VolumeOverlay() {

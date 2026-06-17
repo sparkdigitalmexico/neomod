@@ -58,7 +58,7 @@ CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize,
 CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::string name)
     : sName(std::move(name)), rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
 
-CBaseUIElement::~CBaseUIElement() { uiDispatcher->onElementDestroyed(this); }
+CBaseUIElement::~CBaseUIElement() { CBaseUIDispatch::onElementDestroyed(this); }
 
 // keyboard input
 void CBaseUIElement::onKeyUp(KeyboardEvent &e) { (void)e; }
@@ -198,19 +198,20 @@ void CBaseUIElement::onCapturedMouseMove() { ; }
 void CBaseUIElement::onCapturedMoveThrough() { ; }
 void CBaseUIElement::onCapturedEndThrough() { ; }
 
-void CBaseUIElement::lockCapture() { uiDispatcher->lockCapture(this); }
+void CBaseUIElement::lockCapture() { CBaseUIDispatch::lockCapture(this); }
+void CBaseUIElement::stealCapture() { CBaseUIDispatch::stealCapture(this); }
 
-void CBaseUIElement::stealCapture() { uiDispatcher->stealCapture(this); }
+bool CBaseUIElement::isCaptor() const { return CBaseUIDispatch::getCaptor() == this; }
 
 void CBaseUIElement::stealFocus() {
     this->bActive = false;
-    uiDispatcher->clearFocusIf(this);
+    CBaseUIDispatch::clearFocusIf(this);
     this->onFocusStolen();
 }
 
-void CBaseUIElement::requestFocus() { uiDispatcher->setFocus(this); }
+void CBaseUIElement::requestFocus() { CBaseUIDispatch::setFocus(this); }
 
-bool CBaseUIElement::isFocused() { return uiDispatcher->getFocus() == this; }
+bool CBaseUIElement::isFocused() { return CBaseUIDispatch::getFocus() == this; }
 
 void CBaseUIElement::tick() {
     if(unlikely(CBaseUIDebug::dumpElems)) this->dumpElem();
@@ -247,7 +248,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
         if(oldMouseInsideState && !rectInside) this->bMouseInside = false;
     } else {
         // while a capture is held, nothing but the captor may GAIN hover (losing it stays allowed)
-        const CBaseUIElement *captor = uiDispatcher->getCaptor();
+        const CBaseUIElement *captor = CBaseUIDispatch::getCaptor();
         if(!oldMouseInsideState) {
             if((captor == nullptr || captor == this) && rectInside) this->bMouseInside = true;
         } else if(!rectInside) {
@@ -284,7 +285,7 @@ void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
         // the captor is excluded; its events are routed in CBaseUIDispatch::dispatchEvents.
         const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
                                (u8)(this->bHandleRightMouse && mouse->isRightPressed());
-        if(pressedMask && !rectInside && this != uiDispatcher->getCaptor()) {
+        if(pressedMask && !rectInside && this != CBaseUIDispatch::getCaptor()) {
             UI_TRACE_EVENT(1, this, "downOutside");
             this->onMouseDownOutside((pressedMask & 0b10), (pressedMask & 0b01));
         }

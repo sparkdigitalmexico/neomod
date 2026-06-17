@@ -170,8 +170,9 @@ Engine::~Engine() {
     }
     SAFE_DELETE(this->guiContainer);
 
-    if(mouse) mouse->removeListener(this->uiDispatch.get());
-    this->uiDispatch.reset();
+    if(mouse) mouse->removeListener(this->uiMouseSink.get());
+    this->uiMouseSink.reset();
+    CBaseUIDispatch::clear();
 
     DiscRPC::destroy();
 
@@ -263,8 +264,8 @@ void Engine::loadApp() {
 
         // the UI layer receives mouse button events through the same relay as everyone else;
         // CBaseUIDispatch routes them after each root's updateInput pass
-        this->uiDispatch = std::make_unique<CBaseUIDispatch>();  // ctor also sets uiDispatch global
-        mouse->addListener(this->uiDispatch.get());
+        this->uiMouseSink = std::make_unique<CBaseUIDispatch::MouseSink>();
+        mouse->addListener(this->uiMouseSink.get());
     }
 
     debugLog("Engine: Loading app ...");
@@ -444,7 +445,7 @@ void Engine::onUpdate() {
                 CBaseUIEventCtx c;
                 this->guiContainer->updateInput(c);
                 // engine root dispatches (and consumes) before the app root: it draws on top
-                this->uiDispatch->dispatchEvents(c, CBaseUIDispatch::Root::ENGINE);
+                CBaseUIDispatch::dispatchEvents(c, CBaseUIDispatch::Root::ENGINE);
             }
         }
     }
