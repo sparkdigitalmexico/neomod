@@ -1,9 +1,0 @@
-uitrace evt=hoverIn elem=CBaseUIContainer
-uitrace evt=hoverIn elem=CBaseUIContainer
-uitrace evt=hoverIn elem=MainMenu
-uitrace evt=hoverIn elem=UIUserContextMenuScreen
-uitrace evt=hoverIn elem=mainmenu_tip
-uitrace evt=hoverIn elem=CBaseUILabel
-uitrace evt=downInside elem=mainmenu_tip
-uitrace evt=upInside elem=mainmenu_tip
-uitrace evt=hoverIn elem=CBaseUILabel

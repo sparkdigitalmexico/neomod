@@ -1,4 +1,0 @@
-uitrace evt=hoverIn elem=CBaseUIContainer
-uitrace evt=hoverIn elem=CBaseUIContainer
-uitrace evt=hoverIn elem=MainMenu
-uitrace evt=hoverIn elem=UIUserContextMenuScreen
