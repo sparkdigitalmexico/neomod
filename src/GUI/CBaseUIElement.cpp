@@ -198,10 +198,8 @@ void CBaseUIElement::onCapturedMouseMove() { ; }
 void CBaseUIElement::onCapturedMoveThrough() { ; }
 void CBaseUIElement::onCapturedEndThrough() { ; }
 
-void CBaseUIElement::lockCapture() { CBaseUIDispatch::lockCapture(this); }
-void CBaseUIElement::stealCapture() { CBaseUIDispatch::stealCapture(this); }
-
-bool CBaseUIElement::isCaptor() const { return CBaseUIDispatch::getCaptor() == this; }
+void CBaseUIElement::lockCapture() { return CBaseUIDispatch::lockCapture(this); }
+bool CBaseUIElement::stealCapture() { return CBaseUIDispatch::stealCapture(this); }
 
 void CBaseUIElement::stealFocus() {
     this->bActive = false;

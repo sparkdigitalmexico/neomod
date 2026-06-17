@@ -502,8 +502,7 @@ void CBaseUIScrollView::onCapturedMoveThrough() {
         // captures - slider grabs, textbox selections - decline the steal)
         if(!this->bBlockScrolling && (this->bVerticalScrolling || this->bHorizontalScrolling) &&
            (this->verticalScrollbar.contains(curMousePos) || this->horizontalScrollbar.contains(curMousePos))) {
-            this->stealCapture();
-            if(this->isCaptor()) this->tryBeginScrollbarDrag(curMousePos);
+            if(this->stealCapture()) this->tryBeginScrollbarDrag(curMousePos);
             return;
         }
     }
@@ -523,8 +522,7 @@ void CBaseUIScrollView::onCapturedMoveThrough() {
             diff = std::abs(curMousePos.y - this->vMouseBackup3.y);
 
         if(diff > this->iScrollResistance) {
-            this->stealCapture();
-            if(this->isCaptor()) this->beginDragScroll(curMousePos);
+            if(this->stealCapture()) this->beginDragScroll(curMousePos);
         }
     }
 }

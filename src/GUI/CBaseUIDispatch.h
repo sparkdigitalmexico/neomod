@@ -99,7 +99,8 @@ void lockCapture(const CBaseUIElement *who);
 // an ancestor on the captured hit path takes an unlocked descendant capture (scrollview past
 // drag resistance): the old captor gets onMouseCancel (its press dies, no click), ancestors
 // below the thief get onCapturedEndThrough, the thief becomes the locked captor
-void stealCapture(CBaseUIElement *thief);
+// returns true if capture steal succeeded
+bool stealCapture(CBaseUIElement *thief);
 
 [[nodiscard]] CBaseUIElement *getCaptor();
 [[nodiscard]] bool isCaptureLocked();

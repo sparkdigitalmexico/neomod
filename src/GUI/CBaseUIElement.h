@@ -254,9 +254,7 @@ class CBaseUIElement : public KeyboardListener {
     // current capture unstealable (slider grab, scrollbar drag); stealCapture takes a descendant's
     // unlocked capture (scrollview past drag resistance), cancelling the descendant's press
     void lockCapture();
-    void stealCapture();
-
-    [[nodiscard]] bool isCaptor() const;
+    bool stealCapture();
 
     // vars
     std::string sName;

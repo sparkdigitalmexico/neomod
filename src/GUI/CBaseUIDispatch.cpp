@@ -13,41 +13,20 @@
 namespace CBaseUIDispatch {
 
 struct State final {
-    // routes this frame's buffered mouse button events to the candidates collected during the
-    // updateInput walk. down -> best candidate + implicit capture, up -> whoever received the
-    // down. call once per root, directly after its updateInput pass.
+    // documentation for these first few are in the header
     void dispatchEvents(CBaseUIEventCtx &c, Root root);
-
-    // element dtors report here: bumps the mutation generation and releases a dead captor
     void onElementDestroyed(CBaseUIElement *elem);
-
-    // the fall-through wheel sink: offered the frame's totals when no hit candidate in either
-    // root consumed them (VolumeOverlay; replaces its raw-delta poll, whose exclusivity used
-    // to depend on the canChangeVolume screen enumeration instead of actual consumption)
     void setWheelSink(CBaseUIElement *sink) { this->wheelSink = sink; }
-
-    // the single focused element across BOTH roots (the keyboard-target authority; replaces
-    // the engine->stealUIFocus() cascade). setFocus(x) relinquishes the previous holder via
-    // its stealFocus(); clearFocusIf is the non-recursive drop stealFocus() itself calls.
     void setFocus(CBaseUIElement *elem);
     [[nodiscard]] CBaseUIElement *getFocus() const { return this->focused; }
     void clearFocusIf(const CBaseUIElement *elem) {
         if(this->focused == elem) this->focused = nullptr;
     }
-
-    // a locked capture cannot be stolen (slider grab, scrollbar drag, window drag/resize);
-    // only the current captor may lock
     void lockCapture(const CBaseUIElement *who);
-
-    // an ancestor on the captured hit path takes an unlocked descendant capture (scrollview past
-    // drag resistance): the old captor gets onMouseCancel (its press dies, no click), ancestors
-    // below the thief get onCapturedEndThrough, the thief becomes the locked captor
-    void stealCapture(CBaseUIElement *thief);
+    bool stealCapture(CBaseUIElement *thief);
 
     [[nodiscard]] CBaseUIElement *getCaptor() const { return this->captor; }
     [[nodiscard]] bool isCaptureLocked() const { return this->captorLocked; }
-    // which buttons the current capture holds (for captured-move/observe handlers; reconciled
-    // against the device state every dispatch)
     [[nodiscard]] MouseButtonFlags getCaptorButtons() const { return this->captorButtons; }
 
     // hover resolved once per frame from the walk's hit candidates: the single top-most candidate
@@ -205,11 +184,12 @@ void State::lockCapture(const CBaseUIElement *who) {
     if(this->captor == who) this->captorLocked = true;
 }
 
-void State::stealCapture(CBaseUIElement *thief) {
-    if(this->captor == nullptr || this->captor == thief || this->captorLocked) return;
+bool State::stealCapture(CBaseUIElement *thief) {
+    if(this->captor == nullptr || this->captorLocked) return false;
+    if(this->captor == thief) return true;
 
     const auto thiefIt = std::ranges::find(this->capturePath, thief);
-    if(thiefIt == this->capturePath.end()) return;  // only observing ancestors may steal
+    if(thiefIt == this->capturePath.end()) return false;  // only observing ancestors may steal
 
     // detach the in-between ancestors before any handler runs (they may mutate the path);
     // the thief's own ancestors keep observing the new capture
@@ -226,6 +206,7 @@ void State::stealCapture(CBaseUIElement *thief) {
     UI_TRACE_EVENT(0, old, "mouseCancel");
     old->onMouseCancel();
     for(auto it = detached.rbegin(); it != detached.rend(); ++it) (*it)->onCapturedEndThrough();
+    return true;
 }
 
 void State::cancelCapture() {
@@ -524,7 +505,7 @@ void setFocus(CBaseUIElement *elem) { return state.setFocus(elem); }
 CBaseUIElement *getFocus() { return state.getFocus(); }
 void clearFocusIf(const CBaseUIElement *elem) { return state.clearFocusIf(elem); }
 void lockCapture(const CBaseUIElement *who) { return state.lockCapture(who); }
-void stealCapture(CBaseUIElement *thief) { return state.stealCapture(thief); }
+bool stealCapture(CBaseUIElement *thief) { return state.stealCapture(thief); }
 CBaseUIElement *getCaptor() { return state.getCaptor(); }
 bool isCaptureLocked() { return state.isCaptureLocked(); }
 MouseButtonFlags getCaptorButtons() { return state.getCaptorButtons(); }
