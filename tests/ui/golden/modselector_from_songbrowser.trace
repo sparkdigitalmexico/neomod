@@ -1,26 +1,26 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=32 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=32 evt=hoverIn elem=InfoLabel
-uitrace frame=332 evt=keydown consumed_by=SongBrowser
-uitrace frame=332 evt=hoverIn elem=modsel_overrides
-uitrace frame=333 evt=hoverIn elem=modsel_experimental
-uitrace frame=333 evt=hoverIn elem=modsel_experimental
-uitrace frame=333 evt=hoverIn elem= Experimental Mods (!)
-uitrace frame=334 evt=hoverIn elem=ModSelector
-uitrace frame=354 evt=hoverOut elem=modsel_experimental
-uitrace frame=354 evt=hoverOut elem=modsel_experimental
-uitrace frame=354 evt=hoverOut elem= Experimental Mods (!)
-uitrace frame=354 evt=hoverOut elem=ModSelector
-uitrace frame=370 evt=keydown consumed_by=VolumeOverlay
-uitrace frame=374 evt=keydown consumed_by=ModSelector
-uitrace frame=374 evt=hoverOut elem=CBaseUIContainer
-uitrace frame=374 evt=hoverOut elem=InfoLabel
-uitrace frame=374 evt=hoverIn elem=Carousel
-uitrace frame=374 evt=hoverIn elem=Carousel
-uitrace frame=380 evt=keydown consumed_by=SongBrowser
-uitrace frame=386 evt=keydown consumed_by=ModSelector
-uitrace frame=392 evt=keydown consumed_by=SongBrowser
-uitrace frame=392 evt=hoverIn elem=mainmenu_cube
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=InfoLabel
+uitrace evt=keydown consumed_by=SongBrowser
+uitrace evt=hoverIn elem=modsel_overrides
+uitrace evt=hoverIn elem=modsel_experimental
+uitrace evt=hoverIn elem=modsel_experimental
+uitrace evt=hoverIn elem= Experimental Mods (!)
+uitrace evt=hoverIn elem=ModSelector
+uitrace evt=hoverOut elem=modsel_experimental
+uitrace evt=hoverOut elem=modsel_experimental
+uitrace evt=hoverOut elem= Experimental Mods (!)
+uitrace evt=hoverOut elem=ModSelector
+uitrace evt=keydown consumed_by=VolumeOverlay
+uitrace evt=keydown consumed_by=ModSelector
+uitrace evt=hoverOut elem=CBaseUIContainer
+uitrace evt=hoverOut elem=InfoLabel
+uitrace evt=hoverIn elem=Carousel
+uitrace evt=hoverIn elem=Carousel
+uitrace evt=keydown consumed_by=SongBrowser
+uitrace evt=keydown consumed_by=ModSelector
+uitrace evt=keydown consumed_by=SongBrowser
+uitrace evt=hoverIn elem=mainmenu_cube

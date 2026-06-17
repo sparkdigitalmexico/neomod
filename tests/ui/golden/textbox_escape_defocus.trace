@@ -1,17 +1,17 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=21 evt=hoverIn elem=options_categories
-uitrace frame=21 evt=hoverIn elem=options_categories
-uitrace frame=22 evt=hoverIn elem=OptionsOverlay
-uitrace frame=52 evt=hoverIn elem=options_contents
-uitrace frame=52 evt=hoverOut elem=options_categories
-uitrace frame=52 evt=hoverOut elem=options_categories
-uitrace frame=52 evt=hoverIn elem=options_search
-uitrace frame=52 evt=hoverIn elem=options_contents
-uitrace frame=52 evt=hoverIn elem=options_server_box
-uitrace frame=56 evt=downInside elem=options_server_box
-uitrace frame=60 evt=upInside elem=options_server_box
-uitrace frame=64 evt=keydown consumed_by=OptionsOverlay
-uitrace frame=68 evt=keydown consumed_by=OptionsOverlay
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=OptionsOverlay
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverIn elem=options_server_box
+uitrace evt=downInside elem=options_server_box
+uitrace evt=upInside elem=options_server_box
+uitrace evt=keydown consumed_by=OptionsOverlay
+uitrace evt=keydown consumed_by=OptionsOverlay

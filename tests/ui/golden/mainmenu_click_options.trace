@@ -1,11 +1,11 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=31 evt=hoverIn elem=mainmenu_cube
-uitrace frame=34 evt=downInside elem=mainmenu_cube
-uitrace frame=38 evt=upInside elem=mainmenu_cube
-uitrace frame=59 evt=hoverOut elem=mainmenu_cube
-uitrace frame=79 evt=hoverIn elem=mainmenu_options
-uitrace frame=83 evt=downInside elem=mainmenu_options
-uitrace frame=87 evt=upInside elem=mainmenu_options
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=mainmenu_cube
+uitrace evt=downInside elem=mainmenu_cube
+uitrace evt=upInside elem=mainmenu_cube
+uitrace evt=hoverOut elem=mainmenu_cube
+uitrace evt=hoverIn elem=mainmenu_options
+uitrace evt=downInside elem=mainmenu_options
+uitrace evt=upInside elem=mainmenu_options

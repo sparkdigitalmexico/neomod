@@ -1,41 +1,41 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=32 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=32 evt=hoverIn elem=InfoLabel
-uitrace frame=332 evt=keydown consumed_by=SongBrowser
-uitrace frame=336 evt=hoverIn elem=options_categories
-uitrace frame=336 evt=hoverIn elem=options_categories
-uitrace frame=336 evt=hoverOut elem=InfoLabel
-uitrace frame=337 evt=hoverIn elem=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=346 evt=char consumed_by=OptionsOverlay
-uitrace frame=357 evt=hoverOut elem=options_categories
-uitrace frame=357 evt=hoverOut elem=options_categories
-uitrace frame=357 evt=hoverIn elem=options_search
-uitrace frame=357 evt=hoverIn elem=songbrowser_scores
-uitrace frame=357 evt=hoverOut elem=CBaseUIContainer
-uitrace frame=357 evt=hoverIn elem=options_contents
-uitrace frame=363 evt=wheel elem=VolumeOverlay
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=InfoLabel
+uitrace evt=keydown consumed_by=SongBrowser
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverOut elem=InfoLabel
+uitrace evt=hoverIn elem=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverIn elem=songbrowser_scores
+uitrace evt=hoverOut elem=CBaseUIContainer
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=wheel elem=VolumeOverlay

@@ -28,7 +28,7 @@ std::string elemName(const CBaseUIElement *elem);
 // ui_trace level (0 = off), see the ui_trace convar
 [[nodiscard]] int traceLevel();
 
-// logs "uitrace frame=N evt=<evt> elem=<name>" for scripted-test golden diffing
+// logs "uitrace evt=<evt> elem=<name>" for scripted-test golden diffing
 void traceEvent(const CBaseUIElement *elem, std::string_view evt);
 
 // helper to trace if traceLevel is > given debug_level

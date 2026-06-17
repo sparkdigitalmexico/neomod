@@ -1,40 +1,40 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=35 evt=hoverIn elem=options_categories
-uitrace frame=35 evt=hoverIn elem=options_categories
-uitrace frame=36 evt=hoverIn elem=OptionsOverlay
-uitrace frame=45 evt=hoverIn elem=options_contents
-uitrace frame=45 evt=hoverOut elem=options_categories
-uitrace frame=45 evt=hoverOut elem=options_categories
-uitrace frame=45 evt=hoverIn elem=options_search
-uitrace frame=45 evt=hoverIn elem=options_contents
-uitrace frame=45 evt=hoverIn elem=options_server_box
-uitrace frame=51 evt=wheel elem=options_contents
-uitrace frame=52 evt=hoverOut elem=options_server_box
-uitrace frame=53 evt=hoverIn elem=Localization
-uitrace frame=54 evt=hoverOut elem=Localization
-uitrace frame=57 evt=hoverIn elem=2) osu! > Options > "Open osu! folder"
-uitrace frame=57 evt=wheel elem=options_contents
-uitrace frame=58 evt=hoverOut elem=2) osu! > Options > "Open osu! folder"
-uitrace frame=60 evt=hoverIn elem=Localization
-uitrace frame=61 evt=hoverOut elem=Localization
-uitrace frame=62 evt=hoverIn elem=Log in
-uitrace frame=63 evt=keydown consumed_by=OptionsOverlay
-uitrace frame=64 evt=hoverOut elem=Log in
-uitrace frame=64 evt=hoverIn elem=options_server_box
-uitrace frame=67 evt=wheel elem=VolumeOverlay
-uitrace frame=77 evt=hoverOut elem=options_contents
-uitrace frame=77 evt=hoverOut elem=options_contents
-uitrace frame=77 evt=hoverOut elem=options_server_box
-uitrace frame=77 evt=hoverIn elem=options_categories
-uitrace frame=77 evt=hoverOut elem=options_search
-uitrace frame=77 evt=hoverIn elem=options_categories
-uitrace frame=228 evt=keydown consumed_by=OptionsOverlay
-uitrace frame=235 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=235 evt=hoverIn elem=InfoLabel
-uitrace frame=535 evt=hoverOut elem=CBaseUIContainer
-uitrace frame=535 evt=hoverOut elem=InfoLabel
-uitrace frame=535 evt=hoverIn elem=Carousel
-uitrace frame=541 evt=wheel elem=VolumeOverlay
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=OptionsOverlay
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverIn elem=options_server_box
+uitrace evt=wheel elem=options_contents
+uitrace evt=hoverOut elem=options_server_box
+uitrace evt=hoverIn elem=Localization
+uitrace evt=hoverOut elem=Localization
+uitrace evt=hoverIn elem=2) osu! > Options > "Open osu! folder"
+uitrace evt=wheel elem=options_contents
+uitrace evt=hoverOut elem=2) osu! > Options > "Open osu! folder"
+uitrace evt=hoverIn elem=Localization
+uitrace evt=hoverOut elem=Localization
+uitrace evt=hoverIn elem=Log in
+uitrace evt=keydown consumed_by=OptionsOverlay
+uitrace evt=hoverOut elem=Log in
+uitrace evt=hoverIn elem=options_server_box
+uitrace evt=wheel elem=VolumeOverlay
+uitrace evt=hoverOut elem=options_contents
+uitrace evt=hoverOut elem=options_contents
+uitrace evt=hoverOut elem=options_server_box
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverOut elem=options_search
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=keydown consumed_by=OptionsOverlay
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=InfoLabel
+uitrace evt=hoverOut elem=CBaseUIContainer
+uitrace evt=hoverOut elem=InfoLabel
+uitrace evt=hoverIn elem=Carousel
+uitrace evt=wheel elem=VolumeOverlay

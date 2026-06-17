@@ -32,6 +32,7 @@ sendkey F1
 @wait 12
 ui_assert visible modselector 1
 sendkey Escape
+@sleep 2000
 @wait 12
 ui_assert visible modselector 0
 ui_assert visible pauseoverlay 0

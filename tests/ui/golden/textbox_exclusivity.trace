@@ -1,38 +1,38 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=31 evt=hoverIn elem=mainmenu_cube
-uitrace frame=34 evt=downInside elem=mainmenu_cube
-uitrace frame=38 evt=upInside elem=mainmenu_cube
-uitrace frame=59 evt=hoverOut elem=mainmenu_cube
-uitrace frame=79 evt=hoverIn elem=mainmenu_options
-uitrace frame=83 evt=downInside elem=mainmenu_options
-uitrace frame=87 evt=upInside elem=mainmenu_options
-uitrace frame=118 evt=hoverIn elem=options_contents
-uitrace frame=118 evt=hoverIn elem=options_search
-uitrace frame=118 evt=hoverOut elem=mainmenu_options
-uitrace frame=118 evt=hoverIn elem=options_contents
-uitrace frame=118 evt=hoverIn elem=options_server_box
-uitrace frame=119 evt=hoverIn elem=OptionsOverlay
-uitrace frame=122 evt=downInside elem=options_server_box
-uitrace frame=126 evt=upInside elem=options_server_box
-uitrace frame=130 evt=char consumed_by=OptionsOverlay
-uitrace frame=130 evt=char consumed_by=OptionsOverlay
-uitrace frame=130 evt=char consumed_by=OptionsOverlay
-uitrace frame=131 evt=hoverOut elem=options_server_box
-uitrace frame=131 evt=hoverIn elem=CBaseUILabel
-uitrace frame=134 evt=hoverIn elem=PromptOverlay
-uitrace frame=134 evt=hoverOut elem=prompt_input
-uitrace frame=138 evt=hoverIn elem=prompt_input
-uitrace frame=141 evt=downInside elem=prompt_input
-uitrace frame=145 evt=upInside elem=prompt_input
-uitrace frame=149 evt=char consumed_by=PromptOverlay
-uitrace frame=149 evt=char consumed_by=PromptOverlay
-uitrace frame=149 evt=char consumed_by=PromptOverlay
-uitrace frame=153 evt=hoverOut elem=prompt_input
-uitrace frame=153 evt=hoverIn elem=cancel_btn
-uitrace frame=156 evt=downInside elem=cancel_btn
-uitrace frame=160 evt=upInside elem=cancel_btn
-uitrace frame=161 evt=hoverOut elem=options_contents
-uitrace frame=161 evt=hoverOut elem=CBaseUILabel
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=mainmenu_cube
+uitrace evt=downInside elem=mainmenu_cube
+uitrace evt=upInside elem=mainmenu_cube
+uitrace evt=hoverOut elem=mainmenu_cube
+uitrace evt=hoverIn elem=mainmenu_options
+uitrace evt=downInside elem=mainmenu_options
+uitrace evt=upInside elem=mainmenu_options
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverOut elem=mainmenu_options
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverIn elem=options_server_box
+uitrace evt=hoverIn elem=OptionsOverlay
+uitrace evt=downInside elem=options_server_box
+uitrace evt=upInside elem=options_server_box
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=char consumed_by=OptionsOverlay
+uitrace evt=hoverOut elem=options_server_box
+uitrace evt=hoverIn elem=CBaseUILabel
+uitrace evt=hoverIn elem=PromptOverlay
+uitrace evt=hoverOut elem=prompt_input
+uitrace evt=hoverIn elem=prompt_input
+uitrace evt=downInside elem=prompt_input
+uitrace evt=upInside elem=prompt_input
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=hoverOut elem=prompt_input
+uitrace evt=hoverIn elem=cancel_btn
+uitrace evt=downInside elem=cancel_btn
+uitrace evt=upInside elem=cancel_btn
+uitrace evt=hoverOut elem=options_contents
+uitrace evt=hoverOut elem=CBaseUILabel

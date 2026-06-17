@@ -356,7 +356,7 @@ namespace {
 // for scripted testing: log who consumed a key event (same format family as CBaseUIDebug::traceEvent)
 forceinline void traceKeyConsumed(std::string_view evt, CBaseUIElement *consumer) {
     if(unlikely(CBaseUIDebug::traceLevel() > 0))
-        logRaw("uitrace frame={} evt={} consumed_by={}", engine->getFrameCount(), evt,
+        logRaw("uitrace evt={} consumed_by={}",  evt,
                CBaseUIDebug::elemName(consumer));
 }
 }  // namespace

@@ -1,7 +1,7 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=35 evt=hoverIn elem=options_categories
-uitrace frame=35 evt=hoverIn elem=options_categories
-uitrace frame=36 evt=hoverIn elem=OptionsOverlay
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=OptionsOverlay

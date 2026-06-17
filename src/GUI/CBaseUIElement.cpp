@@ -24,7 +24,7 @@ void onTraceChangeCallback(float newvalue) { traceLvl = static_cast<int>(newvalu
 int traceLevel() { return traceLvl; }
 
 void traceEvent(const CBaseUIElement *elem, std::string_view evt) {
-    logRaw("uitrace frame={} evt={} elem={}", engine->getFrameCount(), evt, elemName(elem));
+    logRaw("uitrace evt={} elem={}", evt, elemName(elem));
 }
 
 std::string elemName(const CBaseUIElement *elem) {

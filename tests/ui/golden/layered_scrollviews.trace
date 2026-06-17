@@ -1,52 +1,52 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=31 evt=hoverIn elem=mainmenu_cube
-uitrace frame=34 evt=downInside elem=mainmenu_cube
-uitrace frame=38 evt=upInside elem=mainmenu_cube
-uitrace frame=59 evt=hoverOut elem=mainmenu_cube
-uitrace frame=79 evt=hoverIn elem=mainmenu_options
-uitrace frame=83 evt=downInside elem=mainmenu_options
-uitrace frame=87 evt=upInside elem=mainmenu_options
-uitrace frame=118 evt=hoverIn elem=options_categories
-uitrace frame=118 evt=hoverOut elem=mainmenu_options
-uitrace frame=118 evt=hoverIn elem=options_categories
-uitrace frame=118 evt=hoverIn elem=options_category_3
-uitrace frame=119 evt=hoverIn elem=OptionsOverlay
-uitrace frame=122 evt=downInside elem=options_category_3
-uitrace frame=126 evt=upInside elem=options_category_3
-uitrace frame=147 evt=hoverIn elem=options_contents
-uitrace frame=147 evt=hoverOut elem=options_categories
-uitrace frame=147 evt=hoverOut elem=options_categories
-uitrace frame=147 evt=hoverOut elem=options_category_3
-uitrace frame=147 evt=hoverIn elem=options_search
-uitrace frame=147 evt=hoverIn elem=options_contents
-uitrace frame=147 evt=hoverIn elem=options_skin_select
-uitrace frame=151 evt=downInside elem=options_skin_select
-uitrace frame=155 evt=upInside elem=options_skin_select
-uitrace frame=158 evt=hoverOut elem=options_contents
-uitrace frame=158 evt=hoverOut elem=options_contents
-uitrace frame=158 evt=hoverOut elem=options_skin_select
-uitrace frame=158 evt=hoverIn elem=options_categories
-uitrace frame=158 evt=hoverOut elem=options_search
-uitrace frame=158 evt=hoverIn elem=options_categories
-uitrace frame=459 evt=hoverIn elem=options_contextmenu
-uitrace frame=459 evt=hoverIn elem=options_contents
-uitrace frame=459 evt=hoverOut elem=options_categories
-uitrace frame=459 evt=hoverOut elem=options_categories
-uitrace frame=459 evt=hoverIn elem=options_search
-uitrace frame=459 evt=hoverIn elem=options_contextmenu
-uitrace frame=459 evt=hoverIn elem=default
-uitrace frame=459 evt=hoverIn elem=options_contents
-uitrace frame=463 evt=wheel elem=options_contents
-uitrace frame=464 evt=hoverOut elem=options_contextmenu
-uitrace frame=464 evt=hoverOut elem=options_contextmenu
-uitrace frame=464 evt=hoverOut elem=default
-uitrace frame=464 evt=hoverIn elem=Reload Skin
-uitrace frame=465 evt=hoverOut elem=Reload Skin
-uitrace frame=466 evt=hoverIn elem=Number Scale:
-uitrace frame=467 evt=hoverOut elem=Number Scale:
-uitrace frame=467 evt=hoverIn elem=HitResult Scale:
-uitrace frame=468 evt=hoverOut elem=HitResult Scale:
-uitrace frame=468 evt=hoverIn elem=Draw Numbers
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=mainmenu_cube
+uitrace evt=downInside elem=mainmenu_cube
+uitrace evt=upInside elem=mainmenu_cube
+uitrace evt=hoverOut elem=mainmenu_cube
+uitrace evt=hoverIn elem=mainmenu_options
+uitrace evt=downInside elem=mainmenu_options
+uitrace evt=upInside elem=mainmenu_options
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverOut elem=mainmenu_options
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_category_3
+uitrace evt=hoverIn elem=OptionsOverlay
+uitrace evt=downInside elem=options_category_3
+uitrace evt=upInside elem=options_category_3
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_category_3
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverIn elem=options_skin_select
+uitrace evt=downInside elem=options_skin_select
+uitrace evt=upInside elem=options_skin_select
+uitrace evt=hoverOut elem=options_contents
+uitrace evt=hoverOut elem=options_contents
+uitrace evt=hoverOut elem=options_skin_select
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverOut elem=options_search
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_contextmenu
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverIn elem=options_contextmenu
+uitrace evt=hoverIn elem=default
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=wheel elem=options_contents
+uitrace evt=hoverOut elem=options_contextmenu
+uitrace evt=hoverOut elem=options_contextmenu
+uitrace evt=hoverOut elem=default
+uitrace evt=hoverIn elem=Reload Skin
+uitrace evt=hoverOut elem=Reload Skin
+uitrace evt=hoverIn elem=Number Scale:
+uitrace evt=hoverOut elem=Number Scale:
+uitrace evt=hoverIn elem=HitResult Scale:
+uitrace evt=hoverOut elem=HitResult Scale:
+uitrace evt=hoverIn elem=Draw Numbers

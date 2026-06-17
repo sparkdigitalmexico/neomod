@@ -1,19 +1,19 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=31 evt=hoverIn elem=PromptOverlay
-uitrace frame=31 evt=hoverOut elem=prompt_input
-uitrace frame=46 evt=hoverIn elem=prompt_input
-uitrace frame=49 evt=downInside elem=prompt_input
-uitrace frame=53 evt=upInside elem=prompt_input
-uitrace frame=57 evt=char consumed_by=PromptOverlay
-uitrace frame=57 evt=char consumed_by=PromptOverlay
-uitrace frame=57 evt=char consumed_by=PromptOverlay
-uitrace frame=57 evt=char consumed_by=PromptOverlay
-uitrace frame=57 evt=char consumed_by=PromptOverlay
-uitrace frame=61 evt=hoverOut elem=prompt_input
-uitrace frame=61 evt=hoverIn elem=ok_btn
-uitrace frame=64 evt=downInside elem=ok_btn
-uitrace frame=68 evt=upInside elem=ok_btn
-uitrace frame=69 evt=hoverIn elem=mainmenu_cube
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=PromptOverlay
+uitrace evt=hoverOut elem=prompt_input
+uitrace evt=hoverIn elem=prompt_input
+uitrace evt=downInside elem=prompt_input
+uitrace evt=upInside elem=prompt_input
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=char consumed_by=PromptOverlay
+uitrace evt=hoverOut elem=prompt_input
+uitrace evt=hoverIn elem=ok_btn
+uitrace evt=downInside elem=ok_btn
+uitrace evt=upInside elem=ok_btn
+uitrace evt=hoverIn elem=mainmenu_cube

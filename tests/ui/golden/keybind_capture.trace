@@ -1,30 +1,30 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=31 evt=hoverIn elem=mainmenu_cube
-uitrace frame=34 evt=downInside elem=mainmenu_cube
-uitrace frame=38 evt=upInside elem=mainmenu_cube
-uitrace frame=59 evt=hoverOut elem=mainmenu_cube
-uitrace frame=79 evt=hoverIn elem=mainmenu_options
-uitrace frame=83 evt=downInside elem=mainmenu_options
-uitrace frame=87 evt=upInside elem=mainmenu_options
-uitrace frame=118 evt=hoverIn elem=options_categories
-uitrace frame=118 evt=hoverOut elem=mainmenu_options
-uitrace frame=118 evt=hoverIn elem=options_categories
-uitrace frame=118 evt=hoverIn elem=options_category_5
-uitrace frame=119 evt=hoverIn elem=OptionsOverlay
-uitrace frame=122 evt=downInside elem=options_category_5
-uitrace frame=126 evt=upInside elem=options_category_5
-uitrace frame=147 evt=hoverIn elem=options_contents
-uitrace frame=147 evt=hoverOut elem=options_categories
-uitrace frame=147 evt=hoverOut elem=options_categories
-uitrace frame=147 evt=hoverOut elem=options_category_5
-uitrace frame=147 evt=hoverIn elem=options_search
-uitrace frame=147 evt=hoverIn elem=options_contents
-uitrace frame=147 evt=hoverIn elem=Left Click
-uitrace frame=151 evt=downInside elem=Left Click
-uitrace frame=155 evt=upInside elem=Left Click
-uitrace frame=166 evt=keydown consumed_by=OptionsOverlay
-uitrace frame=172 evt=keydown consumed_by=OptionsOverlay
-uitrace frame=172 evt=hoverIn elem=mainmenu_cube
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=mainmenu_cube
+uitrace evt=downInside elem=mainmenu_cube
+uitrace evt=upInside elem=mainmenu_cube
+uitrace evt=hoverOut elem=mainmenu_cube
+uitrace evt=hoverIn elem=mainmenu_options
+uitrace evt=downInside elem=mainmenu_options
+uitrace evt=upInside elem=mainmenu_options
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverOut elem=mainmenu_options
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_category_5
+uitrace evt=hoverIn elem=OptionsOverlay
+uitrace evt=downInside elem=options_category_5
+uitrace evt=upInside elem=options_category_5
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_category_5
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverIn elem=Left Click
+uitrace evt=downInside elem=Left Click
+uitrace evt=upInside elem=Left Click
+uitrace evt=keydown consumed_by=OptionsOverlay
+uitrace evt=keydown consumed_by=OptionsOverlay
+uitrace evt=hoverIn elem=mainmenu_cube

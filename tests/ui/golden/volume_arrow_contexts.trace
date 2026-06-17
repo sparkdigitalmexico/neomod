@@ -1,23 +1,23 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=21 evt=keydown consumed_by=VolumeOverlay
-uitrace frame=21 evt=hoverIn elem=UIVolumeSlider
-uitrace frame=22 evt=hoverOut elem=UIVolumeSlider
-uitrace frame=204 evt=hoverIn elem=options_categories
-uitrace frame=204 evt=hoverIn elem=options_categories
-uitrace frame=205 evt=hoverIn elem=OptionsOverlay
-uitrace frame=235 evt=hoverIn elem=options_contents
-uitrace frame=235 evt=hoverOut elem=options_categories
-uitrace frame=235 evt=hoverOut elem=options_categories
-uitrace frame=235 evt=hoverIn elem=options_search
-uitrace frame=235 evt=hoverIn elem=options_contents
-uitrace frame=235 evt=hoverIn elem=Log in
-uitrace frame=239 evt=keydown consumed_by=OptionsOverlay
-uitrace frame=422 evt=hoverOut elem=options_contents
-uitrace frame=422 evt=hoverOut elem=options_contents
-uitrace frame=422 evt=hoverOut elem=Log in
-uitrace frame=422 evt=hoverOut elem=options_search
-uitrace frame=423 evt=hoverOut elem=OptionsOverlay
-uitrace frame=426 evt=keydown consumed_by=OptionsOverlay
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=keydown consumed_by=VolumeOverlay
+uitrace evt=hoverIn elem=UIVolumeSlider
+uitrace evt=hoverOut elem=UIVolumeSlider
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=options_categories
+uitrace evt=hoverIn elem=OptionsOverlay
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverOut elem=options_categories
+uitrace evt=hoverIn elem=options_search
+uitrace evt=hoverIn elem=options_contents
+uitrace evt=hoverIn elem=Log in
+uitrace evt=keydown consumed_by=OptionsOverlay
+uitrace evt=hoverOut elem=options_contents
+uitrace evt=hoverOut elem=options_contents
+uitrace evt=hoverOut elem=Log in
+uitrace evt=hoverOut elem=options_search
+uitrace evt=hoverOut elem=OptionsOverlay
+uitrace evt=keydown consumed_by=OptionsOverlay

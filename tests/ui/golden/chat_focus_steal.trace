@@ -1,10 +1,10 @@
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=CBaseUIContainer
-uitrace frame=0 evt=hoverIn elem=MainMenu
-uitrace frame=1 evt=hoverIn elem=UIUserContextMenuScreen
-uitrace frame=50 evt=hoverIn elem=chat_input
-uitrace frame=54 evt=downInside elem=chat_input
-uitrace frame=58 evt=upInside elem=chat_input
-uitrace frame=62 evt=char consumed_by=Chat
-uitrace frame=62 evt=char consumed_by=Chat
-uitrace frame=66 evt=hoverOut elem=chat_input
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=CBaseUIContainer
+uitrace evt=hoverIn elem=MainMenu
+uitrace evt=hoverIn elem=UIUserContextMenuScreen
+uitrace evt=hoverIn elem=chat_input
+uitrace evt=downInside elem=chat_input
+uitrace evt=upInside elem=chat_input
+uitrace evt=char consumed_by=Chat
+uitrace evt=char consumed_by=Chat
+uitrace evt=hoverOut elem=chat_input
