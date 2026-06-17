@@ -1,6 +1,6 @@
 # pins the async songbrowser boot path: set_active_ui_screen songbrowser triggers the
 # database load that a plain boot does not. osu_folder points at the empty fixture dir
-# (run.sh creates it) so the carousel stays empty and machine-independent; the screen
+# (run.py creates it) so the carousel stays empty and machine-independent; the screen
 # must come up active with its manually-managed containers reachable.
 options_save_on_back 0
 debug_fixed_frametime 0.0166667

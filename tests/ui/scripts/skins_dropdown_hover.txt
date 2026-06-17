@@ -1,7 +1,7 @@
 # pins the OptionsOverlay stealFocus loop ("eyes are bleeding", OptionsOverlay.cpp): with
 # the skin select dropdown open, hovering a dropdown item must hover EXACTLY one element;
 # options_skin_select sits directly beneath the menu and must not be hovered. must still
-# pass after P4 deletes the stealFocus loop. needs the UITestSkin fixture (run.sh creates
+# pass after P4 deletes the stealFocus loop. needs the UITestSkin fixture (run.py creates
 # it; the dropdown only opens when at least one skin folder exists).
 options_save_on_back 0
 debug_fixed_frametime 0.0166667

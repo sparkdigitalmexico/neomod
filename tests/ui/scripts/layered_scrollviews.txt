@@ -7,7 +7,7 @@
 # tail shows the content-movement hover churn). a scrollable dropdown would consume
 # instead (pinned by the standalone path, cf. decision log). the trace is identical to
 # the pre-P2.3 golden, but by chaining rather than by update-order accident.
-# needs the UITestSkin fixture (run.sh creates it).
+# needs the UITestSkin fixture (run.py creates it).
 options_save_on_back 0
 debug_fixed_frametime 0.0166667
 ui_trace 1
