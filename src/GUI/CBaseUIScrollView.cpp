@@ -96,27 +96,14 @@ void ScrollContainer::draw() {
 
     this->invalidateUpdate = false;
 
-    // if we were invalidated in the update() in this frame, clipping (elements to draw) will not have been updated
-    // if there's a manageable amount of elements in the full vElements array, then just temporarily use the unoptimized
-    // path of iterating over all of them to avoid 1 frame of flicker
-    // otherwise draw only pre-clipped elements
-    if(this->vVisibleElements.size() < 3 && this->vElements.size() < 1024) {
-        for(auto *e : this->vElements) {
-            if(e->isVisible() && e->isVisibleOnScreen()) {
-                e->draw();
-            }
-            assert(!this->invalidateUpdate);
+    for(auto *e : this->vVisibleElements) {
+        // check actual screen visibility since we clipped "lazily"
+        // shouldn't be too expensive since we're no longer iterating over hundreds of thousands of elements here
+        if(e->isVisibleOnScreen()) {
+            e->draw();
         }
-    } else {
-        for(auto *e : this->vVisibleElements) {
-            // check actual screen visibility since we clipped "lazily"
-            // shouldn't be too expensive since we're no longer iterating over hundreds of thousands of elements here
-            if(e->isVisibleOnScreen()) {
-                e->draw();
-            }
-            // programmer error (don't do this in draw(), ever)
-            assert(!this->invalidateUpdate);
-        }
+        // programmer error (don't do this in draw(), ever)
+        assert(!this->invalidateUpdate);
     }
 }
 
@@ -182,6 +169,10 @@ void CBaseUIScrollView::freeElements() {
 
 void CBaseUIScrollView::draw() {
     if(!this->isVisible()) return;
+
+    // really ugly place to put this, but this needs to happen if elements were changed after we have already tick()ed
+    // otherwise, 1 frame of flicker (i.e. invisible elements) may occur until we update the next frame
+    if(this->bClippingDirty && !(this->bScrolling || this->bScrollbarScrolling)) this->updateClipping();
 
     // draw background
     if(this->bDrawBackground) {
