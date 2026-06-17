@@ -58,8 +58,15 @@ AboutScreen::AboutScreen() : ScreenBackable() {
 
     std::vector<CHANGELOG> changelogs;
 
+    CHANGELOG v43_11;
+    v43_11.title = "43.11 (" CHANGELOG_TIMESTAMP ")";
+    v43_11.changes = {
+        R"()",
+    };
+    changelogs.push_back(v43_11);
+
     CHANGELOG v43_10;
-    v43_10.title = "43.10 (" CHANGELOG_TIMESTAMP ")";
+    v43_10.title = "43.10 (2026-06-17)";
     v43_10.changes = {
         R"(- Added credits and license info below changelog)",
         R"(- Added support for UI translations. Please contribute if you can!)",
