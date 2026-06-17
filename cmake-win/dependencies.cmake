@@ -21,9 +21,9 @@ macro(set_download_name dep_name version url)
     set(${_upper_dep_name}_DL_NAME "${dep_name}-${version}${_temp_ext}")
 endmacro()
 
-set(SDL3_VERSION "61363588407195518c5fe0f3c99a3175f0fb85ed")
+set(SDL3_VERSION "b0a9aa3db04128c9e66f8d958e08ea23ed88a951")
 set(SDL3_URL "https://github.com/libsdl-org/SDL/archive/${SDL3_VERSION}.tar.gz")
-set(SDL3_HASH "SHA512=d36511f7d37919c690449bfc66bab874b04bd517bcf23a3523034673dd16bffd70bbafa3ab0bb1403e95cc15802f7fa25de3811676f5c5c4cb6c7a0b708ea420")
+set(SDL3_HASH "SHA512=f70183775f345282e6ff2a8ec5c461d7c95d2bc150d555672a33de209ee8e479a371eebadc7a88530aa2f0ca143cf9e4ee751820910d1ebbfc315c30c7315534")
 set_download_name("sdl3" "${SDL3_VERSION}" "${SDL3_URL}")
 
 set(BROTLI_VERSION "1.2.0")
@@ -58,9 +58,9 @@ set(BZIP2_URL "https://github.com/libarchive/bzip2/archive/${BZIP2_VERSION}.tar.
 set(BZIP2_HASH "SHA512=a1aae1e884f85a225e2a1ddf610f11dda672bc242d4e8d0cda3534efb438b3a0306ec1d130eec378d46abb48f6875687d6b20dcc18a6037a4455f531c22d50f6")
 set_download_name("bzip2" "${BZIP2_VERSION}" "${BZIP2_URL}")
 
-set(FMT_VERSION "0e078f6ed0624be8babc43bd145371d9f3a08aab")
+set(FMT_VERSION "1be298e1bd68957e4cd352e1f676f00e07dcfb57")
 set(FMT_URL "https://github.com/fmtlib/fmt/archive/${FMT_VERSION}.tar.gz")
-set(FMT_HASH "SHA512=df87cbd340ddb6ea272fd8f7eff7f8bb7d9d0e75cb5d1fbda4cdb7f05222478c47a1e8bc72fcb58bb6810d370a71c967232f72b3db3644eba3f56f770a44abbc")
+set(FMT_HASH "SHA512=22eb44aa2e160cf6cf2ce5f8820070621f51fc739cc6973d72492d56e7a2c473769ccb2509de45b8484143cc925edd51cf64ff584f0e26ab20140c94cd9dadc9")
 set_download_name("fmt" "${FMT_VERSION}" "${FMT_URL}")
 
 set(SPDLOG_VERSION "1.17.0")
