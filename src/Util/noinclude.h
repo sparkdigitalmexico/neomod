@@ -70,6 +70,10 @@ inline bool isInt(float f) { return (f == static_cast<float>(static_cast<int>(f)
 #define likely(x) (x)
 #define unlikely(x) (x)
 #ifdef _MSC_VER
+
+// HACK: ignore "constinit" keyword since it basically doesn't work on MSVC
+#define constinit
+
 #define really_forceinline __forceinline
 #define neverinline __declspec(noinline)
 #else
