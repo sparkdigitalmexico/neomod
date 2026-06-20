@@ -13,7 +13,7 @@ If you need help, contact `kiwec` or `spec.ta.tor` on Discord, either by direct 
 
 The recommended way to build (and the way releases are made) is using gcc/gcc-mingw.
 
-- For all *nix systems, run `./autogen.sh` in the top-level folder (once) to generate the build files.
+- (Only necessary if manually adding/removing sources) For all *nix systems, run `./autogen.sh` in the top-level folder (once) to generate the build files.
 - Create and enter a build subdirectory; e.g. `mkdir build && cd build`
 - On Linux, for Linux -> run `../configure`, then `make install`
   - This will build and install everything under `./dist/bin-$arch`, configurable with the `--prefix` option to `configure`

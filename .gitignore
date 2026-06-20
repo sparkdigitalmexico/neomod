@@ -29,12 +29,6 @@ libraries-old
 /build-aux/.tmpwinepfx/
 /build-aux/cache/
 /build-aux/deps/
-/build-aux/compile
-/build-aux/config.guess
-/build-aux/config.sub
-/build-aux/depcomp
-/build-aux/install-sh
-/build-aux/missing
 dist/
 dist-*/
 debug*/
@@ -51,9 +45,7 @@ release/
 /LivePP/
 
 /Makefile
-/Makefile.in
 /src/config.h
-/src/config.h.in
 /src/config.h.in~
 /src/build_timestamp.h
 /src/build_timestamp.h.in~
@@ -62,9 +54,7 @@ release/
 /src/stamp-h1
 .dirstamp
 
-/aclocal.m4
 /autom4te.cache
-/configure
 /configure~
 
 .vscode/
@@ -78,3 +68,15 @@ release/
 
 compile_commands.json
 core
+
+# NOTE: ignore these in .git/info/exclude if you want to ignore them locally
+# /build-aux/compile
+# /build-aux/config.guess
+# /build-aux/config.sub
+# /build-aux/depcomp
+# /build-aux/install-sh
+# /build-aux/missing
+# /Makefile.in
+# /src/config.h.in
+# /aclocal.m4
+# /configure
