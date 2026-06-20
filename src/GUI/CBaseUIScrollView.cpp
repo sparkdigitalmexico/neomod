@@ -348,6 +348,7 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
 
 bool CBaseUIScrollView::onWheel(int deltaVertical, int deltaHorizontal) {
     // alt-wheel belongs to the app-level volume gesture
+    // HACK: this doesn't belong here???
     if(this->bBlockScrolling || keyboard->isAltDown()) return false;
 
     bool consumed = false;

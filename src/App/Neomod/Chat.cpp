@@ -792,9 +792,6 @@ void Chat::onKeyDown(KeyboardEvent &key) {
     }
 
     // Typing in chat: capture keypresses ONLY while the input box holds keyboard focus.
-    // previously this ate every non-alt key whenever chat was merely visible, stealing the
-    // keyboard globally (chat_focus_steal: a far click did not release the grab; F1 in a room
-    // never reached RoomScreen). focus is now click-driven (the hover-focus FIXME is gone).
     if(!keyboard->isAltDown() && this->input_box->isFocused()) {
         this->tab_completion_prefix.clear();
         this->tab_completion_match.clear();

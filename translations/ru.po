@@ -348,6 +348,10 @@ msgstr "Сохранить прогресс этой сессии."
 msgid "(Optional, automatic on tab close.)"
 msgstr "(Необязательно, сохраняется автоматически при закрытии.)"
 
+#: src/App/Neomod/MainMenu.cpp
+msgid "Checking for updates ..."
+msgstr "Поиск обновлений ..."
+
 #: src/App/Neomod/MainMenu.cpp src/App/Neomod/RichPresence.cpp
 msgid "Singleplayer"
 msgstr "Одиночная игра"
@@ -363,10 +367,6 @@ msgstr "Настройки"
 #: src/App/Neomod/MainMenu.cpp
 msgid "Exit"
 msgstr "Выход"
-
-#: src/App/Neomod/MainMenu.cpp
-msgid "Checking for updates ..."
-msgstr "Поиск обновлений ..."
 
 #: src/App/Neomod/MainMenu.cpp
 msgid "Save"

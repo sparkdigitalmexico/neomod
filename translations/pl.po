@@ -348,6 +348,10 @@ msgstr "Zapisz wszystko z tej sesji."
 msgid "(Optional, automatic on tab close.)"
 msgstr "(Opcjonalnie, automatycznie przy zamknięciu karty.)"
 
+#: src/App/Neomod/MainMenu.cpp
+msgid "Checking for updates ..."
+msgstr "Sprawdzanie aktualizacji ..."
+
 #: src/App/Neomod/MainMenu.cpp src/App/Neomod/RichPresence.cpp
 msgid "Singleplayer"
 msgstr "Jeden gracz"
@@ -363,10 +367,6 @@ msgstr "Opcje"
 #: src/App/Neomod/MainMenu.cpp
 msgid "Exit"
 msgstr "Wyjście"
-
-#: src/App/Neomod/MainMenu.cpp
-msgid "Checking for updates ..."
-msgstr "Sprawdzanie aktualizacji ..."
 
 #: src/App/Neomod/MainMenu.cpp
 msgid "Save"

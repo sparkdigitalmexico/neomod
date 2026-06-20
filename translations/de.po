@@ -348,6 +348,10 @@ msgstr "Alles aus dieser Sitzung speichern."
 msgid "(Optional, automatic on tab close.)"
 msgstr "(Optional, automatisch beim Schließen des Tabs.)"
 
+#: src/App/Neomod/MainMenu.cpp
+msgid "Checking for updates ..."
+msgstr "Suche nach Updates ..."
+
 #: src/App/Neomod/MainMenu.cpp src/App/Neomod/RichPresence.cpp
 msgid "Singleplayer"
 msgstr "Einzelspieler"
@@ -363,10 +367,6 @@ msgstr "Optionen"
 #: src/App/Neomod/MainMenu.cpp
 msgid "Exit"
 msgstr "Beenden"
-
-#: src/App/Neomod/MainMenu.cpp
-msgid "Checking for updates ..."
-msgstr "Suche nach Updates ..."
 
 #: src/App/Neomod/MainMenu.cpp
 msgid "Save"

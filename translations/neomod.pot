@@ -320,6 +320,10 @@ msgstr ""
 msgid "(Optional, automatic on tab close.)"
 msgstr ""
 
+#: src/App/Neomod/MainMenu.cpp
+msgid "Checking for updates ..."
+msgstr ""
+
 #: src/App/Neomod/MainMenu.cpp src/App/Neomod/RichPresence.cpp
 msgid "Singleplayer"
 msgstr ""
@@ -334,10 +338,6 @@ msgstr ""
 
 #: src/App/Neomod/MainMenu.cpp
 msgid "Exit"
-msgstr ""
-
-#: src/App/Neomod/MainMenu.cpp
-msgid "Checking for updates ..."
 msgstr ""
 
 #: src/App/Neomod/MainMenu.cpp
