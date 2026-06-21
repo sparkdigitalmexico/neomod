@@ -74,7 +74,7 @@ class RankingScreenIndexLabel final : public CBaseUILabel {
             g->setColor(0xff000000);
             g->drawString(this->font, this->sText);
             g->translate(-1, -1);
-            g->setColor(this->textColor);
+            g->setColor(this->getTextColor());
             g->drawString(this->font, this->sText);
         }
         g->popTransform();

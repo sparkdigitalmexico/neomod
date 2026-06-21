@@ -48,25 +48,27 @@ void CBaseUILabel::drawText() {
         }
 
         // g->pushClipRect(McRect(this->getPos(), this->getSize()));
+        TextFX effectiveFX = this->tfx;
 
-        const Color effectiveTextColor = this->bEnabled ? this->textColor : Colors::scale(this->textColor, 0.5f);
+        const Color effectiveTextColor = this->bEnabled
+                                             ? effectiveFX.col_text
+                                             : Colors::scale(effectiveFX.col_text, 0.5f);  // NOTE: "abusing" font dpi
+        effectiveFX.col_text = effectiveTextColor;
+
+        const f32 fxScale = this->bAutoscaleFX ? ((f32)this->font->getDPI() / 96.0f) : 1.f;
+        effectiveFX.outline_px *= fxScale;
+        if(this->bDrawTextShadow) {
+            effectiveFX.offs_px *= fxScale;
+        } else {
+            effectiveFX.col_shadow = 0;
+        }
 
         g->pushTransform();
         {
             g->scale(this->fScale, this->fScale);  // XXX: not sure if scaling respects text justification
             g->translate((i32)(this->getPos().x + xPosAdd),
                          (i32)(this->getPos().y + this->getSize().y / 2.f + this->fStringHeight / 2.f));
-            if(this->bDrawTextShadow) {
-                const f32 shadowOffset =
-                    std::round(1.0f * ((f32)this->font->getDPI() / 96.0f));  // NOTE: "abusing" font dpi
-
-                g->drawString(
-                    this->font, this->sText,
-                    TextFX{.col_text = effectiveTextColor, .col_shadow = this->shadowColor, .offs_px = shadowOffset});
-            } else {
-                g->setColor(effectiveTextColor);
-                g->drawString(this->font, this->sText);
-            }
+            g->drawString(this->font, this->sText, effectiveFX);
         }
         g->popTransform();
 
