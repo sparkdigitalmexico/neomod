@@ -84,7 +84,7 @@ class ModSelector final : public UIScreen {
     void onOverrideSliderLockChange(CBaseUICheckbox *checkbox);
     void onOverrideARSliderDescClicked(CBaseUIButton *button);
     void onOverrideODSliderDescClicked(CBaseUIButton *button);
-    std::string getOverrideSliderLabelText(const OVERRIDE_SLIDER &s, bool active);
+    std::string getOverrideSliderLabelText(const OVERRIDE_SLIDER &s, bool active) const;
 
     CBaseUILabel *addExperimentalLabel(const std::string &text);
     UICheckbox *addExperimentalCheckbox(const std::string &text, const std::string &tooltipText,

@@ -1414,7 +1414,7 @@ void ModSelector::updateOverrideSliderLabels() {
     }
 }
 
-std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLIDER &s, bool active) {
+std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_SLIDER &s, bool active) const {
     float convarValue = s.cvar->getFloat();
     const auto *mapIface = osu->getMapInterface();
 
@@ -1427,7 +1427,6 @@ std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_
              Osu::getCSDifficultyMultiplier() != 1.0f);
 
         // HACKHACK: dirty
-        bool wasSpeedSlider = false;
         float beatmapValue = 1.0f;
         if(s.type == OvrSliderType::CS) {
             beatmapValue = std::clamp<float>(beatmap->getCS() * Osu::getCSDifficultyMultiplier(), 0.0f, 10.0f);
@@ -1458,38 +1457,33 @@ std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_
         } else if(s.type == OvrSliderType::SPEED) {
             beatmapValue = active ? 1.f : mapIface->getSpeedMultiplier();
 
-            wasSpeedSlider = true;
-            {
-                {
-                    if(!active)
-                        newLabelText.append(fmt::format(" {:.4g}", beatmapValue));
-                    else
-                        newLabelText.append(fmt::format(" {:.4g} -> {:.4g}", beatmapValue, convarValue));
-                }
+            if(!active)
+                newLabelText.append(fmt::format(" {:.4g}", beatmapValue));
+            else
+                newLabelText.append(fmt::format(" {:.4g} -> {:.4g}", beatmapValue, convarValue));
 
-                newLabelText.append("  (BPM: ");
+            newLabelText.append("  (BPM: ");
 
-                int minBPM = beatmap->getMinBPM();
-                int maxBPM = beatmap->getMaxBPM();
-                int mostCommonBPM = beatmap->getMostCommonBPM();
-                int newMinBPM = minBPM * mapIface->getSpeedMultiplier();
-                int newMaxBPM = maxBPM * mapIface->getSpeedMultiplier();
-                int newMostCommonBPM = mostCommonBPM * mapIface->getSpeedMultiplier();
-                if(!active || mapIface->getSpeedMultiplier() == 1.0f) {
-                    if(minBPM == maxBPM)
-                        newLabelText.append(fmt::format("{}", newMaxBPM));
-                    else
-                        newLabelText.append(fmt::format("{}-{} ({})", newMinBPM, newMaxBPM, newMostCommonBPM));
-                } else {
-                    if(minBPM == maxBPM)
-                        newLabelText.append(fmt::format("{} -> {}", maxBPM, newMaxBPM));
-                    else
-                        newLabelText.append(fmt::format("{}-{} ({}) -> {}-{} ({})", minBPM, maxBPM, mostCommonBPM,
-                                                        newMinBPM, newMaxBPM, newMostCommonBPM));
-                }
-
-                newLabelText.append(")");
+            int minBPM = beatmap->getMinBPM();
+            int maxBPM = beatmap->getMaxBPM();
+            int mostCommonBPM = beatmap->getMostCommonBPM();
+            int newMinBPM = minBPM * mapIface->getSpeedMultiplier();
+            int newMaxBPM = maxBPM * mapIface->getSpeedMultiplier();
+            int newMostCommonBPM = mostCommonBPM * mapIface->getSpeedMultiplier();
+            if(!active || mapIface->getSpeedMultiplier() == 1.0f) {
+                if(minBPM == maxBPM)
+                    newLabelText.append(fmt::format("{}", newMaxBPM));
+                else
+                    newLabelText.append(fmt::format("{}-{} ({})", newMinBPM, newMaxBPM, newMostCommonBPM));
+            } else {
+                if(minBPM == maxBPM)
+                    newLabelText.append(fmt::format("{} -> {}", maxBPM, newMaxBPM));
+                else
+                    newLabelText.append(fmt::format("{}-{} ({}) -> {}-{} ({})", minBPM, maxBPM, mostCommonBPM,
+                                                    newMinBPM, newMaxBPM, newMostCommonBPM));
             }
+
+            newLabelText.append(")");
         }
 
         // always round beatmapValue to 1 decimal digit, except for the speed slider, and except for non-1.0x speed
@@ -1500,10 +1494,8 @@ std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_
                 beatmapValue = std::round(beatmapValue * 100.0f) / 100.0f;
             else
                 beatmapValue = std::round(beatmapValue * 10.0f) / 10.0f;
-        }
 
-        // update label
-        if(!wasSpeedSlider) {
+            // update label
             if(!active)
                 newLabelText.append(fmt::format(" {:.4g}", beatmapValue));
             else
