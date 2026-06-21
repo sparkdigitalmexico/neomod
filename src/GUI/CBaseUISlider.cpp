@@ -54,18 +54,33 @@ void CBaseUISlider::draw() {
     if(this->bDrawFrame) g->drawRect(pos, vec2{size.x, size.y + 1.f});
 
     // draw sliding line
-    if(!this->bHorizontal)
-        g->drawLine(pos.x + size.x / 2.0f,                        //
-                    pos.y + this->vBlockSize.y / 2.0,             //
-                    pos.x + size.x / 2.0f,                        //
-                    pos.y + size.y - this->vBlockSize.y / 2.0f);  //
-    else
-        g->drawLine(pos.x + (this->vBlockSize.x - 1) / 2 + 1,       //
-                    pos.y + size.y / 2.0f + 1,                      //
-                    pos.x + size.x - (this->vBlockSize.x - 1) / 2,  //
-                    pos.y + size.y / 2.0f + 1);                     //
-
+    if(!this->bHorizontal) {
+        this->drawSlidingLine(pos.x + size.x / 2.0f, pos.y + this->vBlockSize.y / 2.0f,  //
+                              pos.x + size.x / 2.0f, pos.y + size.y - this->vBlockSize.y / 2.0f);
+    } else {
+        this->drawSlidingLine(pos.x + (this->vBlockSize.x - 1) / 2 + 1, pos.y + size.y / 2.0f + 1,  //
+                              pos.x + size.x - (this->vBlockSize.x - 1) / 2, pos.y + size.y / 2.0f + 1);
+    }
     this->drawBlock();
+}
+
+void CBaseUISlider::drawSlidingLine(float x1, float y1, float x2, float y2) {
+    // outline: draw parallel copies of the line in outlineColor, offset perpendicular to it, behind the line itself.
+    // a horizontal slider's line runs along x, so its outline grows along y, and vice versa.
+    if(this->iLineOutlineSize > 0) {
+        const Color lineColor = g->getColor();
+        const float ox = this->bHorizontal ? 0.f : 1.f;
+        const float oy = this->bHorizontal ? 1.f : 0.f;
+
+        g->setColor(this->outlineColor);
+        for(int i = 1; i <= this->iLineOutlineSize; i++) {
+            const float off = (float)i;
+            g->drawLine(x1 + ox * off, y1 + oy * off, x2 + ox * off, y2 + oy * off);
+            g->drawLine(x1 - ox * off, y1 - oy * off, x2 - ox * off, y2 - oy * off);
+        }
+        g->setColor(lineColor);
+    }
+    g->drawLine(x1, y1, x2, y2);
 }
 
 void CBaseUISlider::drawBlock() {
@@ -293,7 +308,7 @@ CBaseUISlider *CBaseUISlider::setInitialValue(float value) {
     return this;
 }
 
-float CBaseUISlider::getPercent() {
+float CBaseUISlider::getPercent() const {
     return std::clamp<float>((this->fCurValue - this->fMinValue) / (std::abs(this->fMaxValue - this->fMinValue)), 0.0f,
                              1.0f);
 }

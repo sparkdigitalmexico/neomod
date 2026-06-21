@@ -154,7 +154,7 @@ class OvrSliderLockButton final : public CBaseUICheckbox {
     AnimFloat fAnim;
 };
 
-void add_label_outlines(std::span<CBaseUIElement *const> elements) {
+void add_text_outlines(std::span<CBaseUIElement *const> elements) {
     const f32 outline_size = 1.f * Osu::getUIScale();
     for(auto *e : elements) {
         if(auto *label = dynamic_cast<CBaseUILabel *>(e)) {
@@ -171,7 +171,7 @@ void add_label_outlines(std::span<CBaseUIElement *const> elements) {
             desc->setTextFX(fx);
         }
         // recurse
-        add_label_outlines(e->getAllChildren());
+        add_text_outlines(e->getAllChildren());
     }
 }
 
@@ -346,9 +346,6 @@ ModSelector::ModSelector() : UIScreen() {
 
     this->updateButtons(true);
     this->updateLayout();
-
-    // lazy loop over everything and add outlines
-    add_label_outlines(this->getAllChildren());
 }
 
 void ModSelector::updateButtons(bool initial) {
@@ -923,6 +920,7 @@ void ModSelector::updateLayout() {
             ovsl.slider->setPos(overrideSliderStart.x,
                                 overrideSliderStart.y + i * overrideSliderHeight + i * overrideSliderOffsetY);
             ovsl.slider->setSize(overrideSliderWidth, overrideSliderHeight);
+            ovsl.slider->setLineOutlineSize((int)std::round(1.f * dpiScale));
 
             ovsl.desc->setPos(ovsl.slider->getPos().x - ovsl.desc->getSize().x - margin, ovsl.slider->getPos().y);
 
@@ -1031,6 +1029,9 @@ void ModSelector::updateLayout() {
     }
 
     this->updateExperimentalLayout();
+
+    // lazy loop over everything and add outlines / update outline size
+    add_text_outlines(this->getAllChildren());
 }
 
 void ModSelector::updateExperimentalLayout() {
@@ -1109,6 +1110,7 @@ ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(OvrSliderType typeEn
 
     os.desc = (new OvrSliderDescButton(0.f, 0.f, 100.f, height, "", text))->setTooltipText(tooltipText);
     os.slider = new UISlider(0.f, 0.f, 100.f, height, "");
+    os.slider->setLineOutlineSize((int)std::round(1.f * Osu::getUIScale()));
     os.label = new CBaseUILabel(0.f, 0.f, 100.f, height, labelText, labelText);
     os.cvar = cvar;
     os.lockCvar = lockCvar;
