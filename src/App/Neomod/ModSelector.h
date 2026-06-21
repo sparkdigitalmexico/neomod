@@ -19,7 +19,6 @@ class CBaseUISlider;
 class CBaseUICheckbox;
 
 class UIModSelectorModButton;
-class ModSelectorOverrideSliderDescButton;
 class UIButton;
 class UICheckbox;
 
@@ -61,13 +60,16 @@ class ModSelector final : public UIScreen {
     void close(bool force);
 
    private:
+    enum class OvrSliderType : u8 { CS, AR, OD, HP, SPEED };
+
     struct OVERRIDE_SLIDER {
-        CBaseUICheckbox *lock{nullptr};
-        ModSelectorOverrideSliderDescButton *desc{nullptr};
-        CBaseUISlider *slider{nullptr};
-        CBaseUILabel *label{nullptr};
-        ConVar *cvar{nullptr};
-        ConVar *lockCvar{nullptr};
+        CBaseUICheckbox *lock;
+        CBaseUIButton *desc;
+        CBaseUISlider *slider;
+        CBaseUILabel *label;
+        ConVar *cvar;
+        ConVar *lockCvar;
+        OvrSliderType type;
     };
 
     struct EXPERIMENTAL_MOD {
@@ -75,8 +77,9 @@ class ModSelector final : public UIScreen {
         ConVar *cvar{nullptr};
     };
 
-    OVERRIDE_SLIDER addOverrideSlider(const std::string &text, const std::string &labelText, ConVar *cvar, float min,
-                                      float max, const std::string &tooltipText = {}, ConVar *lockCvar = nullptr);
+    OVERRIDE_SLIDER addOverrideSlider(OvrSliderType typeEnum, const std::string &text, const std::string &labelText,
+                                      ConVar *cvar, float min, float max, const std::string &tooltipText = {},
+                                      ConVar *lockCvar = nullptr);
     void onOverrideSliderChange(CBaseUISlider *slider);
     void onOverrideSliderLockChange(CBaseUICheckbox *checkbox);
     void onOverrideARSliderDescClicked(CBaseUIButton *button);

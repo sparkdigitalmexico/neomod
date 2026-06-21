@@ -46,10 +46,11 @@
 #include "UISlider.h"
 #include "UniString.h"
 
-class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
+namespace {
+
+class OvrSliderDescButton final : public CBaseUIButton {
    public:
-    ModSelectorOverrideSliderDescButton(float xPos, float yPos, float xSize, float ySize, std::string name,
-                                        std::string text)
+    OvrSliderDescButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
     void updateInput(CBaseUIEventCtx &c) override {
@@ -66,7 +67,10 @@ class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
         }
     }
 
-    void setTooltipText(std::string tooltipText) { this->sTooltipText = std::move(tooltipText); }
+    OvrSliderDescButton *setTooltipText(std::string tooltipText) {
+        this->sTooltipText = std::move(tooltipText);
+        return this;
+    }
 
    private:
     void drawText() override {
@@ -91,12 +95,9 @@ class ModSelectorOverrideSliderDescButton final : public CBaseUIButton {
     std::string sTooltipText;
 };
 
-namespace {
-
-class ModSelectorOverrideSliderLockButton final : public CBaseUICheckbox {
+class OvrSliderLockButton final : public CBaseUICheckbox {
    public:
-    ModSelectorOverrideSliderLockButton(float xPos, float yPos, float xSize, float ySize, std::string name,
-                                        std::string text)
+    OvrSliderLockButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUICheckbox(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {
         this->fAnim = 1.0f;
     }
@@ -170,16 +171,18 @@ ModSelector::ModSelector() : UIScreen() {
     }
 
     // build override sliders
-    OVERRIDE_SLIDER overrideCS = this->addOverrideSlider(_("CS Override"), _("CS:"), &cv::cs_override, 0.0f, 12.5f,
-                                                         _("Circle Size (higher number = smaller circles)."));
+    OVERRIDE_SLIDER overrideCS =
+        this->addOverrideSlider(OvrSliderType::CS, _("CS Override"), _("CS:"), &cv::cs_override, 0.0f, 12.5f,
+                                _("Circle Size (higher number = smaller circles)."));
     OVERRIDE_SLIDER overrideAR =
-        this->addOverrideSlider(_("AR Override"), _("AR:"), &cv::ar_override, 0.0f, 12.5f,
+        this->addOverrideSlider(OvrSliderType::AR, _("AR Override"), _("AR:"), &cv::ar_override, 0.0f, 12.5f,
                                 _("Approach Rate (higher number = faster circles)."), &cv::ar_override_lock);
     OVERRIDE_SLIDER overrideOD =
-        this->addOverrideSlider(_("OD Override"), _("OD:"), &cv::od_override, 0.0f, 12.5f,
+        this->addOverrideSlider(OvrSliderType::OD, _("OD Override"), _("OD:"), &cv::od_override, 0.0f, 12.5f,
                                 _("Overall Difficulty (higher number = harder accuracy)."), &cv::od_override_lock);
-    OVERRIDE_SLIDER overrideHP = this->addOverrideSlider(_("HP Override"), _("HP:"), &cv::hp_override, 0.0f, 12.5f,
-                                                         _("Hit/Health Points (higher number = harder survival)."));
+    OVERRIDE_SLIDER overrideHP =
+        this->addOverrideSlider(OvrSliderType::HP, _("HP Override"), _("HP:"), &cv::hp_override, 0.0f, 12.5f,
+                                _("Hit/Health Points (higher number = harder survival)."));
 
     overrideCS.slider->setAnimated(false);  // quick fix for otherwise possible inconsistencies due to slider vertex
                                             // buffers and animated CS changes
@@ -204,7 +207,7 @@ ModSelector::ModSelector() : UIScreen() {
     this->HPSlider->setName("modsel_hp");
 
     OVERRIDE_SLIDER overrideSpeed =
-        this->addOverrideSlider(_("Speed/BPM Multiplier"), "x", &cv::speed_override, 0.9f, 2.5f);
+        this->addOverrideSlider(OvrSliderType::SPEED, _("Speed/BPM Multiplier"), "x", &cv::speed_override, 0.9f, 2.5f);
 
     overrideSpeed.slider->setChangeCallback(SA::MakeDelegate<&ModSelector::onOverrideSliderChange>(this));
     // overrideSpeed.slider->setValue(-1.0f, false);
@@ -1055,18 +1058,20 @@ void ModSelector::updateExperimentalLayout() {
     expCont->setVisible(!BanchoState::is_in_a_multi_room());
 }
 
-ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(const std::string &text, const std::string &labelText,
-                                                            ConVar *cvar, float min, float max,
-                                                            const std::string &tooltipText, ConVar *lockCvar) {
+ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(OvrSliderType typeEnum, const std::string &text,
+                                                            const std::string &labelText, ConVar *cvar, float min,
+                                                            float max, const std::string &tooltipText,
+                                                            ConVar *lockCvar) {
     const float height = 25;
 
-    OVERRIDE_SLIDER os;
+    OVERRIDE_SLIDER os{};
+    os.type = typeEnum;
     if(lockCvar != nullptr) {
-        os.lock = new ModSelectorOverrideSliderLockButton(0.f, 0.f, height, height, "", "");
+        os.lock = new OvrSliderLockButton(0.f, 0.f, height, height, "", "");
         os.lock->setChangeCallback(SA::MakeDelegate<&ModSelector::onOverrideSliderLockChange>(this));
     }
-    os.desc = new ModSelectorOverrideSliderDescButton(0.f, 0.f, 100.f, height, "", text);
-    os.desc->setTooltipText(tooltipText);
+
+    os.desc = (new OvrSliderDescButton(0.f, 0.f, 100.f, height, "", text))->setTooltipText(tooltipText);
     os.slider = new UISlider(0.f, 0.f, 100.f, height, "");
     os.label = new CBaseUILabel(0.f, 0.f, 100.f, height, labelText, labelText);
     os.cvar = cvar;
@@ -1284,7 +1289,7 @@ void ModSelector::onOverrideSliderChange(CBaseUISlider *slider) {
 
             // HACKHACK: dirty
             if(beatmap) {
-                if(overrideSlider.label->getName().find("BPM") != std::string_view::npos) {
+                if(overrideSlider.type == OvrSliderType::SPEED) {
                     // reset AR and OD override sliders if the bpm slider was reset
                     if(!this->ARLock->isChecked()) this->ARSlider->setValue(0.0f, false);
                     if(!this->ODLock->isChecked()) this->ODSlider->setValue(0.0f, false);
@@ -1298,7 +1303,7 @@ void ModSelector::onOverrideSliderChange(CBaseUISlider *slider) {
             }
         } else {
             // HACKHACK: dirty
-            if(overrideSlider.label->getName().find("BPM") != std::string_view::npos) {
+            if(overrideSlider.type == OvrSliderType::SPEED) {
                 // HACKHACK: force Speed/BPM slider to have a min value of 0.05 instead of 0 (because that's the
                 // minimum for BASS) note that the BPM slider is just a 'fake' slider, it directly controls the
                 // speed slider to do its thing (thus it needs the same limits)
@@ -1427,10 +1432,10 @@ std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_
         // HACKHACK: dirty
         bool wasSpeedSlider = false;
         float beatmapValue = 1.0f;
-        if(s.label->getName().find("CS") != std::string_view::npos) {
+        if(s.type == OvrSliderType::CS) {
             beatmapValue = std::clamp<float>(beatmap->getCS() * Osu::getCSDifficultyMultiplier(), 0.0f, 10.0f);
             convarValue = mapIface->getCS();
-        } else if(s.label->getName().find("AR") != std::string_view::npos) {
+        } else if(s.type == OvrSliderType::AR) {
             beatmapValue =
                 active ? mapIface->getRawARForSpeedMultiplier() : mapIface->getApproachRateForSpeedMultiplier();
 
@@ -1440,7 +1445,7 @@ std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_
                 convarValue = std::round(convarValue * 10.0f) / 10.0f;
             else
                 convarValue = std::round(convarValue * 100.0f) / 100.0f;
-        } else if(s.label->getName().find("OD") != std::string_view::npos) {
+        } else if(s.type == OvrSliderType::OD) {
             beatmapValue =
                 active ? mapIface->getRawODForSpeedMultiplier() : mapIface->getOverallDifficultyForSpeedMultiplier();
 
@@ -1450,10 +1455,10 @@ std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_
                 convarValue = std::round(convarValue * 10.0f) / 10.0f;
             else
                 convarValue = std::round(convarValue * 100.0f) / 100.0f;
-        } else if(s.label->getName().find("HP") != std::string_view::npos) {
+        } else if(s.type == OvrSliderType::HP) {
             beatmapValue = std::clamp<float>(beatmap->getHP() * Osu::getDifficultyMultiplier(), 0.0f, 10.0f);
             convarValue = mapIface->getHP();
-        } else if(s.desc->getText().find("Speed") != std::string_view::npos) {
+        } else if(s.type == OvrSliderType::SPEED) {
             beatmapValue = active ? 1.f : mapIface->getSpeedMultiplier();
 
             wasSpeedSlider = true;
@@ -1491,8 +1496,9 @@ std::string ModSelector::getOverrideSliderLabelText(const ModSelector::OVERRIDE_
         }
 
         // always round beatmapValue to 1 decimal digit, except for the speed slider, and except for non-1.0x speed
-        // multipliers, and except for non-1.0x difficulty multipliers HACKHACK: dirty
-        if(s.desc->getText().find("Speed") == std::string_view::npos) {
+        // multipliers, and except for non-1.0x difficulty multipliers
+        // HACKHACK: dirty
+        if(s.type == OvrSliderType::SPEED) {
             if(forceDisplayTwoDecimalDigits)
                 beatmapValue = std::round(beatmapValue * 100.0f) / 100.0f;
             else
