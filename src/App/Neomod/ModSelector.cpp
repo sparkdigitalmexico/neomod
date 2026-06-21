@@ -72,19 +72,28 @@ class OvrSliderDescButton final : public CBaseUIButton {
         return this;
     }
 
+    OvrSliderDescButton *setTextFX(TextFX effects) {
+        this->tfx = effects;
+        return this;
+    }
+
+    [[nodiscard]] inline const TextFX &getTextFX() const { return this->tfx; }
+
    private:
     void drawText() override {
         if(this->font != nullptr && this->getText().length() > 0) {
+            // TEMP
+            this->tfx.col_text = this->getTextColor();
+
             float xPosAdd = this->getSize().x / 2.0f - this->fStringWidth / 2.0f;
 
             // g->pushClipRect(McRect(this->getPos(), this->getSize()));
             {
-                g->setColor(this->textColor);
                 g->pushTransform();
                 {
                     g->translate((int)(this->getPos().x + (xPosAdd)),
                                  (int)(this->getPos().y + this->getSize().y / 2.0f + this->fStringHeight / 2.0f));
-                    g->drawString(this->font, this->getText());
+                    g->drawString(this->font, this->getText(), this->tfx);
                 }
                 g->popTransform();
             }
@@ -92,6 +101,8 @@ class OvrSliderDescButton final : public CBaseUIButton {
         }
     }
 
+    // TODO: lazy (CBaseUIButton should support TextFX directly like CBaseUILabel, annoying code duplication)
+    TextFX tfx;
     std::string sTooltipText;
 };
 
@@ -142,6 +153,28 @@ class OvrSliderLockButton final : public CBaseUICheckbox {
 
     AnimFloat fAnim;
 };
+
+void add_label_outlines(std::span<CBaseUIElement *const> elements) {
+    const f32 outline_size = 1.f * Osu::getUIScale();
+    for(auto *e : elements) {
+        if(auto *label = dynamic_cast<CBaseUILabel *>(e)) {
+            auto fx = label->getTextFX();
+            fx.col_outline = rgb(0, 0, 0);
+            fx.outline_px = outline_size;
+            label->setAutoscaleFX(false);
+            label->setTextFX(fx);
+        } else if(auto *desc = dynamic_cast<OvrSliderDescButton *>(e)) {
+            // TODO: add TextFX support to CBaseUIButton
+            auto fx = desc->getTextFX();
+            fx.col_outline = rgb(0, 0, 0);
+            fx.outline_px = outline_size;
+            desc->setTextFX(fx);
+        }
+        // recurse
+        add_label_outlines(e->getAllChildren());
+    }
+}
+
 }  // namespace
 
 ModSelector::ModSelector() : UIScreen() {
@@ -313,6 +346,9 @@ ModSelector::ModSelector() : UIScreen() {
 
     this->updateButtons(true);
     this->updateLayout();
+
+    // lazy loop over everything and add outlines
+    add_label_outlines(this->getAllChildren());
 }
 
 void ModSelector::updateButtons(bool initial) {

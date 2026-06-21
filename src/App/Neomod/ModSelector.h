@@ -59,6 +59,8 @@ class ModSelector final : public UIScreen {
 
     void close(bool force);
 
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override;
+
    private:
     enum class OvrSliderType : u8 { CS, AR, OD, HP, SPEED };
 
@@ -92,8 +94,6 @@ class ModSelector final : public UIScreen {
     void onCheckboxChange(CBaseUICheckbox *checkbox);
 
     UIButton *addActionButton(const std::string &text);
-
-    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override;
 
    private:
     AnimFloat fAnimation;
