@@ -1608,13 +1608,16 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> o
 
     auto loading_screen = std::make_unique<BeatmapLoadingOverlay>(this, osu->getBackgroundImageHandler(), next_screen,
                                                                   std::move(on_refreshed));
-    this->loadingOverlay = ui->pushOverlay(std::move(loading_screen));
+    this->loadingOverlay = loading_screen.get();
 
     // start loading
     db->load();
 
     // make sure whatever was visible is hidden until loading finishes
     ui->hide();
+
+    // NOTE: this also tick()s the new overlay once immediately, that's why it's put after everything above
+    ui->pushOverlay(std::move(loading_screen));
 }
 
 namespace {
