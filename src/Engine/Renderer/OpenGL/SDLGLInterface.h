@@ -60,6 +60,8 @@ class SDLGLInterface : public GLGraphicsBackend {
     int getVRAMRemaining() override;
     int getVRAMTotal() override;
 
+    [[nodiscard]] bool hasFlippedTextureOrigin() const override { return true; }
+
     static void setGLLog(bool on);
 
     // debugging

@@ -15,7 +15,6 @@
 #include "ConVar.h"
 #include "Engine.h"
 #include "Logging.h"
-#include "VertexArrayObject.h"
 
 #include "SDLGPUInterface.h"
 
@@ -141,69 +140,6 @@ void SDLGPURenderTarget::destroy() {
     m_gpu->releaseTexture(m_depthTexture);
     m_gpu->releaseTexture(m_msaaTexture);
     m_gpu->releaseTexture(m_colorTexture);
-}
-
-void SDLGPURenderTarget::draw(int x, int y) {
-    if(!this->isReady()) return;
-
-    bind();
-    {
-        m_gpu->setColor(this->color);
-        m_gpu->drawQuad(x, y, (int)this->getSize().x, (int)this->getSize().y);
-    }
-    unbind();
-}
-
-void SDLGPURenderTarget::draw(int x, int y, int width, int height) {
-    if(!this->isReady()) return;
-
-    bind();
-    {
-        m_gpu->setColor(this->color);
-        m_gpu->drawQuad(x, y, width, height);
-    }
-    unbind();
-}
-
-namespace {
-static constinit VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
-}
-
-void SDLGPURenderTarget::drawRect(int x, int y, int width, int height) {
-    if(!this->isReady()) return;
-
-    const float texCoordWidth0 = (float)x / this->getSize().x;
-    const float texCoordWidth1 = (float)(x + width) / this->getSize().x;
-    const float texCoordHeight1 = (float)y / this->getSize().y;
-    const float texCoordHeight0 = (float)(y + height) / this->getSize().y;
-
-    bind();
-    {
-        m_gpu->setColor(this->color);
-
-        triVAO.clear();
-
-        triVAO.addTexcoord(texCoordWidth0, texCoordHeight1);
-        triVAO.addVertex(x, y);
-
-        triVAO.addTexcoord(texCoordWidth0, texCoordHeight0);
-        triVAO.addVertex(x, y + height);
-
-        triVAO.addTexcoord(texCoordWidth1, texCoordHeight0);
-        triVAO.addVertex(x + width, y + height);
-
-        triVAO.addTexcoord(texCoordWidth1, texCoordHeight0);
-        triVAO.addVertex(x + width, y + height);
-
-        triVAO.addTexcoord(texCoordWidth1, texCoordHeight1);
-        triVAO.addVertex(x + width, y);
-
-        triVAO.addTexcoord(texCoordWidth0, texCoordHeight1);
-        triVAO.addVertex(x, y);
-
-        m_gpu->drawVAO(&triVAO);
-    }
-    unbind();
 }
 
 void SDLGPURenderTarget::enable() {

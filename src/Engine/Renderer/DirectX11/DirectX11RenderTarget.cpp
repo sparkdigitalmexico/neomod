@@ -12,7 +12,6 @@
 
 #include "Engine.h"
 #include "ConVar.h"
-#include "VertexArrayObject.h"
 #include "Logging.h"
 
 #include "DirectX11Interface.h"
@@ -153,78 +152,6 @@ void DirectX11RenderTarget::destroy() {
     this->renderTargetView = nullptr;
     this->depthStencilTexture = nullptr;
     this->renderTexture = nullptr;
-}
-
-void DirectX11RenderTarget::draw(int x, int y) {
-    if(!this->isReady()) {
-        debugLog("WARNING: RenderTarget is not ready!");
-        return;
-    }
-
-    bind();
-    {
-        g->setColor(this->color);
-        g->drawQuad(x, y, this->getSize().x, this->getSize().y);
-    }
-    unbind();
-}
-
-void DirectX11RenderTarget::draw(int x, int y, int width, int height) {
-    if(!this->isReady()) {
-        debugLog("WARNING: RenderTarget is not ready!");
-        return;
-    }
-
-    bind();
-    {
-        g->setColor(this->color);
-        g->drawQuad(x, y, width, height);
-    }
-    unbind();
-}
-
-namespace {
-static constinit VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
-}
-
-void DirectX11RenderTarget::drawRect(int x, int y, int width, int height) {
-    if(!this->isReady()) {
-        debugLog("WARNING: RenderTarget is not ready!");
-        return;
-    }
-
-    const float texCoordWidth0 = x / this->getSize().x;
-    const float texCoordWidth1 = (x + width) / this->getSize().x;
-    const float texCoordHeight1 = y / this->getSize().y;
-    const float texCoordHeight0 = (y + height) / this->getSize().y;
-
-    bind();
-    {
-        g->setColor(this->color);
-
-        triVAO.clear();
-
-        triVAO.addTexcoord(texCoordWidth0, texCoordHeight1);
-        triVAO.addVertex(x, y);
-
-        triVAO.addTexcoord(texCoordWidth0, texCoordHeight0);
-        triVAO.addVertex(x, y + height);
-
-        triVAO.addTexcoord(texCoordWidth1, texCoordHeight0);
-        triVAO.addVertex(x + width, y + height);
-
-        triVAO.addTexcoord(texCoordWidth1, texCoordHeight0);
-        triVAO.addVertex(x + width, y + height);
-
-        triVAO.addTexcoord(texCoordWidth1, texCoordHeight1);
-        triVAO.addVertex(x + width, y);
-
-        triVAO.addTexcoord(texCoordWidth0, texCoordHeight1);
-        triVAO.addVertex(x, y);
-
-        g->drawVAO(&triVAO);
-    }
-    unbind();
 }
 
 void DirectX11RenderTarget::enable() {

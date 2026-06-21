@@ -30,13 +30,8 @@ class DirectX11Interface;
 class DirectX11RenderTarget final : public RenderTarget {
     NOCOPY_NOMOVE(DirectX11RenderTarget)
    public:
-    DirectX11RenderTarget(int x, int y, int width, int height,
-                          MultisampleType multiSampleType = MultisampleType{0});
+    DirectX11RenderTarget(int x, int y, int width, int height, MultisampleType multiSampleType = MultisampleType{0});
     ~DirectX11RenderTarget() override { destroy(); }
-
-    void draw(int x, int y) override;
-    void draw(int x, int y, int width, int height) override;
-    void drawRect(int x, int y, int width, int height) override;
 
     void enable() override;
     void disable() override;

@@ -653,8 +653,8 @@ void ModFPoSu::FPoSuImpl::makePlayfield() {
     this->vao->clear();
     this->meshList.clear();
 
-    const float topTC = !env->usingGL() ? 0.f : 1.f;
-    const float bottomTC = !env->usingGL() ? 1.f : 0.f;
+    const float topTC = g->hasFlippedTextureOrigin() ? 1.f : 0.f;
+    const float bottomTC = g->hasFlippedTextureOrigin() ? 0.f : 1.f;
 
     const float dist = -cv::fposu_distance.getFloat();
 

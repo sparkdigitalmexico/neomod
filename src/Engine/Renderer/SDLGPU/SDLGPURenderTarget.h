@@ -33,10 +33,6 @@ class SDLGPURenderTarget final : public RenderTarget {
     SDLGPURenderTarget() = delete;
     ~SDLGPURenderTarget() override { destroy(); }
 
-    void draw(int x, int y) override;
-    void draw(int x, int y, int width, int height) override;
-    void drawRect(int x, int y, int width, int height) override;
-
     void enable() override;
     void disable() override;
 

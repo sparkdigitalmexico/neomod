@@ -52,10 +52,10 @@ void RenderTarget::draw(int x, int y) {
 
             this->vao1->setVertices(vertices);
 
-            static std::vector<vec2> texcoords(
-                {vec2{0.f, 1.f}, vec2{0.f, 0.f}, vec2{1.f, 0.f}, vec2{1.f, 0.f}, vec2{1.f, 1.f}, vec2{0.f, 1.f}});
-
-            this->vao1->setTexcoords(texcoords);
+            const float vTop = g->hasFlippedTextureOrigin() ? 1.f : 0.f;
+            const float vBot = g->hasFlippedTextureOrigin() ? 0.f : 1.f;
+            this->vao1->setTexcoords(std::vector<vec2>{vec2{0.f, vTop}, vec2{0.f, vBot}, vec2{1.f, vBot},
+                                                       vec2{1.f, vBot}, vec2{1.f, vTop}, vec2{0.f, vTop}});
 
             this->vao1->loadAsync();
             this->vao1->load();
@@ -66,6 +66,7 @@ void RenderTarget::draw(int x, int y) {
     this->unbind();
 }
 
+static constinit std::array<vec3, 6> lastDrawVerts{};
 void RenderTarget::draw(int x, int y, int width, int height) {
     if(!this->isReady()) {
         logIfCV(debug_rt, "WARNING: RenderTarget is not ready!");
@@ -76,11 +77,9 @@ void RenderTarget::draw(int x, int y, int width, int height) {
 
     this->bind();
     {
-        static std::vector<vec3> vertices(6, vec3{0.f, 0.f, 0.f});
-
         // clang-format off
-        std::vector<vec3> newVertices = {
-            {x, y, 0.f},
+        std::array<vec3, 6> newVertices = {
+            vec3{x, y, 0.f},
             {x, y + height, 0.f},
             {x + width, y + height, 0.f},
             {x + width, y + height, 0.f},
@@ -89,17 +88,17 @@ void RenderTarget::draw(int x, int y, int width, int height) {
         };
         // clang-format on
 
-        if(!this->vao2->isReady() || vertices != newVertices) {
+        if(!this->vao2->isReady() || lastDrawVerts != newVertices) {
             this->vao2->release();
 
-            vertices = std::move(newVertices);
+            lastDrawVerts = newVertices;
 
-            this->vao2->setVertices(vertices);
+            this->vao2->setVertices(lastDrawVerts);
 
-            static std::vector<vec2> texcoords(
-                {vec2{0.f, 1.f}, vec2{0.f, 0.f}, vec2{1.f, 0.f}, vec2{1.f, 0.f}, vec2{1.f, 1.f}, vec2{0.f, 1.f}});
-
-            this->vao2->setTexcoords(texcoords);
+            const float vTop = g->hasFlippedTextureOrigin() ? 1.f : 0.f;
+            const float vBot = g->hasFlippedTextureOrigin() ? 0.f : 1.f;
+            this->vao2->setTexcoords(
+                std::array<vec2, 6>{vec2{0.f, vTop}, {0.f, vBot}, {1.f, vBot}, {1.f, vBot}, {1.f, vTop}, {0.f, vTop}});
 
             this->vao2->loadAsync();
             this->vao2->load();
@@ -120,8 +119,12 @@ void RenderTarget::drawRect(int x, int y, int width, int height) {
 
     const float texCoordWidth0 = x / this->vSize.x;
     const float texCoordWidth1 = (x + width) / this->vSize.x;
-    const float texCoordHeight1 = 1.0f - y / this->vSize.y;
-    const float texCoordHeight0 = 1.0f - (y + height) / this->vSize.y;
+    float texCoordHeight1 = y / this->vSize.y;
+    float texCoordHeight0 = (y + height) / this->vSize.y;
+    if(g->hasFlippedTextureOrigin()) {
+        texCoordHeight1 = 1.0f - texCoordHeight1;
+        texCoordHeight0 = 1.0f - texCoordHeight0;
+    }
 
     g->setColor(this->color);
 
