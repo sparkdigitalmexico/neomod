@@ -79,9 +79,9 @@ class ModSelector final : public UIScreen {
         ConVar *cvar{nullptr};
     };
 
-    OVERRIDE_SLIDER addOverrideSlider(OvrSliderType typeEnum, const std::string &text, const std::string &labelText,
-                                      ConVar *cvar, float min, float max, const std::string &tooltipText = {},
-                                      ConVar *lockCvar = nullptr);
+    const OVERRIDE_SLIDER addOverrideSlider(OvrSliderType typeEnum, const std::string &text,
+                                                const std::string &labelText, ConVar *cvar, float min, float max,
+                                                const std::string &tooltipText = {}, ConVar *lockCvar = nullptr);
     void onOverrideSliderChange(CBaseUISlider *slider);
     void onOverrideSliderLockChange(CBaseUICheckbox *checkbox);
     void onOverrideARSliderDescClicked(CBaseUIButton *button);

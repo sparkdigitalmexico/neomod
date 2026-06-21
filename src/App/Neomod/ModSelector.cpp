@@ -204,16 +204,16 @@ ModSelector::ModSelector() : UIScreen() {
     }
 
     // build override sliders
-    OVERRIDE_SLIDER overrideCS =
+    const OVERRIDE_SLIDER overrideCS =
         this->addOverrideSlider(OvrSliderType::CS, _("CS Override"), _("CS:"), &cv::cs_override, 0.0f, 12.5f,
                                 _("Circle Size (higher number = smaller circles)."));
-    OVERRIDE_SLIDER overrideAR =
+    const OVERRIDE_SLIDER overrideAR =
         this->addOverrideSlider(OvrSliderType::AR, _("AR Override"), _("AR:"), &cv::ar_override, 0.0f, 12.5f,
                                 _("Approach Rate (higher number = faster circles)."), &cv::ar_override_lock);
-    OVERRIDE_SLIDER overrideOD =
+    const OVERRIDE_SLIDER overrideOD =
         this->addOverrideSlider(OvrSliderType::OD, _("OD Override"), _("OD:"), &cv::od_override, 0.0f, 12.5f,
                                 _("Overall Difficulty (higher number = harder accuracy)."), &cv::od_override_lock);
-    OVERRIDE_SLIDER overrideHP =
+    const OVERRIDE_SLIDER overrideHP =
         this->addOverrideSlider(OvrSliderType::HP, _("HP Override"), _("HP:"), &cv::hp_override, 0.0f, 12.5f,
                                 _("Hit/Health Points (higher number = harder survival)."));
 
@@ -239,7 +239,7 @@ ModSelector::ModSelector() : UIScreen() {
     this->ODSlider->setName("modsel_od");
     this->HPSlider->setName("modsel_hp");
 
-    OVERRIDE_SLIDER overrideSpeed =
+    const OVERRIDE_SLIDER overrideSpeed =
         this->addOverrideSlider(OvrSliderType::SPEED, _("Speed/BPM Multiplier"), "x", &cv::speed_override, 0.9f, 2.5f);
 
     overrideSpeed.slider->setChangeCallback(SA::MakeDelegate<&ModSelector::onOverrideSliderChange>(this));
@@ -1095,10 +1095,10 @@ void ModSelector::updateExperimentalLayout() {
     expCont->setVisible(!BanchoState::is_in_a_multi_room());
 }
 
-ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(OvrSliderType typeEnum, const std::string &text,
-                                                            const std::string &labelText, ConVar *cvar, float min,
-                                                            float max, const std::string &tooltipText,
-                                                            ConVar *lockCvar) {
+const ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(OvrSliderType typeEnum, const std::string &text,
+                                                                  const std::string &labelText, ConVar *cvar, float min,
+                                                                  float max, const std::string &tooltipText,
+                                                                  ConVar *lockCvar) {
     const float height = 25;
 
     OVERRIDE_SLIDER os{};
@@ -1141,9 +1141,8 @@ ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(OvrSliderType typeEn
 
     this->overrideSliderContainer->addBaseUIElements(
         std::array<CBaseUIElement *const, 4>{os.lock, os.desc, os.slider, os.label});
-    this->overrideSliders.push_back(os);
 
-    return os;
+    return this->overrideSliders.emplace_back(os);
 }
 
 UIButton *ModSelector::addActionButton(const std::string &text) {
