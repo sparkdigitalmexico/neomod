@@ -265,8 +265,7 @@ struct McFontImpl final {
 
     // drawString helpers
     void drawStringShadered(VerTexMetCacheEntry &readyBuffer, const TextFX &effects) const;
-    void drawStringPlain(VerTexMetCacheEntry &readyBuffer, bool hasShadow,
-                         std::optional<TextFX> effects = std::nullopt) const;
+    void drawStringPlain(VerTexMetCacheEntry &readyBuffer, std::optional<TextFX> effects) const;
 
     // atlas management methods
     int allocateDynamicSlot(char32_t ch);
@@ -538,18 +537,23 @@ void McFontImpl::drawStringShadered(VerTexMetCacheEntry &readyBuffer, const Text
     s_textShader->disable();
 }
 
-void McFontImpl::drawStringPlain(VerTexMetCacheEntry &readyBuffer, bool hasShadow,
-                                 std::optional<TextFX> effects) const {
-    if(!readyBuffer.getVerts().empty()) {
-        if(hasShadow) {
-            const auto &shadowConf = *effects;
-            const float px = shadowConf.offs_px;
+void McFontImpl::drawStringPlain(VerTexMetCacheEntry &readyBuffer, std::optional<TextFX> effects) const {
+    const Color savedColor = g->getColor();
+    const bool hasEffects = effects.has_value();
+    const bool hasShadow = hasEffects && (effects->col_shadow.a > 0);
 
-            g->translate(px, px);
-            g->setColor(shadowConf.col_shadow);
-            g->drawVAO(readyBuffer.getVAO());
-            g->translate(-px, -px);
-            g->setColor(shadowConf.col_text);
+    if(!readyBuffer.getVerts().empty()) {
+        if(hasEffects) {
+            const auto &fxConf = *effects;
+            if(hasShadow) {
+                const float px = fxConf.offs_px;
+
+                g->translate(px, px);
+                g->setColor(fxConf.col_shadow);
+                g->drawVAO(readyBuffer.getVAO());
+                g->translate(-px, -px);
+            }
+            g->setColor(fxConf.col_text);
         }
 
         g->drawVAO(readyBuffer.getVAO());
@@ -557,7 +561,6 @@ void McFontImpl::drawStringPlain(VerTexMetCacheEntry &readyBuffer, bool hasShado
 
     // emoji
     if(!readyBuffer.getEmojiVerts().empty()) {
-        const Color savedColor = g->getColor();
         if(hasShadow) {
             const auto &shadowConf = *effects;
             const float px = shadowConf.offs_px;
@@ -572,8 +575,9 @@ void McFontImpl::drawStringPlain(VerTexMetCacheEntry &readyBuffer, bool hasShado
         }
 
         g->drawVAO(readyBuffer.getEmojiVAO());
-        g->setColor(savedColor);
     }
+
+    g->setColor(savedColor);
 }
 
 void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects) {
@@ -584,9 +588,10 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
 
     // compute directional expansion for shadow/outline effects (needed before cache check).
     // shadow extends to the bottom-right only; outline extends in all directions.
-    const bool hasEffects = effects.has_value() && (effects->col_shadow.a > 0 || effects->col_outline.a > 0);
-    const float outlinePx = (hasEffects && effects->col_outline.a > 0) ? effects->outline_px : 0.f;
-    const float shadowPx = (hasEffects && effects->col_shadow.a > 0) ? effects->offs_px : 0.f;
+    const bool hasEffects = effects.has_value();
+    const bool hasShadowOrOutline = hasEffects && (effects->col_shadow.a > 0 || effects->col_outline.a > 0);
+    const float outlinePx = (hasShadowOrOutline && effects->col_outline.a > 0) ? effects->outline_px : 0.f;
+    const float shadowPx = (hasShadowOrOutline && effects->col_shadow.a > 0) ? effects->offs_px : 0.f;
     // cap outline expansion so that expansion + outline sampling reach stays within atlas padding.
     // without this, the shader's 8-tap outline samples at the expanded quad edge overshoot the
     // padding and read neighboring glyph data, producing colored fringe artifacts.
@@ -660,7 +665,7 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
     m_textureAtlas->getAtlasImage()->bind();
 
     bool forceFallbackPath = s_textShaderBroken || cv::r_debug_drawstring_fallback.getBool();
-    if(!forceFallbackPath && hasEffects) {
+    if(!forceFallbackPath && hasShadowOrOutline) {
         if(!s_textShader) {
             // lazy load shader
             s_textShader = resourceManager->createShaderAuto("text");
@@ -676,10 +681,9 @@ void McFontImpl::drawString(std::string_view text, std::optional<TextFX> effects
         }
     }
 
-    if(forceFallbackPath || !hasEffects) {
+    if(forceFallbackPath || !hasShadowOrOutline) {
         // no effects (or fallback shadow)
-        const bool hasShadow = hasEffects && (effects->col_shadow.a > 0);
-        drawStringPlain(buffer, hasShadow, effects);
+        drawStringPlain(buffer, effects);
     }
 
     if(cv::r_debug_drawstring_unbind.getBool()) {
