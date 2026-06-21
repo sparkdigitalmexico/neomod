@@ -41,26 +41,29 @@ CBaseUISlider::CBaseUISlider(float xPos, float yPos, float xSize, float ySize, s
 void CBaseUISlider::draw() {
     if(!this->bVisible) return;
 
+    const vec2 pos = this->getPos();
+    const vec2 size = this->getSize();
     // draw background
     if(this->bDrawBackground) {
         g->setColor(this->backgroundColor);
-        g->fillRect(this->getPos(), vec2{this->getSize().x, this->getSize().y + 1.f});
+        g->fillRect(pos, vec2{size.x, size.y + 1.f});
     }
 
     // draw frame
     g->setColor(this->frameColor);
-    if(this->bDrawFrame) g->drawRect(this->getPos(), vec2{this->getSize().x, this->getSize().y + 1.f});
+    if(this->bDrawFrame) g->drawRect(pos, vec2{size.x, size.y + 1.f});
 
     // draw sliding line
     if(!this->bHorizontal)
-        g->drawLine(this->getPos().x + this->getSize().x / 2.0f, this->getPos().y + this->vBlockSize.y / 2.0,
-                    this->getPos().x + this->getSize().x / 2.0f,
-                    this->getPos().y + this->getSize().y - this->vBlockSize.y / 2.0f);
+        g->drawLine(pos.x + size.x / 2.0f,                        //
+                    pos.y + this->vBlockSize.y / 2.0,             //
+                    pos.x + size.x / 2.0f,                        //
+                    pos.y + size.y - this->vBlockSize.y / 2.0f);  //
     else
-        g->drawLine(this->getPos().x + (this->vBlockSize.x - 1) / 2 + 1,
-                    this->getPos().y + this->getSize().y / 2.0f + 1,
-                    this->getPos().x + this->getSize().x - (this->vBlockSize.x - 1) / 2,
-                    this->getPos().y + this->getSize().y / 2.0f + 1);
+        g->drawLine(pos.x + (this->vBlockSize.x - 1) / 2 + 1,       //
+                    pos.y + size.y / 2.0f + 1,                      //
+                    pos.x + size.x - (this->vBlockSize.x - 1) / 2,  //
+                    pos.y + size.y / 2.0f + 1);                     //
 
     this->drawBlock();
 }
