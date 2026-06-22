@@ -35,7 +35,7 @@ using namespace Spectating;
 namespace Spectating {
 
 static i32 current_map_id = 0;
-static constinit MapFetcher map_fetcher;
+static CONSTINIT MapFetcher map_fetcher;
 
 // TODO @kiwec: test that those bugs have been fixed
 

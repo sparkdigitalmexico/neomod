@@ -260,7 +260,7 @@ void OpenGLES32Interface::setAlpha(float alpha) {
 }
 
 namespace {
-static constinit VertexArrayObject lineLoopVAO{DrawPrimitive::LINE_LOOP};
+static CONSTINIT VertexArrayObject lineLoopVAO{DrawPrimitive::LINE_LOOP};
 }
 
 void OpenGLES32Interface::drawRectf(const RectOptions &opts) {
@@ -294,7 +294,7 @@ void OpenGLES32Interface::drawRectf(const RectOptions &opts) {
 }
 
 namespace {
-static constinit VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
+static CONSTINIT VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
 }
 
 void OpenGLES32Interface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {

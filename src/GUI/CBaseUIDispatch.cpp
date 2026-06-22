@@ -94,7 +94,7 @@ struct State final {
 namespace {
 
 // per-frame buffer lives here
-inline constinit State state{};
+inline CONSTINIT State state{};
 
 // the top-most hit candidate matching pred: groups in input-priority order, within a group the best
 // (tier, then latest visit), the first group with a match winning (= the top-most layer). the single

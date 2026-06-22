@@ -66,7 +66,7 @@ void RenderTarget::draw(int x, int y) {
     this->unbind();
 }
 
-static constinit std::array<vec3, 6> lastDrawVerts{};
+static CONSTINIT std::array<vec3, 6> lastDrawVerts{};
 void RenderTarget::draw(int x, int y, int width, int height) {
     if(!this->isReady()) {
         logIfCV(debug_rt, "WARNING: RenderTarget is not ready!");
@@ -109,7 +109,7 @@ void RenderTarget::draw(int x, int y, int width, int height) {
     this->unbind();
 }
 
-static constinit VertexArrayObject rectVAO{};
+static CONSTINIT VertexArrayObject rectVAO{};
 
 void RenderTarget::drawRect(int x, int y, int width, int height) {
     if(!this->bReady) {

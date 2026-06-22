@@ -139,7 +139,7 @@ struct NvApiState {
 };
 
 std::string s_init_info{""};
-static constinit NvApiState s_state{};
+static CONSTINIT NvApiState s_state{};
 
 [[maybe_unused]] bool initNvAPI() noexcept {
     if(s_state.initialized) return true;

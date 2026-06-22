@@ -1105,7 +1105,7 @@ struct RhythmIsland {
     }
 };
 
-constinit thread_local std::vector<std::pair<RhythmIsland, int>> g_islandCounts{};
+CONSTINIT thread_local std::vector<std::pair<RhythmIsland, int>> g_islandCounts{};
 }  // namespace
 
 // new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/

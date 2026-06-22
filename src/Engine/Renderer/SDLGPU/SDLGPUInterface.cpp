@@ -642,7 +642,7 @@ void SDLGPUInterface::setAlpha(float alpha) {
 // 2d resource drawing
 
 namespace {
-static constinit VertexArrayObject triStripVAO(DrawPrimitive::TRIANGLE_STRIP);
+static CONSTINIT VertexArrayObject triStripVAO(DrawPrimitive::TRIANGLE_STRIP);
 }
 
 void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {

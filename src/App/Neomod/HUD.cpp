@@ -107,8 +107,8 @@ void HUD::onCursorTrailMaxChange() {
 
 // temp vao buffers
 namespace {
-static constinit VertexArrayObject quadVAO{DrawPrimitive::QUADS};
-static constinit VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
+static CONSTINIT VertexArrayObject quadVAO{DrawPrimitive::QUADS};
+static CONSTINIT VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
 }  // namespace
 
 HUD::HUD() : UIScreen() {
@@ -530,7 +530,7 @@ void HUD::drawCursorTrail(vec2 pos, f32 alphaMultiplier, bool secondTrail) {
                              alphaMultiplier, fposuTrailJumpFix);
 }
 
-static constinit std::array<vec2, 4> defaultQuadTexcoords{vec2{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+static CONSTINIT std::array<vec2, 4> defaultQuadTexcoords{vec2{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
 void HUD::drawCursorTrailInt(Shader *trailShader, CursorTrail &trail, vec2 pos, f32 alphaMultiplier,
                              bool emptyTrailFrame) {

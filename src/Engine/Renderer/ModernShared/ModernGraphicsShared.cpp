@@ -12,10 +12,10 @@
 
 namespace {
 // temp vao buffers
-static constinit VertexArrayObject lineVAO{DrawPrimitive::LINES};
-static constinit VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
-static constinit VertexArrayObject triFanVAO{DrawPrimitive::TRIANGLE_FAN};
-static constinit VertexArrayObject lineStripVAO{DrawPrimitive::LINE_STRIP};
+static CONSTINIT VertexArrayObject lineVAO{DrawPrimitive::LINES};
+static CONSTINIT VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
+static CONSTINIT VertexArrayObject triFanVAO{DrawPrimitive::TRIANGLE_FAN};
+static CONSTINIT VertexArrayObject lineStripVAO{DrawPrimitive::LINE_STRIP};
 
 // emit outer/inner vertex pairs for a triangle strip outline
 inline void addArcStripVertices(VertexArrayObject &vao, float cx, float cy, float rInner, float rOuter,

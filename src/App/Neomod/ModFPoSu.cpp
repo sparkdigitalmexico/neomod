@@ -151,7 +151,7 @@ ModFPoSu::~ModFPoSu() {
 }
 
 namespace {
-static constinit VertexArrayObject lineVAO{DrawPrimitive::LINES};
+static CONSTINIT VertexArrayObject lineVAO{DrawPrimitive::LINES};
 }
 
 void ModFPoSu::draw() {

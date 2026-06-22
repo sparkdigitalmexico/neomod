@@ -469,7 +469,7 @@ void DirectX11Interface::drawPixel(int x, int y) {
 }
 
 namespace {
-static constinit VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
+static CONSTINIT VertexArrayObject triStripVAO{DrawPrimitive::TRIANGLE_STRIP};
 }
 
 void DirectX11Interface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {
