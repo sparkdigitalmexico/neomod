@@ -52,7 +52,8 @@ void SDLGLInterface::load() {
     GLESLoaded = loadedGLVer > 0;
 #else
     loadedGLVer = gladLoaderLoadGL();
-    GLLoaded = loadedGLVer > 0;
+    // if we have opengl 1.1, we need to bail
+    GLLoaded = GLAD_VERSION_MAJOR(loadedGLVer) >= 2;
 #endif
     if(!loadedGLVer) {
         debugLog("glad load error");

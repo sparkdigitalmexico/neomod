@@ -119,7 +119,10 @@ Engine::Engine() {
         // create graphics through environment
         g = env->createRenderer();
         // needs init() separation due to potential graphics access
-        this->runtime_assert(!!g && g->init(), "Graphics failed to initialize!");
+        this->runtime_assert(!!g, "Graphics failed to initialize!");
+        this->runtime_assert(
+            g->init(),
+            fmt::format("{:s} failed to initialize!\nTry running with -dx11 or -sdlgpu.", g->getName()).c_str());
 
         // make unique_ptrs for the rest
         networkHandler = std::make_unique<NetworkHandler>();
