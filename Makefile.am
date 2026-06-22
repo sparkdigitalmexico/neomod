@@ -781,7 +781,7 @@ $(DEPS_PREFIX)/libjpeg-$(LIBJPEG_VERSION).built: $(DEPS_CACHE)/libjpeg-$(LIBJPEG
 		-DWITH_TESTS=OFF \
 		-DWITH_TURBOJPEG=ON \
 		-DCMAKE_ASM_NASM_OBJECT_FORMAT=$(NASMOBJ) \
-		$(if $(filter x86_64,$(host_cpu)),-DWITH_SIMD=ON,$(if $(findstring gcc,$(CC)),-DWITH_SIMD=ON,-DWITH_SIMD=OFF)) \
+		$(if $(WASM_CC),-DWITH_SIMD=OFF,-DWITH_SIMD=ON) \
 		$(if $(STATICBUILD),-DENABLE_STATIC=ON -DENABLE_SHARED=OFF,-DENABLE_STATIC=OFF -DENABLE_SHARED=ON) && \
 	$(CMAKE) --build build "$(CMAKEPAROPT)" && \
 	$(CMAKE) --install build
