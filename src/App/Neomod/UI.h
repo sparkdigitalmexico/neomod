@@ -51,12 +51,29 @@ class UIDebug;
 
 // The screen registry: one row per always-alive screen, in STORAGE order (NOT layer order).
 // Everything below is derived from it, so adding a screen is one row. Columns:
-//   rank   : bottom->top draw position, dense + unique (see SCREEN_RANK/LAYER_ORDER)
+//   rank   : position in the layer stack mapped out below; dense + unique (a gap or duplicate is
+//            a compile error, see SCREEN_RANK/LAYER_ORDER)
 //   flags  : UIF_* mask
 //   Acc    : getAcc()/getAccBase() accessor names
 //   Type   : concrete screen class
 //   member : field name, also stringized into SCREEN_NAMES (set_active_ui_screen / ui_screens)
 // dummy (index 0) is the one screen NOT here: a file-local NullScreen sentinel, no accessor, built first.
+//
+// Layer stack, bottom -> top (= the `rank` column). The rows below are storage-ordered, so this
+// comment is the only place the stack reads in order. The active base screen draws at the frame
+// bottom, the overlay band draws over it; input + key routing walk the whole stack top-down.
+//
+//   BASE band (ranks 1-10): at most one visible at a time, so order WITHIN the band does not
+//     matter; the 9 setScreen-swapped base screens (room, rankingscreen, userstatsscreen,
+//     spectatorscreen, songbrowser, osudirectscreen, lobby, aboutscreen, mainmenu), then hud
+//     (rank 10, drawn by the gameplay composite).
+//   OVERLAY band (ranks 11-20): occlusion matters here, so this order is important:
+//     11 pauseoverlay  12 modselector  13 chat  14 useractions  15 optionsoverlay
+//     16 promptoverlay  17 beatmapinstalloverlay  18 tooltipoverlay  19 volumeoverlay
+//     20 notificationoverlay
+//   notification > volume is deliberate: VolumeOverlay::onKeyDown is ungated (KEY_MUTE, volume
+//   binds) and must not eat keys ahead of notification's keybind capture. extra_overlays from
+//   pushOverlay splice in just below tooltipoverlay (see EXTRAS_SPLICE).
 
 // clang-format off
 #define UI_SCREEN_REGISTRY(X)                                                                            \
@@ -177,11 +194,8 @@ struct UI final {
 #undef X
 
     // bottom -> top, the inverse of SCREEN_RANK: draw walks it forward, input/key routing walk it in
-    // reverse, so input order = reverse draw order by construction. [0, OVERLAY_BAND_BEGIN) is the
-    // base band (one base screen visible at a time, swapped by setScreen) plus hud (drawn by the
-    // gameplay composite, not the band walk). notification ranks ABOVE volume deliberately:
-    // VolumeOverlay::onKeyDown is ungated (KEY_MUTE, volume binds) and must not eat keys ahead of
-    // notification's keybind capture.
+    // reverse, so input order = reverse draw order by construction. See the layer-stack map atop the
+    // registry for the band structure and the notification > volume rationale.
     static constexpr std::array<size_t, NUM_SCREENS> LAYER_ORDER = [] {
         std::array<size_t, NUM_SCREENS> order{};
         for(size_t i = 0; i < NUM_SCREENS; ++i) order[SCREEN_RANK[i]] = i;
