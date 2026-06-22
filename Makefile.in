@@ -1069,6 +1069,7 @@ ECHO_T = @ECHO_T@
 EGL_CFLAGS = @EGL_CFLAGS@
 EGL_LIBS = @EGL_LIBS@
 EMBED_MANIFESTS = @EMBED_MANIFESTS@
+EMBED_TYPE = @EMBED_TYPE@
 ENABLE_ASAN = @ENABLE_ASAN@
 ENABLE_DEBUG = @ENABLE_DEBUG@
 ETAGS = @ETAGS@
@@ -1668,8 +1669,6 @@ EMBED_OUTPUT := $(builddir)/gen/binary_embed.cpp
 EMBED_MANIFEST_FLAGS := $(foreach m,$(EMBED_MANIFESTS),-f $(m)) \
                         $(foreach m,$(BUILD_EMBED_MANIFESTS),-F $(m))
 
-@WASM_PLATFORM_FALSE@EMBED_TYPE := asm-inline
-@WASM_PLATFORM_TRUE@EMBED_TYPE := cppembed
 EMBED_DEPFILE := $(builddir)/gen/binary_embed.d
 @WASM_PLATFORM_FALSE@EMBED_CACERT_DEPS := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem
 

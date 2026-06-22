@@ -1273,12 +1273,6 @@ EMBED_OUTPUT := $(builddir)/gen/binary_embed.cpp
 EMBED_MANIFEST_FLAGS := $(foreach m,$(EMBED_MANIFESTS),-f $(m)) \
                         $(foreach m,$(BUILD_EMBED_MANIFESTS),-F $(m))
 
-if WASM_PLATFORM
-EMBED_TYPE := cppembed
-else
-EMBED_TYPE := asm-inline
-endif
-
 EMBED_DEPFILE := $(builddir)/gen/binary_embed.d
 
 # cacert.pem is only needed on non-WASM platforms (WASM uses browser TLS, not curl)

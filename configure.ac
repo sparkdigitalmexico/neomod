@@ -1138,6 +1138,25 @@ int main(void) { return 0; }
     ], [_is_linux_libcpp=yes], [_is_linux_libcpp=])
 ])
 
+AC_MSG_CHECKING([whether $CXX supports embed])
+echo "nothing" > conftest.cppembed_test
+# EMBED_TYPE passed to gen_binary_embed.py in Makefile.am
+EMBED_TYPE=asm-inline
+AC_COMPILE_IFELSE([
+    AC_LANG_SOURCE([[
+const unsigned char test@<:@@:>@ = {
+#embed "conftest.cppembed_test"
+}; int main(void) { (void)test; return 0; }
+    ]])
+], [
+    AC_MSG_RESULT([yes])
+    EMBED_TYPE=cppembed
+], [
+    AC_MSG_RESULT([no])
+])
+rm -f conftest.cppembed_test
+AC_SUBST([EMBED_TYPE])
+
 AS_IF([test -z "$WASM_CC" && test -z "$_is_linux_libcpp" && test "$SYSNAME" != "macos"], [
     # the default static libc++ build does not work with -fno-exceptions
     # (also not supported with macos libc++)

@@ -844,6 +844,7 @@ ENABLE_DEBUG
 RANLIB
 AR
 LD
+EMBED_TYPE
 CFLAGS_EXTRA
 CXXFLAGS_EXTRA
 CP_INSTALL
@@ -10703,6 +10704,39 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 fi
+
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports embed" >&5
+printf %s "checking whether $CXX supports embed... " >&6; }
+echo "nothing" > conftest.cppembed_test
+# EMBED_TYPE passed to gen_binary_embed.py in Makefile.am
+EMBED_TYPE=asm-inline
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+const unsigned char test[] = {
+#embed "conftest.cppembed_test"
+}; int main(void) { (void)test; return 0; }
+
+
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+
+    { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf '%s\n' "yes" >&6; }
+    EMBED_TYPE=cppembed
+
+else case e in #(
+  e)
+    { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+ ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+rm -f conftest.cppembed_test
+
 
 if test -z "$WASM_CC" && test -z "$_is_linux_libcpp" && test "$SYSNAME" != "macos"
 then :
