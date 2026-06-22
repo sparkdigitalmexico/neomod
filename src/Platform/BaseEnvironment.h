@@ -266,10 +266,10 @@ typedef SSIZE_T ssize_t;
 
 #if defined(_X86_) || defined(__i386__) || (defined(_WIN32) && !defined(_WIN64))
 #define MC_ARCH32
-#elif defined(_AMD64_) || defined(__x86_64__) || (defined(_WIN64))
-#define MC_ARCH64
 #elif defined(_ARM64_) || defined(__aarch64__) || defined(__arm64__)
 #define MC_AARCH64
+#elif defined(_AMD64_) || defined(__x86_64__) || (defined(_WIN64))
+#define MC_ARCH64
 #elif defined(__wasm32__) || defined(__EMSCRIPTEN__)
 #define MC_WASM32
 #else

@@ -7052,7 +7052,7 @@ esac
 
 fi
 
-case "$host_os" in #(
+case "$build_os" in #(
   darwin*) :
 
     # also try to find gnu realpath

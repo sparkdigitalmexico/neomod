@@ -39,7 +39,7 @@ using lib_obj = struct lib_obj;
 #ifdef _MSC_VER
 #define D3D_CALL WINAPI
 #else
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__arm64__) || defined(__aarch64__)
 #define D3D_CALL __attribute__((ms_abi))
 #else
 #define D3D_CALL __attribute__((__stdcall__)) __attribute__((__force_align_arg_pointer__))

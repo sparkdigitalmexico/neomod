@@ -297,6 +297,10 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsx86_64.tar.xz:
 	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
 	$(CURLCOMMAND) "https://github.com/whrvt/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-windows-x86_64-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
 
+$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsaarch64.tar.xz:
+	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
+	$(CURLCOMMAND) "https://github.com/stunnel/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-windows-aarch64-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
+
 $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxi686.tar.xz:
 	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
 	$(CURLCOMMAND) "https://github.com/whrvt/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-linux-i686-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
@@ -329,6 +333,15 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-windowsx86_64.source: $(DEPS_CACHE)/curl
 		include lib/'*'.a lib64/'*'.a lib64/pkgconfig/'*' && \
 	mv windowsx86_64/lib64/* windowsx86_64/lib/ && \
 	rm -rf windowsx86_64/lib/*zlib*.a windowsx86_64/lib/*libz.*a windowsx86_64/lib/*brotli*.a
+	touch $@
+
+$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-windowsaarch64.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsaarch64.tar.xz
+	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
+	rm -rf windowsaarch64 && \
+	$(MKDIR_P) windowsaarch64 && $(TAR) xf curl-windowsaarch64.tar.xz -C windowsaarch64 --strip-components=1 --wildcards --no-anchored \
+		include lib/'*'.a lib-arm64/'*'.a lib-arm64/pkgconfig/'*' && \
+	mv windowsaarch64/lib-arm64/* windowsaarch64/lib/ && \
+	rm -rf windowsaarch64/lib/*zlib*.a windowsaarch64/lib/*libz.*a windowsaarch64/lib/*brotli*.a
 	touch $@
 
 $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-linuxi686.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxi686.tar.xz
@@ -1727,7 +1740,7 @@ INSTALL_STAMPS += stamp-install-assets
 stamp-install-sharedlibs: $(INSTALL_LIB_DEPS) | install-dirs
 if BUILD_MIMALLOC
 if WIN_PLATFORM
-	@$(CP_INSTALL) "$(DEPS_PREFIX)/bin/mimalloc"{,-redirect$(if $(filter x86_64,$(host_cpu)),,32)}".dll" "$(DESTDIR)$(bindir)/$(LIBDEST)"
+	@$(CP_INSTALL) "$(DEPS_PREFIX)/bin/mimalloc"{,-redirect$(if $(filter i686,$(host_cpu)),32,)}".dll" "$(DESTDIR)$(bindir)/$(LIBDEST)"
 else
 	@find $(DEPS_PREFIX)/lib/ -iname '*mimalloc*''.so*' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'
 endif

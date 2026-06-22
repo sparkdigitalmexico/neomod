@@ -338,7 +338,7 @@ AS_IF([test "x$enable_clang" = "x"], [
     )
 ])
 
-AS_CASE(["$host_os"], 
+AS_CASE(["$build_os"], 
 [darwin*], [
     # also try to find gnu realpath
     AC_PATH_PROG([REALPATH], [realpath], [realpath], [/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH])
