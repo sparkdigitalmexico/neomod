@@ -4,10 +4,11 @@
 #include "Delegate.h"
 
 class CBaseUICheckbox : public CBaseUIButton {
+    NOCOPY_NOMOVE(CBaseUICheckbox)
    public:
     CBaseUICheckbox(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {},
                     std::string text = {});
-    ~CBaseUICheckbox() override { ; }
+    ~CBaseUICheckbox() override = default;
 
     void draw() override;
 
@@ -20,7 +21,7 @@ class CBaseUICheckbox : public CBaseUIButton {
     CBaseUICheckbox *setWidthToContent(int horizontalBorderSize = 1);
 
     using CheckboxChangeCallback = SA::delegate<void(CBaseUICheckbox *)>;
-    CBaseUICheckbox *setChangeCallback(const CheckboxChangeCallback& clickCallback) {
+    CBaseUICheckbox *setChangeCallback(const CheckboxChangeCallback &clickCallback) {
         this->changeCallback = clickCallback;
         return this;
     }
