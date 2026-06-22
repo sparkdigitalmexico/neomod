@@ -1295,66 +1295,34 @@ void ModSelector::close(bool force) {
 }
 
 void ModSelector::onOverrideSliderChange(CBaseUISlider *slider) {
-    const auto *mapIface = osu->getMapInterface();
-    const BeatmapDifficulty *beatmap = mapIface->getBeatmap();
     auto it = std::ranges::find(this->overrideSliders, slider, &OVERRIDE_SLIDER::slider);
     assert(it != this->overrideSliders.end());
     auto &overrideSlider = *it;
-
-    // TODO: wtf why do we also need to check the label name here?
-    const bool isSpeedSlider =
-        (overrideSlider.type == OvrSliderType::SPEED) && overrideSlider.label->getName().contains("BPM");
 
     float sliderValue = slider->getFloat() - 1.0f;
     const float rawSliderValue = slider->getFloat();
 
     // alt key allows rounding to only 1 decimal digit
-    if(!keyboard->isAltDown())
+    const bool altDown = keyboard->isAltDown();
+    if(!altDown)
         sliderValue = std::round(sliderValue * 10.0f) / 10.0f;
     else
         sliderValue = std::round(sliderValue * 100.0f) / 100.0f;
+
+    if(overrideSlider.type == OvrSliderType::SPEED && sliderValue >= 0.f && sliderValue < .05f) {
+        // HACKHACK: force Speed/BPM slider to have a min value of 0.05 instead of 0 (because that's the
+        // minimum for BASS)
+        sliderValue = altDown ? .05f : 0.1f;
+    }
 
     if(sliderValue < 0.0f) {
         sliderValue = -1.0f;
         overrideSlider.label->setWidthToContent(0);
 
-        // HACKHACK: dirty
-        if(beatmap && isSpeedSlider) {
-            // reset AR and OD override sliders if the bpm slider was reset
-            if(!this->ARLock->isChecked()) this->ARSlider->setValue(0.0f, false);
-            if(!this->ODLock->isChecked()) this->ODSlider->setValue(0.0f, false);
-        }
-
         // usability: auto disable lock if override slider is fully set to -1.0f (disabled)
         if(rawSliderValue == 0.0f) {
             if(overrideSlider.lock != nullptr && overrideSlider.lock->isChecked())
                 overrideSlider.lock->setChecked(false);
-        }
-    } else if(isSpeedSlider) {
-        // HACKHACK: dirty
-        // HACKHACK: force Speed/BPM slider to have a min value of 0.05 instead of 0 (because that's the
-        // minimum for BASS) note that the BPM slider is just a 'fake' slider, it directly controls the
-        // speed slider to do its thing (thus it needs the same limits)
-        sliderValue = std::max(sliderValue, 0.05f);
-
-        // speed slider may not be used in conjunction
-        this->speedSlider->setValue(0.0f, false);
-
-        // force early update
-        overrideSlider.cvar->setValue(sliderValue);
-
-        // AR/OD lock may not be used in conjunction with BPM
-        this->ARLock->setChecked(false);
-        this->ODLock->setChecked(false);
-
-        // force change all other depending sliders
-        if(beatmap) {
-            const float newAR = mapIface->getConstantApproachRateForSpeedMultiplier();
-            const float newOD = mapIface->getConstantOverallDifficultyForSpeedMultiplier();
-
-            // '+1' to compensate for turn-off area of the override sliders
-            this->ARSlider->setValue(newAR + 1.0f, false);
-            this->ODSlider->setValue(newOD + 1.0f, false);
         }
     }
 
