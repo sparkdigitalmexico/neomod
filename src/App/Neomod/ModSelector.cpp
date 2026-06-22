@@ -1004,6 +1004,7 @@ void ModSelector::updateLayout() {
             ovsl.slider->setPos(overrideSliderStart.x,
                                 overrideSliderStart.y + i * overrideSliderHeight + i * overrideSliderOffsetY);
             ovsl.slider->setSizeX(overrideSliderWidth);
+            ovsl.slider->setLineOutlineSize((int)std::round(1.f * dpiScale));
 
             ovsl.desc->setPos(ovsl.slider->getPos().x - ovsl.desc->getSize().x - margin, ovsl.slider->getPos().y);
 
