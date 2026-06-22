@@ -61,7 +61,9 @@ AboutScreen::AboutScreen() : ScreenBackable() {
     CHANGELOG v43_11;
     v43_11.title = "43.11 (" CHANGELOG_TIMESTAMP ")";
     v43_11.changes = {
-        R"()",
+        R"(- Fixed skin dropdown in options menu blocking drag-scrolling)",
+        R"(- Updated mod selector screen in song browser to be transparent)",
+        R"(- Refactored and improved UI element focus behavior overall (please report bugs/regressions))",
     };
     changelogs.push_back(v43_11);
 
