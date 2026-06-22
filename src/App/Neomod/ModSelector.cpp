@@ -48,6 +48,14 @@
 
 namespace {
 
+// color used for e.g. "HP Override" text (also the draggable slider body) when active/inactive
+constexpr Color INACTIVE_OVERRIDE_DESC_COLOR{rgb(150, 150, 150)};
+constexpr Color ACTIVE_OVERRIDE_DESC_COLOR{rgb(255, 255, 255)};
+
+// color used for e.g. "HP: 3" text when active/inactive
+constexpr Color INACTIVE_OVERRIDE_LABEL_COLOR{rgb(35, 150, 255)};
+constexpr Color ACTIVE_OVERRIDE_LABEL_COLOR{rgb(255, 255, 255)};
+
 class OvrSliderDescButton final : public CBaseUIButton {
    public:
     OvrSliderDescButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
@@ -124,7 +132,7 @@ class OvrSliderLockButton final : public CBaseUICheckbox {
 
         McFont *iconFont = osu->getFontIcons();
         const float scale = (this->getSize().y / iconFont->getHeight()) * this->fAnim;
-        g->setColor(this->bChecked ? 0xffffffff : 0xff1166ff);
+        g->setColor(this->bChecked ? ACTIVE_OVERRIDE_LABEL_COLOR : INACTIVE_OVERRIDE_LABEL_COLOR);
 
         g->pushTransform();
         {
@@ -596,7 +604,7 @@ void ModSelector::draw() {
                     (int)(experimentalTextHeight / 3.0f + std::max(0.0f, experimentalModsAnimationTranslation +
                                                                              this->experimentalContainer->getSize().x)),
                     (int)(osu->getVirtScreenHeight() / 2 - experimentalTextWidth / 2));
-                g->setColor(Color(0xff777777).setA(1.0f - this->fExperimentalAnimation * this->fExperimentalAnimation));
+                g->setColor(Color(0xff999999).setA(1.0f - this->fExperimentalAnimation * this->fExperimentalAnimation));
 
                 g->drawString(experimentalFont, experimentalText);
             }
@@ -1107,7 +1115,7 @@ const ModSelector::OVERRIDE_SLIDER ModSelector::addOverrideSlider(OvrSliderType 
     os.lockCvar = lockCvar;
 
     const bool debugDrawFrame = false;
-    constexpr Color color = rgb(119, 119, 119);
+    constexpr Color color = rgb(150, 150, 150);
 
     os.slider                               //
         ->setDrawFrame(debugDrawFrame)      //
@@ -1369,23 +1377,19 @@ void ModSelector::onOverrideSliderLockChange(CBaseUICheckbox *checkbox) {
 }
 
 void ModSelector::updateOverrideSliderLabels() {
-    const Color inactiveColor = 0xff777777;
-    const Color activeColor = 0xffffffff;
-    const Color inactiveLabelColor = 0xff1166ff;
-
     for(const auto &overrideSlider : this->overrideSliders) {
         const float convarValue = overrideSlider.cvar->getFloat();
         const bool isLocked = (overrideSlider.lock != nullptr && overrideSlider.lock->isChecked());
 
         // update colors
         if(convarValue < 0.0f && !isLocked) {
-            overrideSlider.label->setTextColor(inactiveLabelColor);
-            overrideSlider.desc->setTextColor(inactiveColor);
-            overrideSlider.slider->setFrameColor(inactiveColor);
+            overrideSlider.label->setTextColor(INACTIVE_OVERRIDE_LABEL_COLOR);
+            overrideSlider.desc->setTextColor(INACTIVE_OVERRIDE_DESC_COLOR);
+            overrideSlider.slider->setFrameColor(INACTIVE_OVERRIDE_DESC_COLOR);
         } else {
-            overrideSlider.label->setTextColor(activeColor);
-            overrideSlider.desc->setTextColor(activeColor);
-            overrideSlider.slider->setFrameColor(activeColor);
+            overrideSlider.label->setTextColor(ACTIVE_OVERRIDE_LABEL_COLOR);
+            overrideSlider.desc->setTextColor(ACTIVE_OVERRIDE_DESC_COLOR);
+            overrideSlider.slider->setFrameColor(ACTIVE_OVERRIDE_DESC_COLOR);
         }
 
         overrideSlider.desc->setDrawFrame(isLocked);
