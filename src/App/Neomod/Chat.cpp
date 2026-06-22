@@ -69,7 +69,7 @@ ChatChannel::ChatChannel(Chat *chat, std::string name_arg) {
 
     if(chat != nullptr) {
         this->btn = new UIButton(0, 0, 0, 0, "button", this->name);
-        this->btn->setGrabClicks(true);
+        this->btn->setDrawsOnTop(true);
         this->btn->setUseDefaultSkin();
         this->btn->setClickCallback(SA::MakeDelegate<&ChatChannel::onChannelButtonClick>(this));
         this->chat->button_container->addBaseUIElement(this->btn);
@@ -297,20 +297,20 @@ Chat::Chat() : UIScreen() {
 
     this->button_container = new CBaseUIContainer(0, 0, 0, 0, "");
 
-    this->join_channel_btn = new UIButton(0, 0, 0, 0, "button", "+");
+    this->join_channel_btn = new UIButton(0, 0, 0, 0, "chat_join_channel", "+");
     this->join_channel_btn->setUseDefaultSkin();
     this->join_channel_btn->setColor(0xffd9d948);
     this->join_channel_btn->setSize(this->button_height + 2, this->button_height + 2);
     this->join_channel_btn->setClickCallback(SA::MakeDelegate<&Chat::askWhatChannelToJoin>(this));
     this->button_container->addBaseUIElement(this->join_channel_btn);
 
-    this->input_box = new CBaseUITextbox(0, 0, 0, 0, "");
+    this->input_box = new CBaseUITextbox(0, 0, 0, 0, "chat_input");
     this->input_box->setDrawFrame(false);
     this->input_box->setDrawBackground(true);
     this->input_box->setBackgroundColor(0xdd000000);
     this->addBaseUIElement(this->input_box);
 
-    this->user_list = new CBaseUIScrollView(0, 0, 0, 0, "");
+    this->user_list = new CBaseUIScrollView(0, 0, 0, 0, "chat_user_list");
     this->user_list->setDrawFrame(false);
     this->user_list->setDrawBackground(true);
     this->user_list->setBackgroundColor(0xcc000000);
@@ -408,7 +408,13 @@ void Chat::drawTicker() {
     g->pop3DScene();
 }
 
-void Chat::update(CBaseUIEventCtx &c) {
+void Chat::tick() {
+    UIScreen::tick();
+    this->button_container->tick();
+    if(this->selected_channel) {
+        this->selected_channel->ui->tick();
+    }
+
     if(!this->bVisible) return;
 
     if(this->user_list->isVisible()) {
@@ -436,13 +442,17 @@ void Chat::update(CBaseUIEventCtx &c) {
             }
         }
     }
+}
 
-    UIScreen::update(c);
+void Chat::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    UIScreen::updateInput(c);
 
     // XXX: don't let mouse click through the buttons area
-    this->button_container->update(c);
+    this->button_container->updateInput(c);
     if(this->selected_channel) {
-        this->selected_channel->ui->update(c);
+        this->selected_channel->ui->updateInput(c);
     }
 
     // HACKHACK: MOUSE3 handling
@@ -464,10 +474,12 @@ void Chat::update(CBaseUIEventCtx &c) {
         was_M3_down = is_M3_down;
     }
 
-    // FIXME: steals click focus globally no matter where you click on the screen
-    // why is this here anyways? just handle onMouseDownInside on the chatbox?
-    if(this->isMouseInChat()) {
-        // Focus without placing the cursor at the end of the field
+    // keep the input focused while the user presses anywhere WITHIN the chat panel (messages,
+    // user list, tabs); only a press truly outside chat releases focus, via the input box's
+    // own onMouseDownOutside. scoped to the panel so it does not re-introduce the global grab
+    // (chat_focus_steal): without it, clicking off the input dropped focus and the next
+    // keystroke leaked into the song browser's type-to-search behind the still-open chat.
+    if(mouse->isLeftPressed() && this->isMouseInside()) {
         this->input_box->focus(false);
     }
 }
@@ -779,8 +791,8 @@ void Chat::onKeyDown(KeyboardEvent &key) {
         return;
     }
 
-    // Typing in chat: capture keypresses
-    if(!keyboard->isAltDown()) {
+    // Typing in chat: capture keypresses ONLY while the input box holds keyboard focus.
+    if(!keyboard->isAltDown() && this->input_box->isFocused()) {
         this->tab_completion_prefix.clear();
         this->tab_completion_match.clear();
         this->input_box->onKeyDown(key);
@@ -790,14 +802,14 @@ void Chat::onKeyDown(KeyboardEvent &key) {
 }
 
 void Chat::onKeyUp(KeyboardEvent &key) {
-    if(!this->bVisible || key.isConsumed()) return;
+    if(!this->bVisible || key.isConsumed() || !this->input_box->isFocused()) return;
 
     this->input_box->onKeyUp(key);
     key.consume();
 }
 
 void Chat::onChar(KeyboardEvent &key) {
-    if(!this->bVisible || key.isConsumed() ||
+    if(!this->bVisible || key.isConsumed() || !this->input_box->isFocused() ||
        (keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown())))
         return;
 
@@ -1372,7 +1384,10 @@ bool Chat::isMouseInChat() {
 }
 
 bool Chat::isMouseInside() {
-    return this->isVisible() && UIScreen::isMouseInside() &&
+    // the child/region checks are all within the chat panel, so they already imply the screen rect;
+    // don't also require the screen's own bMouseInside, which the dispatcher does not set for a
+    // clickthrough container that loses the top-most hover resolution to its own children
+    return this->isVisible() &&
            (this->button_container->isMouseInside() || this->isMouseInChat() || this->isMouseInUserList());
 }
 

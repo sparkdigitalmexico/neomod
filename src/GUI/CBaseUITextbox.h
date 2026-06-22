@@ -13,9 +13,14 @@ class CBaseUITextbox : public CBaseUIElement {
     ~CBaseUITextbox() override = default;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void onFocusStolen() override;
     void onResized() override;
+
+    // a textbox is "active" while it holds the keyboard focus, on top of the base pressed/busy
+    // states (focus is the dispatcher pointer now; bActive is only the transient press)
+    bool isActive() override;
 
     void onChar(KeyboardEvent &e) override;
     void onKeyDown(KeyboardEvent &e) override;
@@ -102,6 +107,10 @@ class CBaseUITextbox : public CBaseUIElement {
     void onMouseDownOutside(bool left = true, bool right = false) override;
     void onMouseUpInside(bool left = true, bool right = false) override;
     void onMouseUpOutside(bool left = true, bool right = false) override;
+    void onMouseCancel() override;
+    void onCapturedMouseMove() override;
+
+    [[nodiscard]] int hitTestCaret(std::string_view vt, int mx) const;
 
     void handleCaretKeyboardMove();
     void handleCaretKeyboardDelete();
@@ -137,10 +146,6 @@ class CBaseUITextbox : public CBaseUIElement {
     TEXT_JUSTIFICATION textJustification{TEXT_JUSTIFICATION::LEFT};
 
     bool bHitenter;
-    bool bContextMouse;
-    bool bBlockMouse;
-    bool bCatchMouse;
     bool bDrawFrame;
     bool bDrawBackground;
-    bool bSelectCheck;
 };

@@ -29,11 +29,18 @@ void ScreenBackable::draw() {
     if(this->backable) this->backButton->draw();
 }
 
-void ScreenBackable::update(CBaseUIEventCtx &c) {
+void ScreenBackable::tick() {
+    UIScreen::tick();
+    this->backButton->tick();
+}
+
+void ScreenBackable::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    if(this->backable) this->backButton->update(c);
-    if(c.mouse_consumed()) return;
-    UIScreen::update(c);
+    if(this->backable) {
+        // back button ranks above the body it draws over via its bDrawsOnTop flag (set in its ctor)
+        this->backButton->updateInput(c);
+    }
+    UIScreen::updateInput(c);
 }
 
 void ScreenBackable::onKeyDown(KeyboardEvent &e) {

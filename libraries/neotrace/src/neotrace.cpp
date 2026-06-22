@@ -6,6 +6,15 @@
 #include <cstdio>
 #include <string_view>
 
+// the itanium demangler is a toolchain facility, present on every platform whose runtime
+// uses that abi (linux, macos, emscripten, mingw/llvm-mingw); plain msvc lacks it, where
+// demangle() degrades to returning names raw
+#if __has_include(<cxxabi.h>)
+#include <cstdlib>
+#include <cxxabi.h>
+#define NEOTRACE_HAVE_CXA_DEMANGLE 1
+#endif
+
 namespace neotrace
 {
 
@@ -33,6 +42,21 @@ frame_info symbolize(void *address) noexcept
 	return info;
 }
 #endif
+
+std::string demangle(const char *mangled) noexcept
+{
+	if (mangled == nullptr)
+		return {};
+#if NEOTRACE_HAVE_CXA_DEMANGLE
+	int status = 0;
+	char *demangled = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
+	std::string result((status == 0 && demangled != nullptr) ? demangled : mangled); // non-c++ names don't demangle; keep them raw
+	std::free(demangled);                                                            // a no-op on the null failure path
+	return result;
+#else
+	return mangled;
+#endif
+}
 
 namespace
 {

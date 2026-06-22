@@ -19,7 +19,6 @@ class CBaseUISlider;
 class CBaseUICheckbox;
 
 class UIModSelectorModButton;
-class ModSelectorOverrideSliderDescButton;
 class UIButton;
 class UICheckbox;
 
@@ -32,7 +31,8 @@ class ModSelector final : public UIScreen {
     ~ModSelector() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyDown(KeyboardEvent &key) override;
     void onResolutionChange(vec2 newResolution) override;
@@ -48,7 +48,6 @@ class ModSelector final : public UIScreen {
 
     [[nodiscard]] bool isInCompactMode() const;
     [[nodiscard]] bool isCSOverrideSliderActive() const;
-    [[nodiscard]] bool isMouseInScrollView() const;
     bool isMouseInside() override;
 
     void updateButtons(bool initial = false);
@@ -58,14 +57,21 @@ class ModSelector final : public UIScreen {
     void updateLayout();
     void updateExperimentalLayout();
 
+    void close(bool force);
+
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override;
+
    private:
+    enum class OvrSliderType : u8 { CS, AR, OD, HP, SPEED };
+
     struct OVERRIDE_SLIDER {
-        CBaseUICheckbox *lock{nullptr};
-        ModSelectorOverrideSliderDescButton *desc{nullptr};
-        CBaseUISlider *slider{nullptr};
-        CBaseUILabel *label{nullptr};
-        ConVar *cvar{nullptr};
-        ConVar *lockCvar{nullptr};
+        CBaseUICheckbox *lock;
+        CBaseUIButton *desc;
+        CBaseUISlider *slider;
+        CBaseUILabel *label;
+        ConVar *cvar;
+        ConVar *lockCvar;
+        OvrSliderType type;
     };
 
     struct EXPERIMENTAL_MOD {
@@ -73,13 +79,12 @@ class ModSelector final : public UIScreen {
         ConVar *cvar{nullptr};
     };
 
-    OVERRIDE_SLIDER addOverrideSlider(const std::string &text, const std::string &labelText, ConVar *cvar, float min,
-                                      float max, const std::string &tooltipText = {}, ConVar *lockCvar = nullptr);
+    const OVERRIDE_SLIDER addOverrideSlider(OvrSliderType typeEnum, const std::string &text,
+                                                const std::string &labelText, ConVar *cvar, float min, float max,
+                                                const std::string &tooltipText = {}, ConVar *lockCvar = nullptr);
     void onOverrideSliderChange(CBaseUISlider *slider);
     void onOverrideSliderLockChange(CBaseUICheckbox *checkbox);
-    void onOverrideARSliderDescClicked(CBaseUIButton *button);
-    void onOverrideODSliderDescClicked(CBaseUIButton *button);
-    std::string getOverrideSliderLabelText(const OVERRIDE_SLIDER &s, bool active);
+    std::string getOverrideSliderLabelText(const OVERRIDE_SLIDER &s, bool active) const;
 
     CBaseUILabel *addExperimentalLabel(const std::string &text);
     UICheckbox *addExperimentalCheckbox(const std::string &text, const std::string &tooltipText,
@@ -88,8 +93,6 @@ class ModSelector final : public UIScreen {
 
     UIButton *addActionButton(const std::string &text);
 
-    void close(bool force);
-
    private:
     AnimFloat fAnimation;
     AnimFloat fExperimentalAnimation;
@@ -97,6 +100,8 @@ class ModSelector final : public UIScreen {
     bool bExperimentalVisible{false};
     std::unique_ptr<CBaseUIContainer> overrideSliderContainer;
     std::unique_ptr<CBaseUIScrollView> experimentalContainer;
+    // vElements + the two manual containers above; rebuilt on each getAllChildren() call (debug-only path)
+    mutable std::vector<CBaseUIElement *> allChildren;
 
     bool bWaitForCSChangeFinished{false};
     bool bWaitForSpeedChangeFinished{false};

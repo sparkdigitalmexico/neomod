@@ -201,6 +201,7 @@ neomod_SOURCES = \
 	src/App/Neomod/UIButtonWithIcon.cpp \
 	src/App/Neomod/UICheckbox.cpp \
 	src/App/Neomod/UIContextMenu.cpp \
+	src/App/Neomod/UIDebug.cpp \
 	src/App/Neomod/UIIcon.cpp \
 	src/App/Neomod/UILabel.cpp \
 	src/App/Neomod/UIModSelectorModButton.cpp \
@@ -268,6 +269,7 @@ neomod_SOURCES = \
 	src/GUI/CBaseUIButton.cpp \
 	src/GUI/CBaseUICheckbox.cpp \
 	src/GUI/CBaseUIContainer.cpp \
+	src/GUI/CBaseUIDispatch.cpp \
 	src/GUI/CBaseUIElement.cpp \
 	src/GUI/CBaseUIImage.cpp \
 	src/GUI/CBaseUIImageButton.cpp \

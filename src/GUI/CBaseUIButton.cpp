@@ -11,8 +11,6 @@
 
 CBaseUIButton::CBaseUIButton(std::nullptr_t notext, f32 xPos, f32 yPos, f32 xSize, f32 ySize)
     : CBaseUIElement(xPos, yPos, xSize, ySize, notext) {
-    // this->setGrabClicks(true); // shouldn't this be set?
-
     this->font = engine->getDefaultFont();
 }
 

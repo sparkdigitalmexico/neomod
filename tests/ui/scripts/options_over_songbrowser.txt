@@ -1,0 +1,32 @@
+# pins the core layering promise (the UI.cpp update-loop break on mouse_consumed): with
+# the options overlay open over the songbrowser (Ctrl+O), hovering the options panel must
+# hover ONLY options elements; the songbrowser below receives no hover. today the whole
+# songbrowser is frozen while the overlay eats the mouse; P1 makes it tick again while
+# still receiving no input -- this trace must stay identical across that change.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+osu_folder uitest_osu_folder
+set_active_ui_screen songbrowser
+@wait 300
+sendkey Left Ctrl down
+@wait 3
+sendkey O
+@wait 3
+sendkey Left Ctrl up
+@wait 5
+ui_assert visible optionsoverlay 1
+ui_assert screen_active songbrowser 1
+mouse_to 395 288
+@wait 5
+ui_assert hovered options_contents 1
+ui_assert hovered options_server_box 1
+ui_assert hovered songbrowser_scores 0
+ui_assert hovered songbrowser 0
+exit

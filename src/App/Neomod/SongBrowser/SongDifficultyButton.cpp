@@ -149,11 +149,18 @@ void SongDifficultyButton::draw() {
     }
 }
 
-void SongDifficultyButton::update(CBaseUIEventCtx& c) {
+void SongDifficultyButton::updateInput(CBaseUIEventCtx& c) {
     if(!this->bVisible) {
         return;
     }
-    CarouselButton::update(c);
+    CarouselButton::updateInput(c);
+}
+
+void SongDifficultyButton::tick() {
+    CarouselButton::tick();
+    if(!this->bVisible) {
+        return;
+    }
 
     // don't try to load images while scrolling fast to avoid lag
     if(!g_carousel->isScrollingFast())

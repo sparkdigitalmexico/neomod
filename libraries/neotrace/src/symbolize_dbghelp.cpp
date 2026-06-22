@@ -14,15 +14,6 @@
 
 #include <dbghelp.h> // requires windows.h first
 
-// mingw toolchains mangle with the itanium abi, and clang-built pdbs carry those raw
-// names, which dbghelp's UNDNAME cannot decode; msvc names arrive already undecorated
-#if __has_include(<cxxabi.h>)
-#include <cxxabi.h>
-
-#include <cstdlib>
-#define NEOTRACE_DBGHELP_CXA_DEMANGLE 1
-#endif
-
 #include <mutex>
 
 namespace neotrace
@@ -93,21 +84,9 @@ void assign_utf8(std::string &out, const wchar_t *wide) noexcept
 
 void assign_symbol(frame_info &info, const char *name) noexcept
 {
-#if NEOTRACE_DBGHELP_CXA_DEMANGLE
-	if (name[0] == '_' && name[1] == 'Z')
-	{
-		int status = 0;
-		char *demangled = abi::__cxa_demangle(name, nullptr, nullptr, &status);
-		if (status == 0 && demangled != nullptr)
-		{
-			info.symbol = demangled;
-			std::free(demangled);
-			return;
-		}
-		std::free(demangled);
-	}
-#endif
-	info.symbol = name;
+	// mingw and clang-built pdbs carry raw itanium names dbghelp's UNDNAME cannot decode;
+	// msvc names arrive already undecorated, so only itanium-mangled names need demangling
+	info.symbol = (name[0] == '_' && name[1] == 'Z') ? demangle(name) : name;
 }
 
 } // namespace

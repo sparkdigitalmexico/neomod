@@ -22,7 +22,7 @@ class VisualProfiler : public CBaseUIElement {
     ~VisualProfiler() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
 
     void incrementInfoBladeDisplayMode();
     void decrementInfoBladeDisplayMode();

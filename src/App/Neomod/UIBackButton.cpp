@@ -15,7 +15,10 @@
 #include "Graphics.h"
 
 UIBackButton::UIBackButton(float xPos, float yPos, float xSize, float ySize, std::string name)
-    : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {}
+    : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), "") {
+    // the back button draws on top of the screen body but is visited first, so rank it above the body
+    this->bDrawsOnTop = true;
+}
 
 UIBackButton::~UIBackButton() = default;
 
@@ -38,9 +41,9 @@ void UIBackButton::draw() {
     this->bFocusStolenDelay = false;
 }
 
-void UIBackButton::update(CBaseUIEventCtx &c) {
+void UIBackButton::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    CBaseUIButton::update(c);
+    CBaseUIButton::updateInput(c);
 }
 
 void UIBackButton::onMouseDownInside(bool left, bool right) {

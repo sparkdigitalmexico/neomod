@@ -10,6 +10,7 @@
 #include "Logging.h"
 #include "Mouse.h"
 #include "Graphics.h"
+#include "CBaseUIDispatch.h"
 
 #include <unordered_set>
 
@@ -17,14 +18,6 @@
 // #include "Logging.h"
 
 namespace {
-// UBER hack for "handling" mousewheel events on layered scrollviews
-// much more proper would be to:
-//  - actually track Z order globally and have a defined order of event handling
-//  - stop doing the insane propagate_clicks thing (you can interact with gui elements in more ways than just clicking!!!)
-// but that takes time and this seems to work in practice for now...
-u64 lastScrollFrame{0};
-u32 layeredScrollsHandledInFrame{0};
-
 using ScrollContainer = CBaseUIScrollView::CBaseUIScrollView::CBaseUIScrollViewContainer;
 }  // namespace
 
@@ -42,7 +35,7 @@ CBaseUIContainer *ScrollContainer::removeBaseUIElement(CBaseUIElement *element) 
 CBaseUIContainer *ScrollContainer::deleteBaseUIElement(CBaseUIElement *element) {
     this->invalidateUpdate = true;
     std::erase(this->vVisibleElements, element);
-    return CBaseUIContainer::removeBaseUIElement(element);
+    return CBaseUIContainer::deleteBaseUIElement(element);
 }
 
 void ScrollContainer::freeElements() {
@@ -59,15 +52,35 @@ void ScrollContainer::invalidate() {
     CBaseUIContainer::invalidate();
 }
 
-void ScrollContainer::update(CBaseUIEventCtx &c) {
-    // intentionally not calling parent
-    CBaseUIElement::update(c);
-    if(!this->isVisible()) return;
+void ScrollContainer::tick() {
+    // intentionally not calling parent: tick only the clipped-visible subset,
+    // carousels hold thousands of elements
+    CBaseUIElement::tick();
 
     this->invalidateUpdate = false;
 
     for(auto *e : this->vVisibleElements) {
-        e->update(c);
+        e->tick();
+        if(this->invalidateUpdate) {
+            // iterators have been invalidated!
+            // try again next time.
+            break;
+        }
+    }
+
+    this->invalidateUpdate = false;
+}
+
+void ScrollContainer::updateInput(CBaseUIEventCtx &c) {
+    // intentionally not calling parent
+    CBaseUIElement::updateInput(c);
+    if(!this->isVisible()) return;
+
+    this->invalidateUpdate = false;
+
+    CBaseUIEventCtx::HitPathScope scope(c, this);
+    for(auto *e : this->vVisibleElements) {
+        e->updateInput(c);
         if(this->invalidateUpdate) {
             // iterators have been invalidated!
             // try again next time.
@@ -83,27 +96,14 @@ void ScrollContainer::draw() {
 
     this->invalidateUpdate = false;
 
-    // if we were invalidated in the update() in this frame, clipping (elements to draw) will not have been updated
-    // if there's a manageable amount of elements in the full vElements array, then just temporarily use the unoptimized
-    // path of iterating over all of them to avoid 1 frame of flicker
-    // otherwise draw only pre-clipped elements
-    if(this->vVisibleElements.size() < 3 && this->vElements.size() < 1024) {
-        for(auto *e : this->vElements) {
-            if(e->isVisible() && e->isVisibleOnScreen()) {
-                e->draw();
-            }
-            assert(!this->invalidateUpdate);
+    for(auto *e : this->vVisibleElements) {
+        // check actual screen visibility since we clipped "lazily"
+        // shouldn't be too expensive since we're no longer iterating over hundreds of thousands of elements here
+        if(e->isVisibleOnScreen()) {
+            e->draw();
         }
-    } else {
-        for(auto *e : this->vVisibleElements) {
-            // check actual screen visibility since we clipped "lazily"
-            // shouldn't be too expensive since we're no longer iterating over hundreds of thousands of elements here
-            if(e->isVisibleOnScreen()) {
-                e->draw();
-            }
-            // programmer error (don't do this in draw(), ever)
-            assert(!this->invalidateUpdate);
-        }
+        // programmer error (don't do this in draw(), ever)
+        assert(!this->invalidateUpdate);
     }
 }
 
@@ -139,7 +139,7 @@ bool ScrollContainer::isActive() {
 
 CBaseUIScrollView::CBaseUIScrollView(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, name), container(xPos, yPos, xSize, ySize, std::move(name)) {
-    this->setGrabClicks(true);
+    this->bWheelSurface = true;  // scroll surfaces floor the wheel scan (see CBaseUIDispatch)
 
     this->iScrollResistance = cv::ui_scrollview_resistance.getInt();  // TODO: dpi handling
 }
@@ -169,6 +169,10 @@ void CBaseUIScrollView::freeElements() {
 
 void CBaseUIScrollView::draw() {
     if(!this->isVisible()) return;
+
+    // really ugly place to put this, but this needs to happen if elements were changed after we have already tick()ed
+    // otherwise, 1 frame of flicker (i.e. invisible elements) may occur until we update the next frame
+    if(this->bClippingDirty && !(this->bScrolling || this->bScrollbarScrolling)) this->updateClipping();
 
     // draw background
     if(this->bDrawBackground) {
@@ -235,146 +239,13 @@ void CBaseUIScrollView::draw() {
     }
 }
 
-void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
-    if(!this->isVisible()) return;
+void CBaseUIScrollView::tick() {
+    CBaseUIElement::tick();
+    this->container.tick();
 
-    if(!c.propagate_clicks) {
-        // big sigh...
-        this->stealFocus();
-    }
-
-    const bool wasContainerBusyBeforeUpdate = this->container.isBusy();
-
-    this->container.update(c);
-    CBaseUIElement::update(c);
-
-    const dvec2 curMousePos = mouse->getPos();
-
-    if(this->bBusy) {
-        const dvec2 deltaToAdd = (curMousePos - this->vMouseBackup2);
-        // debugLog("+ ({})", deltaToAdd);
-
-        this->vKineticAverage.x.set(deltaToAdd.x, cv::ui_scrollview_kinetic_approach_time.getDouble(), anim::QuadOut);
-        this->vKineticAverage.y.set(deltaToAdd.y, cv::ui_scrollview_kinetic_approach_time.getDouble(), anim::QuadOut);
-
-        this->vMouseBackup2 = curMousePos;
-    }
-
-    // scrolling logic
-    if(this->bActive && !this->bBlockScrolling && (this->bVerticalScrolling || this->bHorizontalScrolling) &&
-       this->isEnabled()) {
-        if(!this->bScrollResistanceCheck) {
-            this->bScrollResistanceCheck = true;
-            this->vMouseBackup3 = curMousePos;
-        }
-
-        // get pull strength
-        int diff = std::abs(curMousePos.x - this->vMouseBackup3.x);
-        if(std::abs(curMousePos.y - this->vMouseBackup3.y) > diff)
-            diff = std::abs(curMousePos.y - this->vMouseBackup3.y);
-
-        // if we are above our resistance, try to steal the focus and enable scrolling for us
-        if(this->container.isActive() && diff > this->iScrollResistance && !this->container.isBusy())
-            this->container.stealFocus();
-
-        // handle scrollbar scrolling start
-        if(this->verticalScrollbar.contains(curMousePos) && !this->bScrollbarScrolling && !this->bScrolling) {
-            // NOTE: scrollbar dragging always force steals focus
-            if(!wasContainerBusyBeforeUpdate) {
-                this->container.stealFocus();
-
-                this->vMouseBackup.y = curMousePos.y - this->verticalScrollbar.getMaxY();
-                this->bScrollbarScrolling = true;
-                this->bScrollbarIsVerticalScrolling = true;
-            }
-        } else if(this->horizontalScrollbar.contains(curMousePos) && !this->bScrollbarScrolling && !this->bScrolling) {
-            // NOTE: scrollbar dragging always force steals focus
-            if(!wasContainerBusyBeforeUpdate) {
-                this->container.stealFocus();
-
-                this->vMouseBackup.x = curMousePos.x - this->horizontalScrollbar.getMaxX();
-                this->bScrollbarScrolling = true;
-                this->bScrollbarIsVerticalScrolling = false;
-            }
-        } else if(!this->bScrolling && !this->bScrollbarScrolling && !this->container.isBusy() &&
-                  !this->container.isActive()) {
-            if(!this->container.isBusy()) {
-                // if we have successfully stolen the focus or the container is no longer busy, start scrolling
-                this->bScrollbarIsVerticalScrolling = false;
-
-                this->vMouseBackup = curMousePos;
-                this->vScrollPosBackup = dvec2{this->vScrollPos};
-                this->bScrolling = true;
-                this->bAutoScrollingX = false;
-                this->bAutoScrollingY = false;
-
-                this->vScrollPos.x.stop();
-                this->vScrollPos.y.stop();
-
-                this->vVelocity.x.stop();
-                this->vVelocity.y.stop();
-            }
-        }
-    } else if(this->bScrolling || this->bScrollbarScrolling)  // we were scrolling, stop it
-    {
-        this->bScrolling = false;
-        this->bActive = false;
-
-        const dvec2 delta{this->vKineticAverage};
-
-        // calculate remaining kinetic energy
-        if(!this->bScrollbarScrolling) {
-            const dvec2 vel = cv::ui_scrollview_kinetic_energy_multiplier.getDouble() * delta *
-                                  (engine->getFrameTime() != 0.0 ? 1.0 / engine->getFrameTime() : 60.0) / 60.0 +
-                              dvec2{this->vScrollPos};
-            this->vVelocity = vel;
-        }
-
-        // debugLog("kinetic = ({}), velocity = ({:}), frametime = {:f}", delta, this->vVelocity, engine->getFrameTime());
-
-        this->bScrollbarScrolling = false;
-    } else
-        this->bScrollResistanceCheck = false;
-
-    // handle mouse wheel scrolling
-    if(!this->bBlockScrolling && (this->bVerticalScrolling || this->bHorizontalScrolling) && !keyboard->isAltDown() &&
-       this->isMouseInside() && this->isEnabled()) {
-        const u64 curFrameCount = engine->getFrameCount();
-        if(curFrameCount != lastScrollFrame) {
-            lastScrollFrame = curFrameCount;
-            layeredScrollsHandledInFrame = 0;
-        }
-
-        if(layeredScrollsHandledInFrame == 0) {
-            bool handledThisFrame = false;
-            if(this->bVerticalScrolling && mouse->getWheelDeltaVertical() != 0) {
-                this->scrollY(mouse->getWheelDeltaVertical() * this->fScrollMouseWheelMultiplier *
-                              cv::ui_scrollview_mousewheel_multiplier.getDouble());
-                handledThisFrame = true;
-            }
-
-            if(this->bHorizontalScrolling && mouse->getWheelDeltaHorizontal() != 0) {
-                this->scrollX(-mouse->getWheelDeltaHorizontal() * this->fScrollMouseWheelMultiplier *
-                              cv::ui_scrollview_mousewheel_multiplier.getDouble());
-                handledThisFrame = true;
-            }
-
-            if(handledThisFrame) {
-                ++layeredScrollsHandledInFrame;
-            }
-        }
-    }
-
-    // handle drag scrolling and rubber banding
-    if(this->bScrolling && this->bActive) {
-        if(this->bVerticalScrolling)
-            this->vScrollPos.y = this->vScrollPosBackup.y + (curMousePos.y - this->vMouseBackup.y);
-        if(this->bHorizontalScrolling)
-            this->vScrollPos.x = this->vScrollPosBackup.x + (curMousePos.x - this->vMouseBackup.x);
-
-        this->container.setPos(vec::round(dvec2{this->getPos()} + dvec2{this->vScrollPos}));
-    } else  // no longer scrolling, smooth the remaining velocity
-    {
+    // kinetic scrolling + rubber banding continue regardless of visibility or input gating;
+    // while drag-scrolling, updateInput() follows the mouse instead
+    if(!(this->bScrolling && this->bActive)) {
         this->vKineticAverage = dvec2{0., 0.};
 
         // rubber banding + kinetic scrolling
@@ -427,29 +298,6 @@ void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
         }
     }
 
-    // handle scrollbar scrolling movement
-    if(this->bScrollbarScrolling) {
-        this->vVelocity.x = 0.;
-        this->vVelocity.y = 0.;
-        if(this->bScrollbarIsVerticalScrolling) {
-            // debugLog("scrollbar scrolling movement vertical");
-            const f64 percent = std::clamp<f64>((curMousePos.y - this->getPos().y - this->verticalScrollbar.getWidth() -
-                                                 this->verticalScrollbar.getHeight() - this->vMouseBackup.y - 1.0) /
-                                                    (this->getSize().y - 2.0 * this->verticalScrollbar.getWidth()),
-                                                0.0, 1.0);
-            this->scrollToYInt(-this->vScrollSize.y * percent, true, false);
-        } else {
-            // debugLog("scrollbar scrolling movement not vertical scrolling");
-
-            const f64 percent =
-                std::clamp<f64>((curMousePos.x - this->getPos().x - this->horizontalScrollbar.getHeight() -
-                                 this->horizontalScrollbar.getWidth() - this->vMouseBackup.x - 1.0) /
-                                    (this->getSize().x - 2.0 * this->horizontalScrollbar.getHeight()),
-                                0.0, 1.0);
-            this->scrollToXInt(-this->vScrollSize.x * percent, true, false);
-        }
-    }
-
     // position update during scrolling
     const dvec2 scrollPos{this->vScrollPos};
     const bool animating =
@@ -461,8 +309,9 @@ void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
         this->container.setPos(vec::round(dvec2{this->getPos()} + scrollPos));
     }
 
-    // update scrollbars
-    if(animating || (this->bScrolling || this->bScrollbarScrolling)) {
+    // update scrollbars (anim-driven movement only; input-driven movement does its own
+    // maintenance at the end of updateInput())
+    if(animating) {
         this->bClippingDirty = true;
         // debugLog("hit second condition, frame: {}", engine->getFrameCount());
         this->updateScrollbars();
@@ -477,7 +326,202 @@ void CBaseUIScrollView::update(CBaseUIEventCtx &c) {
         this->updateScrollbars();
     }
 
+    // while drag-/scrollbar-scrolling, onCapturedMouseMove() applies the move and rebuilds clipping
+    // later this frame (in dispatch, after updateInput), don't redundantly update clipping here
+    if(this->bClippingDirty && !(this->bScrolling || this->bScrollbarScrolling)) this->updateClipping();
+}
+
+void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
+    if(!this->isVisible()) return;
+
+    // self before children: visit order doubles as hit-candidate priority (latest = top-most),
+    // and the children draw above the scrollview surface.
+    CBaseUIElement::updateInput(c);
+    // our content inherits our draws-on-top bias (e.g. UIContextMenu items out-rank the carousel)
+    c.currentHitTier += this->bDrawsOnTop;
+    {
+        CBaseUIEventCtx::HitPathScope scope(c, this);
+        this->container.updateInput(c);
+    }
+    c.currentHitTier -= this->bDrawsOnTop;
+}
+
+bool CBaseUIScrollView::onWheel(int deltaVertical, int deltaHorizontal) {
+    // alt-wheel belongs to the app-level volume gesture
+    // HACK: this doesn't belong here???
+    if(this->bBlockScrolling || keyboard->isAltDown()) return false;
+
+    bool consumed = false;
+    if(this->bVerticalScrolling && deltaVertical != 0 && this->getSize().y < this->vScrollSize.y) {
+        this->scrollY(deltaVertical * this->fScrollMouseWheelMultiplier *
+                      cv::ui_scrollview_mousewheel_multiplier.getDouble());
+        consumed = true;
+    }
+    if(this->bHorizontalScrolling && deltaHorizontal != 0 && this->getSize().x < this->vScrollSize.x) {
+        this->scrollX(-deltaHorizontal * this->fScrollMouseWheelMultiplier *
+                      cv::ui_scrollview_mousewheel_multiplier.getDouble());
+        consumed = true;
+    }
+
+    // deltas no enabled axis can take are DECLINED so the wheel chains to the scroll surface
+    // beneath (ultimately to the volume sink): an anchored dropdown whose content fits
+    // (UIContextMenu disables scrolling then) or a fits-content surface (empty carousel) must
+    // not dead-end the gesture - the space gates mirror scrollY/scrollX's own no-op guards
+    return consumed;
+}
+
+void CBaseUIScrollView::beginDragScroll(dvec2 pos) {
+    this->bScrollbarIsVerticalScrolling = false;
+
+    this->vMouseBackup = pos;
+    this->vScrollPosBackup = dvec2{this->vScrollPos};
+    this->bScrolling = true;
+    this->bAutoScrollingX = false;
+    this->bAutoScrollingY = false;
+
+    this->vScrollPos.stop();
+    this->vVelocity.stop();
+}
+
+bool CBaseUIScrollView::tryBeginScrollbarDrag(dvec2 pos) {
+    if(this->verticalScrollbar.contains(pos)) {
+        this->vMouseBackup.y = pos.y - this->verticalScrollbar.getMaxY();
+        this->bScrollbarScrolling = true;
+        this->bScrollbarIsVerticalScrolling = true;
+        return true;
+    }
+    if(this->horizontalScrollbar.contains(pos)) {
+        this->vMouseBackup.x = pos.x - this->horizontalScrollbar.getMaxX();
+        this->bScrollbarScrolling = true;
+        this->bScrollbarIsVerticalScrolling = false;
+        return true;
+    }
+    return false;
+}
+
+void CBaseUIScrollView::endDragScroll(bool launchKinetic) {
+    if(this->bScrolling || this->bScrollbarScrolling) {
+        this->bScrolling = false;
+
+        // calculate remaining kinetic energy
+        if(launchKinetic && !this->bScrollbarScrolling) {
+            const dvec2 delta{this->vKineticAverage};
+            const dvec2 vel = cv::ui_scrollview_kinetic_energy_multiplier.getDouble() * delta *
+                                  (engine->getFrameTime() != 0.0 ? 1.0 / engine->getFrameTime() : 60.0) / 60.0 +
+                              dvec2{this->vScrollPos};
+            this->vVelocity = vel;
+        }
+
+        // debugLog("kinetic = ({}), velocity = ({:}), frametime = {:f}", delta, this->vVelocity, engine->getFrameTime());
+
+        this->bScrollbarScrolling = false;
+    }
+    this->bBusy = false;
+}
+
+void CBaseUIScrollView::onCapturedMouseMove() {
+    if(!this->bActive) return;  // stealFocus() mid-drag freezes the gesture (cleared press state)
+
+    const dvec2 curMousePos = mouse->getPos();
+
+    // kinetic average tracks the drag motion (evaluated at release for the fling velocity)
+    if(this->bBusy) {
+        const dvec2 deltaToAdd = (curMousePos - this->vMouseBackup2);
+        // debugLog("+ ({})", deltaToAdd);
+
+        this->vKineticAverage.x.set(deltaToAdd.x, cv::ui_scrollview_kinetic_approach_time.getDouble(), anim::QuadOut);
+        this->vKineticAverage.y.set(deltaToAdd.y, cv::ui_scrollview_kinetic_approach_time.getDouble(), anim::QuadOut);
+
+        this->vMouseBackup2 = curMousePos;
+    }
+
+    // handle drag scrolling
+    if(this->bScrolling) {
+        if(this->bVerticalScrolling)
+            this->vScrollPos.y = this->vScrollPosBackup.y + (curMousePos.y - this->vMouseBackup.y);
+        if(this->bHorizontalScrolling)
+            this->vScrollPos.x = this->vScrollPosBackup.x + (curMousePos.x - this->vMouseBackup.x);
+
+        this->container.setPos(vec::round(dvec2{this->getPos()} + dvec2{this->vScrollPos}));
+    }
+
+    // handle scrollbar scrolling movement
+    if(this->bScrollbarScrolling) {
+        this->vVelocity.x = 0.;
+        this->vVelocity.y = 0.;
+        if(this->bScrollbarIsVerticalScrolling) {
+            const f64 percent = std::clamp<f64>((curMousePos.y - this->getPos().y - this->verticalScrollbar.getWidth() -
+                                                 this->verticalScrollbar.getHeight() - this->vMouseBackup.y - 1.0) /
+                                                    (this->getSize().y - 2.0 * this->verticalScrollbar.getWidth()),
+                                                0.0, 1.0);
+            this->scrollToYInt(-this->vScrollSize.y * percent, true, false);
+        } else {
+            const f64 percent =
+                std::clamp<f64>((curMousePos.x - this->getPos().x - this->horizontalScrollbar.getHeight() -
+                                 this->horizontalScrollbar.getWidth() - this->vMouseBackup.x - 1.0) /
+                                    (this->getSize().x - 2.0 * this->horizontalScrollbar.getHeight()),
+                                0.0, 1.0);
+            this->scrollToXInt(-this->vScrollSize.x * percent, true, false);
+        }
+    }
+
+    // input-driven movement (drag-follow / scrollbar drag) must refresh scrollbars + clipping
+    // here: tick() already ran this frame, so deferring to the next tick would draw this frame
+    // with a clip list that is one frame of drag delta stale (elements scrolled into view would
+    // pop in one frame late)
+    if(this->bScrolling || this->bScrollbarScrolling) {
+        this->bClippingDirty = true;
+        this->updateScrollbars();
+    }
     if(this->bClippingDirty) this->updateClipping();
+}
+
+void CBaseUIScrollView::onCapturedMoveThrough() {
+    // the drag-scroll gesture is a left-button gesture
+    if(!flags::has<MouseButtonFlags::MF_LEFT>(CBaseUIDispatch::getCaptorButtons())) return;
+
+    const dvec2 curMousePos = mouse->getPos();
+
+    if(!this->bBusy) {
+        // first observed frame: a descendant took a press inside us; arm gesture tracking
+        if(!this->bHandleLeftMouse || !this->bMouseInside || !this->isEnabled()) return;
+
+        this->bBusy = true;
+        this->vMouseBackup2 = curMousePos;  // to avoid spastic movement at scroll start
+        this->vMouseBackup3 = curMousePos;  // resistance origin
+
+        // a press on the scrollbar force-steals even from a child underneath it (locked
+        // captures - slider grabs, textbox selections - decline the steal)
+        if(!this->bBlockScrolling && (this->bVerticalScrolling || this->bHorizontalScrolling) &&
+           (this->verticalScrollbar.contains(curMousePos) || this->horizontalScrollbar.contains(curMousePos))) {
+            if(this->stealCapture()) this->tryBeginScrollbarDrag(curMousePos);
+            return;
+        }
+    }
+
+    // kinetic average keeps tracking the held child's motion (a steal mid-gesture must launch
+    // with the full drag history at release)
+    const dvec2 deltaToAdd = (curMousePos - this->vMouseBackup2);
+    this->vKineticAverage.x.set(deltaToAdd.x, cv::ui_scrollview_kinetic_approach_time.getDouble(), anim::QuadOut);
+    this->vKineticAverage.y.set(deltaToAdd.y, cv::ui_scrollview_kinetic_approach_time.getDouble(), anim::QuadOut);
+    this->vMouseBackup2 = curMousePos;
+
+    // past the pull resistance, take the capture away from the child and drag-scroll
+    if(!this->bScrolling && !this->bBlockScrolling && (this->bVerticalScrolling || this->bHorizontalScrolling) &&
+       this->isEnabled()) {
+        int diff = std::abs(curMousePos.x - this->vMouseBackup3.x);
+        if(std::abs(curMousePos.y - this->vMouseBackup3.y) > diff)
+            diff = std::abs(curMousePos.y - this->vMouseBackup3.y);
+
+        if(diff > this->iScrollResistance) {
+            if(this->stealCapture()) this->beginDragScroll(curMousePos);
+        }
+    }
+}
+
+void CBaseUIScrollView::onCapturedEndThrough() {
+    // the observed capture ended on the child (plain click or cancel): disarm gesture tracking
+    this->bBusy = false;
 }
 
 void CBaseUIScrollView::onKeyUp(KeyboardEvent &e) { this->container.onKeyUp(e); }
@@ -577,13 +621,19 @@ void CBaseUIScrollView::scrollToY(int scrollPosY, bool animated) { this->scrollT
 
 void CBaseUIScrollView::scrollToYInt(int scrollPosY, bool animated, bool slow) {
     if(!this->bVerticalScrolling || this->bScrolling) return;
-    this->bClippingDirty = true;
 
     f64 upperBounds = 1;
     f64 lowerBounds = -this->vScrollSize.y + this->getSize().y;
     if(lowerBounds >= upperBounds) lowerBounds = upperBounds;
 
     const f64 targetY = std::clamp<f64>(scrollPosY, lowerBounds, upperBounds);
+
+    // a scroll to where we already sit (and aren't animating away from) is a no-op: don't re-dirty
+    // clipping. the songbrowser's left-edge auto-recenter calls this every frame, and a full O(n)
+    // clip rebuild over thousands of carousel elements that changes nothing is pure waste
+    if(!this->vScrollPos.y.animating() && std::round(this->vScrollPos.y) == std::round(targetY)) return;
+
+    this->bClippingDirty = true;
 
     this->vVelocity.y.stop();
     this->vVelocity.y = targetY;
@@ -599,13 +649,17 @@ void CBaseUIScrollView::scrollToYInt(int scrollPosY, bool animated, bool slow) {
 
 void CBaseUIScrollView::scrollToXInt(int scrollPosX, bool animated, bool slow) {
     if(!this->bHorizontalScrolling || this->bScrolling) return;
-    this->bClippingDirty = true;
 
     f64 upperBounds = 1;
     f64 lowerBounds = -this->vScrollSize.x + this->getSize().x;
     if(lowerBounds >= upperBounds) lowerBounds = upperBounds;
 
     const f64 targetX = std::clamp<f64>(scrollPosX, lowerBounds, upperBounds);
+
+    // no-op scroll (already at target, not animating): don't re-dirty clipping (see scrollToYInt)
+    if(!this->vScrollPos.x.animating() && std::round(this->vScrollPos.x) == std::round(targetX)) return;
+
+    this->bClippingDirty = true;
 
     this->vVelocity.x = targetX;
 
@@ -684,13 +738,13 @@ void CBaseUIScrollView::updateClipping() {
                     // need to call isVisible instead of just directly setting "true" because
                     // it may be overridden
                     nowVisible = e->isVisible();
-                    ++numChangedElements;
                 }
             } else if(eVisible) {
                 e->setVisible(false);
                 nowVisible = e->isVisible();
-                ++numChangedElements;
             }
+
+            if(nowVisible != eVisible) ++numChangedElements;
 
             if(nowVisible) {
                 visElements.push_back(e);
@@ -811,14 +865,26 @@ void CBaseUIScrollView::scrollToTop() { this->scrollToY(0); }
 
 void CBaseUIScrollView::onMouseDownOutside(bool /*left*/, bool /*right*/) { this->container.stealFocus(); }
 
-void CBaseUIScrollView::onMouseDownInside(bool /*left*/, bool /*right*/) {
+void CBaseUIScrollView::onMouseDownInside(bool left, bool /*right*/) {
+    if(!left) return;
+
+    // a press on our own surface (scrollbar or empty content space); children get their own
+    // captures and we observe them through onCapturedMoveThrough instead
     this->bBusy = true;
     this->vMouseBackup2 = mouse->getPos();  // to avoid spastic movement at scroll start
+
+    if(this->bBlockScrolling || (!this->bVerticalScrolling && !this->bHorizontalScrolling)) return;
+
+    const dvec2 curMousePos = mouse->getPos();
+    if(!this->tryBeginScrollbarDrag(curMousePos)) this->beginDragScroll(curMousePos);
+    this->lockCapture();
 }
 
-void CBaseUIScrollView::onMouseUpInside(bool /*left*/, bool /*right*/) { this->bBusy = false; }
+void CBaseUIScrollView::onMouseUpInside(bool /*left*/, bool /*right*/) { this->endDragScroll(true); }
 
-void CBaseUIScrollView::onMouseUpOutside(bool /*left*/, bool /*right*/) { this->bBusy = false; }
+void CBaseUIScrollView::onMouseUpOutside(bool /*left*/, bool /*right*/) { this->endDragScroll(true); }
+
+void CBaseUIScrollView::onMouseCancel() { this->endDragScroll(false); }
 
 void CBaseUIScrollView::onFocusStolen() {
     this->bActive = false;

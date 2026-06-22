@@ -51,11 +51,11 @@ void UserStatsScreen::draw() {
     m_contextMenu->draw();
 }
 
-void UserStatsScreen::update(CBaseUIEventCtx &c) {
+void UserStatsScreen::updateInput(CBaseUIEventCtx &c) {
     if(!this->isVisible()) return;
 
-    m_contextMenu->update(c);
-    ScreenBackable::update(c);
+    m_contextMenu->updateInput(c);
+    ScreenBackable::updateInput(c);
 }
 
 CBaseUIContainer *UserStatsScreen::setVisible(bool visible) {

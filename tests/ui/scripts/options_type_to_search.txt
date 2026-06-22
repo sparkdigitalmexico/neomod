@@ -1,0 +1,30 @@
+# type-to-search (options): with NO textbox focused, chars route to OptionsOverlay::onChar
+# which builds the settings-search sSearchString AND consumes (OptionsOverlay.cpp:2307-2326,
+# the eat-all). distinct from songbrowser (which does NOT consume chars): here 4.2 deletes
+# the screen-level eat-all, so the walk-fallback must keep the search build alive (locked
+# open (a)). same Escape discrimination: a non-empty search Escape clears it + STAYS open
+# (:2280-2284); a second Escape on the empty search runs onBack and closes. the first Escape
+# leaving options OPEN proves the chars landed in the search.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 20
+sendkey Left Ctrl down
+sendkey O
+sendkey Left Ctrl up
+@wait 30
+ui_assert visible optionsoverlay 1
+sendtext abc
+@wait 3
+sendkey Escape
+@wait 3
+ui_assert visible optionsoverlay 1
+sendkey Escape
+@wait 5
+ui_assert visible optionsoverlay 0
+exit

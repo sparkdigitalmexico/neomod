@@ -41,6 +41,9 @@ class AsyncIOHandler;
 class DirectoryWatcher;
 
 class CBaseUIContainer;
+namespace CBaseUIDispatch {
+class MouseSink;
+}
 class VisualProfiler;
 class ConsoleBox;
 class Console;
@@ -81,9 +84,6 @@ class Engine final : public KeyboardListener {
     void center();
     void toggleFullscreen();
     void disableFullscreen();
-
-    // UI focus hacks (passthrough to app + engine UI)
-    void stealUIFocus();
 
     void showMessageInfo(const std::string &title, const std::string &message);
     void showMessageWarning(const std::string &title, const std::string &message);
@@ -159,6 +159,9 @@ class Engine final : public KeyboardListener {
     CBaseUIContainer *guiContainer;
     VisualProfiler *visualProfiler;
     static Mc::atomic_sharedptr<ConsoleBox> consoleBox;
+
+    // UI mouse routing sink
+    std::unique_ptr<CBaseUIDispatch::MouseSink> uiMouseSink{nullptr};
 
     McFont *consoleFont{nullptr};
     McFont *defaultFont{nullptr};

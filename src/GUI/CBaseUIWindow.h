@@ -17,7 +17,8 @@ class CBaseUIWindow : public CBaseUIElement {
 
     void draw() override;
     virtual void drawCustomContent() { ; }
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyDown(KeyboardEvent &e) override;
     void onKeyUp(KeyboardEvent &e) override;
@@ -104,6 +105,8 @@ class CBaseUIWindow : public CBaseUIElement {
     void onMouseDownInside(bool left = true, bool right = false) override;
     void onMouseUpInside(bool left = true, bool right = false) override;
     void onMouseUpOutside(bool left = true, bool right = false) override;
+    void onMouseCancel() override;
+    void onCapturedMouseMove() override;
 
     void onMoved() override;
     void onResized() override;

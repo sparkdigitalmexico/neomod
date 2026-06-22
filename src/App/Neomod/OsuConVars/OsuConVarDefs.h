@@ -644,7 +644,7 @@ CONVAR(cursor_trail_smooth_length, 0.5f, CLIENT | SKINS | SERVER, "how long smoo
 CONVAR(cursor_trail_spacing, 15.f, CLIENT | SKINS | SERVER,
        "how big the gap between consecutive unsmooth cursortrail images should be, in milliseconds");
 CONVAR(disable_mousebuttons, Env::cfg(OS::WASM) ? false : true, CLIENT | SKINS | SERVER);
-CONVAR(disable_mousewheel, true, CLIENT | SKINS | SERVER);
+CONVAR(disable_mousewheel, true, CLIENT | SKINS | SERVER, "disallow mousewheel (AND UP/DOWN KEYS!) from changing volume during gameplay");
 CONVAR(drain_kill, true, CLIENT | SERVER | PROTECTED | GAMEPLAY, "whether to kill the player upon failing");
 CONVAR(drain_disabled, false, CLIENT | SERVER | PROTECTED | GAMEPLAY,
        "determines if HP drain should be disabled entirely");

@@ -61,6 +61,16 @@ class SDLMain final : public Environment {
     // SDL will call this on the main thread when the window needs to be redrawn
     static bool resizeCallback(void *userdata, SDL_Event *event);
 
+    // debug convar callbacks
+    void sendkey(std::string_view args);
+    void sendtext(std::string_view args);
+
+    void pushMouseButtonEvent(std::string_view btnName, bool down);
+    void mouse_to(std::string_view args);
+    void mouse_down(std::string_view args);
+    void mouse_up(std::string_view args);
+    void mouse_wheel(std::string_view args);
+
     // GL context (must be created early, during window creation)
     SDL_GLContext m_context{nullptr};
 

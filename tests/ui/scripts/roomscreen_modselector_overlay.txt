@@ -1,0 +1,39 @@
+# closes the phase-3 owed manual smoke "RoomScreen multi + modselector-over-room look",
+# now automatable via the fake-online path (debug_fake_room enters a synthetic multiplayer
+# room with no server). pins:
+#  - the room renders and stays the ACTIVE base screen after joining
+#  - clicking the room's "Select mods" button opens the ModSelector as an OVERLAY (phase
+#    3.3): the room stays VISIBLE and ACTIVE beneath it (not a setScreen replace)
+#  - the 0x88000000 fullscreen dim darkens the room (pixel probe): isInCompactMode() is
+#    false outside play mode, so the room (not just play) gets the osu-style dim
+# F1 cannot be used to open the modselector here: chat is force-visible in a room and eats
+# every keystroke (the chat_focus_steal bug, see that pin), so the realistic click path is
+# used instead.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+debug_fake_room
+@wait 20
+ui_assert screen_active room 1
+ui_assert visible room 1
+ui_assert visible modselector 0
+mouse_to 937 307
+@wait 5
+mouse_down
+@wait 2
+mouse_up
+@wait 20
+ui_assert visible modselector 1
+ui_assert visible room 1
+ui_assert screen_active room 1
+mouse_to 10 10
+@wait 5
+take_screenshot screenshots/uitest_roomscreen_modselector_overlay.png
+@wait 3
+exit

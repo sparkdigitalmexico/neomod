@@ -16,10 +16,8 @@ class BeatmapCarousel final : public CBaseUIScrollView {
     void onChar(KeyboardEvent &e) override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
-
-    // checks for context menu visibility
-    bool isMouseInside() override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     // if we are actually scrolling at a "noticeable" velocity, so that we can skip
     // drawing some things for elements which the user will probably not notice anyways (backgrounds)

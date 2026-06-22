@@ -1,0 +1,50 @@
+# pins the OptionsOverlay stealFocus loop ("eyes are bleeding", OptionsOverlay.cpp): with
+# the skin select dropdown open, hovering a dropdown item must hover EXACTLY one element;
+# options_skin_select sits directly beneath the menu and must not be hovered. must still
+# pass after P4 deletes the stealFocus loop. needs the UITestSkin fixture (run.py creates
+# it; the dropdown only opens when at least one skin folder exists).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+mouse_to 640 360
+@wait 2
+mouse_down
+@wait 3
+mouse_up
+@wait 40
+mouse_to 867 401
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 30
+mouse_to 40 267
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 20
+mouse_to 256 492
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 2
+mouse_to 10 10
+@wait 300
+ui_assert visible options_contextmenu 1
+mouse_to 193 492
+@wait 3
+ui_assert hovered options_contextmenu 1
+ui_assert hovered options_skin_select 0
+sendkey Escape
+@wait 5
+ui_assert visible options_contextmenu 0
+ui_assert visible optionsoverlay 1
+exit

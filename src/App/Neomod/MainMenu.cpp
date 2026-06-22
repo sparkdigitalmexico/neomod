@@ -62,7 +62,12 @@ using namespace neomod;
 class MainMenu::CubeButton final : public CBaseUIButton {
    public:
     CubeButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
-        : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {}
+        : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {
+        // the cube/logo draws on top of the expanded menu buttons, so it must win hover/click where
+        // they overlap (the buttons are added later = visited later, so they would otherwise out-rank
+        // the earlier-visited cube at the same base tier)
+        this->bDrawsOnTop = true;
+    }
 
     void draw() override {
         // draw nothing
@@ -85,28 +90,29 @@ class MainMenu::CubeButton final : public CBaseUIButton {
         CBaseUIButton::onMouseOutside();
     }
 
-    bool isMouseInside() override {
-        // more terrible workarounds for lack of Z-ordering
-        return CBaseUIButton::isMouseInside() &&
-               !(ui->getOptionsOverlay()->isMouseInside() || ui->getChat()->isMouseInside() ||
-                 ui->getAboutScreen()->isMouseInside());
-    }
-
    private:
     MainMenu *mm;
 };
 
+namespace {
+enum class SubButtonType : u8 {
+    Singleplayer,
+    Multiplayer,
+    Options,
+    Exit,
+    Save,  // only relevant in WASM
+};
+
+}
+
 class MainMenu::MainButton final : public UIButtonRounded {
    public:
-    MainButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
-        : UIButtonRounded(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent) {}
+    MainButton(MainMenu *parent, float xPos, float yPos, float xSize, float ySize, std::string name, std::string text,
+               SubButtonType type)
+        : UIButtonRounded(xPos, yPos, xSize, ySize, std::move(name), std::move(text)), mm(parent), type(type) {}
 
-    void update(CBaseUIEventCtx &c) override {
-        UIButtonRounded::update(c);
-        if(c.mouse_consumed()) {
-            this->showSaveTooltip = false;
-            return;
-        }
+    void updateInput(CBaseUIEventCtx &c) override {
+        UIButtonRounded::updateInput(c);
         if(!this->isVisible() || !this->isEnabled()) return;
         if(this->showSaveTooltip) {
             auto *ttoverlay = ui->getTooltipOverlay();
@@ -120,7 +126,8 @@ class MainMenu::MainButton final : public UIButtonRounded {
     }
 
     bool isMouseInside() override {
-        return this->isEnabled() && UIButtonRounded::isMouseInside() && !this->mm->cube->isMouseInside();
+        // occlusion vs the cube is resolved by the dispatcher now (single top-most hover candidate)
+        return this->isEnabled() && UIButtonRounded::isMouseInside();
     }
 
     void onMouseDownInside(bool left = true, bool right = false) override {
@@ -136,29 +143,154 @@ class MainMenu::MainButton final : public UIButtonRounded {
     void onMouseInside() override {
         if(this->mm->cube->isMouseInside()) return;
         UIButtonRounded::onMouseInside();
-        const bool isSave = this->getText() == "Save";
-        if(isSave) {
+        if(this->type == SubButtonType::Save) {
             this->showSaveTooltip = true;
         }
 
         if(this->mm->buttonSoundCooldown + 0.05f < engine->getTime()) {
             this->mm->buttonSoundCooldown = engine->getTime();
-            if(this->getText() == _("Singleplayer")) {
-                soundEngine->play(osu->getSkin()->s_hover_sp);
-            } else if(this->getText() == _("Multiplayer")) {
-                soundEngine->play(osu->getSkin()->s_hover_mp);
-            } else if(this->getText() == _("Options") || isSave) {
-                soundEngine->play(osu->getSkin()->s_hover_options);
-            } else if(this->getText() == _("Exit")) {
-                soundEngine->play(osu->getSkin()->s_hover_exit);
+            const auto *skin = osu->getSkin();
+            Sound *sound{nullptr};
+            switch(this->type) {
+                // clang-format off
+                using enum SubButtonType;
+                case Singleplayer:  sound = skin->s_hover_sp;       break;
+                case Multiplayer:   sound = skin->s_hover_mp;       break;
+                case Save:          [[fallthrough]]; // WASM (just use options sound)
+                case Options:       sound = skin->s_hover_options;  break;
+                case Exit:          sound = skin->s_hover_exit;     break;
+                    // clang-format on
             }
+            soundEngine->play(sound);
         }
     }
 
    private:
     MainMenu *mm;
+    SubButtonType type;
     [[maybe_unused]] bool showSaveTooltip{false};
 };
+
+namespace {
+bool is_updating_from_old_version() {
+    if(!Environment::fileExists(NEOMOD_DATA_DIR "version.txt")) {
+        // no version.txt exists, we are not updating
+        return false;
+    }
+
+    File versionFile(NEOMOD_DATA_DIR "version.txt");
+    std::string linebuf{};
+    double version = -1.;
+    u64 buildstamp = 0;
+    // get version number
+    if(!(versionFile.canRead() && ((linebuf = versionFile.readLine()) != "") &&
+         ((version = Parsing::strto<f64>(linebuf)) > 0.))) {
+        // assume empty/invalid version.txt means we updated
+        return true;
+    }
+
+    bool drawNotificationArrow = false;
+    bool makeBackup = false;
+    bool gotLegitBuildstamp = true;
+    // get build timestamp
+    if(versionFile.canRead() && ((linebuf = versionFile.readLine()) != "") &&
+       ((buildstamp = Parsing::strto<u64>(linebuf)) > 0)) {
+        // ignore bogus build timestamps
+        if(buildstamp > 4000000000 || buildstamp < 2000000000) {
+            gotLegitBuildstamp = false;
+            buildstamp = cv::build_timestamp.getVal<u64>();
+        }
+    }
+    gotLegitBuildstamp &= buildstamp > 0;
+
+    // debugLog("versionFile version: {} our version: {}{}", version, cv::version.getFloat(),
+    //           buildstamp > 0.0f ? fmt::format(" build timestamp: {}", buildstamp) : "");
+    if(version < cv::version.getDouble() || buildstamp < cv::build_timestamp.getVal<u64>()) {
+        if(!Env::cfg(BUILD::DEBUG)) {
+            // we know
+            drawNotificationArrow = true;
+        }
+        makeBackup = !Env::cfg(OS::WASM) &&                 // too hard to even access on wasm
+                     (version < cv::version.getDouble() ||  // always backup release version bumps
+                      // don't spam backups for debug builds with build timestamp updates
+                      (!Env::cfg(BUILD::DEBUG) && buildstamp < cv::build_timestamp.getVal<u64>()));
+    }
+
+    bool shouldSave = false;
+    if(version < 35.06) {
+        // SoundEngine choking issues have been fixed, option has been removed from settings menu
+        // We leave the cvar available as it could still be useful for some players
+        cv::restart_sound_engine_before_playing.setValue(false);
+
+        // 0.5 is shit default value
+        if(cv::songbrowser_search_delay.getFloat() == 0.5f) {
+            cv::songbrowser_search_delay.setValue(0.2f);
+        }
+
+        // Match osu!stable value
+        if(cv::relax_offset.getFloat() == 0.f) {
+            cv::relax_offset.setValue(-12.f);
+        }
+
+        shouldSave = true;
+    }
+    if(version < 39.00) {
+        if(!cv::mp_password.getString().empty()) {
+            const char *plaintext_pw{cv::mp_password.getString().c_str()};
+            const auto hash{crypto::hash::md5_hex((u8 *)plaintext_pw, strlen(plaintext_pw))};
+            cv::mp_password_md5.setValue(hash.string());
+            cv::mp_password.setValue("");
+            shouldSave = true;
+        }
+    }
+    if(version < 39.01) {
+        if(cv::fps_unlimited.getBool()) {
+            cv::fps_max.setValue(0);
+            shouldSave = true;
+        }
+    }
+    if(version < 40.00) {
+        for(auto *bind : OsuKeyBinds::getAll()) {
+            if(bind->isDefault()) continue;
+            bind->set(KeyBindings::old_keycode_to_sdl_scancode(bind->get()));
+        }
+        shouldSave = true;
+    }
+    if(version < 40.06) {
+        cv::letterboxed_resolution.setValue(cv::resolution.getString());
+        shouldSave = true;
+    }
+    if(version < 43.02) {
+        if(cv::mp_server.getString() == "neosu.net"sv) {
+            cv::mp_server.setValue(cv::mp_server.getDefaultString());
+            shouldSave = true;
+        }
+        if(Database::migrate_neosu_to_neomod()) {
+            debugLog("Migrated old neosu databases to neomod.");
+        }
+    }
+    if(version < 43.04 || buildstamp <= 2602190926) {
+        cv::prefer_websockets.setValue(true);
+        shouldSave = true;
+    }
+
+    makeBackup &= shouldSave;
+    if(makeBackup) {
+        // back up synchronously
+        const std::string backup_name = fmt::format(NEOMOD_CFG_PATH "/osu.cfg.{:.2f}{:s}.bak", version,
+                                                    gotLegitBuildstamp ? fmt::format("-{:d}", buildstamp) : "");
+        debugLog("Backing up config " NEOMOD_CFG_PATH "/osu.cfg -> {}", backup_name);
+        if(!File::copy(NEOMOD_CFG_PATH "/osu.cfg"sv, backup_name)) {
+            debugLog("WARNING: failed to back up " NEOMOD_CFG_PATH "/osu.cfg -> {:s}!", backup_name);
+        }
+    }
+    if(shouldSave) {
+        ui->getOptionsOverlay()->save();
+    }
+
+    return drawNotificationArrow;
+}
+}  // namespace
 
 MainMenu::MainMenu() : UIScreen() {
     // engine settings
@@ -210,144 +342,43 @@ MainMenu::MainMenu() : UIScreen() {
     // background_shader = resourceManager->loadShader("main_menu_bg.vsh", "main_menu_bg.fsh");
 
     // check if the user has never clicked the changelog for this update
-    this->didUserUpdateFromOlderVersion = false;
-    this->drawVersionNotificationArrow = false;
-    {
-        if(Environment::fileExists(NEOMOD_DATA_DIR "version.txt")) {
-            File versionFile(NEOMOD_DATA_DIR "version.txt");
-            std::string linebuf{};
-            double version = -1.;
-            u64 buildstamp = 0;
-            // get version number
-            if(versionFile.canRead() && ((linebuf = versionFile.readLine()) != "") &&
-               ((version = Parsing::strto<f64>(linebuf)) > 0.)) {
-                bool makeBackup = false;
-                bool gotLegitBuildstamp = true;
-                // get build timestamp
-                if(versionFile.canRead() && ((linebuf = versionFile.readLine()) != "") &&
-                   ((buildstamp = Parsing::strto<u64>(linebuf)) > 0)) {
-                    // ignore bogus build timestamps
-                    if(buildstamp > 4000000000 || buildstamp < 2000000000) {
-                        gotLegitBuildstamp = false;
-                        buildstamp = cv::build_timestamp.getVal<u64>();
-                    }
-                }
-                gotLegitBuildstamp &= buildstamp > 0;
-
-                // debugLog("versionFile version: {} our version: {}{}", version, cv::version.getFloat(),
-                //           buildstamp > 0.0f ? fmt::format(" build timestamp: {}", buildstamp) : "");
-                if(version < cv::version.getDouble() || buildstamp < cv::build_timestamp.getVal<u64>()) {
-                    if(!Env::cfg(BUILD::DEBUG)) {
-                        // we know
-                        this->drawVersionNotificationArrow = true;
-                    }
-                    makeBackup = !Env::cfg(OS::WASM) &&                 // too hard to even access on wasm
-                                 (version < cv::version.getDouble() ||  // always backup release version bumps
-                                  // don't spam backups for debug builds with build timestamp updates
-                                  (!Env::cfg(BUILD::DEBUG) && buildstamp < cv::build_timestamp.getVal<u64>()));
-                }
-
-                bool shouldSave = false;
-                if(version < 35.06) {
-                    // SoundEngine choking issues have been fixed, option has been removed from settings menu
-                    // We leave the cvar available as it could still be useful for some players
-                    cv::restart_sound_engine_before_playing.setValue(false);
-
-                    // 0.5 is shit default value
-                    if(cv::songbrowser_search_delay.getFloat() == 0.5f) {
-                        cv::songbrowser_search_delay.setValue(0.2f);
-                    }
-
-                    // Match osu!stable value
-                    if(cv::relax_offset.getFloat() == 0.f) {
-                        cv::relax_offset.setValue(-12.f);
-                    }
-
-                    shouldSave = true;
-                }
-                if(version < 39.00) {
-                    if(!cv::mp_password.getString().empty()) {
-                        const char *plaintext_pw{cv::mp_password.getString().c_str()};
-                        const auto hash{crypto::hash::md5_hex((u8 *)plaintext_pw, strlen(plaintext_pw))};
-                        cv::mp_password_md5.setValue(hash.string());
-                        cv::mp_password.setValue("");
-                        shouldSave = true;
-                    }
-                }
-                if(version < 39.01) {
-                    if(cv::fps_unlimited.getBool()) {
-                        cv::fps_max.setValue(0);
-                        shouldSave = true;
-                    }
-                }
-                if(version < 40.00) {
-                    for(auto *bind : OsuKeyBinds::getAll()) {
-                        if(bind->isDefault()) continue;
-                        bind->set(KeyBindings::old_keycode_to_sdl_scancode(bind->get()));
-                    }
-                    shouldSave = true;
-                }
-                if(version < 40.06) {
-                    cv::letterboxed_resolution.setValue(cv::resolution.getString());
-                    shouldSave = true;
-                }
-                if(version < 43.02) {
-                    if(cv::mp_server.getString() == "neosu.net"sv) {
-                        cv::mp_server.setValue(cv::mp_server.getDefaultString());
-                        shouldSave = true;
-                    }
-                    if(Database::migrate_neosu_to_neomod()) {
-                        debugLog("Migrated old neosu databases to neomod.");
-                    }
-                }
-                if(version < 43.04 || buildstamp <= 2602190926) {
-                    cv::prefer_websockets.setValue(true);
-                    shouldSave = true;
-                }
-
-                makeBackup &= shouldSave;
-                if(makeBackup) {
-                    // back up synchronously
-                    const std::string backup_name =
-                        fmt::format(NEOMOD_CFG_PATH "/osu.cfg.{:.2f}{:s}.bak", version,
-                                    gotLegitBuildstamp ? fmt::format("-{:d}", buildstamp) : "");
-                    debugLog("Backing up config " NEOMOD_CFG_PATH "/osu.cfg -> {}", backup_name);
-                    if(!File::copy(NEOMOD_CFG_PATH "/osu.cfg"sv, backup_name)) {
-                        debugLog("WARNING: failed to back up " NEOMOD_CFG_PATH "/osu.cfg -> {:s}!", backup_name);
-                    }
-                }
-                if(shouldSave) {
-                    ui->getOptionsOverlay()->save();
-                }
-            } else {
-                this->drawVersionNotificationArrow = true;
-            }
-        }
-    }
-    this->didUserUpdateFromOlderVersion = this->drawVersionNotificationArrow;  // (same logic atm)
+    this->didUserUpdateFromOlderVersion = this->drawVersionNotificationArrow =
+        is_updating_from_old_version();  // (same logic atm)
 
     this->setPos(-1, 0);
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
 
-    this->cube = new CubeButton(this, 0, 0, 1, 1, "", "");
+    this->cube = new CubeButton(this, 0, 0, 1, 1, "mainmenu_cube", "");
     this->cube->setClickCallback(SA::MakeDelegate<&MainMenu::onCubePressed>(this));
     this->addBaseUIElement(this->cube);
 
-    this->addMainMenuButton(_("Singleplayer"))
-        ->setClickCallback(SA::MakeDelegate<&MainMenu::onPlayButtonPressed>(this));
-    this->addMainMenuButton(_("Multiplayer"))
-        ->setClickCallback(SA::MakeDelegate<&MainMenu::onMultiplayerButtonPressed>(this));
-    this->addMainMenuButton(_("Options"))->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
+    {
+        auto add_main_menu_button = [this](std::string text, std::string name, SubButtonType type) -> MainButton * {
+            auto *button = new MainButton(this, this->vSize.x, 0, 1, 1, std::move(name), std::move(text), type);
+            button->setFont(osu->getSubTitleFont());
+            button->setVisible(false);
 
-    std::string lastButtonText = Env::cfg(OS::WASM) ? _("Save") : _("Exit");
-    this->addMainMenuButton(std::move(lastButtonText))
-        ->setClickCallback(SA::MakeDelegate<&MainMenu::onSaveOrExitButtonPressed>(this));
+            this->menuElements.push_back(button);
+            this->addBaseUIElement(button);
+            return button;
+        };
 
-    this->pauseButton = new PauseButton(0, 0, 0, 0, "", "");
+        add_main_menu_button(_("Singleplayer"), "mainmenu_singleplayer", SubButtonType::Singleplayer)
+            ->setClickCallback(SA::MakeDelegate<&MainMenu::onPlayButtonPressed>(this));
+        add_main_menu_button(_("Multiplayer"), "mainmenu_multiplayer", SubButtonType::Multiplayer)
+            ->setClickCallback(SA::MakeDelegate<&MainMenu::onMultiplayerButtonPressed>(this));
+        add_main_menu_button(_("Options"), "mainmenu_options", SubButtonType::Options)
+            ->setClickCallback(SA::MakeDelegate<&MainMenu::onOptionsButtonPressed>(this));
+        add_main_menu_button(Env::cfg(OS::WASM) ? _("Save") : _("Exit"), "mainmenu_exit",
+                             Env::cfg(OS::WASM) ? SubButtonType::Save : SubButtonType::Exit)
+            ->setClickCallback(SA::MakeDelegate<&MainMenu::onSaveOrExitButtonPressed>(this));
+    }
+
+    this->pauseButton = new PauseButton(0, 0, 0, 0, "mainmenu_pause", "");
     this->pauseButton->setClickCallback(SA::MakeDelegate<&MainMenu::onPausePressed>(this));
     this->addBaseUIElement(this->pauseButton);
 
-    this->onlineBeatmapsButton = new UIButtonVertical(0, 0, 0, 0, "", _("Online Beatmaps"));
+    this->onlineBeatmapsButton = new UIButtonVertical(0, 0, 0, 0, "mainmenu_online_beatmaps", _("Online Beatmaps"));
     this->onlineBeatmapsButton->setFont(osu->getSubTitleFont());
     this->onlineBeatmapsButton->setDrawBackground(false);
     this->onlineBeatmapsButton->setClickCallback(SA::MakeDelegate<&MainMenu::onOnlineBeatmapsButtonPressed>(this));
@@ -363,6 +394,7 @@ MainMenu::MainMenu() : UIScreen() {
     cv::adblock.setCallback(SA::MakeDelegate<&MainMenu::onAdblockChangeCallback>(this));
 
     this->tipLabel = new mainmenu::WrappedText(engine->getDefaultFont(), 0, 0, 0, 0);
+    this->tipLabel->setName("mainmenu_tip");
     this->tipLabel->setHandleRightMouse(true);
     this->tipLabel->setOnMouseUpInsideCallback(
         [](bool left, bool /*right*/) -> void { mainmenu::cycleTip(left ? 1 : -1); });
@@ -971,7 +1003,10 @@ void MainMenu::draw() {
     this->drawMainButton();
 }
 
-void MainMenu::update(CBaseUIEventCtx &c) {
+void MainMenu::tick() {
+    UIScreen::tick();
+    this->updateAvailableButton->tick();
+
     if(!this->bVisible) return;
 
     if(cv::draw_menu_background.getBool()) {
@@ -997,11 +1032,6 @@ void MainMenu::update(CBaseUIEventCtx &c) {
     }
 
     this->updateLayout();
-
-    // update and focus handling
-    UIScreen::update(c);
-
-    this->updateAvailableButton->update(c);
 
     // handle automatic menu closing
     if(this->mainMenuButtonCloseTime != 0.0f && engine->getTime() > this->mainMenuButtonCloseTime) {
@@ -1181,6 +1211,15 @@ void MainMenu::update(CBaseUIEventCtx &c) {
     }
 }
 
+void MainMenu::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    // update and focus handling
+    UIScreen::updateInput(c);
+
+    this->updateAvailableButton->updateInput(c);
+}
+
 void MainMenu::selectRandomBeatmap() {
     if(db->isFinished() && !db->getBeatmapSets().empty() && !ui->getSongBrowser()->parentButtons.empty()) {
         ui->getSongBrowser()->selectRandomBeatmap();
@@ -1279,7 +1318,7 @@ void MainMenu::onKeyDown(KeyboardEvent &e) {
     }
 }
 
-void MainMenu::onButtonChange(ButtonEvent ev) {
+void MainMenu::onButtonChange(ButtonEvent &ev) {
     if(!this->bVisible || ev.btn != MouseButtonFlags::MF_MIDDLE ||
        !(ev.down && !this->menuAnim.animating() && !this->menuElementsVisible))
         return;
@@ -1537,16 +1576,6 @@ void MainMenu::writeVersionFile() {
                       debugLog("Warning: failed to write new version to {}", NEOMOD_DATA_DIR "version.txt");
                   }
               });
-}
-
-MainMenu::MainButton *MainMenu::addMainMenuButton(std::string text) {
-    auto *button = new MainButton(this, this->vSize.x, 0, 1, 1, "", std::move(text));
-    button->setFont(osu->getSubTitleFont());
-    button->setVisible(false);
-
-    this->menuElements.push_back(button);
-    this->addBaseUIElement(button);
-    return button;
 }
 
 void MainMenu::onCubePressed() {

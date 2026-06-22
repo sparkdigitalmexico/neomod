@@ -127,7 +127,12 @@ class SongBrowser final : public ScreenBackable {
     ~SongBrowser() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
+
+    // screen-wide wheel fallback, forwarded to the carousel (osu-stable behavior); hovered
+    // scroll surfaces win first, and an empty/fits carousel declines down to the volume sink
+    bool onWheel(int deltaVertical, int deltaHorizontal) override;
 
     void onKeyDown(KeyboardEvent &e) override;
     void onKeyUp(KeyboardEvent &e) override;
@@ -136,6 +141,8 @@ class SongBrowser final : public ScreenBackable {
     void onResolutionChange(vec2 newResolution) override;
 
     CBaseUIContainer *setVisible(bool visible) override;
+
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override;
 
     bool selectBeatmapset(const BeatmapSet *set);
     void selectSelectedBeatmapSongButton();
@@ -308,6 +315,9 @@ class SongBrowser final : public ScreenBackable {
 
     // song carousel
     std::unique_ptr<BeatmapCarousel> carousel{nullptr};
+    // vElements + the manually-managed containers (topbars, score browser, carousel, ...);
+    // rebuilt on each getAllChildren() call (debug-only path)
+    mutable std::vector<CBaseUIElement *> allChildren;
     CarouselButton *selectedButton = nullptr;
     bool bSongBrowserRightClickScrollCheck;
     bool bSongBrowserRightClickScrolling;
@@ -356,10 +366,8 @@ class SongBrowser final : public ScreenBackable {
     std::string sLastOsuFolder;
 
     // keys
-    bool bF1Pressed;
     bool bF2Pressed;
     bool bF3Pressed;
-    bool bShiftPressed;
     bool bLeft;
     bool bRight;
     bool bRandomBeatmapScheduled;

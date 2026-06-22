@@ -9,7 +9,11 @@
 #include "ContainerRanges.h"
 
 CBaseUIContainer::CBaseUIContainer(float Xpos, float Ypos, float Xsize, float Ysize, std::string name)
-    : CBaseUIElement(Xpos, Ypos, Xsize, Ysize, std::move(name)) {}
+    : CBaseUIElement(Xpos, Ypos, Xsize, Ysize, std::move(name)) {
+    // a container is a transparent wrapper: clicks on its rect belong to whatever is beneath,
+    // not to it (widget subclasses with a real self-surface opt back in, e.g. scrollview)
+    this->bClickThroughSelf = true;
+}
 
 CBaseUIContainer::~CBaseUIContainer() { this->freeElements(); }
 
@@ -194,16 +198,34 @@ void CBaseUIContainer::draw_debug() {
     }
 }
 
-void CBaseUIContainer::update(CBaseUIEventCtx &c) {
-    CBaseUIElement::update(c);
-    if(!this->isVisible()) return;
+void CBaseUIContainer::tick() {
+    CBaseUIElement::tick();
 
-    // NOTE: do NOT use a range-based for loop here, update() might invalidate iterators by changing the container contents...
+    // NOTE: do NOT use a range-based for loop here, tick() might invalidate iterators by changing the container contents...
     const auto &elements = this->vElements;
     for(size_t i = 0; i < elements.size(); i++) {
-        auto *e = elements[i];
-        if(e->isVisible()) e->update(c);
+        elements[i]->tick();
     }
+}
+
+void CBaseUIContainer::updateInput(CBaseUIEventCtx &c) {
+    CBaseUIElement::updateInput(c);
+    if(!this->isVisible()) return;
+
+    // descendants inherit our draws-on-top bias (CBaseUIElement::updateInput already applied it to
+    // our own candidacy, but balanced it back before returning here)
+    c.currentHitTier += this->bDrawsOnTop;
+    {
+        CBaseUIEventCtx::HitPathScope scope(c, this);
+
+        // NOTE: do NOT use a range-based for loop here, updateInput() might invalidate iterators by changing the container contents...
+        const auto &elements = this->vElements;
+        for(size_t i = 0; i < elements.size(); i++) {
+            auto *e = elements[i];
+            if(e->isVisible()) e->updateInput(c);
+        }
+    }
+    c.currentHitTier -= this->bDrawsOnTop;
 }
 
 void CBaseUIContainer::update_pos() {

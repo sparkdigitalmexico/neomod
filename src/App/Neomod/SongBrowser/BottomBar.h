@@ -18,7 +18,8 @@ inline void update_export_progress_cb(float progress, std::string entry_being_pr
     return update_export_progress(progress, std::move(entry_being_processed), "");
 }
 
-void update(CBaseUIEventCtx &c);
+void tick();
+void updateInput(CBaseUIEventCtx &c);
 void draw();
 void press_button(Button btn);
 [[nodiscard]] f32 get_height();

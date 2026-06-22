@@ -1,0 +1,24 @@
+# draw-order pixel pin for the phase 3 layer stack: with options open over the
+# mainmenu, the options panel must render ABOVE the menu at the overlap point and the
+# un-overlapped menu area must stay menu-colored. probes/options_over_mainmenu_probe
+# .probes holds the points; the runner checks them against the capture below.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+sendkey Left Ctrl down
+@wait 3
+sendkey O
+@wait 3
+sendkey Left Ctrl up
+@wait 60
+ui_assert visible optionsoverlay 1
+ui_assert screen_active mainmenu 1
+take_screenshot screenshots/uitest_options_over_mainmenu_probe.png
+@wait 3
+exit

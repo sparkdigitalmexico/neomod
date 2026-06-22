@@ -1,0 +1,34 @@
+# pins P2.2 locked slider capture: grab the AR override block, drag it far below the slider
+# rect across the mod button grid, keep moving. only the captor receives moves (captureMove
+# elem=modsel_ar), nothing beneath gains hover while captured (no hoverIn from mod buttons in
+# the golden), and the enclosing UI cannot steal the locked grab. release outside the rect ->
+# upOutside on the captor, value committed (convar assert), press state reset.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+set_active_ui_screen modselector
+@wait 10
+mouse_to 460 79
+@wait 2
+mouse_down
+@wait 2
+mouse_to 600 79
+@wait 2
+mouse_to 700 350
+@wait 2
+mouse_to 850 350
+@wait 3
+mouse_up
+@wait 10
+ui_assert convar ar_override 12.4
+ui_assert active modsel_ar 0
+ui_assert hovered modsel_ar 0
+mouse_to 10 10
+@wait 5
+exit

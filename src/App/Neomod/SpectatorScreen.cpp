@@ -35,7 +35,7 @@ using namespace Spectating;
 namespace Spectating {
 
 static i32 current_map_id = 0;
-static constinit MapFetcher map_fetcher;
+static CONSTINIT MapFetcher map_fetcher;
 
 // TODO @kiwec: test that those bugs have been fixed
 
@@ -145,7 +145,7 @@ SpectatorScreen::SpectatorScreen() {
     this->background->container.addBaseUIElement(this->status);
 
     this->stop_btn = new UIButton(0, 0, 190, 40, "stop_spec_btn", _("Stop spectating"));
-    this->stop_btn->setGrabClicks(true);
+    this->stop_btn->setDrawsOnTop(true);
     this->stop_btn->setColor(0xff00d900);
     this->stop_btn->setUseDefaultSkin();
     this->stop_btn->setClickCallback(SA::MakeDelegate<&SpectatorScreen::onStopSpectatingClicked>(this));
@@ -153,7 +153,9 @@ SpectatorScreen::SpectatorScreen() {
 }
 
 // NOTE: We use this to control client state, even when the spectator screen isn't visible.
-void SpectatorScreen::update(CBaseUIEventCtx &c) {
+void SpectatorScreen::tick() {
+    UIScreen::tick();
+
     // HACK: "spectator screen" is just an overlay with higher priority than most screens
     this->bVisible = BanchoState::spectating && !osu->isInPlayMode() && !ui->getRankingScreen()->isVisible();
 
@@ -253,10 +255,12 @@ void SpectatorScreen::update(CBaseUIEventCtx &c) {
     stop_pos.x += bgsize.x / 2.f - this->stop_btn->getSize().x / 2.f;
     stop_pos.y += bgsize.y + 20 * dpiScale;
     this->stop_btn->setPos(stop_pos);
+}
 
-    // Handle spectator screen UI input
+void SpectatorScreen::updateInput(CBaseUIEventCtx &c) {
+    // bVisible is computed in tick(), which ran earlier this frame
     if(this->isVisible()) {
-        UIScreen::update(c);
+        UIScreen::updateInput(c);
     }
 }
 

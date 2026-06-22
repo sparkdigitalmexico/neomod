@@ -14,9 +14,7 @@
 #include <utility>
 
 // SA::delegate<R(Args...)> has a fixed 2-pointer layout regardless of signature, so a single
-// sized/aligned buffer (CallbackSlot::storage) can hold any of them. This is the load-bearing
-// invariant for CallbackSlot — assert it explicitly so a future delegate ABI change is caught
-// here rather than producing UB at dispatch time.
+// sized/aligned buffer (CallbackSlot::storage) can hold any of them.
 static_assert(sizeof(ConVar::VoidCB) == sizeof(ConVar::StringCB));
 static_assert(sizeof(ConVar::VoidCB) == sizeof(ConVar::FloatCB));
 static_assert(sizeof(ConVar::VoidCB) == sizeof(ConVar::DoubleCB));

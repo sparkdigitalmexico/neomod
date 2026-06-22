@@ -173,10 +173,10 @@ void InfoLabel::draw() {
     }
 }
 
-void InfoLabel::update(CBaseUIEventCtx &c) {
+void InfoLabel::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
 
-    CBaseUIButton::update(c);
+    CBaseUIButton::updateInput(c);
 
     // detail info tooltip when hovering over diff info
     if(this->isMouseInside() && !ui->getOptionsOverlay()->isMouseInside()) {

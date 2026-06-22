@@ -17,7 +17,8 @@ class SongDifficultyButton final : public SongButton {
     ~SongDifficultyButton() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void onClicked(bool left = true, bool right = false) override;
 
     void resetAnimations() override;

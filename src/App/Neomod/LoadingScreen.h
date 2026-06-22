@@ -12,10 +12,12 @@ class LoadingScreen : public UIOverlay {
     NOCOPY_NOMOVE(LoadingScreen)
    public:
     LoadingScreen() = delete;
-    LoadingScreen(UIScreen *parent) : UIOverlay(parent) {}
+    LoadingScreen(UIScreen *parent) : UIOverlay(parent) {
+        this->bModal = true;  // a loading cover covers: nothing below gets input while it shows
+    }
     ~LoadingScreen() override { this->onFinished(); }
 
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
 
     inline void draw() final {
         if(!this->isVisible()) return;

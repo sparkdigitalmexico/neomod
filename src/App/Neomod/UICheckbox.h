@@ -6,7 +6,7 @@ class UICheckbox final : public CBaseUICheckbox {
    public:
     UICheckbox(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text);
 
-    void update(CBaseUIEventCtx &c) override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void setTooltipText(std::string_view text);
 

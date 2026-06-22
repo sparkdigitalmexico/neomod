@@ -12,6 +12,9 @@
 
 #ifdef MCENGINE_PLATFORM_WASM
 #include <emscripten/emscripten.h>
+#elif !defined(MCENGINE_PLATFORM_WINDOWS)
+#include <poll.h>
+#include <unistd.h>
 #endif
 
 namespace Mc {
@@ -20,8 +23,33 @@ using std::string_view_literals::operator""sv;
 
 #ifndef MCENGINE_PLATFORM_WASM
 
-ConsoleReader::ConsoleReader()
-    : stdinThread{[this](const Sync::stop_token &stoken) { this->stdinReaderThread(stoken); }} {}
+ConsoleReader::ConsoleReader() {
+    bool startThread = true;
+#ifndef MCENGINE_PLATFORM_WINDOWS
+    // piped scripts (headless testing) must be fully queued before the engine's first frame (for determinism)
+    // so (synchronously) drain whatever the writer already piped in early
+    // TODO: windows (low prio)
+    if(!isatty(STDIN_FILENO)) {
+        struct pollfd pfd{.fd = STDIN_FILENO, .events = POLLIN, .revents = 0};
+        std::string line;
+        while(std::cin.rdbuf()->in_avail() > 0 || poll(&pfd, 1, 50) > 0) {
+            if(!std::getline(std::cin, line)) {
+                startThread = false;  // EOF
+                break;
+            }
+            const bool gotExit = (line == "exit"sv || line == "shutdown"sv || line == "restart"sv || line == "crash"sv);
+            this->stdinQueue.push_back(std::move(line));
+            if(gotExit) {
+                startThread = false;
+                break;
+            }
+        }
+    }
+#endif
+    if(startThread) {
+        this->stdinThread = Sync::jthread{[this](const Sync::stop_token &stoken) { this->stdinReaderThread(stoken); }};
+    }
+}
 
 ConsoleReader::~ConsoleReader() {
     if(this->stdinThread.joinable()) {

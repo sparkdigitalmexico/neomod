@@ -1,0 +1,58 @@
+# pins the wheel consumption matrix across volume contexts. since P3.2 exclusivity is
+# STRUCTURAL: VolumeOverlay is the CBaseUIDispatch fall-through sink (plus a hovered-slider
+# claim), offered only deltas no hit candidate consumed - the old canChangeVolume screen
+# enumeration is gone. wheel over the options scrollview scrolls the page and must NOT
+# touch volume (options consumes, the sink never sees it); alt+wheel over the same spot
+# changes ONLY volume (scrollviews decline on alt, the delta chains to the sink); wheel
+# over the EMPTY songbrowser carousel changes volume (flipped at P3.2: the screen-wide
+# carousel-forward claim declines deltas the empty carousel cannot take, the gesture
+# chains to the sink; a full carousel scrolls instead - pinned by carousel_wheel_forward).
+# NOTE: alt is sent as scancode 226 (LALT): SDL3 resolves the name platform-dependently
+# ("Left Option" on macOS, "Left Alt" elsewhere), numbers are portable.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+sendkey Left Ctrl down
+@wait 3
+sendkey O
+@wait 3
+sendkey Left Ctrl up
+@wait 5
+ui_assert visible optionsoverlay 1
+mouse_to 395 288
+@wait 5
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 0
+mouse_wheel 1
+@wait 5
+ui_assert visible volumeoverlay 0
+sendkey 226 down
+@wait 3
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 1
+sendkey 226 up
+@wait 3
+mouse_to 10 10
+@wait 150
+ui_assert visible volumeoverlay 0
+sendkey Escape
+@wait 5
+ui_assert visible optionsoverlay 0
+osu_folder uitest_osu_folder
+set_active_ui_screen songbrowser
+@wait 300
+ui_assert screen_active songbrowser 1
+mouse_to 900 400
+@wait 5
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 1
+exit

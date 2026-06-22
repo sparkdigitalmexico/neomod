@@ -372,6 +372,8 @@ Osu::Osu()
 
     // (finish) loading ui
     this->userButton = std::make_unique<UserCard>(BanchoState::get_uid());
+    // the songbrowser bottom bar draws this over the full-height carousel, so it must win clicks there
+    this->userButton->setDrawsOnTop(true);
     this->bUILoaded = ui->init();
 }
 
@@ -714,6 +716,7 @@ void Osu::update() {
                 this->map_iface->restart(true);
                 this->map_iface->update();
                 ui->getPauseOverlay()->setVisible(false);
+                ui->getModSelector()->setVisible(false);
             }
         }
     }
@@ -721,10 +724,7 @@ void Osu::update() {
     // background image cache tick
     // NOTE: must be before the asynchronous ui toggles due to potential 1-frame unloads after invisible songbrowser
     {
-        // songbrowser gets hidden when mod selector opens, so the image can be potentially marked stale and unloaded
-        // which can cause a flicker when exiting mod selector
-        // side TODO: make mod selector partially transparent and don't hide song browser?
-        const bool allowCacheEviction = !this->isInPlayMode() && !this->ui_memb->getModSelector()->isVisible();
+        const bool allowCacheEviction = !this->isInPlayMode();
         this->backgroundImageHandler->update(allowCacheEviction);
     }
 
@@ -1098,8 +1098,9 @@ void Osu::onKeyDown(KeyboardEvent &key) {
                 // quit if we try to 'escape' the pause menu when dead (satisfying ragequit mechanic)
                 this->map_iface->stop(true);
             } else {
-                // else just toggle the pause menu
+                // else just toggle the pause menu (closing a mod selector left open mid-play)
                 ui->getPauseOverlay()->setVisible(!ui->getPauseOverlay()->isVisible());
+                if(ui->getPauseOverlay()->isVisible()) ui->getModSelector()->setVisible(false);
             }
         }
 
@@ -1166,11 +1167,9 @@ void Osu::onKeyUp(KeyboardEvent &key) {
     this->fposu->onKeyUp(key);
 }
 
-void Osu::stealFocus() { this->UIReady() ? ui->stealFocus() : (void)0; }
-
 void Osu::onChar(KeyboardEvent &e) { this->UIReady() ? ui->onChar(e) : (void)0; }
 
-void Osu::onButtonChange(ButtonEvent ev) {
+void Osu::onButtonChange(ButtonEvent &ev) {
     using enum MouseButtonFlags;
     if(!(ev.btn & (MF_LEFT | MF_RIGHT))) {
         return;
@@ -1199,7 +1198,7 @@ void Osu::onFingerPressed(Finger finger) {
     if(touch->getFingers().size() == 1) {
         this->mainFingerID = finger.id;
         this->onFingerMoved(finger);
-        mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, true});
+        mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, true, false});
     }
 
     const bool inGameplay = this->isInPlayMode() && !this->map_iface->isPaused();
@@ -1213,7 +1212,7 @@ void Osu::onFingerPressed(Finger finger) {
     if(this->mainFingerID != finger.id && this->map_iface->clickableHitobjectAt(finger.pos)) {
         this->mainFingerID = finger.id;
         this->onFingerMoved(finger);
-        mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, true});
+        mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, true, false});
     }
 
     static constexpr GameplayKeys keys[4]{GameplayKeys::M1, GameplayKeys::M2, GameplayKeys::K1, GameplayKeys::K2};
@@ -1234,7 +1233,7 @@ void Osu::onFingerReleased(Finger finger) {
     if(finger.id == this->mainFingerID) {
         this->mainFingerID = 0;
         if(fingers.empty()) {
-            mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, false});
+            mouse->onButtonChange({finger.last_event_ns, MouseButtonFlags::MF_LEFT, false, false});
         } else {
             this->mainFingerID = fingers[0].id;
         }

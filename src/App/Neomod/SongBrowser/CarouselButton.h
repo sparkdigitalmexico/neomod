@@ -37,13 +37,13 @@ class CarouselButton : public CBaseUIButton {
     void deleteAnimations();
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     virtual void updateLayoutEx();
 
     CarouselButton *setVisible(bool visible) override;
 
-    bool isMouseInside() override;
     inline void onMouseUpInside(bool left = true, bool right = false) override {
         CBaseUIButton::onMouseUpInside(left, right);
         if(right) {

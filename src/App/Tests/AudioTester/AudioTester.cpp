@@ -1066,7 +1066,6 @@ void AudioTester::onResolutionChanged(vec2 newResolution) { debugLog("{}", newRe
 void AudioTester::onDPIChanged() { debugLog(""); }
 bool AudioTester::isInGameplay() const { return false; }
 bool AudioTester::isInUnpausedGameplay() const { return false; }
-void AudioTester::stealFocus() { debugLog(""); }
 bool AudioTester::onShutdown() {
     debugLog("");
     return true;
@@ -1090,7 +1089,7 @@ void AudioTester::onMinimized() { debugLog(""); }
 void AudioTester::onRestored() { debugLog(""); }
 void AudioTester::onKeyUp(KeyboardEvent &e) { (void)e; }
 void AudioTester::onChar(KeyboardEvent &e) { (void)e; }
-void AudioTester::onButtonChange(ButtonEvent event) { (void)event; }
+void AudioTester::onButtonChange(ButtonEvent &event) { (void)event; }
 void AudioTester::onWheelVertical(int delta) { (void)delta; }
 void AudioTester::onWheelHorizontal(int delta) { (void)delta; }
 

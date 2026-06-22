@@ -409,6 +409,16 @@ class Environment {
     vec2 m_vLastAbsPenPos{0.f, 0.f};
 
     vec2 m_vLastAbsMousePos{0.f, 0.f};
+
+    // synthetic cursor position for headless/scripted UI testing (mouse_to command)
+    inline void setInjectedCursorPos(vec2 pos) {
+        m_bInjectedCursorDirty = true;
+        m_vInjectedCursorPos = pos;
+    }
+    vec2 m_vInjectedCursorPos{0.f, 0.f};
+    vec2 m_vLastInjectedCursorPos{0.f, 0.f};
+    bool m_bInjectedCursorDirty{true};  // dirty to initialize mouse cursor pos
+
     bool m_bIsCursorInsideWindow;
     bool m_bCursorClipped;
     bool m_bHideCursorPending;

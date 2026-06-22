@@ -1,0 +1,18 @@
+# the standalone skin-select dropdown (key_open_skin_select_menu) opens the options context menu
+# while the options SCREEN stays hidden. since #3, arrow-volume is the global fallback key sink and
+# the dropdown does NOT consume the arrow (OptionsOverlayImpl::onKeyDown forwards to the context menu
+# and returns, without the all-keys eat-all the open screen has) -> Up reaches the sink and changes
+# volume. previously OptionsOverlay::claimsArrowKeys()=getContextMenu()->isVisible() blocked it.
+options_save_on_back 0
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+key_open_skin_select_menu 14
+mouse_to 10 10
+@wait 30
+sendkey K
+@wait_secs 2
+sendkey Up
+@wait_secs 0.5
+ui_assert visible volumeoverlay 1
+@wait 2
+exit

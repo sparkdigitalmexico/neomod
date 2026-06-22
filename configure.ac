@@ -1357,6 +1357,11 @@ AS_IF([test "x$enable_lto" != "xno"], [
                     ])
                 ])
             ])
+            # fix lto on macOS breaking dsymutil/debug info
+            # TODO: should probably be in /tmp?
+            AX_CHECK_LINK_FLAG([-Wl,-object_path_lto,neomod_lto.o], [
+                NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,-object_path_lto,neomod_lto.o"
+            ])
         ])
     ], [
         # gcc

@@ -6,7 +6,7 @@ class UIIcon : public CBaseUILabel {
    public:
     UIIcon(char32_t icon);
 
-    void update(CBaseUIEventCtx &c) override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void setTooltipText(std::string_view text);
 
     // debugging

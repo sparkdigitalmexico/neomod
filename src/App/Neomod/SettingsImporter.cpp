@@ -340,6 +340,7 @@ bool import_from_osu_stable() {
     f32 flt;
 
     for(auto line = file.readLine(); !line.empty() || file.canRead(); line = file.readLine()) {
+        if(line.empty()) continue;
         if(Parsing::parse(line, "BeatmapDirectory", '=', &str)) {
             if(str.length() > 2) cv::songs_folder.setValue(str);
         } else if(Parsing::parse(line, "VolumeUniversal", '=', &flt))

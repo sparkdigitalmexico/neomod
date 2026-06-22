@@ -66,10 +66,16 @@ inline bool isInt(float f) { return (f == static_cast<float>(static_cast<int>(f)
 // different from "really_forceinline", because the function itself won't necessarily be inlined at all call sites
 #define REALLY_INLINE_BODY __attribute__((flatten))
 
+#define CONSTINIT constinit
+
 #else
 #define likely(x) (x)
 #define unlikely(x) (x)
 #ifdef _MSC_VER
+
+// HACK: ignore "constinit" keyword since it basically doesn't work on MSVC
+#define CONSTINIT
+
 #define really_forceinline __forceinline
 #define neverinline __declspec(noinline)
 #else

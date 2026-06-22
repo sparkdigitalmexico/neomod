@@ -1,0 +1,9 @@
+# phase 3.3 dim pins (1280x720, screenshot taken with the modselector open over the
+# songbrowser, dim fade settled): the browser must still DRAW beneath the overlay, and
+# the 0x88000000 dim must darken it. both points are solid browser fills (>=11px square,
+# probed at patch center): expected = undimmed * 0.467 (alpha 0x88 over black). pre-3.3
+# the replaced browser left them pure #000000; an undimmed browser reads ~2.1x brighter.
+# songbrowser bottombar, purple strip detail left of the user card
+0.1977 0.8917 381935 8
+# user card avatar placeholder box (solid gray)
+0.4875 0.9361 606060 8

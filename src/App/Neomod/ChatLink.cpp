@@ -26,8 +26,8 @@ ChatLink::ChatLink(float xPos, float yPos, float xSize, float ySize, std::string
     this->setBackgroundColor(0xff2e3784);
 }
 
-void ChatLink::update(CBaseUIEventCtx& c) {
-    CBaseUILabel::update(c);
+void ChatLink::updateInput(CBaseUIEventCtx &c) {
+    CBaseUILabel::updateInput(c);
 
     if(this->isMouseInside()) {
         ui->getTooltipOverlay()->begin();

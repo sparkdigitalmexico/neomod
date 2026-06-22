@@ -379,10 +379,8 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
     this->selectionPreviousSongDiffButton = nullptr;
     this->selectionPreviousCollectionButton = nullptr;
 
-    this->bF1Pressed = false;
     this->bF2Pressed = false;
     this->bF3Pressed = false;
-    this->bShiftPressed = false;
     this->bLeft = false;
     this->bRight = false;
 
@@ -417,12 +415,12 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
                                ->setDrawFrame(false)
                                ->setText(_("Group:"))  // setting text later so string metrics get applied...
                                ->setSizeToContent(-1, 0);
-        this->groupLabel->setGrabClicks(true);
+        this->groupLabel->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupLabel);
 
         this->groupButton = new UIButtonRounded(0, 0, 0, 0, "", _("No Grouping"), 5);
         this->groupButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onGroupClicked>(this));
-        this->groupButton->setGrabClicks(true);
+        this->groupButton->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupButton);
 
         this->sortLabel = (new CBaseUILabel(0, 0, 0, 0, "SongBrowser::sortLabel", ""))
@@ -434,43 +432,43 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
                               ->setDrawFrame(false)
                               ->setText(_("Sort:"))
                               ->setSizeToContent(-1, 0);
-        this->sortLabel->setGrabClicks(true);
+        this->sortLabel->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->sortLabel);
 
         this->sortButton = new UIButtonRounded(0, 0, 0, 0, "", _("By Date Added"), 5);
         this->sortButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortClicked>(this));
-        this->sortButton->setGrabClicks(true);
+        this->sortButton->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->sortButton);
 
         // "hardcoded" grouping tabs
         this->groupByCollectionBtn = new UIButtonRounded(0, 0, 0, 0, "", _("Collections"), 5);
         this->groupByCollectionBtn->setHandleRightMouse(true);
         this->groupByCollectionBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByCollectionBtn->setGrabClicks(true);
+        this->groupByCollectionBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByCollectionBtn);
         this->groupByArtistBtn = new UIButtonRounded(0, 0, 0, 0, "", _("By Artist"), 5);
         this->groupByArtistBtn->setHandleRightMouse(true);
         this->groupByArtistBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByArtistBtn->setGrabClicks(true);
+        this->groupByArtistBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByArtistBtn);
         this->groupByDifficultyBtn = new UIButtonRounded(0, 0, 0, 0, "", _("By Difficulty"), 5);
         this->groupByDifficultyBtn->setHandleRightMouse(true);
         this->groupByDifficultyBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByDifficultyBtn->setGrabClicks(true);
+        this->groupByDifficultyBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByDifficultyBtn);
         this->groupByNothingBtn = new UIButtonRounded(0, 0, 0, 0, "", _("No Grouping"), 5);
         this->groupByNothingBtn->setHandleRightMouse(true);
         this->groupByNothingBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
-        this->groupByNothingBtn->setGrabClicks(true);
+        this->groupByNothingBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByNothingBtn);
     }
 
     // context menu
-    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "");
+    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "songbrowser_contextmenu");
     this->contextMenu->setVisible(true);
 
     // build scorebrowser
-    this->scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "");
+    this->scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "songbrowser_scores");
     this->scoreBrowser->setScrollbarOnLeft(true);
     this->scoreBrowser->setDrawBackground(false);
     this->scoreBrowser->setDrawFrame(false);
@@ -497,7 +495,7 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
     this->fBackgroundFadeInTime = 0.0f;
 
     // search
-    this->search = new UISearchOverlay(0, 0, 0, 0, "");
+    this->search = new UISearchOverlay(0, 0, 0, 0, "songbrowser_search");
     this->search->setOffsetRight(10);
     this->fSearchWaitTime = 0.0f;
     this->bInSearch = (!cv::songbrowser_search_hardcoded_filter.getString().empty());
@@ -894,7 +892,16 @@ bool SongBrowser::selectBeatmapset(const BeatmapSet *set) {
     }
 }
 
-void SongBrowser::update(CBaseUIEventCtx &c) {
+void SongBrowser::tick() {
+    ScreenBackable::tick();
+    this->localBestContainer->tick();
+    this->contextMenu->tick();
+    BottomBar::tick();
+    this->topbarRight->tick();
+    this->scoreBrowser->tick();
+    this->topbarLeft->tick();
+    this->carousel->tick();
+
     // flush diffcalc results to database
     // do this even if not visible, but not during gameplay
     if(!osu->isInGameplay()) {
@@ -913,19 +920,6 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
     }
 
     if(!this->bVisible) return;
-
-    this->localBestContainer->update(c);
-    if(this->localBestButton && this->localBestButton->isVisible() && this->localBestButton->isMouseInside()) {
-        // HACKHACK: don't hover score button list buttons under local best!
-        this->scoreBrowser->stealFocus();
-    }
-    ScreenBackable::update(c);
-
-    // NOTE: This is placed before BottomBar::update(), otherwise the context menu would close
-    //       on a bottombar selector click (yeah, a bit hacky)
-    this->contextMenu->update(c);
-
-    BottomBar::update(c);
 
     // handle changed mods resort
     if(this->lastDiffSortModIndex != StarPrecalc::active_idx) {
@@ -971,13 +965,6 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
         this->rebuildScoreButtons();
         this->score_resort_scheduled = false;
     }
-
-    // update and focus handling
-    this->topbarRight->update(c);
-    this->scoreBrowser->update(c);
-    this->topbarLeft->update(c);
-
-    this->carousel->update(c);
 
     // handle async random beatmap selection
     if(this->bRandomBeatmapScheduled) {
@@ -1025,6 +1012,38 @@ void SongBrowser::update(CBaseUIEventCtx &c) {
         ui->getNotificationOverlay()->addToast(std::move(n.msg), n.success ? SUCCESS_TOAST : ERROR_TOAST,
                                                std::move(n.click_cb));
     }
+}
+
+void SongBrowser::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    // registered FIRST = lowest wheel priority in this group: every hovered candidate
+    // (score browser, context menu, the carousel itself) gets first refusal
+    if(c.propagate_clicks) c.addWheelClaim(this);
+
+    this->localBestContainer->updateInput(c);
+    if(this->localBestButton && this->localBestButton->isVisible() && this->localBestButton->isMouseInside()) {
+        // HACKHACK: don't hover score button list buttons under local best!
+        this->scoreBrowser->stealFocus();
+    }
+    ScreenBackable::updateInput(c);
+
+    // NOTE: This is placed before BottomBar::updateInput(), otherwise the context menu would close
+    //       on a bottombar selector click (yeah, a bit hacky)
+    this->contextMenu->updateInput(c);
+
+    BottomBar::updateInput(c);
+
+    // update and focus handling
+    this->topbarRight->updateInput(c);
+    this->scoreBrowser->updateInput(c);
+    this->topbarLeft->updateInput(c);
+
+    this->carousel->updateInput(c);
+}
+
+bool SongBrowser::onWheel(int deltaVertical, int deltaHorizontal) {
+    return this->carousel->onWheel(deltaVertical, deltaHorizontal);
 }
 
 void SongBrowser::onKeyDown(KeyboardEvent &key) {
@@ -1092,11 +1111,10 @@ void SongBrowser::onKeyDown(KeyboardEvent &key) {
         }
     }
 
-    if(key == KEY_LSHIFT || key == KEY_RSHIFT) this->bShiftPressed = true;
-
     // function hotkeys
-    if((key == KEY_F1 || key == binds::TOGGLE_MODSELECT) && !this->bF1Pressed) {
-        this->bF1Pressed = true;
+    // NOTE: no held-flag for F1: the modal modselector floors our key-ups while it is open,
+    // so a flag set on the opening press could never be cleared (isRepeat is ground truth)
+    if((key == KEY_F1 || key == binds::TOGGLE_MODSELECT) && !key.isRepeat()) {
         BottomBar::press_button(BottomBar::MODS);
     }
     if((key == KEY_F2 || key == binds::RANDOM_BEATMAP) && !this->bF2Pressed) {
@@ -1124,11 +1142,9 @@ void SongBrowser::onKeyUp(KeyboardEvent &key) {
     this->contextMenu->onKeyUp(key);
     if(key.isConsumed()) return;
 
-    if(key == KEY_LSHIFT || key == KEY_RSHIFT) this->bShiftPressed = false;
     if(key == KEY_LEFT) this->bLeft = false;
     if(key == KEY_RIGHT) this->bRight = false;
 
-    if(key == KEY_F1 || key == binds::TOGGLE_MODSELECT) this->bF1Pressed = false;
     if(key == KEY_F2 || key == binds::RANDOM_BEATMAP) this->bF2Pressed = false;
     if(key == KEY_F3) this->bF3Pressed = false;
 }
@@ -1141,7 +1157,7 @@ void SongBrowser::onChar(KeyboardEvent &e) {
     if(e.getCharCode() < 32 || !this->bVisible ||
        (keyboard->isSuperDown() || (keyboard->isControlDown() && !keyboard->isAltDown())))
         return;
-    if(this->bF1Pressed || this->bF2Pressed || this->bF3Pressed) return;
+    if(this->bF2Pressed || this->bF3Pressed) return;
 
     // handle searching
     char32_t ch = e.getCharCode();
@@ -1152,6 +1168,18 @@ void SongBrowser::onChar(KeyboardEvent &e) {
 }
 
 void SongBrowser::onResolutionChange(vec2 newResolution) { ScreenBackable::onResolutionChange(newResolution); }
+
+[[nodiscard]] std::span<CBaseUIElement *const> SongBrowser::getAllChildren() const {
+    this->allChildren.assign(this->vElements.begin(), this->vElements.end());
+    for(CBaseUIElement *extra :
+        {static_cast<CBaseUIElement *>(this->topbarLeft), static_cast<CBaseUIElement *>(this->topbarRight),
+         static_cast<CBaseUIElement *>(this->contextMenu), static_cast<CBaseUIElement *>(this->scoreBrowser),
+         static_cast<CBaseUIElement *>(this->carousel.get()),
+         static_cast<CBaseUIElement *>(this->localBestContainer.get()), static_cast<CBaseUIElement *>(this->search)}) {
+        if(extra) this->allChildren.push_back(extra);
+    }
+    return this->allChildren;
+}
 
 CBaseUIContainer *SongBrowser::setVisible(bool visible) {
     if(BanchoState::spectating && visible) return this;  // don't allow song browser to be visible while spectating
@@ -1164,7 +1192,6 @@ CBaseUIContainer *SongBrowser::setVisible(bool visible) {
     }
 
     this->bVisible = visible;
-    this->bShiftPressed = false;  // seems to get stuck sometimes otherwise
 
     if(this->bVisible) {
         soundEngine->play(osu->getSkin()->s_expand);
@@ -1581,13 +1608,16 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> o
 
     auto loading_screen = std::make_unique<BeatmapLoadingOverlay>(this, osu->getBackgroundImageHandler(), next_screen,
                                                                   std::move(on_refreshed));
-    this->loadingOverlay = ui->pushOverlay(std::move(loading_screen));
+    this->loadingOverlay = loading_screen.get();
 
     // start loading
     db->load();
 
     // make sure whatever was visible is hidden until loading finishes
     ui->hide();
+
+    // NOTE: this also tick()s the new overlay once immediately, that's why it's put after everything above
+    ui->pushOverlay(std::move(loading_screen));
 }
 
 namespace {
@@ -2347,7 +2377,7 @@ void SongBrowser::rebuildScoreButtons() {
                     this->localBestButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onScoreClicked>(this));
                     this->localBestButton->setScore(*local_best, map);
                     this->localBestButton->resetHighlight();
-                    this->localBestButton->setGrabClicks(true);
+                    this->localBestButton->setDrawsOnTop(true);
                     this->localBestContainer->addBaseUIElement(this->localBestLabel);
                     this->localBestContainer->addBaseUIElement(this->localBestButton);
                     this->localBestContainer->setVisible(true);
@@ -2368,7 +2398,7 @@ void SongBrowser::rebuildScoreButtons() {
                     this->localBestButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onScoreClicked>(this));
                     this->localBestButton->setScore(*local_best, map);
                     this->localBestButton->resetHighlight();
-                    this->localBestButton->setGrabClicks(true);
+                    this->localBestButton->setDrawsOnTop(true);
                     this->localBestContainer->addBaseUIElement(this->localBestLabel);
                     this->localBestContainer->addBaseUIElement(this->localBestButton);
                     this->localBestContainer->setVisible(true);
@@ -2407,16 +2437,14 @@ void SongBrowser::rebuildScoreButtons() {
         this->scoreBrowser->container.addBaseUIElement(toAdd, this->scoreBrowserScoresStillLoadingElement->getRelPos());
     } else {
         // build
-        CBaseUIEventCtx fakeHack;
-        fakeHack.consume_mouse();
         std::vector<ScoreButton *> scoreButtons;
         for(int i = 0; i < numScores; i++) {
             ScoreButton *button = this->scoreButtonCache[i];
             button->setScore(scores[i], map, i + 1);
             button->setVisible(false);
             // HACKHACK: preload pp immediately (flicker reduction)
-            // ScoreButton::update should not have a side effect of updating the database!
-            button->update(fakeHack);
+            // ScoreButton::tick should not have a side effect of updating the database!
+            button->tick();
             scoreButtons.push_back(button);
         }
 
@@ -3104,13 +3132,15 @@ void SongBrowser::onSelectionMode() {
 }
 
 void SongBrowser::onSelectionMods() {
-    ui->setScreen(ui->getModSelector());
+    // mod selector is an overlay, so the browser stays visible (and active) beneath
+    this->contextMenu->setVisible2(false);
+    ui->getModSelector()->setVisible(true);
     soundEngine->play(osu->getSkin()->s_expand);
 }
 
 void SongBrowser::onSelectionRandom() {
     soundEngine->play(osu->getSkin()->s_click_button);
-    if(this->bShiftPressed)
+    if(keyboard->isShiftDown())
         this->selectPreviousRandomBeatmap();
     else
         this->bRandomBeatmapScheduled = true;

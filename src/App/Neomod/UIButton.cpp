@@ -75,9 +75,9 @@ void UIButton::draw() {
     }
 }
 
-void UIButton::update(CBaseUIEventCtx &c) {
+void UIButton::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible || !this->bVisible2 || !this->bEnabled) return;
-    CBaseUIButton::update(c);
+    CBaseUIButton::updateInput(c);
 
     if(this->isMouseInside() && this->tooltipTextLines.size() > 0 && !this->bFocusStolenDelay) {
         auto *ttoverlay = ui->getTooltipOverlay();

@@ -5,7 +5,6 @@
 #include "MakeDelegateWrapper.h"
 #include "AnimationHandler.h"
 #include "UIVolumeSlider.h"
-#include "UI.h"
 #include "Engine.h"
 #include "Sound.h"
 #include "SoundEngine.h"
@@ -17,7 +16,7 @@
 #include "OptionsOverlay.h"
 #include "ModSelector.h"
 #include "UIContextMenu.h"
-#include "Database.h"
+#include "CBaseUIDispatch.h"
 #include "Environment.h"
 #include "BeatmapInterface.h"
 #include "Skin.h"
@@ -61,6 +60,10 @@ VolumeOverlay::VolumeOverlay() : UIScreen() {
 
     soundEngine->setMasterVolume(cv::volume_master.getFloat());
     this->updateLayout();
+
+    // the dispatch fall-through wheel sink: offered whatever no hit candidate consumed
+    // (unregistered automatically via the element dtor's onElementDestroyed report)
+    CBaseUIDispatch::setWheelSink(this);
 }
 
 VolumeOverlay::~VolumeOverlay() {
@@ -111,12 +114,14 @@ void VolumeOverlay::draw() {
     if(this->fVolumeChangeFade != 1.0f) g->pop3DScene();
 }
 
-void VolumeOverlay::update(CBaseUIEventCtx &c) {
+void VolumeOverlay::tick() {
+    UIScreen::tick();
+
     this->volumeMaster->setEnabled(this->fVolumeChangeTime > engine->getTime());
     this->volumeEffects->setEnabled(this->volumeMaster->isEnabled());
     this->volumeMusic->setEnabled(this->volumeMaster->isEnabled());
     this->volumeSliderOverlayContainer->setSize(osu->getVirtScreenSize());
-    this->volumeSliderOverlayContainer->update(c);
+    this->volumeSliderOverlayContainer->tick();
 
     if(!this->volumeMaster->isBusy()) {
         if(this->volumeMaster->getFloat() != cv::volume_master.getFloat()) {
@@ -183,17 +188,38 @@ void VolumeOverlay::update(CBaseUIEventCtx &c) {
         // check if we're done
         if(this->fVolumeInactiveToActiveAnim == 1.0f) this->bVolumeInactiveToActiveScheduled = false;
     }
+}
 
-    // scroll wheel events (should be separate from update(), but... oh well...)
-    if(this->canChangeVolume()) {
-        if(const int wheelDelta = mouse->getWheelDeltaVertical() / 120; wheelDelta != 0) {
-            if(wheelDelta > 0) {
-                this->volumeUp(wheelDelta);
-            } else {
-                this->volumeDown(-wheelDelta);
-            }
-        }
+void VolumeOverlay::updateInput(CBaseUIEventCtx &c) {
+    // while the user is on the visible sliders (hover/drag), the overlay claims the wheel
+    // outright: continuous adjustment must beat the scroll surfaces beneath (the sliders
+    // themselves decline it, setAllowMouseWheel(false))
+    if(this->isBusy()) c.addWheelClaim(this);
+
+    this->volumeSliderOverlayContainer->updateInput(c);
+}
+
+bool VolumeOverlay::onWheel(int deltaVertical, int /*deltaHorizontal*/) {
+    const int notches = deltaVertical / 120;
+    if(notches == 0) return false;
+
+    // the global gates that survived canChangeVolume's screen enumeration (exclusivity is
+    // structural now: this only runs when no candidate consumed the wheel, or as the
+    // hovered-slider claim): on the sliders or with alt held, always allow; otherwise
+    // respect the play-mode mousewheel disable and ignore out-of-screen wheel. the disable
+    // only applies to ACTIVE gameplay, not while paused (you're not aiming, so let the wheel
+    // adjust volume - the pause menu has no wheel use of its own)
+    if(!this->isBusy() && !keyboard->isAltDown()) {
+        if(osu->isInPlayModeAndNotPaused() && cv::disable_mousewheel.getBool()) return false;
+        if(!osu->getVirtScreenRect().contains(mouse->getPos())) return false;
     }
+
+    if(notches > 0) {
+        this->volumeUp(notches);
+    } else {
+        this->volumeDown(-notches);
+    }
+    return true;
 }
 
 void VolumeOverlay::updateLayout() {
@@ -214,52 +240,59 @@ void VolumeOverlay::updateLayout() {
 
 void VolumeOverlay::onResolutionChange(vec2 /*newResolution*/) { this->updateLayout(); }
 
+// regular screen walk-ordered keydown handler
 void VolumeOverlay::onKeyDown(KeyboardEvent &key) {
     if(key == KEY_MUTE) {
         osu->getMapInterface()->pausePreviewMusic(true);
         key.consume();
-    } else {
-        // avoid conflicting focus with e.g. songbrowser up/down
-        const bool volIncreaseIsUp = binds::INCREASE_VOLUME == KEY_UP;
-        const bool volDecreaseIsDown = binds::DECREASE_VOLUME == KEY_DOWN;
-
-        if(key == KEY_VOLUMEUP ||
-           (key == binds::INCREASE_VOLUME && (!volIncreaseIsUp || this->isVisible() || this->canChangeVolume()))) {
-            this->volumeUp();
-            key.consume();
-        } else if(key == KEY_VOLUMEDOWN || (key == binds::DECREASE_VOLUME &&
-                                            (!volDecreaseIsDown || this->isVisible() || this->canChangeVolume()))) {
-            this->volumeDown();
-            key.consume();
-        }
+        return;
     }
 
-    if(this->isVisible() && this->canChangeVolume()) {
-        if(key == KEY_LEFT) {
-            const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
-            for(int i = 0; i < elements.size(); i++) {
-                if(elements[i]->isSelected()) {
-                    const int nextIndex = (i == elements.size() - 1 ? 0 : i + 1);
-                    elements[i]->setSelected(false);
-                    elements[nextIndex]->setSelected(true);
-                    break;
-                }
+    const bool volIncreaseIsUp = binds::INCREASE_VOLUME == KEY_UP;
+    const bool volDecreaseIsDown = binds::DECREASE_VOLUME == KEY_DOWN;
+    if(key == KEY_VOLUMEUP || (key == binds::INCREASE_VOLUME && (!volIncreaseIsUp || this->isVisible()))) {
+        this->volumeUp();
+        key.consume();
+    } else if(key == KEY_VOLUMEDOWN || (key == binds::DECREASE_VOLUME && (!volDecreaseIsDown || this->isVisible()))) {
+        this->volumeDown();
+        key.consume();
+    }
+}
+
+// the global arrow-volume key sink
+void VolumeOverlay::onArrowVolumeFallback(KeyboardEvent &key) {
+    if(!this->canChangeVolume()) return;
+
+    if(key == binds::INCREASE_VOLUME) {
+        this->volumeUp();
+        key.consume();
+    } else if(key == binds::DECREASE_VOLUME) {
+        this->volumeDown();
+        key.consume();
+    } else if(this->isVisible() && key == KEY_LEFT) {
+        const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
+        for(int i = 0; i < elements.size(); i++) {
+            if(elements[i]->isSelected()) {
+                const int nextIndex = (i == elements.size() - 1 ? 0 : i + 1);
+                elements[i]->setSelected(false);
+                elements[nextIndex]->setSelected(true);
+                break;
             }
-            this->animate();
-            key.consume();
-        } else if(key == KEY_RIGHT) {
-            const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
-            for(int i = 0; i < elements.size(); i++) {
-                if(elements[i]->isSelected()) {
-                    const int prevIndex = (i == 0 ? elements.size() - 1 : i - 1);
-                    elements[i]->setSelected(false);
-                    elements[prevIndex]->setSelected(true);
-                    break;
-                }
-            }
-            this->animate();
-            key.consume();
         }
+        this->animate();
+        key.consume();
+    } else if(this->isVisible() && key == KEY_RIGHT) {
+        const auto &elements = this->volumeSliderOverlayContainer->getElementsAs<UIVolumeSlider>();
+        for(int i = 0; i < elements.size(); i++) {
+            if(elements[i]->isSelected()) {
+                const int prevIndex = (i == 0 ? elements.size() - 1 : i - 1);
+                elements[i]->setSelected(false);
+                elements[prevIndex]->setSelected(true);
+                break;
+            }
+        }
+        this->animate();
+        key.consume();
     }
 }
 
@@ -272,26 +305,18 @@ bool VolumeOverlay::isBusy() {
 
 bool VolumeOverlay::isVisible() { return engine->getTime() < this->fVolumeChangeTime; }
 
-// needless to say, this is not a good way of doing things
+// the play-mode / on-screen gate shared by both volume-input paths (onWheel and the arrow
+// fallback): may the volume gesture act right now? exclusivity vs other consumers is structural
+// (the wheel sink and onArrowVolumeFallback only run when nothing else consumed), so there is no
+// screen enumeration here anymore.
 bool VolumeOverlay::canChangeVolume() {
-    const bool can_scroll =
-        this->isBusy() || keyboard->isAltDown() ||                                                          //
-        (                                                                                                   //
-            !(osu->isInPlayMode() && cv::disable_mousewheel.getBool()) &&                                   //
-            (osu->getVirtScreenRect().contains(mouse->getPos())) &&                                         //
-            !(ui->getPauseOverlayBase()->isVisible()) &&                                                    //
-            !(ui->getSongBrowserBase()->isVisible() && db->isFinished()) &&                                 //
-            !(ui->getOsuDirectScreenBase()->isVisible()) &&                                                 //
-            !(ui->getOptionsOverlayBase()->isVisible() && ui->getOptionsOverlayBase()->isMouseInside()) &&  //
-            !(ui->getOptionsOverlay()->getContextMenu()->isVisible()) &&                                    //
-            !(ui->getAboutScreenBase()->isVisible()) &&                                                     //
-            !(ui->getRankingScreenBase()->isVisible()) &&                                                   //
-            !(ui->getModSelector()->isMouseInScrollView()) &&                                               //
-            !(ui->getChatBase()->isMouseInside()) &&                                                        //
-            !(ui->getUserStatsScreenBase()->isVisible())                                                    //
-        );
+    if(this->isBusy() || keyboard->isAltDown()) return true;
 
-    return can_scroll;
+    // no volume gesture during active play, only while paused (you're not aiming then), mirroring onWheel
+    if(osu->isInPlayModeAndNotPaused() && cv::disable_mousewheel.getBool()) return false;
+    if(!osu->getVirtScreenRect().contains(mouse->getPos())) return false;
+
+    return true;
 }
 
 void VolumeOverlay::gainFocus() {

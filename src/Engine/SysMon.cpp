@@ -755,7 +755,7 @@ struct CpuUsageSamplerPortable final {
     }
 };
 
-static constinit CpuUsageSamplerPortable cpuSampler{};
+static CONSTINIT CpuUsageSamplerPortable cpuSampler{};
 
 }  // namespace
 

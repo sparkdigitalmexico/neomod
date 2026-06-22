@@ -39,8 +39,6 @@ class AudioTester : public App, public MouseListener {
     [[nodiscard]] bool isInGameplay() const override;
     [[nodiscard]] bool isInUnpausedGameplay() const override;
 
-    void stealFocus() override;
-
     bool onShutdown() override;
 
     [[nodiscard]] Sound *getSound(ActionSound action) const override;
@@ -54,7 +52,7 @@ class AudioTester : public App, public MouseListener {
     void onChar(KeyboardEvent &e) override;
 
     // mouse
-    void onButtonChange(ButtonEvent event) override;
+    void onButtonChange(ButtonEvent &event) override;
     void onWheelVertical(int delta) override;
     void onWheelHorizontal(int delta) override;
 

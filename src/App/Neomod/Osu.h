@@ -92,9 +92,8 @@ class Osu final : public App, public MouseListener, public TouchListener {
     void onKeyDown(KeyboardEvent &e) override;
     void onKeyUp(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;
-    void stealFocus() override;
 
-    void onButtonChange(ButtonEvent ev) override;
+    void onButtonChange(ButtonEvent &ev) override;
 
     void onFingerPressed(Finger finger) override;
     void onFingerReleased(Finger finger) override;

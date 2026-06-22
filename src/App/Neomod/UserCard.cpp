@@ -206,7 +206,8 @@ void UserCard::draw() {
     }
 }
 
-void UserCard::update(CBaseUIEventCtx &c) {
+void UserCard::tick() {
+    CBaseUIButton::tick();
     if(!this->bVisible) return;
 
     if(BANCHO::User::is_online_id(this->user_id)) {
@@ -221,8 +222,6 @@ void UserCard::update(CBaseUIEventCtx &c) {
     // calling this on each update loop allows us to just set db->bDidScoresChangeForStats = true
     // to recalculate local user stats
     this->updateUserStats();
-
-    CBaseUIButton::update(c);
 }
 
 void UserCard::updateUserStats() {

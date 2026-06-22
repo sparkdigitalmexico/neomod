@@ -1,0 +1,32 @@
+# type-to-search (songbrowser): with NO textbox focused, chars route through the routeKey
+# char walk to SongBrowser::onChar, which appends to sSearchString (SongBrowser.cpp:1167 -
+# a screen-level search, NOT a textbox; onChar does not consume). pinned so P4's onChar
+# focused-first-then-walk keeps the walk-fallback alive (locked open (a): type-to-search
+# stays screen-level). headless observation is the Escape discrimination (no assertable
+# search-string predicate exists): a NON-EMPTY search Escape clears the string + consumes +
+# STAYS on songbrowser (SongBrowser.cpp:1091-1096); a SECOND Escape on the now-empty search
+# runs onBack and leaves to mainmenu (SongBrowser.cpp:1100-1102). so typing must have built
+# a non-empty string for the first Escape to be absorbed.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+osu_folder uitest_osu_folder
+set_active_ui_screen songbrowser
+@wait 300
+ui_assert screen_active songbrowser 1
+sendtext abc
+@wait 3
+sendkey Escape
+@wait 3
+ui_assert screen_active songbrowser 1
+sendkey Escape
+@wait 5
+ui_assert screen_active songbrowser 0
+ui_assert screen_active mainmenu 1
+exit

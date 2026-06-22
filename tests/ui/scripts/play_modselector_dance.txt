@@ -1,0 +1,42 @@
+# closes the owed P3 play-mode smokes (modselector dance + draw restructure), now automatable
+# via Enter-to-play on a PLAYABLE fixture (uitest_osu_folder_play has real silent audio so the
+# map starts; mod_nofail keeps it alive with no input). pins the phase-3.3 play-mode dance:
+#  - F1 toggles the ModSelector open during gameplay (Osu.cpp:1035)
+#  - Escape with the modselector open CLOSES it and does NOT open pause: ui->onKeyDown runs
+#    before Osu's pause handler (Osu.cpp:1079 vs 1082), so the visible modselector consumes
+#    the Escape first (the "pause open => modselector closed" invariant)
+#  - a second Escape (modselector now closed) opens the pause menu
+# the take_screenshot is for the play-mode/FPoSu draw-restructure eyeball (gameplay composite
+# + HUD draw under the P3.1 drawLayerRange segmentation).
+# NO ui_trace: beatmap audio decodes async on wall-clock, so play-start frame timing is not
+# sim-deterministic -> this pin is assertion-only (the empty trace golden stays stable).
+# in-play is asserted via "songbrowser hidden" (it stays active_screen but goes invisible
+# under the bespoke gameplay composite). quick-retry/fail dance + wheel-during-pause deferred
+# to manual (see decision log).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mod_nofail 1
+mouse_to 10 10
+@wait 30
+osu_folder uitest_osu_folder_play
+set_active_ui_screen songbrowser
+@wait 300
+sendkey Return
+@wait_secs 5
+ui_assert visible songbrowser 0
+take_screenshot screenshots/uitest_play_modselector_dance.png
+@wait 3
+sendkey F1
+@wait 12
+ui_assert visible modselector 1
+sendkey Escape
+@sleep 2000
+@wait 12
+ui_assert visible modselector 0
+ui_assert visible pauseoverlay 0
+sendkey Escape
+@wait 12
+ui_assert visible pauseoverlay 1
+exit

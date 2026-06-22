@@ -1,0 +1,42 @@
+# pins PromptOverlay modality (the sole consume_mouse() user): with the prompt open, a
+# click far away must land only on the prompt overlay (trace shows nothing beneath it),
+# typed text goes only to the prompt input, OK closes it. uses the ui_prompt debug cmd
+# because every real prompt() call site is an online flow (chat join, room/lobby password).
+# note: the click into the input mirrors the real user flow; since the direct-handleEvent
+# change sendtext is no longer gated on an SDL text session (chars reach the active box).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+ui_prompt test_message
+@wait 3
+ui_assert visible promptoverlay 1
+mouse_to 100 600
+@wait 2
+mouse_down
+@wait 3
+mouse_up
+@wait 3
+ui_assert visible promptoverlay 1
+mouse_to 640 380
+@wait 2
+mouse_down
+@wait 3
+mouse_up
+@wait 3
+sendtext hello
+@wait 3
+ui_assert text prompt_input hello
+mouse_to 575 427
+@wait 2
+mouse_down
+@wait 3
+mouse_up
+@wait 3
+ui_assert visible promptoverlay 0
+exit

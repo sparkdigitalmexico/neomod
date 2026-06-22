@@ -32,8 +32,8 @@ std::vector<f32> s_UNIT_CIRCLE;
 VertexArrayObject *s_UNIT_CIRCLE_VAO_BAKED{nullptr};
 
 // unbaked, basic VAO containers
-static constinit VertexArrayObject s_UNIT_CIRCLE_VAO{DrawPrimitive::TRIANGLE_FAN};
-static constinit VertexArrayObject s_UNIT_CIRCLE_VAO_TRIANGLES{DrawPrimitive::TRIANGLES};
+static CONSTINIT VertexArrayObject s_UNIT_CIRCLE_VAO{DrawPrimitive::TRIANGLE_FAN};
+static CONSTINIT VertexArrayObject s_UNIT_CIRCLE_VAO_TRIANGLES{DrawPrimitive::TRIANGLES};
 
 // tiny rendering optimization for RenderTarget
 f32 s_fBoundingBoxMinX{(std::numeric_limits<f32>::max)()};
@@ -56,7 +56,7 @@ struct UniformCache {
     bool needsConfigUpdate{true};  // for convar-based uniforms
 };
 
-static constinit UniformCache s_uniformCache{};
+static CONSTINIT UniformCache s_uniformCache{};
 
 // helper function to update color uniforms (after ->enable-ing the shader)
 void updateColorUniforms(Color borderColor, Color bodyColor);
@@ -567,7 +567,7 @@ void updateConfigUniforms() {
     s_uniformCache.needsConfigUpdate = false;
 }
 
-static constinit VertexArrayObject quadDebugVAO{DrawPrimitive::QUADS};
+static CONSTINIT VertexArrayObject quadDebugVAO{DrawPrimitive::QUADS};
 
 void drawDebugLegacy(std::span<const vec2> points, f32 hitcircleDiameter, Color undimmedColor, f32 colorRGBMultiplier,
                      f32 alpha, uSz drawFromIndex, uSz drawUpToIndex) {

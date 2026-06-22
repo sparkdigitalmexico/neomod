@@ -15,7 +15,8 @@ class CBaseUIContainer : public CBaseUIElement {
 
     void draw_debug();
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyUp(KeyboardEvent &e) override;
     void onKeyDown(KeyboardEvent &e) override;
@@ -61,6 +62,10 @@ class CBaseUIContainer : public CBaseUIElement {
         requires(std::derived_from<T, CBaseUIElement>)
     {
         return reinterpret_cast<const std::vector<T *> &>(this->vElements);
+    }
+
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override {
+        return {this->vElements.begin(), this->vElements.end()};
     }
 
    protected:

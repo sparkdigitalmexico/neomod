@@ -13,6 +13,7 @@
 #include "VertexArrayObject.h"
 
 #include "CBaseUIButton.h"
+#include "CBaseUIDispatch.h"
 
 namespace Mc::Tests {
 class FrameworkTestButton : public CBaseUIButton {
@@ -140,8 +141,10 @@ void BaseFrameworkTest::draw() {
 }
 
 void BaseFrameworkTest::update() {
+    m_testButton->tick();
     CBaseUIEventCtx c;
-    m_testButton->update(c);
+    m_testButton->updateInput(c);
+    CBaseUIDispatch::dispatchEvents(c, CBaseUIDispatch::Root::APP);
 }
 
 void BaseFrameworkTest::onResolutionChanged(vec2 newResolution) { debugLog("{}", newResolution); }
@@ -156,8 +159,6 @@ bool BaseFrameworkTest::isInUnpausedGameplay() const {
     // debugLog("");
     return false;
 }
-
-void BaseFrameworkTest::stealFocus() { debugLog(""); }
 
 bool BaseFrameworkTest::onShutdown() {
     debugLog("");
@@ -196,7 +197,7 @@ void BaseFrameworkTest::onChar(KeyboardEvent &e) {
     debugLog("charCode: {}", UniString::to_utf8(std::u32string_view{charray}));
 }
 
-void BaseFrameworkTest::onButtonChange(ButtonEvent event) {
+void BaseFrameworkTest::onButtonChange(ButtonEvent &event) {
     debugLog("button: {} down: {} timestamp: {}", static_cast<size_t>(event.btn), event.down, event.timestamp);
 }
 void BaseFrameworkTest::onWheelVertical(int delta) { debugLog("{}", delta); }

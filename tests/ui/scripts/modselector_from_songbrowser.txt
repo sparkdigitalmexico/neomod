@@ -1,0 +1,55 @@
+# pins ModSelector unified as an overlay (phase 3.3): F1 routes through
+# SongBrowser::onSelectionMods -> modSelector->setVisible(true); the browser stays
+# VISIBLE and ACTIVE beneath the 0x88 dim (pixel probes), and the modal floor keeps
+# input below the modselector:
+#  - the injected 'x' char must NOT reach the browser search: the FINAL Escape (empty
+#    search) lands in SongBrowser::onBack -> mainmenu; a leaked char would clear-search
+#    instead and the script would end still on the browser
+#  - arrow volume binds keep working over the open modselector (floor-aware
+#    UI::arrowKeysClaimed: the browser's claim doesn't count from below the floor)
+#  - F1 still opens the modselector after a full open/close roundtrip (key-ups are
+#    floored while it is open, so no held-key flag may go stale; was bF1Pressed)
+# pre-3.3 this script pinned the dual identity (setScreen replace: browser hidden +
+# modselector active).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+osu_folder uitest_osu_folder
+set_active_ui_screen songbrowser
+@wait 300
+ui_assert screen_active songbrowser 1
+sendkey F1
+@wait 15
+ui_assert visible modselector 1
+ui_assert visible songbrowser 1
+ui_assert screen_active songbrowser 1
+take_screenshot screenshots/uitest_modselector_from_songbrowser.png
+@wait 2
+sendtext x
+@wait 2
+mouse_to 640 360
+@wait 15
+sendkey Down
+@wait 3
+ui_assert visible volumeoverlay 1
+sendkey Escape
+@wait 5
+ui_assert visible modselector 0
+ui_assert visible songbrowser 1
+ui_assert screen_active songbrowser 1
+sendkey F1
+@wait 5
+ui_assert visible modselector 1
+sendkey Escape
+@wait 5
+ui_assert visible modselector 0
+sendkey Escape
+@wait 5
+ui_assert screen_active mainmenu 1
+exit

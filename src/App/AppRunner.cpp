@@ -155,7 +155,7 @@ void AppRunner::onChar(KeyboardEvent &e) {
     }
 }
 
-void AppRunner::onButtonChange(ButtonEvent event) {
+void AppRunner::onButtonChange(ButtonEvent &event) {
     // this inconsistency should be fixed, App should just inherit from both MouseListener and KeyboardListener so
     // we're not implicitly expecting the active app to register itself (and let the engine register the apprunner instead)
     // (addMouse/KeyboardListener should be only accessible through Engine TBH...)
@@ -206,10 +206,6 @@ void AppRunner::onMinimized() {
 
 void AppRunner::onRestored() {
     if(m_activeApp) m_activeApp->onRestored();
-}
-
-void AppRunner::stealFocus() {
-    if(m_activeApp) m_activeApp->stealFocus();
 }
 
 bool AppRunner::onShutdown() {

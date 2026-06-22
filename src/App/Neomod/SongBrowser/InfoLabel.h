@@ -10,7 +10,7 @@ class InfoLabel final : public CBaseUIButton {
     InfoLabel(f32 xPos, f32 yPos, f32 xSize, f32 ySize, std::string name);
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onResized() override;
 

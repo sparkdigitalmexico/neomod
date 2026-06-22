@@ -220,7 +220,7 @@ struct SlotPool final {
 };
 
 template <AnimatableType T>
-inline constinit SlotPool<T> pool{};
+inline CONSTINIT SlotPool<T> pool{};
 
 }  // namespace
 

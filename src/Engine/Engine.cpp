@@ -12,6 +12,7 @@
 #include "AsyncPool.h"
 #include "AnimationHandler.h"
 #include "CBaseUIContainer.h"
+#include "CBaseUIDispatch.h"
 #include "ConVar.h"
 #include "Graphics.h"
 #include "ConsoleBox.h"
@@ -159,8 +160,19 @@ Engine::~Engine() {
         // don't allow CBaseUI to delete it, it might still be in use (being flushed) by Logger
         this->guiContainer->removeBaseUIElement(cbox.get());
     }
-    Engine::consoleBox.store(nullptr, std::memory_order_release);
+
+    // sanity, wait until logger has stopped logging messages to console box before continuing to delete uiDispatch
+    // (this is spaghetti but should prevent the need to null-check uiDispatcher)
+    {
+        auto cbox = Engine::consoleBox.load(std::memory_order_acquire);
+        Engine::consoleBox.store(nullptr, std::memory_order_release);
+        while(cbox.use_count() > 1) Timing::sleep(0);
+    }
     SAFE_DELETE(this->guiContainer);
+
+    if(mouse) mouse->removeListener(this->uiMouseSink.get());
+    this->uiMouseSink.reset();
+    CBaseUIDispatch::clear();
 
     DiscRPC::destroy();
 
@@ -249,6 +261,11 @@ void Engine::loadApp() {
         // (engine hardcoded hotkeys come first, then engine gui)
         keyboard->addListener(this->guiContainer, true);
         keyboard->addListener(this, true);
+
+        // the UI layer receives mouse button events through the same relay as everyone else;
+        // CBaseUIDispatch routes them after each root's updateInput pass
+        this->uiMouseSink = std::make_unique<CBaseUIDispatch::MouseSink>();
+        mouse->addListener(this->uiMouseSink.get());
     }
 
     debugLog("Engine: Loading app ...");
@@ -336,10 +353,18 @@ void Engine::onUpdate() {
         VPROF_BUDGET("Timer::update", VPROF_BUDGETGROUP_UPDATE);
 
         // frame time
-        const f64 now = Timing::getTimeReal();
-        const f64 frameTime = this->dFrameTime = std::max<f64>(now - this->dTime, 0.00005);
-        // total engine runtime
-        this->dTime = now;
+        f64 frameTime;
+        if(const f64 fixedDt = cv::debug_fixed_frametime.getDouble(); fixedDt > 0.0) {
+            // deterministic stepping for headless testing: simulation time advances by a fixed
+            // step per frame, decoupled from wall clock (so anims and @wait_secs are reproducible)
+            frameTime = this->dFrameTime = fixedDt;
+            this->dTime += fixedDt;
+        } else {
+            const f64 now = Timing::getTimeReal();
+            frameTime = this->dFrameTime = std::max<f64>(now - this->dTime, 0.00005);
+            // total engine runtime
+            this->dTime = now;
+        }
         if(this->bEngineThrottle) {
             const f64 refreshTime = env->getDisplayRefreshTime();
             // it's more like a crude estimate but it gets the job done for use as a throttle
@@ -415,8 +440,13 @@ void Engine::onUpdate() {
 
         {
             VPROF_BUDGET("GUI::update", VPROF_BUDGETGROUP_UPDATE);
-            CBaseUIEventCtx c;
-            if(this->guiContainer) this->guiContainer->update(c);
+            if(this->guiContainer) {
+                this->guiContainer->tick();
+                CBaseUIEventCtx c;
+                this->guiContainer->updateInput(c);
+                // engine root dispatches (and consumes) before the app root: it draws on top
+                CBaseUIDispatch::dispatchEvents(c, CBaseUIDispatch::Root::ENGINE);
+            }
         }
     }
 
@@ -519,14 +549,6 @@ void Engine::onShutdown() {
     this->bShuttingDown = true;
     if(soundEngine) soundEngine->shutdown();
     env->shutdown();
-}
-
-void Engine::stealUIFocus() {
-    logIfCV(debug_engine, "(Engine) called");
-
-    // HACKHACK for textboxes
-    this->guiContainer->stealFocus();
-    app->stealFocus();
 }
 
 // hardcoded engine hotkeys

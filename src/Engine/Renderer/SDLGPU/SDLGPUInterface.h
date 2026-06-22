@@ -418,6 +418,9 @@ class SDLGPUInterface final : public ModernGraphicsShared {
     int m_statsNumDrawCalls{0};
     int m_statsNumUniformUploads{0};
     int m_statsNumVertexUploads{0};
+
+    // headless mode cache
+    bool m_isHeadless{false};
 };
 
 #endif

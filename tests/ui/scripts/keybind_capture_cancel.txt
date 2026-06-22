@@ -1,0 +1,49 @@
+# the cancel half of keybind capture (the apply half is keybind_capture): clicking a
+# KeyBindButton arms capture, then Escape CANCELS it instead of binding - the convar is
+# unchanged, the notification is dismissed, and options stays OPEN (the Escape is consumed
+# by the capture, it does not bubble to ScreenBackable's close). post-4.3 the Escape is
+# consumed_by=OptionsOverlay (its own onKeyDown owns capture); pre-4.3 it was
+# consumed_by=NotificationOverlay via the deleted addKeyListener side channel.
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+mouse_to 640 360
+@wait 2
+mouse_down
+@wait 3
+mouse_up
+@wait 40
+mouse_to 867 401
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 30
+mouse_to 40 365
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 20
+ui_assert convar key_left_click 29
+mouse_to 346 330
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 10
+sendkey Escape
+@wait 5
+ui_assert convar key_left_click 29
+ui_assert visible optionsoverlay 1
+ui_assert visible notificationoverlay 0
+sendkey Escape
+@wait 5
+ui_assert visible optionsoverlay 0
+exit

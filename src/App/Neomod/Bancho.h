@@ -98,6 +98,14 @@ struct BanchoState final {
     static void reconnect();
     static void reconnect_websocket();
 
+    // headless/offline testing: fake a logged-in session with NO server and NO network I/O,
+    // so the online-gated UI (chat, multiplayer rooms) is reachable from the test harness.
+    // while set, update_networking()/send_packet() are inert. set via set_fake_online().
+    static bool fake_online;
+    static void set_fake_online(bool enable);
+    // enter a synthetic multiplayer room (auto-enables fake_online); shows RoomScreen + #multiplayer chat.
+    static void fake_join_room();
+
    private:
     // internal helpers
     static void update_channel(const std::string &name, const std::string &topic, i32 nb_members, bool join);

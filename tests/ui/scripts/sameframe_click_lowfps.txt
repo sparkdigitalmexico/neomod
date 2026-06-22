@@ -1,0 +1,20 @@
+# phase 2 proof, low-FPS variant: at 10 FPS sim time (dt=0.1) a same-frame press+release
+# still produces a full click (the original Mouse.h "jank at low FPS" complaint).
+options_save_on_back 0
+debug_fixed_frametime 0.1
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+mouse_to 640 360
+@wait 2
+mouse_down
+mouse_up
+@wait 30
+mouse_to 867 401
+@wait 3
+ui_assert hovered mainmenu_options 1
+exit

@@ -12004,6 +12004,52 @@ fi
 
 
 fi
+            # fix lto on macOS breaking dsymutil/debug info
+            # TODO: should probably be in /tmp?
+            { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether the linker accepts -Wl,-object_path_lto,neomod_lto.o" >&5
+printf %s "checking whether the linker accepts -Wl,-object_path_lto,neomod_lto.o... " >&6; }
+if test ${ax_cv_check_ldflags___Wl__object_path_lto_neomod_lto_o+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e)
+  ax_check_save_flags=$LDFLAGS
+  LDFLAGS="$LDFLAGS  -Wl,-object_path_lto,neomod_lto.o"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"
+then :
+  ax_cv_check_ldflags___Wl__object_path_lto_neomod_lto_o=yes
+else case e in #(
+  e) ax_cv_check_ldflags___Wl__object_path_lto_neomod_lto_o=no ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+  LDFLAGS=$ax_check_save_flags ;;
+esac
+fi
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_ldflags___Wl__object_path_lto_neomod_lto_o" >&5
+printf '%s\n' "$ax_cv_check_ldflags___Wl__object_path_lto_neomod_lto_o" >&6; }
+if test "x$ax_cv_check_ldflags___Wl__object_path_lto_neomod_lto_o" = xyes
+then :
+
+                NEOMOD_LDFLAGS="$NEOMOD_LDFLAGS -Wl,-object_path_lto,neomod_lto.o"
+
+else case e in #(
+  e) : ;;
+esac
+fi
+
 
 else case e in #(
   e) : ;;

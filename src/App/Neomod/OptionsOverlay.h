@@ -8,21 +8,20 @@
 class UIContextMenu;
 struct OptionsOverlayImpl;
 
-class OptionsOverlay final : public ScreenBackable, public NotificationOverlayKeyListener {
+class OptionsOverlay final : public ScreenBackable {
     NOCOPY_NOMOVE(OptionsOverlay)
    public:
     OptionsOverlay();
     ~OptionsOverlay() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyDown(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;
 
     void onResolutionChange(vec2 newResolution) override;
-
-    void onKey(KeyboardEvent &e) override;
 
     CBaseUIContainer *setVisible(bool visible) override;
 

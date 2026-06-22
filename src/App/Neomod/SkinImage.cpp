@@ -229,7 +229,7 @@ void SkinImage::destroy(bool everything) {
 namespace {
 
 // buffer
-static constinit VertexArrayObject quadVAO{DrawPrimitive::QUADS};
+static CONSTINIT VertexArrayObject quadVAO{DrawPrimitive::QUADS};
 
 void draw_bright_quad(Graphics* g, VertexArrayObject* vao, float brightness) {
     // it is assumed that the vao is already set up as a quad with the right texcoords/vertices

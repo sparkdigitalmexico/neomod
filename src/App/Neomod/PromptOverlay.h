@@ -14,12 +14,11 @@ class PromptOverlay final : public UIScreen {
     void onResolutionChange(vec2 newResolution) override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
     void onKeyDown(KeyboardEvent &e) override;
     void onKeyUp(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;
 
-    using PromptResponseCallback = SA::delegate<void(std::string_view )>;
+    using PromptResponseCallback = SA::delegate<void(std::string_view)>;
     void prompt(std::string msg, const PromptResponseCallback &callback);
 
    private:

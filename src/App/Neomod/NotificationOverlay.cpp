@@ -85,7 +85,7 @@ static f32 TOAST_SCREEN_RIGHT_MARGIN{DEF_TOAST_SCREEN_RIGHT_MARGIN};
 
 ToastElement::ToastElement(std::string text, Color borderColor, ToastElement::TYPE type)
     : CBaseUIButton(0.f, 0.f, 0.f, 0.f, "", std::move(text)), type(type) {
-    this->setGrabClicks(true);
+    this->setDrawsOnTop(true);
 
     // TODO: animations
 
@@ -138,11 +138,10 @@ void ToastElement::draw() {
     }
 }
 
-void NotificationOverlay::update(CBaseUIEventCtx &c) {
+void NotificationOverlay::tick() {
     Sync::scoped_lock lk(*this->notifMtx);
     this->updateVisibility();
-    if(!this->isVisible() && this->toasts.empty()) return;
-    UIScreen::update(c);
+    UIScreen::tick();
     if(this->toasts.empty()) return;
 
     const bool chat_toasts_visible = should_chat_toasts_be_visible();
@@ -156,7 +155,7 @@ void NotificationOverlay::update(CBaseUIEventCtx &c) {
 
         bottom_y -= TOAST_OUTER_Y_MARGIN + t->getSize().y;
         t->setPos(screen.x - (TOAST_SCREEN_RIGHT_MARGIN + TOAST_WIDTH), bottom_y);
-        t->update(c);
+        t->tick();
         a_toast_is_hovered |= t->isMouseInside();
     }
 
@@ -179,6 +178,20 @@ void NotificationOverlay::update(CBaseUIEventCtx &c) {
             // prevent some toasts from timing out depending on the above conditions
             t->freezeTimeout();
         }
+    }
+}
+
+void NotificationOverlay::updateInput(CBaseUIEventCtx &c) {
+    Sync::scoped_lock lk(*this->notifMtx);
+    if(!this->isVisible() && this->toasts.empty()) return;
+    UIScreen::updateInput(c);
+    if(this->toasts.empty()) return;
+
+    const bool chat_toasts_visible = should_chat_toasts_be_visible();
+    for(auto rtit = this->toasts.rbegin(); rtit != this->toasts.rend(); ++rtit) {
+        const auto &t = *rtit;
+        if(t->type == ToastElement::TYPE::CHAT && !chat_toasts_visible) continue;
+        t->updateInput(c);
     }
 }
 
@@ -250,42 +263,6 @@ void NotificationOverlay::drawNotificationBackground(const NotificationOverlay::
     g->setColor(argb((f32)n.alpha * 0.75f, 0.f, 0.f, 0.f));
 
     g->fillRect(0, osu->getVirtScreenHeight() / 2 - height / 2, osu->getVirtScreenWidth(), height);
-}
-
-void NotificationOverlay::onKeyDown(KeyboardEvent &e) {
-    if(!this->isVisible()) return;
-
-    // escape always stops waiting for a key
-    if(e.getScanCode() == KEY_ESCAPE) {
-        if(this->bWaitForKey) e.consume();
-
-        this->stopWaitingForKey();
-    }
-
-    // key binding logic
-    if(this->bWaitForKey) {
-        // HACKHACK: prevent left mouse click bindings if relevant
-        if(Env::cfg(OS::WINDOWS) && this->bWaitForKeyDisallowsLeftClick &&
-           e.getScanCode() == 0x01)  // 0x01 == VK_LBUTTON
-            this->stopWaitingForKey();
-        else {
-            this->stopWaitingForKey(true);
-
-            debugLog("keyCode = {:d}", e.getScanCode());
-
-            if(this->keyListener != nullptr) this->keyListener->onKey(e);
-        }
-
-        e.consume();
-    }
-
-    if(this->bWaitForKey) e.consume();
-}
-
-void NotificationOverlay::onKeyUp(KeyboardEvent &e) {
-    if(!this->isVisible()) return;
-
-    if(this->bWaitForKey) e.consume();
 }
 
 void NotificationOverlay::onChar(KeyboardEvent &e) {
@@ -372,7 +349,6 @@ void NotificationOverlay::addToast(ToastOpts opts) {
 
 void NotificationOverlay::stopWaitingForKey(bool stillConsumeNextChar) {
     this->bWaitForKey = false;
-    this->bWaitForKeyDisallowsLeftClick = false;
     this->bConsumeNextChar = stillConsumeNextChar;
 }
 

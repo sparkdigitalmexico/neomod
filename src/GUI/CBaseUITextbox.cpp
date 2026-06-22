@@ -17,6 +17,7 @@
 #include "Mouse.h"
 #include "ResourceManager.h"
 #include "SoundEngine.h"
+#include "CBaseUIDispatch.h"
 #include "Font.h"
 #include "Graphics.h"
 #include "SString.h"
@@ -28,10 +29,6 @@
 
 CBaseUITextbox::CBaseUITextbox(float xPos, float yPos, float xSize, float ySize, std::string name)
     : CBaseUIElement(xPos, yPos, xSize, ySize, std::move(name)) {
-    this->setKeepActive(true);
-
-    this->setGrabClicks(true);
-
     this->font = engine->getDefaultFont();
 
     this->textColor = this->frameColor = this->caretColor = 0xffffffff;
@@ -50,10 +47,6 @@ CBaseUITextbox::CBaseUITextbox(float xPos, float yPos, float xSize, float ySize,
     this->iCaretWidth = 2;
 
     this->bHitenter = false;
-    this->bContextMouse = false;
-    this->bBlockMouse = false;
-    this->bCatchMouse = false;
-    this->bSelectCheck = false;
     this->iSelectStart = 0;
     this->iSelectEnd = 0;
 
@@ -116,7 +109,7 @@ void CBaseUITextbox::draw() {
         this->drawText();
 
         // draw caret
-        if(this->bActive) {
+        if(this->isFocused()) {
             const int caretWidth = std::round((float)this->iCaretWidth * dpiScale);
             const int height = std::round(this->getSize().y - 2 * 3 * dpiScale);
             const float yadd = std::round(height / 2.0f);
@@ -140,32 +133,13 @@ void CBaseUITextbox::drawText() {
     g->popTransform();
 }
 
-void CBaseUITextbox::update(CBaseUIEventCtx &c) {
+void CBaseUITextbox::tick() {
+    CBaseUIElement::tick();
     if(!this->bVisible) return;
-    bool was_active = this->bActive;
-    CBaseUIElement::update(c);
-
-    // Steal focus from all other Textboxes
-    if(!was_active && this->bActive) {
-        engine->stealUIFocus();
-        this->bActive = true;
-    }
-
-    const vec2 mousepos = mouse->getPos();
-    const bool mleft = mouse->isLeftDown();
-    const bool mright = mouse->isRightDown();
-
-    // HACKHACK: should do this with the proper events! this will only work properly though if we can event.consume()
-    // charDown's
-    if(!this->bEnabled && this->bActive && mleft && !this->isMouseInside()) this->bActive = false;
-
-    if(this->bEnabled && (this->bActive || (!mleft && !mright)) &&
-       ((this->bBusy && (mleft || mright)) || this->isMouseInside()))
-        env->setCursor(CURSORTYPE::CURSOR_TEXT);
 
     // update caret blinking
     {
-        if(!this->bActive) {
+        if(!this->isFocused()) {
             this->tickCaret();
         } else {
             const double elapsed = engine->getTime() - this->fCaretBlinkStartTime;
@@ -174,105 +148,99 @@ void CBaseUITextbox::update(CBaseUIEventCtx &c) {
             this->caretColor.setA(newAbsAlpha);
         }
     }
-
-    // handle mouse input
-    {
-        if(mleft && !this->bActive && !this->isMouseInside()) this->bBlockMouse = true;
-
-        if((mleft || mright) && this->bActive && this->isMouseInside()) {
-            this->bCatchMouse = true;
-            this->tickCaret();
-
-            if(mright) this->bContextMouse = true;
-        }
-
-        if(!mleft) {
-            this->bCatchMouse = false;
-            this->bBlockMouse = false;
-            this->bSelectCheck = false;
-        }
-    }
-
-    // handle selecting and scrolling
-    if(this->bBusy && this->bActive && (mleft || mright) && !this->bBlockMouse && this->text.length() > 0) {
-        this->tickCaret();
-
-        const int mouseX = mousepos.x - this->getPos().x;
-        auto visible_text = this->getVisibleText();
-
-        // find the codepoint boundary closest to the mouse position
-        auto hitTestCaret = [&](std::string_view vt, int mx) -> int {
-            int result = 0;
-            uSz prev = 0;
-            for(uSz i = 0;;) {
-                const float prevGlyphWidth = (prev < i) ? this->font->getStringWidth(vt.substr(prev, i - prev)) / 2 : 0;
-                if(mx >= this->font->getStringWidth(vt.substr(0, i)) + this->iTextAddX + this->fTextScrollAddX -
-                             prevGlyphWidth)
-                    result = i;
-                if(i >= vt.length()) break;
-                prev = i;
-                i = UniString::next(vt, i);
-            }
-            return result;
-        };
-
-        // handle scrolling
-        if(mleft) {
-            if(this->fTextWidth > this->getSize().x) {
-                if(mouseX < this->getSize().x * 0.15f) {
-                    const int scrollspeed = mouseX < 0 ? std::abs(mouseX) / 2 + 1 : 3;
-
-                    // TODO: animations which don't suck for usability
-                    this->fTextScrollAddX = std::clamp<int>(
-                        this->fTextScrollAddX + scrollspeed, 0,
-                        this->fTextWidth - this->getSize().x + cv::ui_textbox_text_offset_x.getInt() * 2);
-                    /// animation->moveSmoothEnd(&m_fTextScrollAddX, clampi(this->fTextScrollAddX+scrollspeed, 0,
-                    /// m_fTextWidth-m_vSize.x+cv::ui_textbox_text_offset_x.getInt()*2), 1);
-                }
-
-                if(mouseX > this->getSize().x * 0.85f) {
-                    const int scrollspeed =
-                        mouseX > this->getSize().x ? std::abs(mouseX - this->getSize().x) / 2 + 1 : 1;
-
-                    // TODO: animations which don't suck for usability
-                    this->fTextScrollAddX = std::clamp<int>(
-                        this->fTextScrollAddX - scrollspeed, 0,
-                        this->fTextWidth - this->getSize().x + cv::ui_textbox_text_offset_x.getInt() * 2);
-                    /// animation->moveSmoothEnd(&m_fTextScrollAddX, clampi(this->fTextScrollAddX-scrollspeed, 0,
-                    /// m_fTextWidth-m_vSize.x+cv::ui_textbox_text_offset_x.getInt()*2), 1);
-                }
-            }
-
-            // handle selecting begin, once per grab
-            if(!this->bSelectCheck) {
-                this->bSelectCheck = true;
-                this->iSelectStart = hitTestCaret(visible_text, mouseX);
-                this->iSelectX = this->font->getStringWidth(visible_text.substr(0, this->iSelectStart));
-            }
-
-            // handle selecting end
-            this->iSelectEnd = hitTestCaret(visible_text, mouseX);
-            this->caretPosition = this->iSelectEnd;
-        } else {
-            if(!this->hasSelectedText()) {
-                this->caretPosition = hitTestCaret(visible_text, mouseX);
-            }
-        }
-
-        // update caretx
-        this->updateCaretX();
-    }
-
-    // handle context menu
-    if(!mright && this->bContextMouse && this->isMouseInside()) {
-        this->bContextMouse = false;
-    }
 }
 
-void CBaseUITextbox::onFocusStolen() { this->deselectText(); }
+void CBaseUITextbox::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+    CBaseUIElement::updateInput(c);
+
+    const bool mleft = mouse->isLeftDown();
+    const bool mright = mouse->isRightDown();
+
+    // HACKHACK: should do this with the proper events! this will only work properly though if we can event.consume()
+    // charDown's
+    if(!this->bEnabled && this->isFocused() && mleft && !this->isMouseInside()) this->stealFocus();
+
+    if(this->bEnabled && (this->isFocused() || (!mleft && !mright)) &&
+       ((this->bBusy && (mleft || mright)) || this->isMouseInside()))
+        env->setCursor(CURSORTYPE::CURSOR_TEXT);
+}
+
+// find the codepoint boundary closest to the mouse position
+int CBaseUITextbox::hitTestCaret(std::string_view vt, int mx) const {
+    int result = 0;
+    uSz prev = 0;
+    for(uSz i = 0;;) {
+        const float prevGlyphWidth = (prev < i) ? this->font->getStringWidth(vt.substr(prev, i - prev)) / 2 : 0;
+        if(mx >= this->font->getStringWidth(vt.substr(0, i)) + this->iTextAddX + this->fTextScrollAddX - prevGlyphWidth)
+            result = i;
+        if(i >= vt.length()) break;
+        prev = i;
+        i = UniString::next(vt, i);
+    }
+    return result;
+}
+
+void CBaseUITextbox::onCapturedMouseMove() {
+    // selecting and scrolling: the selection was begun at the down, captured moves extend it
+    const MouseButtonFlags held = CBaseUIDispatch::getCaptorButtons();
+    const bool mleft = flags::has<MouseButtonFlags::MF_LEFT>(held);
+    const bool mright = flags::has<MouseButtonFlags::MF_RIGHT>(held);
+    if((!mleft && !mright) || this->text.length() == 0) return;
+
+    this->tickCaret();
+
+    const int mouseX = mouse->getPos().x - this->getPos().x;
+    auto visible_text = this->getVisibleText();
+
+    // handle scrolling
+    if(mleft) {
+        if(this->fTextWidth > this->getSize().x) {
+            if(mouseX < this->getSize().x * 0.15f) {
+                const int scrollspeed = mouseX < 0 ? std::abs(mouseX) / 2 + 1 : 3;
+
+                // TODO: animations which don't suck for usability
+                this->fTextScrollAddX =
+                    std::clamp<int>(this->fTextScrollAddX + scrollspeed, 0,
+                                    this->fTextWidth - this->getSize().x + cv::ui_textbox_text_offset_x.getInt() * 2);
+                /// animation->moveSmoothEnd(&m_fTextScrollAddX, clampi(this->fTextScrollAddX+scrollspeed, 0,
+                /// m_fTextWidth-m_vSize.x+cv::ui_textbox_text_offset_x.getInt()*2), 1);
+            }
+
+            if(mouseX > this->getSize().x * 0.85f) {
+                const int scrollspeed = mouseX > this->getSize().x ? std::abs(mouseX - this->getSize().x) / 2 + 1 : 1;
+
+                // TODO: animations which don't suck for usability
+                this->fTextScrollAddX =
+                    std::clamp<int>(this->fTextScrollAddX - scrollspeed, 0,
+                                    this->fTextWidth - this->getSize().x + cv::ui_textbox_text_offset_x.getInt() * 2);
+                /// animation->moveSmoothEnd(&m_fTextScrollAddX, clampi(this->fTextScrollAddX-scrollspeed, 0,
+                /// m_fTextWidth-m_vSize.x+cv::ui_textbox_text_offset_x.getInt()*2), 1);
+            }
+        }
+
+        // handle selecting end
+        this->iSelectEnd = this->hitTestCaret(visible_text, mouseX);
+        this->caretPosition = this->iSelectEnd;
+    } else {
+        if(!this->hasSelectedText()) {
+            this->caretPosition = this->hitTestCaret(visible_text, mouseX);
+        }
+    }
+
+    // update caretx
+    this->updateCaretX();
+}
+
+bool CBaseUITextbox::isActive() { return CBaseUIElement::isActive() || this->isFocused(); }
+
+void CBaseUITextbox::onFocusStolen() {
+    this->bBusy = false;
+    this->deselectText();
+}
 
 void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
-    if(!this->bActive || !this->bVisible) return;
+    if(!this->isFocused() || !this->bVisible) return;
 
     e.consume();
 
@@ -298,7 +266,7 @@ void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
             break;
 
         case KEY_ESCAPE:
-            this->bActive = false;
+            this->stealFocus();
             break;
 
         case KEY_BACKSPACE:
@@ -432,7 +400,7 @@ void CBaseUITextbox::onKeyDown(KeyboardEvent &e) {
 }
 
 void CBaseUITextbox::onChar(KeyboardEvent &e) {
-    if(!this->bActive || !this->bVisible) return;
+    if(!this->isFocused() || !this->bVisible) return;
 
     e.consume();
 
@@ -507,7 +475,7 @@ void CBaseUITextbox::clear() {
 }
 
 void CBaseUITextbox::focus(bool move_caret) {
-    this->bActive = true;
+    this->requestFocus();
     this->bBusy = true;
     this->bMouseInside = true;
 
@@ -656,17 +624,41 @@ void CBaseUITextbox::onMouseOutside() {
 void CBaseUITextbox::onMouseDownInside(bool left, bool right) {
     CBaseUIElement::onMouseDownInside(left, right);
 
-    // force busy, can't drag scroll release (textbox requires full focus due to text selection)
+    // take keyboard focus: relinquishes any other focused textbox (in either root); the
+    // dispatch sets bActive on us after this handler returns
+    this->requestFocus();
+
+    // force busy + lock: a drag on a textbox is a text selection, an enclosing scrollview must
+    // not steal it into a drag-scroll (textbox requires full focus due to text selection)
     this->bBusy = true;
+    this->lockCapture();
+
+    this->tickCaret();
+
+    if(this->text.length() > 0) {
+        const int mouseX = mouse->getPos().x - this->getPos().x;
+        const auto visibleText = this->getVisibleText();
+        const int hit = this->hitTestCaret(visibleText, mouseX);
+        if(left) {
+            // begin a fresh selection at the click point; captured moves extend it
+            this->iSelectStart = this->iSelectEnd = hit;
+            this->iSelectX = this->font->getStringWidth(visibleText.substr(0, this->iSelectStart));
+            this->caretPosition = hit;
+        } else if(!this->hasSelectedText()) {
+            this->caretPosition = hit;
+        }
+        this->updateCaretX();
+    }
 }
+
+void CBaseUITextbox::onMouseCancel() { this->bBusy = false; }
 
 void CBaseUITextbox::onMouseDownOutside(bool left, bool right) {
     CBaseUIElement::onMouseDownOutside(left, right);
 
-    this->bBusy = false;
-    this->bActive = false;
-
-    this->deselectText();
+    // pressed elsewhere: relinquish focus (bActive=false + clears the focus pointer +
+    // onFocusStolen does bBusy=false + deselect)
+    this->stealFocus();
 }
 
 void CBaseUITextbox::onMouseUpInside(bool left, bool right) {

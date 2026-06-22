@@ -44,26 +44,17 @@ class ToastElement final : public CBaseUIButton {
     f64 timeout{DEFAULT_TOAST_TIMEOUT};  // relative to creation time
 };
 
-class NotificationOverlayKeyListener {
-    NOCOPY_NOMOVE(NotificationOverlayKeyListener)
-   public:
-    NotificationOverlayKeyListener() = default;
-    virtual ~NotificationOverlayKeyListener() = default;
-    virtual void onKey(KeyboardEvent &e) = 0;
-};
-
 class NotificationOverlay final : public UIScreen {
     NOCOPY_NOMOVE(NotificationOverlay)
    public:
     NotificationOverlay();
     ~NotificationOverlay() override;
 
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void draw() override;
     void onResolutionChange(vec2 newResolution) override;
 
-    void onKeyDown(KeyboardEvent &e) override;
-    void onKeyUp(KeyboardEvent &e) override;
     void onChar(KeyboardEvent &e) override;
 
     using ToastClickCallback = std::function<void()>;
@@ -81,14 +72,10 @@ class NotificationOverlay final : public UIScreen {
             {.text = std::move(text), .callback = std::move(callback), .borderColor = borderColor, .type = type});
     }
 
-    void addNotification(std::string text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
-    void setDisallowWaitForKeyLeftClick(bool disallowWaitForKeyLeftClick) {
-        this->bWaitForKeyDisallowsLeftClick = disallowWaitForKeyLeftClick;
-    }
+    void addNotification(std::string text, Color textColor = 0xffffffff, bool waitForKey = false,
+                         float duration = -1.0f);
 
     void stopWaitingForKey(bool stillConsumeNextChar = false);
-
-    void addKeyListener(NotificationOverlayKeyListener *keyListener) { this->keyListener = keyListener; }
 
     inline bool isWaitingForKey() { return this->bWaitForKey || this->bConsumeNextChar; }
 
@@ -117,9 +104,7 @@ class NotificationOverlay final : public UIScreen {
 
     NOTIFICATION notification1;
     NOTIFICATION notification2;
-    NotificationOverlayKeyListener *keyListener{nullptr};
 
     bool bWaitForKey{false};
-    bool bWaitForKeyDisallowsLeftClick{false};
     bool bConsumeNextChar{false};
 };

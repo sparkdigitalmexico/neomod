@@ -1,0 +1,41 @@
+# volume arrow-key (INCREASE/DECREASE_VOLUME = Up/Down) matrix. since #3, arrow-volume is the
+# global fallback key sink (VolumeOverlay::onArrowVolumeFallback, offered by UI::onKeyDown when the
+# layer walk leaves the key unconsumed) - mirroring the wheel sink, NOT the old claimsArrowKeys
+# enumeration. discriminator: a volume key that ACTS shows the overlay (VolumeOverlay::isVisible() =
+# time-based), one swallowed by a layer above the sink does not.
+# contexts:
+#   1. mainmenu dead space            -> Up acts (visible 1)   fallback sink, consumed_by=VolumeOverlay
+#   2. options open, cursor ON panel  -> suppressed (visible 0) options' all-keys eat-all consumes it
+#   3. options open, cursor OFF panel -> suppressed (visible 0) SAME eat-all - cursor no longer matters
+#      (the old hover-qualified claim that let volume through off-panel is gone with claimsArrowKeys)
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 20
+sendkey Up
+@wait 2
+ui_assert visible volumeoverlay 1
+@wait_secs 3
+sendkey Left Ctrl down
+sendkey O
+sendkey Left Ctrl up
+@wait 30
+ui_assert visible optionsoverlay 1
+mouse_to 400 360
+@wait 3
+sendkey Up
+@wait 2
+ui_assert visible volumeoverlay 0
+@wait_secs 3
+mouse_to 1000 360
+@wait 3
+sendkey Up
+@wait 2
+ui_assert visible volumeoverlay 0
+@wait 2
+exit

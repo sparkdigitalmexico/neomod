@@ -12,11 +12,13 @@ UIIcon::UIIcon(char32_t icon)
     this->setFont(osu->getFontIcons());
     this->setDrawBackground(false);
     this->setDrawFrame(false);
+    // hover-tooltip decoration: must not win the single-target click over the surface beneath
+    this->setHandleLeftMouse(false);
 }
 
-void UIIcon::update(CBaseUIEventCtx& c) {
+void UIIcon::updateInput(CBaseUIEventCtx& c) {
     if(!this->bVisible) return;
-    CBaseUILabel::update(c);
+    CBaseUILabel::updateInput(c);
 
     if(this->isMouseInside() && this->tooltipTextLines.size() > 0 && !this->bFocusStolenDelay) {
         ui->getTooltipOverlay()->begin();

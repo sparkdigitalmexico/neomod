@@ -5,21 +5,51 @@
 #include "Logging.h"
 #include "ConVar.h"
 #include "Mouse.h"
+#include "CBaseUIDispatch.h"
+
+#include "neotrace/neotrace.h"  // demangling
 
 #include <utility>
 #include <memory>
+#include <typeinfo>
 
 namespace CBaseUIDebug {
 namespace {
 bool dumpElems{false};
-}
+int traceLvl{0};
+}  // namespace
 void onDumpElemsChangeCallback(float newvalue) { dumpElems = !!static_cast<int>(newvalue); }
+void onTraceChangeCallback(float newvalue) { traceLvl = static_cast<int>(newvalue); }
+
+int traceLevel() { return traceLvl; }
+
+void traceEvent(const CBaseUIElement *elem, std::string_view evt) {
+    logRaw("uitrace evt={} elem={}", evt, elemName(elem));
+}
+
+std::string elemName(const CBaseUIElement *elem) {
+    if(!elem) return "<null>";
+    if(!elem->getName().empty()) return std::string{elem->getName()};
+
+    return neotrace::demangle(typeid(*elem).name());
+}
 }  // namespace CBaseUIDebug
 
-void CBaseUIEventCtx::consume_mouse() { this->propagate_clicks = this->propagate_hover = false; }
+void CBaseUIEventCtx::consume_mouse() { this->bConsumed = true; }
 
-bool CBaseUIEventCtx::mouse_consumed() const {
-    return this->propagate_clicks == this->propagate_hover && (this->propagate_hover == false);
+bool CBaseUIEventCtx::mouse_consumed() const { return this->bConsumed; }
+
+void CBaseUIEventCtx::beginHitGroup() { this->hitGroupStarts.push_back(this->hitCandidates.size()); }
+
+void CBaseUIEventCtx::addHitCandidate(CBaseUIElement *elem) {
+    if(this->hitGroupStarts.empty()) this->hitGroupStarts.push_back(0);  // implicit single group
+    this->hitCandidates.push_back({.elem = elem, .tier = this->currentHitTier, .path = this->hitPath});
+}
+
+void CBaseUIEventCtx::addWheelClaim(CBaseUIElement *elem) {
+    if(this->hitGroupStarts.empty()) this->hitGroupStarts.push_back(0);
+    // no ancestor path: claims never receive buttons, so they never capture
+    this->hitCandidates.push_back({.elem = elem, .tier = this->currentHitTier, .wheelOnly = true, .path = {}});
 }
 
 CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::nullptr_t /**/)
@@ -27,7 +57,8 @@ CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize,
 
 CBaseUIElement::CBaseUIElement(float xPos, float yPos, float xSize, float ySize, std::string name)
     : sName(std::move(name)), rect(xPos, yPos, xSize, ySize), relRect(this->rect) {}
-CBaseUIElement::~CBaseUIElement() = default;
+
+CBaseUIElement::~CBaseUIElement() { CBaseUIDispatch::onElementDestroyed(this); }
 
 // keyboard input
 void CBaseUIElement::onKeyUp(KeyboardEvent &e) { (void)e; }
@@ -115,10 +146,6 @@ CBaseUIElement *CBaseUIElement::setActive(bool active) {
     this->bActive = active;
     return this;
 }
-CBaseUIElement *CBaseUIElement::setKeepActive(bool keepActive) {
-    this->bKeepActive = keepActive;
-    return this;
-}
 CBaseUIElement *CBaseUIElement::setEnabled(bool enabled) {
     if(enabled != this->bEnabled) {
         this->bEnabled = enabled;
@@ -147,9 +174,8 @@ CBaseUIElement *CBaseUIElement::setHandleRightMouse(bool handle) {
     return this;
 }
 
-// TODO: remove this, changes behavior in more ways than just mouse handling
-CBaseUIElement *CBaseUIElement::setGrabClicks(bool grabClicks) {
-    this->grabs_clicks = grabClicks;
+CBaseUIElement *CBaseUIElement::setDrawsOnTop(bool drawsOnTop) {
+    this->bDrawsOnTop = drawsOnTop;
     return this;
 }
 
@@ -166,100 +192,104 @@ void CBaseUIElement::onMouseDownInside(bool /*left*/, bool /*right*/) { ; }
 void CBaseUIElement::onMouseDownOutside(bool /*left*/, bool /*right*/) { ; }
 void CBaseUIElement::onMouseUpInside(bool /*left*/, bool /*right*/) { ; }
 void CBaseUIElement::onMouseUpOutside(bool /*left*/, bool /*right*/) { ; }
+bool CBaseUIElement::onWheel(int /*deltaVertical*/, int /*deltaHorizontal*/) { return false; }
+void CBaseUIElement::onMouseCancel() { ; }
+void CBaseUIElement::onCapturedMouseMove() { ; }
+void CBaseUIElement::onCapturedMoveThrough() { ; }
+void CBaseUIElement::onCapturedEndThrough() { ; }
+
+void CBaseUIElement::lockCapture() { return CBaseUIDispatch::lockCapture(this); }
+bool CBaseUIElement::stealCapture() { return CBaseUIDispatch::stealCapture(this); }
 
 void CBaseUIElement::stealFocus() {
-    this->mouseInsideCheck = (u8)(this->bHandleLeftMouse << 1) | (u8)this->bHandleRightMouse;
     this->bActive = false;
+    CBaseUIDispatch::clearFocusIf(this);
     this->onFocusStolen();
 }
 
-void CBaseUIElement::update(CBaseUIEventCtx &c) {
+void CBaseUIElement::requestFocus() { CBaseUIDispatch::setFocus(this); }
+
+bool CBaseUIElement::isFocused() { return CBaseUIDispatch::getFocus() == this; }
+
+void CBaseUIElement::tick() {
     if(unlikely(CBaseUIDebug::dumpElems)) this->dumpElem();
+}
+
+// pass A of the two-pass mouse model (pass B is CBaseUIDispatch::dispatchEvents): this walk does NOT
+// deliver clicks. it registers hit candidates, resolves hover LOSS (gain is deferred to pass B) and
+// broadcasts outside-downs. see the model overview atop CBaseUIDispatch.h.
+void CBaseUIElement::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible || !this->bEnabled) return;
 
-    // TODO: hover "consumption"
-    {
-        const bool oldMouseInsideState = this->bMouseInside;
+    this->lastInputFrame = engine->getFrameCount();
 
-        // to avoid issues with mouse position right along the boundaries
+    // raise the hit tier for the duration of this element's candidacy (and, via the container/
+    // scrollview child walkers, its descendants') when it draws on top; balanced -= below so
+    // later-visited siblings are unaffected
+    c.currentHitTier += this->bDrawsOnTop;
+
+    const bool oldMouseInsideState = this->bMouseInside;
+
+    // rect membership with enter-strict / leave-loose hysteresis, recomputed FRESH every frame
+    // (there is no stored occlusion bit that could get stuck): the single basis for both hit
+    // candidacy and hover.
+    const bool rectInside = oldMouseInsideState ? this->getRect().contains(mouse->getPos())
+                                                : this->getRect().containsStrict(mouse->getPos());
+
+    // hover. a hit candidate (!bClickThroughSelf) GAINS hover only in CBaseUIDispatch::resolveHover after
+    // the whole walk: only the single top-most candidate (+ its ancestor path) gains, so an element
+    // occluded by a higher one never briefly gains hover (and plays a hover sound). LOSS on
+    // rect-leave stays local here. transparent wrappers/screens (bClickThroughSelf) are never
+    // candidates, so they self-determine here as before; their isMouseInside() override aggregates
+    // their children, whose hover the dispatcher resolves.
+    if(!this->bClickThroughSelf) {
+        if(oldMouseInsideState && !rectInside) this->bMouseInside = false;
+    } else {
+        // while a capture is held, nothing but the captor may GAIN hover (losing it stays allowed)
+        const CBaseUIElement *captor = CBaseUIDispatch::getCaptor();
         if(!oldMouseInsideState) {
-            // going into strictly-contains area from outside
-            if(this->getRect().containsStrict(mouse->getPos())) {
-                this->bMouseInside = true;
-            }
-        } else {
-            // leaving deadzone area from inside
-            if(!this->getRect().contains(mouse->getPos())) {
-                this->bMouseInside = false;
-            }
-        }
-
-        // re-check to account for possible isMouseInside override
-        if((this->bMouseInside = this->isMouseInside())) {
-            c.propagate_hover = false;  // doesn't really do anything much atm
-        }
-
-        if(oldMouseInsideState != this->bMouseInside) {
-            if(this->bMouseInside) {
-                this->onMouseInside();
-            } else {
-                this->onMouseOutside();
-            }
+            if((captor == nullptr || captor == this) && rectInside) this->bMouseInside = true;
+        } else if(!rectInside) {
+            this->bMouseInside = false;
         }
     }
 
-    const u8 rawButtonMask = (u8)((this->bHandleLeftMouse && mouse->isLeftDown()) << 1) |
-                             (u8)(this->bHandleRightMouse && mouse->isRightDown());
+    // re-check to account for a possible isMouseInside() override (aggregate screens). for a plain
+    // candidate widget isMouseInside() == bMouseInside, so this is a no-op and its gain comes from
+    // the dispatcher.
+    this->bMouseInside = this->isMouseInside();
 
-    // if update() wasn't called last frame (e.g. element or a parent container was invisible),
-    // treat any already-held buttons as stale and ignore them until released
-    // TODO: this is a stop-gap until mouse handling is separated from update()
-    const u32 currentFrame = (u32)engine->getFrameCount();
-    if(currentFrame - this->lastUpdateFrame > 1) {
-        this->staleButtons = rawButtonMask;
-    }
-    this->lastUpdateFrame = currentFrame;
-    this->staleButtons &= rawButtonMask;
-    const u8 buttonMask = rawButtonMask & ~this->staleButtons;
-
-    if(buttonMask && c.propagate_clicks) {
-        this->mouseUpCheck |= buttonMask;
+    if(oldMouseInsideState != this->bMouseInside) {
+        UI_TRACE_EVENT(0, this, this->bMouseInside ? "hoverIn" : "hoverOut");
         if(this->bMouseInside) {
-            c.propagate_clicks &= !this->grabs_clicks;
-        }
-
-        // onMouseDownOutside
-        if(!this->bMouseInside && !(this->mouseInsideCheck & buttonMask)) {
-            this->mouseInsideCheck |= buttonMask;
-            this->onMouseDownOutside((buttonMask & 0b10), (buttonMask & 0b01));
-        }
-
-        // onMouseDownInside
-        if(this->bMouseInside && !(this->mouseInsideCheck & buttonMask)) {
-            this->bActive = true;
-            this->mouseInsideCheck |= buttonMask;
-            this->onMouseDownInside((buttonMask & 0b10), (buttonMask & 0b01));
+            this->onMouseInside();
+        } else {
+            this->onMouseOutside();
         }
     }
 
-    // detect which buttons were released for mouse up events
-    const u8 releasedButtons = this->mouseUpCheck & ~buttonMask;
-    if(releasedButtons && this->bActive) {
-        if(this->bMouseInside)
-            this->onMouseUpInside((releasedButtons & 0b10), (releasedButtons & 0b01));
-        else
-            this->onMouseUpOutside((releasedButtons & 0b10), (releasedButtons & 0b01));
+    // hit candidacy: who MAY receive this frame's button/wheel events, and the set the dispatcher
+    // ranks to pick the single hovered element. rect-based (NOT bMouseInside: the gain is deferred)
+    // and NOT handle-gated (clicks filter on bHandleLeftMouse/Right, wheel on onWheel, at dispatch
+    // time); only a transparent wrapper (bClickThroughSelf) opts out. gated on propagate_clicks so a
+    // click-blocked element is not a candidate and the dispatcher never grants it hover.
+    if(c.propagate_clicks && rectInside && !this->bClickThroughSelf) c.addHitCandidate(this);
 
-        if(!this->bKeepActive) this->bActive = false;
+    if(c.propagate_clicks && (this->bHandleLeftMouse || this->bHandleRightMouse)) {
+        // outside-downs stay a per-element broadcast: the rect-based "pressed elsewhere" signal
+        // (popup close-on-outside, contextmenu/textbox deactivation). KEPT deliberately - it is a
+        // mouse concept, not keyboard focus: a context menu holding clickable items cannot be the
+        // focus holder, so the broadcast is the right tool, not the focus pointer.
+        // the captor is excluded; its events are routed in CBaseUIDispatch::dispatchEvents.
+        const u8 pressedMask = (u8)((this->bHandleLeftMouse && mouse->isLeftPressed()) << 1) |
+                               (u8)(this->bHandleRightMouse && mouse->isRightPressed());
+        if(pressedMask && !rectInside && this != CBaseUIDispatch::getCaptor()) {
+            UI_TRACE_EVENT(1, this, "downOutside");
+            this->onMouseDownOutside((pressedMask & 0b10), (pressedMask & 0b01));
+        }
     }
 
-    // remove released buttons from mouseUpCheck
-    this->mouseUpCheck &= buttonMask;
-
-    // reset mouseInsideCheck if all buttons are released
-    if(!buttonMask) {
-        this->mouseInsideCheck = 0b00;
-    }
+    c.currentHitTier -= this->bDrawsOnTop;
 }
 
 void CBaseUIElement::dumpElem() const {
@@ -272,16 +302,14 @@ bVisible:           {}
 bActive:            {}
 bBusy:              {}
 bEnabled:           {}
-bKeepActive:        {}
 bMouseInside:       {}
 bHandleLeftMouse:   {}
 bHandleRightMouse:  {}
 rect:               {}
 relRect:            {}
-mouseInsideCheck:   {:02b}
-mouseUpCheck:       {:02b}
 ==== END UI ELEMENT DEBUG ====)",
            fmt::ptr(this), currentFrame, this->getName(), this->bVisible, this->bActive, this->bBusy, this->bEnabled,
-           this->bKeepActive, this->bMouseInside, this->bHandleLeftMouse, this->bHandleRightMouse, this->rect,
-           this->relRect, this->mouseInsideCheck, this->mouseUpCheck);
+           this->bMouseInside, this->bHandleLeftMouse, this->bHandleRightMouse, this->rect, this->relRect);
 }
+
+std::span<CBaseUIElement *const> CBaseUIElement::getAllChildren() const { return {}; }

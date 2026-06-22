@@ -10,15 +10,15 @@
 #include "i18n.h"
 #include "UIButton.h"
 #include "MakeDelegateWrapper.h"
-#include "Mouse.h"
 
 PromptOverlay::PromptOverlay() : UIScreen() {
+    // modal + closeOnScreenSwitch are declared in UI.h's screen registry
     this->prompt_label = new CBaseUILabel(0, 0, 0, 0, "", "");
     this->prompt_label->setDrawFrame(false);
     this->prompt_label->setDrawBackground(false);
     this->addBaseUIElement(this->prompt_label);
 
-    this->prompt_input = new CBaseUITextbox(0, 0, 400, 40, "");
+    this->prompt_input = new CBaseUITextbox(0, 0, 400, 40, "prompt_input");
     this->addBaseUIElement(this->prompt_input);
 
     this->ok_btn = new UIButton(0, 0, 110, 35, "ok_btn", _("OK"));
@@ -56,13 +56,6 @@ void PromptOverlay::draw() {
     g->fillRect(0, 0, this->getSize().x, this->getSize().y);
 
     UIScreen::draw();
-}
-
-void PromptOverlay::update(CBaseUIEventCtx &c) {
-    if(!this->bVisible) return;
-
-    UIScreen::update(c);
-    c.consume_mouse();
 }
 
 void PromptOverlay::onKeyDown(KeyboardEvent &e) {

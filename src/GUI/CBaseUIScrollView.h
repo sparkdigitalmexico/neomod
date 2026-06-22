@@ -16,7 +16,8 @@ class CBaseUIScrollView : public CBaseUIElement {
     void freeElements();
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void onKeyUp(KeyboardEvent &e) override;
     void onKeyDown(KeyboardEvent &e) override;
@@ -135,6 +136,11 @@ class CBaseUIScrollView : public CBaseUIElement {
     void onMouseDownInside(bool left = true, bool right = false) override;
     void onMouseUpInside(bool left = true, bool right = false) override;
     void onMouseUpOutside(bool left = true, bool right = false) override;
+    void onMouseCancel() override;
+    void onCapturedMouseMove() override;
+    void onCapturedMoveThrough() override;
+    void onCapturedEndThrough() override;
+    bool onWheel(int deltaVertical, int deltaHorizontal) override;
 
     void onFocusStolen() override;
     void onEnabled() override;
@@ -146,7 +152,8 @@ class CBaseUIScrollView : public CBaseUIElement {
         NOCOPY_NOMOVE(CBaseUIScrollViewContainer)
        public:
         using CBaseUIContainer::CBaseUIContainer;
-        CBaseUIScrollViewContainer(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, std::string name = {});
+        CBaseUIScrollViewContainer(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0,
+                                   std::string name = {});
         CBaseUIScrollViewContainer() = delete;
         ~CBaseUIScrollViewContainer() override;
 
@@ -156,7 +163,8 @@ class CBaseUIScrollView : public CBaseUIElement {
         void freeElements() override;
         void invalidate() override;
 
-        void update(CBaseUIEventCtx &c) override;
+        void tick() override;
+        void updateInput(CBaseUIEventCtx &c) override;
         void draw() override;
 
         bool isBusy() override;
@@ -186,11 +194,21 @@ class CBaseUIScrollView : public CBaseUIElement {
         this->previousClippingVisibleElements = 0;
     }
 
+    [[nodiscard]] std::span<CBaseUIElement *const> getAllChildren() const override {
+        return this->container.getAllChildren();
+    }
+
    protected:
     void onMoved() override;
 
     void updateClipping();
     void updateScrollbars();
+
+    // drag-scroll gesture pieces shared by the self-press (onMouseDownInside) and the
+    // observed-child steal (onCapturedMoveThrough) paths
+    void beginDragScroll(dvec2 pos);
+    bool tryBeginScrollbarDrag(dvec2 pos);
+    void endDragScroll(bool launchKinetic);
 
     void scrollToYInt(int scrollPosY, bool animated = true, bool slow = true);
     void scrollToXInt(int scrollPosX, bool animated = true, bool slow = true);
@@ -227,7 +245,6 @@ class CBaseUIScrollView : public CBaseUIElement {
     bool bAutoScrollingX{false};
     bool bAutoScrollingY{false};
 
-    bool bScrollResistanceCheck{false};
     bool bScrolling{false};
     bool bScrollbarScrolling{false};
     bool bScrollbarIsVerticalScrolling{false};

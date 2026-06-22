@@ -51,6 +51,13 @@ struct frame_info
 
 frame_info symbolize(void *address) noexcept;
 
+// demangles an Itanium C++ ABI name into a human-readable form: either a linkage name
+// (_ZN3foo3barEv) or a bare type encoding as produced by typeid(...).name(). returns the
+// input unchanged when it is not a mangled name, or when the platform has no demangler
+// (e.g. msvc without cxxabi). this is the demangler symbolize() applies to frame symbols,
+// exposed for callers that hold a mangled name from another source.
+std::string demangle(const char *mangled) noexcept;
+
 // "0x0000000100a3c044 in demo::leaf() + 0x18 (neotrace_demo) at main.cpp:12",
 // with the pieces that could not be resolved left out
 std::string to_string(const frame_info &frame) noexcept;

@@ -16,7 +16,7 @@ class CBaseUISlider : public CBaseUIElement {
     ~CBaseUISlider() override = default;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
 
     void onKeyDown(KeyboardEvent &e) override;
 
@@ -52,6 +52,16 @@ class CBaseUISlider : public CBaseUIElement {
         return this;
     }
 
+    CBaseUISlider *setLineOutlineSize(int size) {
+        if(size >= 0) this->iLineOutlineSize = size;
+        return this;
+    }
+
+    CBaseUISlider *setOutlineColor(Color outlineColor) {
+        this->outlineColor = outlineColor;
+        return this;
+    }
+
     // callbacks, either void or with ourself as the argument
     using SliderChangeCallback = SA::delegate<void(CBaseUISlider *)>;
     CBaseUISlider *setChangeCallback(const SliderChangeCallback &changeCallback) {
@@ -79,12 +89,15 @@ class CBaseUISlider : public CBaseUIElement {
     CBaseUISlider *setValue(float value, bool animate = true, bool call_callback = true);
     CBaseUISlider *setInitialValue(float value);
 
-    inline float getFloat() { return this->fCurValue; }
-    inline int getInt() { return (int)this->fCurValue; }
-    inline bool getBool() { return (bool)this->fCurValue; }
-    inline float getMax() { return this->fMaxValue; }
-    inline float getMin() { return this->fMinValue; }
-    float getPercent();
+    inline float getFloat() const { return this->fCurValue; }
+    inline int getInt() const { return (int)this->fCurValue; }
+    inline bool getBool() const { return (bool)this->fCurValue; }
+    inline float getMax() const { return this->fMaxValue; }
+    inline float getMin() const { return this->fMinValue; }
+    float getPercent() const;
+
+    inline int getLineOutlineSize() const { return this->iLineOutlineSize; }
+    inline Color getLineOutlineColor() const { return this->outlineColor; }
 
     // TODO: DEPRECATED, don't use this function anymore, use setChangeCallback() instead
     bool hasChanged();
@@ -93,10 +106,16 @@ class CBaseUISlider : public CBaseUIElement {
     void onMouseUpInside(bool left = true, bool right = false) override;
     void onMouseUpOutside(bool left = true, bool right = false) override;
     void onMouseDownInside(bool left = true, bool right = false) override;
+    void onMouseCancel() override;
+    void onCapturedMouseMove() override;
+    bool onWheel(int deltaVertical, int deltaHorizontal) override;
     void onResized() override;
 
    protected:
     virtual void drawBlock();
+
+    // draws the sliding line from (x1,y1) to (x2,y2), with the configured outline behind it (if any)
+    void drawSlidingLine(float x1, float y1, float x2, float y2);
 
     void updateBlockPos();
 
@@ -113,9 +132,14 @@ class CBaseUISlider : public CBaseUIElement {
     float fMinValue, fMaxValue, fCurValue, fCurPercent;
     float fPrevValue;
     float fKeyDelta;
-    float fLastSoundPlayTime = 0.f;
+    float fLastSoundPlayTime{0.f};
 
     Color frameColor, backgroundColor;
+
+    // 0 == no outline
+    // size is # of pixels extended out from the line (e.g. size 2 is 5 pixels across)
+    int iLineOutlineSize{0};
+    Color outlineColor{0xff000000};
 
     bool bDrawFrame;
     bool bDrawBackground;

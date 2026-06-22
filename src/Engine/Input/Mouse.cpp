@@ -102,6 +102,7 @@ void Mouse::drawDebug() {
 void Mouse::update() {
     this->vDelta = {0.f, 0.f};
     this->vRawDelta = {0.f, 0.f};
+    this->buttonsPressedMask = {};
 
     auto [newRel, newAbs, pixelScale, needsClipping] = env->consumeCursorPositionCache();
     if(vec::length(newRel) <= 0.) goto out;  // early return for no motion
@@ -235,6 +236,7 @@ void Mouse::onButtonChange_internal(ButtonEvent &ev) {
 
     if(ev.down) {
         this->buttonsHeldMask |= ev.btn;
+        this->buttonsPressedMask |= ev.btn;
     } else {
         this->buttonsHeldMask &= ~ev.btn;
     }

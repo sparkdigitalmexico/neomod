@@ -74,7 +74,7 @@ class RankingScreenIndexLabel final : public CBaseUILabel {
             g->setColor(0xff000000);
             g->drawString(this->font, this->sText);
             g->translate(-1, -1);
-            g->setColor(this->textColor);
+            g->setColor(this->getTextColor());
             g->drawString(this->font, this->sText);
         }
         g->popTransform();
@@ -336,9 +336,9 @@ void RankingScreen::drawModImage(const SkinImage &image, vec2 &pos, vec2 &max) c
     if(pos.y + image.getSize().y / 2 > max.y) max.y = pos.y + image.getSize().y / 2;
 }
 
-void RankingScreen::update(CBaseUIEventCtx &c) {
+void RankingScreen::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    ScreenBackable::update(c);
+    ScreenBackable::updateInput(c);
 
     // tooltip (pp + accuracy + unstable rate)
     if(!ui->getOptionsOverlay()->isMouseInside() && mouse->getPos().x < osu->getVirtScreenWidth() * 0.5f) {

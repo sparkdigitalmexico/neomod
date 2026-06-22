@@ -39,7 +39,10 @@
 static_assert(SDLGPUInterface::DEFAULT_TEXTURE_FORMAT == (SDLGPUTextureFormat)SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM);
 
 SDLGPUInterface::SDLGPUInterface(SDL_Window *window)
-    : ModernGraphicsShared(), m_window(window), m_currentPrimitiveType(SDL_GPU_PRIMITIVETYPE_TRIANGLELIST) {}
+    : ModernGraphicsShared(),
+      m_window(window),
+      m_currentPrimitiveType(SDL_GPU_PRIMITIVETYPE_TRIANGLELIST),
+      m_isHeadless(env->isHeadless()) {}
 
 SDLGPUInterface::~SDLGPUInterface() {
     cv::r_sync_max_frames.reset();  // release callback
@@ -582,11 +585,13 @@ void SDLGPUInterface::endScene() {
     // TODO: confusing
     if(!m_cmdBuf) m_cmdBuf = SDL_AcquireGPUCommandBuffer(m_device);
 
-    SDL_GPUTexture *swapchainTexture = nullptr;
-
     // acquire swapchain and blit backbuffer to it for presentation
     u32 sw = 0, sh = 0;
-    if(SDL_WaitAndAcquireGPUSwapchainTexture(m_cmdBuf, m_window, &swapchainTexture, &sw, &sh) && swapchainTexture) {
+    SDL_GPUTexture *swapchainTexture = nullptr;
+    // in headless, don't even blit to the swapchain texture at all
+    if(likely(!m_isHeadless &&
+              (SDL_WaitAndAcquireGPUSwapchainTexture(m_cmdBuf, m_window, &swapchainTexture, &sw, &sh) &&
+               !!swapchainTexture))) {
         SDL_GPUBlitInfo blit{};
         blit.source.texture = m_backbuffer;
         blit.source.w = m_backbufferWidth;
@@ -637,7 +642,7 @@ void SDLGPUInterface::setAlpha(float alpha) {
 // 2d resource drawing
 
 namespace {
-static constinit VertexArrayObject triStripVAO(DrawPrimitive::TRIANGLE_STRIP);
+static CONSTINIT VertexArrayObject triStripVAO(DrawPrimitive::TRIANGLE_STRIP);
 }
 
 void SDLGPUInterface::drawImage(const Image *image, AnchorPoint anchor, float edgeSoftness, McRect clipRect) {

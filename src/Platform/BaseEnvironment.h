@@ -260,9 +260,6 @@ typedef void* HWND;
 
 #if defined(_MSC_VER)
 typedef SSIZE_T ssize_t;
-
-// HACK: ignore "constinit" keyword since it basically doesn't work on MSVC
-#define constinit
 #endif
 
 #endif

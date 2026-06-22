@@ -1,0 +1,39 @@
+# pins the WHEEL FLOOR (regression caught live by WH 2026-06-12): a hovered scroll
+# surface that declines the wheel (here: options_contents emptied by a no-match search,
+# fits-content) must not let the gesture act on surfaces occluded by its layer. the
+# populated songbrowser carousel sits beneath the panel; without the floor the scan falls
+# through to the screen-wide carousel-forward claim and scrolls the OCCLUDED carousel
+# (consumer elem=SongBrowser - verified pre-fix); with the floor the scan stops at the
+# options group and only the fall-through sink may take it (consumer elem=VolumeOverlay,
+# volume bar shows). the wheel point (300,288) is over options_contents AND over the
+# (empty, stable-named) score browser region beneath - NOT over the carousel, whose
+# occluded-hover button names would be selection-dependent (the known hover-gain P4 hole,
+# cf. options_over_songbrowser).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+osu_folder uitest_osu_folder_full
+mouse_to 10 10
+@wait 30
+set_active_ui_screen songbrowser
+@wait 300
+sendkey Left Ctrl down
+@wait 3
+sendkey O
+@wait 3
+sendkey Left Ctrl up
+@wait 5
+ui_assert visible optionsoverlay 1
+sendtext nonexistentsearchstring
+@wait 10
+mouse_to 300 288
+@wait 5
+ui_assert hovered options_contents 1
+mouse_wheel -1
+@wait 5
+ui_assert visible volumeoverlay 1
+exit

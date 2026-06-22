@@ -1,0 +1,62 @@
+# pins drag-scroll CHAINING through an unscrollable dropdown (the tablet-user gesture, cf.
+# the 2026-06-11 user reports): with the skin dropdown open (content fits -> UIContextMenu
+# disables its own scrolling), press ON the dropdown (the "default" skin button) and drag
+# past ui_scrollview_resistance. the dropdown must NOT dead-end the gesture: it declines the
+# observer steal (can't scroll), so options_contents steals instead (mouseCancel on the
+# button, no click), the options content drag-follows WITH the dropdown riding its anchor,
+# and the dropdown STAYS OPEN through the whole gesture (press was inside it, never outside).
+# release mid-motion launches kinetic scrolling. navigation prefix shared with
+# layered_scrollviews (UITestSkin fixture).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+mouse_to 640 360
+@wait 2
+mouse_down
+@wait 3
+mouse_up
+@wait 40
+mouse_to 867 401
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 30
+mouse_to 40 267
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 20
+mouse_to 256 492
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 2
+mouse_to 10 10
+@wait 300
+ui_assert visible options_contextmenu 1
+mouse_to 193 492
+@wait 3
+mouse_down
+@wait 2
+mouse_to 193 470
+@wait 1
+mouse_to 193 440
+@wait 1
+mouse_to 193 405
+@wait 1
+mouse_to 193 365
+@wait 1
+mouse_up
+@wait 60
+ui_assert visible options_contextmenu 1
+ui_assert active default 0
+exit

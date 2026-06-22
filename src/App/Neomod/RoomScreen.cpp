@@ -31,7 +31,6 @@
 #include "MainMenu.h"
 #include "ModSelector.h"
 #include "NotificationOverlay.h"
-#include "OptionsOverlay.h"
 #include "OsuDirectScreen.h"
 #include "PromptOverlay.h"
 #include "RankingScreen.h"
@@ -273,7 +272,9 @@ void RoomScreen::draw() {
     UIScreen::draw();
 }
 
-void RoomScreen::update(CBaseUIEventCtx &c) {
+void RoomScreen::tick() {
+    UIScreen::tick();
+
     if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
 
     // drive the host's current pick through the fetcher (retargeting is implicit when the host
@@ -302,20 +303,18 @@ void RoomScreen::update(CBaseUIEventCtx &c) {
     }
 
     this->pauseButton->setPaused(!osu->getMapInterface()->isPreviewMusicPlaying());
+}
 
-    this->contextMenu->update(c);
-    if(c.mouse_consumed()) return;
+void RoomScreen::updateInput(CBaseUIEventCtx &c) {
+    if(!BanchoState::is_in_a_multi_room() || osu->isInPlayMode()) return;
 
-    // HACK: disable "slotlist" scrollview when options menu is open, because it somehow takes priority
-    if(ui->getOptionsOverlay()->isVisible()) {
-        this->settings->update(c);
-    } else {
-        UIScreen::update(c);
-    }
+    this->contextMenu->updateInput(c);
+
+    UIScreen::updateInput(c);
 }
 
 void RoomScreen::onKeyDown(KeyboardEvent &key) {
-    if(!this->bVisible || ui->getOptionsOverlay()->isVisible()) return;
+    if(!this->bVisible) return;
 
     if(key.getScanCode() == KEY_ESCAPE) {
         key.consume();
@@ -335,7 +334,7 @@ void RoomScreen::onKeyDown(KeyboardEvent &key) {
     if(key.getScanCode() == KEY_F1) {
         key.consume();
         if(BanchoState::room.freemods || BanchoState::room.is_host()) {
-            ui->setScreen(ui->getModSelector());
+            ui->getModSelector()->setVisible(true);
         }
         return;
     }
@@ -702,7 +701,7 @@ void RoomScreen::on_room_updated(const Room &room) {
 
     if(ui->getModSelector()->isVisible() && !BanchoState::room.is_host() && !BanchoState::room.freemods) {
         // Force close mod selector if host disabled freemods
-        ui->setScreen(ui->getRoom());
+        ui->getModSelector()->close(true);
     }
     ui->getModSelector()->updateButtons();
     ui->getModSelector()->resetMods();
@@ -881,7 +880,7 @@ void RoomScreen::onReadyButtonClick() {
 }
 
 void RoomScreen::onSelectModsClicked() {
-    ui->setScreen(ui->getModSelector());
+    ui->getModSelector()->setVisible(true);
     soundEngine->play(osu->getSkin()->s_menu_hit);
 }
 

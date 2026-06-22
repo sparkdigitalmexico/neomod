@@ -17,7 +17,6 @@
 #include "i18n.h"
 #include "Keyboard.h"
 #include "OsuKeyBinds.h"
-#include "ModSelector.h"
 #include "OptionsOverlay.h"
 #include "Osu.h"
 #include "ResourceManager.h"
@@ -29,6 +28,10 @@
 #include "UIPauseMenuButton.h"
 
 PauseOverlay::PauseOverlay() : UIScreen() {
+    // modal + closeOnScreenSwitch are declared in UI.h's screen registry. while visible, input
+    // below the pause menu is blocked by the modal floor (replaces the all-except-a-few onKeyDown
+    // eat-all). GAME_PAUSE/Escape/offset still reach Osu's post-ui->onKeyDown handler because the
+    // floor returns WITHOUT consuming (!isConsumed).
     this->setSize(osu->getVirtScreenWidth(), osu->getVirtScreenHeight());
     using ImageGetter = UIPauseMenuButton::BasicSkinImageGetter;
 
@@ -44,7 +47,8 @@ PauseOverlay::PauseOverlay() : UIScreen() {
         ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onContinueClicked>(this));
     addButton(MKIMGGETR(i_pause_retry), _("Retry"))
         ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onRetryClicked>(this));
-    addButton(MKIMGGETR(i_pause_back), _("Quit"))->setClickCallback(SA::MakeDelegate<&PauseOverlay::onBackClicked>(this));
+    addButton(MKIMGGETR(i_pause_back), _("Quit"))
+        ->setClickCallback(SA::MakeDelegate<&PauseOverlay::onBackClicked>(this));
 
 #undef MKIMGGETR
 
@@ -114,7 +118,8 @@ void PauseOverlay::draw() {
     }
 }
 
-void PauseOverlay::update(CBaseUIEventCtx &c) {
+void PauseOverlay::tick() {
+    UIScreen::tick();
     if(!this->bVisible) return;
 
     // hide retry button in multiplayer
@@ -126,15 +131,19 @@ void PauseOverlay::update(CBaseUIEventCtx &c) {
         button->setEnabled(buttonsActive);
     }
 
-    // update and focus handling
-    UIScreen::update(c);
-
     if(this->bScheduledVisibilityChange) {
         this->bScheduledVisibilityChange = false;
         this->setVisible(this->bScheduledVisibility);
     }
 
     if(this->fWarningArrowsAnimX.animating()) this->fWarningArrowsAnimStartTime = engine->getTime();
+}
+
+void PauseOverlay::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible) return;
+
+    // update and focus handling
+    UIScreen::updateInput(c);
 }
 
 void PauseOverlay::onContinueClicked() {
@@ -190,16 +199,13 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
     UIScreen::onKeyDown(e);  // only used for options menu
     if(!this->bVisible || e.isConsumed()) return;
 
-    if(e == binds::LEFT_CLICK || e == binds::RIGHT_CLICK ||
-       e == binds::LEFT_CLICK_2 || e == binds::RIGHT_CLICK_2) {
+    if(e == binds::LEFT_CLICK || e == binds::RIGHT_CLICK || e == binds::LEFT_CLICK_2 || e == binds::RIGHT_CLICK_2) {
         bool fireButtonClick = false;
-        if((e == binds::LEFT_CLICK || e == binds::LEFT_CLICK_2) &&
-           !this->bClick1Down) {
+        if((e == binds::LEFT_CLICK || e == binds::LEFT_CLICK_2) && !this->bClick1Down) {
             this->bClick1Down = true;
             fireButtonClick = true;
         }
-        if((e == binds::RIGHT_CLICK || e == binds::RIGHT_CLICK_2) &&
-           !this->bClick2Down) {
+        if((e == binds::RIGHT_CLICK || e == binds::RIGHT_CLICK_2) && !this->bClick2Down) {
             this->bClick2Down = true;
             fireButtonClick = true;
         }
@@ -239,6 +245,7 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
             }
             this->selectedButton = nextSelectedButton;
             this->onSelectionChange();
+            e.consume();  // arrows that navigate the pause menu must not also fall to the volume sink
         }
 
         if(!keyboard->isAltDown() && e == KEY_UP) {
@@ -265,25 +272,18 @@ void PauseOverlay::onKeyDown(KeyboardEvent &e) {
             }
             this->selectedButton = nextSelectedButton;
             this->onSelectionChange();
+            e.consume();
         }
 
         if(this->selectedButton != nullptr && (e == KEY_ENTER || e == KEY_NUMPAD_ENTER) && this->areButtonsActive())
             this->selectedButton->click();
     }
-
-    // consume ALL events, except for a few special binds which are allowed through (e.g. for unpause or changing the
-    // local offset in Osu.cpp)
-    if(e != KEY_ESCAPE && e != binds::GAME_PAUSE &&
-       e != binds::INCREASE_LOCAL_OFFSET && e != binds::DECREASE_LOCAL_OFFSET)
-        e.consume();
 }
 
 void PauseOverlay::onKeyUp(KeyboardEvent &e) {
-    if(e == binds::LEFT_CLICK || e == binds::LEFT_CLICK_2)
-        this->bClick1Down = false;
+    if(e == binds::LEFT_CLICK || e == binds::LEFT_CLICK_2) this->bClick1Down = false;
 
-    if(e == binds::RIGHT_CLICK || e == binds::RIGHT_CLICK_2)
-        this->bClick2Down = false;
+    if(e == binds::RIGHT_CLICK || e == binds::RIGHT_CLICK_2) this->bClick2Down = false;
 }
 
 void PauseOverlay::onChar(KeyboardEvent &e) {
@@ -398,9 +398,6 @@ CBaseUIContainer *PauseOverlay::setVisible(bool visible) {
             }
         }
     }
-
-    // HACKHACK: force disable mod selection screen in case it was open and the beatmap ended/failed
-    ui->getModSelector()->setVisible(false);
 
     // reset
     this->selectedButton = nullptr;

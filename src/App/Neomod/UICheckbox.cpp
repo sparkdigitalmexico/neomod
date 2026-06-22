@@ -13,9 +13,9 @@ UICheckbox::UICheckbox(float xPos, float yPos, float xSize, float ySize, std::st
     this->bFocusStolenDelay = false;
 }
 
-void UICheckbox::update(CBaseUIEventCtx &c) {
+void UICheckbox::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible || !this->bEnabled) return;
-    CBaseUICheckbox::update(c);
+    CBaseUICheckbox::updateInput(c);
 
     if(this->isMouseInside() && this->tooltipTextLines.size() > 0 && !this->bFocusStolenDelay) {
         auto *ttoverlay = ui->getTooltipOverlay();

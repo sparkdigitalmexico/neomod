@@ -21,6 +21,7 @@
 #include "NetworkHandler.h"
 #include "OptionsOverlay.h"
 #include "ResourceManager.h"
+#include "RoomScreen.h"
 #include "SongBrowser.h"
 #include "SString.h"
 #include "SyncStoptoken.h"
@@ -213,6 +214,9 @@ void send_bancho_packet_ws(Packet outgoing) {
 }  // namespace
 
 void update_networking() {
+    // fake-online test sessions have no server: keep the network layer fully inert
+    if(BanchoState::fake_online) return;
+
     // Rate limit to every 1ms at most
     static double last_update = 0;
     const double current_time = engine->getTime();
@@ -315,8 +319,8 @@ void update_networking() {
 }
 
 void send_packet(Packet &packet) {
-    if(!BanchoState::is_online()) {
-        // Don't queue any packets until we're logged in
+    if(!BanchoState::is_online() || BanchoState::fake_online) {
+        // Don't queue any packets until we're logged in (or in a server-less fake session)
         free(packet.memory);
         packet.memory = nullptr;
         packet.size = 0;
@@ -539,4 +543,50 @@ void BanchoState::reconnect_websocket() {
         BANCHO::Net::websocket->status.store(Mc::Net::WSStatus::DISCONNECTED, std::memory_order_relaxed);
     }
     BANCHO::Net::websocket = new_websocket;
+}
+
+bool BanchoState::fake_online{false};
+
+void BanchoState::set_fake_online(bool enable) {
+    if(enable) {
+        if(BanchoState::is_online()) return;  // already online (real or fake)
+
+        // minimal logged-in session with no server backing it: just enough state that the
+        // online-gated UI behaves as if we're connected. the guards in update_networking()/
+        // send_packet() keep this from ever touching the network.
+        BanchoState::fake_online = true;
+        if(BanchoState::endpoint.empty()) BanchoState::endpoint = "localhost";
+        if(BanchoState::game_endpoint.empty()) BanchoState::game_endpoint = "http://localhost";
+        BanchoState::cho_token = "fake";
+
+        BanchoState::username = cv::name.getString();
+        if(BanchoState::username.empty()) BanchoState::username = "TestUser";
+
+        // set_uid() drives update_online_status() -> login button + options layout + cache dirs
+        BanchoState::set_uid(2);  // any is_online_id(); a small positive id is fine without a server
+        osu->onUserCardChange(BanchoState::username);
+    } else {
+        if(!BanchoState::fake_online) return;
+        BanchoState::fake_online = false;
+        // safe teardown: auth_token is empty in a fake session, so disconnect() sends no logout request
+        BanchoState::disconnect();
+    }
+}
+
+void BanchoState::fake_join_room() {
+    if(!BanchoState::is_online()) BanchoState::set_fake_online(true);
+
+    // mirror Lobby::on_create_room_clicked's locally-built room, but hand it straight to
+    // on_room_joined() instead of round-tripping a CREATE_ROOM packet through a server.
+    Room room;
+    room.id = 1;
+    room.name = "Test Room";
+    room.host_id = BanchoState::get_uid();
+    for(auto &slot : room.slots) slot.status = 1;  // open
+    room.slots[0].status = 4;                      // not ready (occupied by us)
+    room.slots[0].player_id = BanchoState::get_uid();
+    room.nb_players = 1;
+    room.nb_open_slots = 15;
+
+    ui->getRoom()->on_room_joined(room);
 }

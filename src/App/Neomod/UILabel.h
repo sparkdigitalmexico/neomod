@@ -8,7 +8,7 @@ class UILabel final : public CBaseUILabel {
             std::string text = {})
         : CBaseUILabel(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
-    void update(CBaseUIEventCtx &c) override;
+    void updateInput(CBaseUIEventCtx &c) override;
     void setTooltipText(std::string_view text);
 
     // debugging

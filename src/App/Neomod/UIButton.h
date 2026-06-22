@@ -9,7 +9,7 @@ class UIButton : public CBaseUIButton {
         : CBaseUIButton(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {}
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     UIButton *setColor(Color color) {
         this->color = color;

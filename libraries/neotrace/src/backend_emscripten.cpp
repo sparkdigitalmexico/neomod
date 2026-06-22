@@ -14,10 +14,7 @@
 
 #include <emscripten/emscripten.h>
 
-#include <cxxabi.h>
-
 #include <charconv>
-#include <cstdlib>
 #include <map>
 #include <mutex>
 #include <string_view>
@@ -130,17 +127,8 @@ frame_info symbolize(void *address) noexcept
 
 	info.module = it->second.module;
 	const std::string &raw = it->second.symbol;
-	if (raw.size() >= 2 && raw[0] == '_' && raw[1] == 'Z') // older toolchains leave the name section mangled
-	{
-		int status = 0;
-		char *demangled = abi::__cxa_demangle(raw.c_str(), nullptr, nullptr, &status);
-		info.symbol = (status == 0 && demangled != nullptr) ? demangled : raw;
-		std::free(demangled);
-	}
-	else
-	{
-		info.symbol = raw;
-	}
+	// emscripten usually pre-demangles the wasm name section; older toolchains leave it mangled
+	info.symbol = (raw.size() >= 2 && raw[0] == '_' && raw[1] == 'Z') ? demangle(raw.c_str()) : raw;
 	return info;
 }
 

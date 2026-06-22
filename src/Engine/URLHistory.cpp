@@ -6,7 +6,7 @@
 
 EM_JS(void, set_path_internal, (const char* path), { history.replaceState({}, "", UTF8ToString(path)); })
 
-static constinit std::string last_string{};
+static CONSTINIT std::string last_string{};
 
 #endif
 

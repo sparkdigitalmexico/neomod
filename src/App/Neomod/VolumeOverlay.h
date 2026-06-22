@@ -16,9 +16,14 @@ class VolumeOverlay final : public UIScreen {
 
     void animate();
     void draw() override;
-    void update(CBaseUIEventCtx& c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx& c) override;
     void onResolutionChange(vec2 newResolution) override;
     void onKeyDown(KeyboardEvent& key) override;
+    // the global arrow-volume key sink (see UI::onKeyDown)
+    void onArrowVolumeFallback(KeyboardEvent& key);
+    // the dispatch fall-through wheel sink (and the hovered-slider wheel claim)
+    bool onWheel(int deltaVertical, int deltaHorizontal) override;
     void updateLayout();
     bool isBusy() override;
     bool isVisible() override;

@@ -13,7 +13,8 @@
 
 #include <utility>
 
-void LoadingScreen::update(CBaseUIEventCtx& /*c*/) {
+void LoadingScreen::tick() {
+    UIScreen::tick();
     if(!this->isVisible()) {
         return;
     }

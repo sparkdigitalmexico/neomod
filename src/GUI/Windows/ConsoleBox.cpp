@@ -226,16 +226,35 @@ void ConsoleBox::processPendingLogAnimations() {
     }
 }
 
-void ConsoleBox::update(CBaseUIEventCtx &c) {
-    // handle textbox focus first
-    this->textbox->update(c);
+void ConsoleBox::updateInput(CBaseUIEventCtx &c) {
+    // self before children: visit order doubles as hit-candidate priority (latest = top-most)
+    CBaseUIElement::updateInput(c);
 
-    CBaseUIElement::update(c);
+    CBaseUIEventCtx::HitPathScope scope(c, this);
+
+    this->textbox->updateInput(c);
+
+    const bool mleft = mouse->isLeftDown();
+
+    // handle suggestions
+    if(this->suggestion->isVisible()) this->suggestion->updateInput(c);
+
+    if(mleft) {
+        if(!this->suggestion->isMouseInside() && !this->textbox->isVisible() && !this->suggestion->isBusy())
+            this->suggestion->setVisible(false);
+
+        if(this->textbox->isVisible() && this->textbox->isMouseInside() && this->iSuggestionCount > 0)
+            this->suggestion->setVisible(true);
+    }
+}
+
+void ConsoleBox::tick() {
+    CBaseUIElement::tick();
+    this->textbox->tick();
+    this->suggestion->tick();
 
     // handle pending animation operations from logging threads
     processPendingLogAnimations();
-
-    const bool mleft = mouse->isLeftDown();
 
     if(this->textbox->hitEnter()) {
         this->processCommand(this->textbox->getText());
@@ -261,7 +280,7 @@ void ConsoleBox::update(CBaseUIEventCtx &c) {
             this->fConsoleAnimation.stop();
             this->fConsoleAnimation = this->getAnimTargetY();
             this->textbox->setPosY(engine->getScreenHeight() - this->fConsoleAnimation);
-            this->textbox->setActive(true);
+            this->textbox->requestFocus();
         }
     }
 
@@ -277,9 +296,6 @@ void ConsoleBox::update(CBaseUIEventCtx &c) {
             this->textbox->setPosY(engine->getScreenHeight());
         }
     }
-
-    // handle suggestions
-    if(this->suggestion->isVisible()) this->suggestion->update(c);
 
     if(this->bSuggestionAnimateOut) {
         if(this->fSuggestionAnimation <= this->fSuggestionY) {
@@ -302,14 +318,6 @@ void ConsoleBox::update(CBaseUIEventCtx &c) {
             this->fSuggestionAnimation = 0.0f;
             this->suggestion->setPosY(engine->getScreenHeight() - this->fSuggestionY);
         }
-    }
-
-    if(mleft) {
-        if(!this->suggestion->isMouseInside() && !this->textbox->isActive() && !this->suggestion->isBusy())
-            this->suggestion->setVisible(false);
-
-        if(this->textbox->isActive() && this->textbox->isMouseInside() && this->iSuggestionCount > 0)
-            this->suggestion->setVisible(true);
     }
 
     // handle overlay animation and timeout
@@ -346,15 +354,13 @@ void ConsoleBox::onSuggestionClicked(CBaseUIButton *suggestion) {
     this->textbox->setSuggestion("");
     this->textbox->setText(std::move(text));
     this->textbox->setCursorPosRight();
-    this->textbox->setActive(true);
+    this->textbox->requestFocus();
 }
 
 void ConsoleBox::onKeyDown(KeyboardEvent &e) {
     // toggle visibility
-    if((e == KEY_F1 && (this->textbox->isActive() && this->textbox->isVisible() && !this->bConsoleAnimateOut
-                            ? true
-                            : keyboard->isShiftDown())) ||
-       (this->textbox->isActive() && this->textbox->isVisible() && !this->bConsoleAnimateOut && e == KEY_ESCAPE))
+    if((e == KEY_F1 && (this->textbox->isVisible() && !this->bConsoleAnimateOut ? true : keyboard->isShiftDown())) ||
+       (this->textbox->isVisible() && !this->bConsoleAnimateOut && e == KEY_ESCAPE))
         this->toggle(e);
 
     if(this->bConsoleAnimateOut) return;
@@ -363,7 +369,7 @@ void ConsoleBox::onKeyDown(KeyboardEvent &e) {
     this->textbox->onKeyDown(e);
 
     // suggestion + command history hotkey handling
-    if(this->iSuggestionCount > 0 && this->textbox->isActive() && this->textbox->isVisible()) {
+    if(this->iSuggestionCount > 0 && this->textbox->isVisible()) {
         // handle suggestion up/down buttons
 
         if(e == KEY_DOWN || (e == KEY_TAB && !keyboard->isShiftDown())) {
@@ -421,7 +427,7 @@ void ConsoleBox::onKeyDown(KeyboardEvent &e) {
 
             e.consume();
         }
-    } else if(this->commandHistory.size() > 0 && this->textbox->isActive() && this->textbox->isVisible()) {
+    } else if(this->commandHistory.size() > 0 && this->textbox->isVisible()) {
         // handle command history up/down buttons
 
         if(e == KEY_DOWN) {
@@ -462,7 +468,7 @@ void ConsoleBox::onChar(KeyboardEvent &e) {
 
     this->textbox->onChar(e);
 
-    if(this->textbox->isActive() && this->textbox->isVisible()) {
+    if(this->textbox->isVisible()) {
         // rebuild suggestion list
         this->clearSuggestions();
 
@@ -538,7 +544,9 @@ bool ConsoleBox::isBusy() {
 }
 
 bool ConsoleBox::isActive() {
-    return (this->textbox->isActive() || this->suggestion->isActive()) && this->textbox->isVisible();
+    // the box is "active" exactly while it is shown: it is the keyboard focus target whenever open
+    // (toggle requestFocus/stealFocus) and its textbox is perma-busy, so visibility is the gate
+    return this->textbox->isVisible();
 }
 
 void ConsoleBox::addSuggestion(std::string text, std::string_view helpText, std::string_view command) {
@@ -601,10 +609,14 @@ void ConsoleBox::toggle(KeyboardEvent &e) {
 
         if(this->suggestion->container.getElements().size() > 0) this->bSuggestionAnimateOut = true;
 
+        // release the keyboard: the box keeps drawing through the close animation, but it is no
+        // longer the focus target (onKeyDown/onChar early-out while animating out anyway)
+        this->textbox->stealFocus();
+
         e.consume();
     } else if(!this->bConsoleAnimateOut && !this->bSuggestionAnimateOut) {
         this->textbox->setVisible(true);
-        this->textbox->setActive(true);
+        this->textbox->requestFocus();
         this->textbox->setBusy(true);
         this->bConsoleAnimateIn = true;
 

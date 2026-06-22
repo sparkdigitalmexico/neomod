@@ -107,8 +107,8 @@ void HUD::onCursorTrailMaxChange() {
 
 // temp vao buffers
 namespace {
-static constinit VertexArrayObject quadVAO{DrawPrimitive::QUADS};
-static constinit VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
+static CONSTINIT VertexArrayObject quadVAO{DrawPrimitive::QUADS};
+static CONSTINIT VertexArrayObject triVAO{DrawPrimitive::TRIANGLES};
 }  // namespace
 
 HUD::HUD() : UIScreen() {
@@ -530,6 +530,8 @@ void HUD::drawCursorTrail(vec2 pos, f32 alphaMultiplier, bool secondTrail) {
                              alphaMultiplier, fposuTrailJumpFix);
 }
 
+static CONSTINIT std::array<vec2, 4> defaultQuadTexcoords{vec2{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+
 void HUD::drawCursorTrailInt(Shader *trailShader, CursorTrail &trail, vec2 pos, f32 alphaMultiplier,
                              bool emptyTrailFrame) {
     const auto &trailImage = osu->getSkin()->i_cursor_trail;
@@ -569,19 +571,16 @@ void HUD::drawCursorTrailInt(Shader *trailShader, CursorTrail &trail, vec2 pos, 
                 curTrl.alpha = std::clamp<f32>(((curTrl.time - timeNow) / trailLength) * alphaMultiplier, 0.0f, 1.0f) *
                                alphaScaleOpt;
 
-                vao.addVertex(vec3{curTrl.pos.x - realWidth,  // topLeft
-                                   curTrl.pos.y - realHeight, curTrl.alpha});
-                vao.addVertex(vec3{curTrl.pos.x + realWidth,  // topRight
-                                   curTrl.pos.y - realHeight, curTrl.alpha});
-                vao.addVertex(vec3{curTrl.pos.x + realWidth,  // bottomRight
-                                   curTrl.pos.y + realHeight, curTrl.alpha});
-                vao.addVertex(vec3{curTrl.pos.x - realWidth,  // bottomLeft
-                                   curTrl.pos.y + realHeight, curTrl.alpha});
+                vao.addVertices(std::array<vec3, 4>{vec3{curTrl.pos.x - realWidth,  // topLeft
+                                                         curTrl.pos.y - realHeight, curTrl.alpha},
+                                                    {curTrl.pos.x + realWidth,  // topRight
+                                                     curTrl.pos.y - realHeight, curTrl.alpha},
+                                                    {curTrl.pos.x + realWidth,  // bottomRight
+                                                     curTrl.pos.y + realHeight, curTrl.alpha},
+                                                    {curTrl.pos.x - realWidth,  // bottomLeft
+                                                     curTrl.pos.y + realHeight, curTrl.alpha}});
 
-                vao.addTexcoord(vec2{0, 0});
-                vao.addTexcoord(vec2{1, 0});
-                vao.addTexcoord(vec2{1, 1});
-                vao.addTexcoord(vec2{0, 1});
+                vao.addTexcoords(defaultQuadTexcoords);
                 i--;
             }
         } else {  // old style trail

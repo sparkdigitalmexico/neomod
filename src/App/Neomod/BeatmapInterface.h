@@ -38,7 +38,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     using DBBreak = neomod::DatabaseBeatmapTypes::BREAK;
 
     // for handling transition from unloaded database to loaded database
-    static inline constinit MD5Hash loading_reselect_map{};
+    static inline CONSTINIT MD5Hash loading_reselect_map{};
 
     BeatmapInterface();
     ~BeatmapInterface() override;

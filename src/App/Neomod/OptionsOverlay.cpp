@@ -107,11 +107,11 @@ struct OptionsOverlayImpl final {
     ~OptionsOverlayImpl();
 
     void draw();
-    void update(CBaseUIEventCtx &c);
+    void tick();
+    void updateInput(CBaseUIEventCtx &c);
     void onKeyDown(KeyboardEvent &e);
     void onChar(KeyboardEvent &e);
     void onResolutionChange(vec2 newResolution);
-    void onKey(KeyboardEvent &e);
     CBaseUIContainer *setVisible(bool visible);
 
     void save();
@@ -296,6 +296,7 @@ struct OptionsOverlayImpl final {
     CBaseUITextbox *osuFolderTextbox{nullptr};
 
     ConVar *waitingKey{nullptr};
+    bool bWaitingKeyDisallowsLeftClick{false};
 
     // custom
     AnimFloat fAnimation;
@@ -331,15 +332,16 @@ struct OptionsOverlayImpl final {
 };
 
 // passthroughs
-OptionsOverlay::OptionsOverlay() : ScreenBackable(), NotificationOverlayKeyListener(), pImpl(this) {}
+OptionsOverlay::OptionsOverlay()
+    : ScreenBackable(), pImpl(this) {}  // closeOnScreenSwitch is declared in UI.h's screen registry
 OptionsOverlay::~OptionsOverlay() = default;
 
 void OptionsOverlay::draw() { return pImpl->draw(); }
-void OptionsOverlay::update(CBaseUIEventCtx &c) { return pImpl->update(c); }
+void OptionsOverlay::tick() { return pImpl->tick(); }
+void OptionsOverlay::updateInput(CBaseUIEventCtx &c) { return pImpl->updateInput(c); }
 void OptionsOverlay::onKeyDown(KeyboardEvent &e) { return pImpl->onKeyDown(e); }
 void OptionsOverlay::onChar(KeyboardEvent &e) { return pImpl->onChar(e); }
 void OptionsOverlay::onResolutionChange(vec2 newResolution) { return pImpl->onResolutionChange(newResolution); }
-void OptionsOverlay::onKey(KeyboardEvent &e) { return pImpl->onKey(e); }
 CBaseUIContainer *OptionsOverlay::setVisible(bool visible) { return pImpl->setVisible(visible); }
 void OptionsOverlay::save() { return pImpl->save(); }
 void OptionsOverlay::openAndScrollToSkinSection() { return pImpl->openAndScrollToSkinSection(); }
@@ -413,9 +415,9 @@ class ResetButton final : public CBaseUIButton {
                         middle);
     }
 
-    void update(CBaseUIEventCtx &c) override {
+    void updateInput(CBaseUIEventCtx &c) override {
         if(!this->bVisible || !this->bEnabled) return;
-        CBaseUIButton::update(c);
+        CBaseUIButton::updateInput(c);
 
         if(this->isMouseInside() && this->isAvailable()) {
             ui->getTooltipOverlay()->begin();
@@ -687,9 +689,9 @@ class OptionsMenuKeyBindLabel final : public CBaseUILabel {
         this->textColorUnbound = 0xffbb0000;
     }
 
-    void update(CBaseUIEventCtx &c) override {
+    void tick() override {
+        CBaseUILabel::tick();
         if(!this->bVisible) return;
-        CBaseUILabel::update(c);
 
         const SCANCODE newKeyCode = this->bind->get();
         if(this->scanCode == newKeyCode) return;
@@ -800,14 +802,14 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
 
     parent->setPos(-1, 0);
 
-    this->options = new CBaseUIScrollView(0, -1, 0, 0, "");
+    this->options = new CBaseUIScrollView(0, -1, 0, 0, "options_contents");
     this->options->setDrawFrame(true);
     this->options->setDrawBackground(true);
     this->options->setBackgroundColor(0xdd000000);
     this->options->setHorizontalScrolling(false);
     parent->addBaseUIElement(this->options);
 
-    this->categories = new CBaseUIScrollView(0, -1, 0, 0, "");
+    this->categories = new CBaseUIScrollView(0, -1, 0, 0, "options_categories");
     this->categories->setDrawFrame(true);
     this->categories->setDrawBackground(true);
     this->categories->setBackgroundColor(0xff000000);
@@ -816,11 +818,11 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->categories->setScrollResistance(30);  // since all categories are always visible anyway
     parent->addBaseUIElement(this->categories);
 
-    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "", this->options);
+    this->contextMenu = new UIContextMenu(50, 50, 150, 0, "options_contextmenu", this->options);
     this->contextMenu->setBackgroundColor(argb(200, 36, 36, 48));
     this->contextMenu->setFrameColor(argb(240, 240, 240, 255));
 
-    this->search = new UISearchOverlay(0, 0, 0, 0, "");
+    this->search = new UISearchOverlay(0, 0, 0, 0, "options_search");
     this->search->setOffsetRight(20);
     parent->addBaseUIElement(this->search);
 
@@ -846,6 +848,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     }
 
     this->serverTextbox = this->addTextbox(cv::mp_server.getString(), _("Server address:"), &cv::mp_server);
+    this->serverTextbox->setName("options_server_box");
 
     // Only renders if server submission policy is unknown
     {
@@ -858,9 +861,11 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
         this->addSubSection(_("Login details (username/password)"));
         this->elemContainers.back()->render_condition = RenderCondition::PASSWORD_AUTH;
         this->nameTextbox = this->addTextbox(cv::name.getString(), &cv::name);
+        this->nameTextbox->setName("options_name_box");
         this->elemContainers.back()->render_condition = RenderCondition::PASSWORD_AUTH;
         const auto &md5pass = cv::mp_password_md5.getString();
         this->passwordTextbox = this->addTextbox(md5pass.empty() ? "" : md5pass, &cv::mp_password);
+        this->passwordTextbox->setName("options_password_box");
         this->passwordTextbox->is_password = true;
         this->elemContainers.back()->render_condition = RenderCondition::PASSWORD_AUTH;
     }
@@ -912,6 +917,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
     this->addLabel(_("3) Copy paste the full path into the textbox:"))->setTextColor(0xff666666);
     this->addLabel("");
     this->osuFolderTextbox = this->addTextbox(cv::osu_folder.getString(), &cv::osu_folder);
+    this->osuFolderTextbox->setName("options_osufolder_box");
     UIButton *importPeppySettingsButton = this->addButton(_("Import settings from osu!stable"));
     importPeppySettingsButton->setClickCallback(SA::MakeDelegate([]() -> void {
         if(SettingsImporter::import_from_osu_stable()) {
@@ -1322,6 +1328,7 @@ OptionsOverlayImpl::OptionsOverlayImpl(OptionsOverlay *parent) : parent(parent) 
             this->skinLabel = static_cast<CBaseUILabel *>(skinSelect->baseElems[1].get());
         }
 
+        this->skinSelectLocalButton->setName("options_skin_select");
         this->skinSelectLocalButton->setClickCallback(SA::MakeDelegate<&OptionsOverlayImpl::onSkinSelectOpened>(this));
         this->skinSelectLocalButton->setTooltipText(
             _("Shift-click a skin to set it as fallback.\nMissing elements fall back to it instead of \"default\"."));
@@ -2002,7 +2009,7 @@ void OptionsOverlayImpl::update_login_button(bool loggedIn) {
     this->logInButton->is_loading = BanchoState::is_logging_in();
 }
 
-void OptionsOverlayImpl::update(CBaseUIEventCtx &c) {
+void OptionsOverlayImpl::tick() {
     // handle skin folder loading finish
     if(this->skinFolderEnumHandle.valid() && this->skinFolderEnumHandle.is_ready()) {
         auto skinFolders = this->skinFolderEnumHandle.get();
@@ -2013,42 +2020,33 @@ void OptionsOverlayImpl::update(CBaseUIEventCtx &c) {
         this->updateLayout();
     }
 
+    parent->ScreenBackable::tick();
+}
+
+void OptionsOverlayImpl::updateInput(CBaseUIEventCtx &c) {
     const bool optionsMenuVisible = parent->bVisible;
     const bool contextMenuVisible = this->contextMenu->isVisible();
 
     if(!optionsMenuVisible && !contextMenuVisible) return;
     const bool onlyContextMenuVisible = contextMenuVisible && !optionsMenuVisible;
 
-    // force context menu click handling focus
-    this->contextMenu->update(c);
-    if(c.mouse_consumed()) return;
+    // early-update the context menu: it is the whole walk for the standalone case (options
+    // hidden, nested walk below never runs) and keeps close-on-outside working when the
+    // dropdown is scrolled out of the clip list. when the options menu IS visible the menu is
+    // visited AGAIN inside the options scrollview walk, and that registration must win the
+    // hit candidacy (its ancestor path includes options_contents, so the drag-scroll steal can
+    // chain through an unscrollable dropdown).
+    this->contextMenu->updateInput(c);
     if(onlyContextMenuVisible) return;  // HACK: not returning early if options menu is hidden, for skins menu dropdown
-
-    // force context menu mouse-inside focus
-    // NOTE: "propagate_clicks" does not solve the issue of mouse hover focus
-    // this hack is still required, otherwise hovering underneath e.g. skin dropdown will play duplicate sounds for
-    // each element selected (at all z-orders!)
-    if(contextMenuVisible) {
-        parent->backButton->stealFocus();
-    }
 
     // disable widgets bound to a server/skin-forced cvar before their update runs,
     // so input handlers + their own tooltip code don't fire for forced settings
     this->applyForcedCvarLocks();
 
-    parent->ScreenBackable::update(c);
-    if(c.mouse_consumed()) return;
+    parent->ScreenBackable::updateInput(c);
 
     // and show a single "forced by ..." tooltip when hovering any locked widget
     this->pushForcedCvarTooltipIfHovered();
-
-    if(contextMenuVisible) {
-        // eyes are bleeding...
-        for(auto e : this->options->container.getElements()) {
-            if(e == this->contextMenu) continue;
-            e->stealFocus();
-        }
-    }
 
     if(this->bDPIScalingScrollToSliderScheduled) {
         this->bDPIScalingScrollToSliderScheduled = false;
@@ -2207,16 +2205,39 @@ void OptionsOverlayImpl::onKeyDown(KeyboardEvent &e) {
         return;
     }
 
+    // keybind capture: a bind button armed waitingKey, so the next key (or Escape to cancel)
+    // binds into that convar instead of falling through to the normal handling below. this
+    // replaces the old NotificationOverlay::addKeyListener side channel; options is reached by
+    // the normal key walk (it already consumes keys while open) so no focus routing is needed.
+    if(this->waitingKey != nullptr) {
+        const bool cancel = (e.getScanCode() == KEY_ESCAPE) ||
+                            // HACKHACK: prevent left mouse click bindings if relevant
+                            // TODO: no longer relevant since switching to SDL, but keeping this here
+                            // in case we do eventually route mouse buttons through keyboard events
+                            (Env::cfg(OS::WINDOWS) && this->bWaitingKeyDisallowsLeftClick &&
+                             e.getScanCode() == 0x01);  // 0x01 == VK_LBUTTON
+        if(!cancel) {
+            if(e.getScanCode() != this->waitingKey->getVal<SCANCODE>())
+                this->bLayoutUpdateScheduled.store(true, std::memory_order_relaxed);
+            this->waitingKey->setValue(e.getScanCode());
+        }
+        this->waitingKey = nullptr;
+        this->bWaitingKeyDisallowsLeftClick = false;
+        ui->getNotificationOverlay()->stopWaitingForKey();
+        e.consume();
+        return;
+    }
+
     this->contextMenu->onKeyDown(e);
     if(e.isConsumed()) return;
 
     if(e.getScanCode() == KEY_TAB) {
-        if(this->serverTextbox->isActive()) {
+        if(this->serverTextbox->isFocused()) {
             this->serverTextbox->stealFocus();
             this->nameTextbox->focus();
             e.consume();
             return;
-        } else if(this->nameTextbox->isActive()) {
+        } else if(this->nameTextbox->isFocused()) {
             this->nameTextbox->stealFocus();
             this->passwordTextbox->focus();
             e.consume();
@@ -2312,17 +2333,6 @@ void OptionsOverlayImpl::onResolutionChange(vec2 newResolution) {
 
     if(this->resolutionLabel != nullptr)
         this->resolutionLabel->setText(fmt::format("{}x{}", (int)newResolution.x, (int)newResolution.y));
-}
-
-void OptionsOverlayImpl::onKey(KeyboardEvent &e) {
-    // from NotificationOverlay
-    if(this->waitingKey != nullptr) {
-        if(e.getScanCode() != this->waitingKey->getVal<SCANCODE>()) {
-            this->bLayoutUpdateScheduled.store(true, std::memory_order_relaxed);
-        }
-        this->waitingKey->setValue(e.getScanCode());
-        this->waitingKey = nullptr;
-    }
 }
 
 CBaseUIContainer *OptionsOverlayImpl::setVisible(bool visible) {
@@ -3510,12 +3520,12 @@ void OptionsOverlayImpl::onKeyBindingButtonPressed(CBaseUIButton *button) {
     OptionsElement *element = nullptr;
     if(const auto &it = this->uiToOptElemMap.find(button); it != this->uiToOptElemMap.end() && (element = it->second)) {
         this->waitingKey = element->cvar;
+        this->bWaitingKeyDisallowsLeftClick =
+            !(dynamic_cast<KeyBindButton *>(button)->isLeftMouseClickBindingAllowed());
 
         const bool waitForKey = true;
         auto notificationText = tformat("Press new key for {}:", button->getText());
         ui->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, waitForKey);
-        ui->getNotificationOverlay()->setDisallowWaitForKeyLeftClick(
-            !(dynamic_cast<KeyBindButton *>(button)->isLeftMouseClickBindingAllowed()));
     }
 }
 
@@ -4267,7 +4277,9 @@ SliderPreviewElement *OptionsOverlayImpl::addSliderPreview() {
 }
 
 CategoryButton *OptionsOverlayImpl::addCategory(CBaseUIElement *section, char32_t icon) {
-    auto *button = new CategoryButton(section, 0, 0, 50, 50, "", UniString::to_utf8(std::u32string_view{&icon, 1}));
+    auto *button =
+        new CategoryButton(section, 0, 0, 50, 50, fmt::format("options_category_{}", this->categoryButtons.size()),
+                           UniString::to_utf8(std::u32string_view{&icon, 1}));
     button->setFont(osu->getFontIcons());
     button->setDrawBackground(false);
     button->setDrawFrame(false);

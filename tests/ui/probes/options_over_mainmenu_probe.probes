@@ -1,0 +1,9 @@
+# draw-order pins for options-over-mainmenu (1280x720, options slide-in settled).
+# the options panel spans x=82..709; the mainmenu logo cube sits centered (boot color
+# #eaeaea at screen center). avoid the panel/logo EDGES: edge pixels carry AA jitter
+# and the logo pulses to wall-clock music (cost one rejected point at 0.6 0.5).
+# options row background above the menu logo at the overlap point (if the base screen
+# ever draws above the overlay band, this reads the logo's #eaeaea instead)
+0.5 0.5 1f1f1f 8
+# solid logo interior peeking right of the panel edge = the base still draws beneath
+0.61 0.5 eaeaea 8

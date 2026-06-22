@@ -86,6 +86,10 @@ OnlineMapListing::OnlineMapListing(Downloader::BeatmapSetMetadata meta)
                fmt::format("b.{}/thumb/{:d}.jpg", BanchoState::endpoint,
                            this->meta.set_id),  // Also valid: "b.{}/thumb/{:d}l.jpg" ("l" stands for "large")
            .id = this->meta.set_id}) {
+    // the card itself is the click surface: opt back into hit candidacy (container-self is
+    // click-through by default since the single-target dispatch)
+    this->bClickThroughSelf = false;
+
     if(this->meta.beatmaps.size() > 1) {
         // reverse
         std::ranges::sort(this->meta.beatmaps, std::ranges::greater{}, [](const auto& bm) { return bm.star_rating; });
@@ -153,7 +157,7 @@ enum class RankingStatusFilter : u8 {
     LOVED = 8,
 };
 
-Color get_difficulty_color(f32 star_rating) {
+[[nodiscard]] Color get_difficulty_color(f32 star_rating) {
     // using this: https://github.com/ppy/osu-web/blob/2d211ba69831f32bc4aed06d4f3bd0020c50b440/resources/js/utils/beatmap-helper.ts#L22
     // (maybe already outdated?)
     static constexpr const struct ColorMap {
@@ -198,34 +202,6 @@ Color get_difficulty_color(f32 star_rating) {
     return rgb(lerp_ch(a.Rf(), b.Rf()), lerp_ch(a.Gf(), b.Gf()), lerp_ch(a.Bf(), b.Bf()));
 }
 
-class DiffLabel final : public UIIcon {
-   public:
-    using UIIcon::UIIcon;
-    // TODO: crap duplication (CBaseUILabel only supports shadows, TextFX was added later... should retrofit it there to avoid needing this)
-    void drawText() override {
-        if(!this->font || this->sText.empty()) {
-            return;
-        }
-
-        g->pushTransform();
-        {
-            g->scale(this->fScale, this->fScale);
-            g->translate((f32)(i32)(this->getPos().x),
-                         (f32)(i32)(this->getPos().y + this->getSize().y / 2.f + this->fStringHeight / 2.f));
-
-            const f32 outline_scale = Osu::getUIScale();
-            const TextFX icon_fx{.col_text = this->textColor,
-                                 .col_shadow = 0,                                 // no shadow
-                                 .col_outline = Colors::invert(this->textColor),  // TODO: this is kind of ugly
-                                 .outline_px = 1.f * outline_scale,
-                                 .shadow_softness_px = 0.5f * outline_scale};
-
-            g->drawString(this->font, this->sText, icon_fx);
-        }
-        g->popTransform();
-    }
-};
-
 }  // namespace
 
 void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
@@ -235,32 +211,40 @@ void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
     const f32 scale = Osu::getUIScale();
     vec2 pos_counter = this->getSize() - (40.f * scale);
 
-    auto icon_elems_copy = reinterpret_cast<std::vector<DiffLabel*>&>(this->vElements);
+    auto icon_elems_copy = reinterpret_cast<std::vector<UIIcon*>&>(this->vElements);
     this->invalidate();  // clear this->vElements and rebuild
 
     for(sSz added_elem_i = 0; const auto& diff : this->meta.beatmaps) {
         if(diff.mode != 0) continue;
 
-        DiffLabel* icon = nullptr;
+        UIIcon* icon = nullptr;
         if(added_elem_i < icon_elems_copy.size()) {
             icon = icon_elems_copy[added_elem_i];
             icon_elems_copy[added_elem_i] = nullptr;  // set to null so we don't delete it later
         } else {
-            icon = new DiffLabel(Icons::CIRCLE);
+            icon = new UIIcon(Icons::CIRCLE);
         }
 
         icon->setPos(pos_counter);
         icon->setSize(30.f * scale, 30.f * scale);
+        icon->setDrawTextShadow(false);  // only outline
+        icon->setAutoscaleFX(false);     // use osu scaling
 
+        Color text_color = (Color)-1;
         if(diff.star_rating > 0.f) {
             // has star rating
+            text_color = get_difficulty_color(diff.star_rating);
             icon->setTooltipText(fmt::format("{:s} ({:.2f} ⭐)", diff.diffname, diff.star_rating));
-            icon->setTextColor(get_difficulty_color(diff.star_rating));
         } else {
             // didn't parse star rating for this difficulty
             icon->setTooltipText(diff.diffname);
-            icon->setTextColor((Color)-1);
         }
+
+        icon->setTextFX({.col_text = text_color,
+                         .col_shadow = 0,
+                         .col_outline = Colors::invert(text_color),  // TODO: this is kind of ugly
+                         .outline_px = 1.f * scale,
+                         .shadow_softness_px = 0.5f * scale});
 
         this->addBaseUIElement(icon);
 
@@ -401,7 +385,6 @@ OsuDirectScreen::OsuDirectScreen() {
     this->results->setBackgroundColor(0xaa000000);
     this->results->setHorizontalScrolling(false);
     this->results->setVerticalScrolling(true);
-    this->results->setGrabClicks(false);
     this->addBaseUIElement(this->results);
 }
 
@@ -465,10 +448,15 @@ void OsuDirectScreen::draw() {
     // TODO: message if no maps were found or server errored
 }
 
-void OsuDirectScreen::update(CBaseUIEventCtx& c) {
+void OsuDirectScreen::updateInput(CBaseUIEventCtx& c) {
+    if(!this->isVisible()) return;
+    ScreenBackable::updateInput(c);
+}
+
+void OsuDirectScreen::tick() {
+    ScreenBackable::tick();
     if(!this->isVisible()) return;
     if(!BanchoState::is_online() || !db->isFinished() || db->isCancelled()) return this->onBack();
-    ScreenBackable::update(c);
 
     if(this->search_bar->hitEnter()) {
         if(this->current_query == this->search_bar->getText() && this->loading) {

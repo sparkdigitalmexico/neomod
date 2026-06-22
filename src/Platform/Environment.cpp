@@ -149,7 +149,7 @@ Environment::Environment(const Mc::AppDescriptor &appDesc,
     m_bWinKeyDisabled = m_bRawKB ? SDL_GetHintBoolean(SDL_HINT_WINDOWS_RAW_KEYBOARD_EXCLUDE_HOTKEYS, false) : false;
 
     // this is the only platform/configuration where NullGraphics is used currently
-    if(Env::cfg(OS::WASM | OS::MAC) && m_bHeadless) {
+    if(Env::cfg(OS::WASM) && m_bHeadless) {
         m_renderer = RuntimeRenderer::NULLGRAPHICS;
     } else {
         // use directx if:
@@ -178,7 +178,8 @@ Environment::Environment(const Mc::AppDescriptor &appDesc,
         // clang-format on
         if constexpr(Env::cfg(OS::MAC) && Env::cfg(REND::SDLGPU) && Env::cfg(REND::GL)) {
             // use sdl_gpu by default on macOS, actually
-            if(!(m_mArgMap.contains("-gl") || m_mArgMap.contains("-opengl"))) {
+            // also if headless use SDLGPU for offscreen screenshot support
+            if(m_bHeadless || !(m_mArgMap.contains("-gl") || m_mArgMap.contains("-opengl"))) {
                 m_renderer = SDLGPU;
             }
         }
@@ -218,7 +219,7 @@ void Environment::update() {
 }
 
 std::unique_ptr<Graphics> Environment::createRenderer() {
-#if defined(MCENGINE_PLATFORM_WASM) || defined(MCENGINE_PLATFORM_MACOS)
+#if defined(MCENGINE_PLATFORM_WASM)
     if(m_bHeadless) return std::make_unique<NullGraphics>();
 #endif
 #ifdef MCENGINE_FEATURE_DIRECTX11
@@ -1546,6 +1547,17 @@ vec2 Environment::getAsyncMousePos() const {
 }
 
 Environment::CursorPosition Environment::consumeCursorPositionCache() {
+    // synthetic cursor position injected via the mouse_to debug command is the only way to control the mouse in headless
+    if(m_bHeadless) {
+        dvec2 newRel{m_vInjectedCursorPos - m_vLastInjectedCursorPos};
+        // Mouse::update() skips position application on zero relative motion, so report a tiny
+        // delta when a freshly injected position equals the previous one
+        if(m_bInjectedCursorDirty && vec::length(newRel) == 0.) newRel = {0.001, 0.001};
+        m_bInjectedCursorDirty = false;
+        m_vLastInjectedCursorPos = m_vInjectedCursorPos;
+        return CursorPosition{.rel = newRel, .abs = dvec2{m_vInjectedCursorPos}, .scale = 1.f, .needsClipping = false};
+    }
+
     float xRel{0.f}, yRel{0.f};
     float x{m_vLastAbsMousePos.x}, y{m_vLastAbsMousePos.y};
 

@@ -26,9 +26,9 @@ UIContextMenuButton::UIContextMenuButton(float xPos, float yPos, float xSize, fl
     this->iID = id;
 }
 
-void UIContextMenuButton::update(CBaseUIEventCtx &c) {
+void UIContextMenuButton::updateInput(CBaseUIEventCtx &c) {
     if(!this->bVisible) return;
-    CBaseUIButton::update(c);
+    CBaseUIButton::updateInput(c);
 
     if(this->isMouseInside() && this->tooltipTextLines.size() > 0) {
         ui->getTooltipOverlay()->begin();
@@ -80,6 +80,11 @@ UIContextMenu::UIContextMenu(float xPos, float yPos, float xSize, float ySize, s
     this->setDrawFrame(false);
     this->setScrollbarSizeMultiplier(0.5f);
 
+    // a context menu draws on top of its group, so its (sub)tree out-ranks same-group siblings for
+    // hover/click/wheel regardless of visit order (the songbrowser menu is visited before the
+    // carousel beneath it)
+    this->bDrawsOnTop = true;
+
     // HACHACK: this->bVisible is always true, since we want to be able to put a context menu in a scrollview.
     //          When scrolling, scrollviews call setVisible(false) to clip items, and that breaks the menu.
     this->bVisible = true;
@@ -115,9 +120,14 @@ void UIContextMenu::draw() {
     if(this->fAnimation > 0.0f && this->fAnimation < 1.0f) g->pop3DScene();
 }
 
-void UIContextMenu::update(CBaseUIEventCtx &c) {
+void UIContextMenu::updateInput(CBaseUIEventCtx &c) {
+    if(!this->bVisible2) return;  // bDrawsOnTop (set in the ctor) handles the menu's z-priority
+    CBaseUIScrollView::updateInput(c);
+}
+
+void UIContextMenu::tick() {
     if(!this->bVisible2) return;
-    CBaseUIScrollView::update(c);
+    CBaseUIScrollView::tick();
 
     if(this->containedTextbox != nullptr) {
         if(this->containedTextbox->hitEnter()) this->onHitEnter(this->containedTextbox);
@@ -230,7 +240,7 @@ UIContextMenuTextbox *UIContextMenu::addTextbox(const std::string &text, int id)
 
         if(this->bBigStyle) textbox->setFont(osu->getSubTitleFont());
 
-        textbox->setActive(true);
+        textbox->requestFocus();
     }
     this->container.addBaseUIElement(textbox);
 

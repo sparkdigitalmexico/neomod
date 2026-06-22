@@ -33,7 +33,7 @@ class ConsoleReader final {
 
 #ifndef MCENGINE_FEATURE_WASM
     Sync::mutex stdinMutex;
-    Sync::jthread stdinThread;
+    Sync::jthread stdinThread;  // only started if stdin wasn't fully consumed in the ctor pre-drain
 #endif
 };
 }  // namespace Mc

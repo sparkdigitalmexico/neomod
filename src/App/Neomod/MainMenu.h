@@ -48,14 +48,15 @@ class MainMenu final : public UIScreen, public MouseListener {
     ~MainMenu() override;
 
     void draw() override;
-    void update(CBaseUIEventCtx &c) override;
+    void tick() override;
+    void updateInput(CBaseUIEventCtx &c) override;
 
     void clearPreloadedMaps();
     void selectRandomBeatmap();
 
     void onKeyDown(KeyboardEvent &e) override;
 
-    void onButtonChange(ButtonEvent ev) override;
+    void onButtonChange(ButtonEvent &ev) override;
 
     void onResolutionChange(vec2 newResolution) override;
 
@@ -82,9 +83,6 @@ class MainMenu final : public UIScreen, public MouseListener {
     void setMenuElementsVisible(bool visible, bool animate = true);
 
     void writeVersionFile();
-
-    MainButton *addMainMenuButton(std::string text);
-
     void onPlayButtonPressed();
     void onMultiplayerButtonPressed();
     void onOptionsButtonPressed();

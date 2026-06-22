@@ -1,0 +1,44 @@
+# chat_focus_steal: FLIPPED in 4.2 from pinned-known-bad to proof-of-fix. chat keyboard
+# capture is now CLICK-FOCUS based - the typing block + onChar/onKeyUp gate on
+# input_box->isFocused() (Chat.cpp), and the hover-focus FIXME that grabbed the keyboard on
+# ANY in-chat hover (Chat.cpp:477, "steals click focus globally") is deleted. proves BOTH
+# halves of routed focus: clicking the chat input (full-width strip at y690-720) focuses it
+# so typed text lands there; a click FAR from chat (top-centre) defocuses it so the following
+# text/keys do NOT reach chat (previously chat ate every non-alt key while merely visible,
+# Chat.cpp:792 - so 'x' would have leaked into chat and 'A' traced consumed_by=Chat).
+options_save_on_back 0
+debug_fixed_frametime 0.0166667
+ui_trace 1
+mouse_raw_input 0
+mouse_sensitivity 1
+ui_scale_to_dpi 0
+windowed_resolution 1280x720
+mouse_to 10 10
+@wait 30
+debug_fake_online 1
+@wait 5
+sendkey F8
+@wait 12
+ui_assert visible chat 1
+mouse_to 640 700
+@wait 3
+mouse_down
+@wait 3
+mouse_up
+@wait 3
+sendtext hi
+@wait 3
+ui_assert text chat_input hi
+mouse_to 640 80
+@wait 3
+mouse_down
+@wait 2
+mouse_up
+@wait 5
+sendtext x
+@wait 3
+ui_assert text chat_input hi
+sendkey A
+@wait 5
+ui_assert text chat_input hi
+exit
