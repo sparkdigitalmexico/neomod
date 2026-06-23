@@ -111,7 +111,7 @@ check_tool "autoconf" "autoconf"
 check_tool "pkgconf" "pkgconf"
 
 echo "Running autotools..."
-autoreconf -fiv
+autoreconf -iv
 
 echo "
 Bootstrap complete. You can now build neomod either:
