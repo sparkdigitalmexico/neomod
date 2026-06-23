@@ -92,6 +92,11 @@ $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz:
 	$(MKDIR_P) $(DEPS_CACHE)
 	$(CURLCOMMAND) "https://github.com/libarchive/libarchive/releases/download/v$(LIBARCHIVE_VERSION)/libarchive-$(LIBARCHIVE_VERSION).tar.gz" || { rm -f $@; exit 1; }
 
+# always needed (if not on host)
+$(DEPS_CACHE)/libiconv-$(LIBICONV_VERSION).tar.gz:
+	$(MKDIR_P) $(DEPS_CACHE)
+	$(CURLCOMMAND) "https://ftp.gnu.org/gnu/libiconv/libiconv-$(LIBICONV_VERSION).tar.gz" || { rm -f $@; exit 1; }
+
 # needed for libarchive on linux (if not on host)
 $(DEPS_CACHE)/libacl-$(LIBACL_VERSION).tar.xz:
 	$(MKDIR_P) $(DEPS_CACHE)
@@ -1044,7 +1049,7 @@ $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built: $(DEPS_CACHE)/liblzma-$(LZMA_VERSI
 		-D XZ_TOOL_SYMLINKS_LZMA=OFF \
 		-D XZ_TOOL_XZ=OFF \
 		-D XZ_TOOL_XZDEC=OFF \
-		-D XZ_NLS=OFF \
+		-D XZ_NLS=ON \
 		-D XZ_SANDBOX=no \
 		-D XZ_THREADS="$(if $(ubercompat),win95,yes)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
@@ -1083,6 +1088,27 @@ $(DEPS_PREFIX)/ctre-$(CTRE_VERSION).built: $(DEPS_CACHE)/ctre-$(CTRE_VERSION).ta
 	touch $@
 endif # BUILD_CTRE
 
+LIBICONV_LIBS := -liconv
+if BUILD_LIBICONV
+LIBICONV_LIBS += -L$(DEPS_PREFIX)/lib
+# no pkg-config for iconv
+$(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built: $(DEPS_CACHE)/libiconv-$(LIBICONV_VERSION).tar.gz
+	rm -rf $(DEPS_PREFIX)/libiconv
+	$(MKDIR_P) $(DEPS_PREFIX)/libiconv/build
+	$(TAR) xf $(DEPS_CACHE)/libiconv-$(LIBICONV_VERSION).tar.gz -C $(DEPS_PREFIX)/libiconv --strip-components=1 && \
+	cd $(DEPS_PREFIX)/libiconv/build && PKG_CONFIG="$(PKG_CONFIG)" \
+		$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
+		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
+		--disable-tools --disable-tests --disable-rpath --enable-threads=posix $(LT_WITH_GNU_LD) \
+			CC="$(CC)" RANLIB="$(RANLIB)" AR="$(AR)" CXX="$(CXX)" LD="$(LD)" \
+			CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" WINDRES="$(WINDRES)" && \
+	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
+	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
+	test -f $(DEPS_PREFIX)/lib/*iconv$(if $(STATICBUILD),.a,$(DLLEXT))*
+	touch $@
+INSTALL_LIB_DEPS += $(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built
+endif # BUILD_LIBICONV
+
 if BUILD_LIBARCHIVE
 
 # required for proper permissions support on linux
@@ -1109,22 +1135,28 @@ endif # BUILD_LIBACL
 # NOTE: if we have bundled openssl, then this assumes we also have zstd libs (since the static-curl project builds that and provides the static archive)
 LIBARCHIVE_CFLAGS += $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --cflags libarchive)
 LIBARCHIVE_LIBS += $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --libs libarchive)
+# gettext records a static-only libiconv by absolute path in libarchive's global LIBS, and emscripten's
+# libtool then bakes that whole .a into the static libarchive.a (a nested archive that corrupts it). rewrite
+# LIBS to the -l form; iconv is still linked via libarchive_la_LIBADD = $(LTLIBICONV).
 $(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built: $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz $(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built \
 											$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built \
-											$(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built
+											$(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built \
+											$(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built
 	rm -rf $(DEPS_PREFIX)/libarchive
 	$(MKDIR_P) $(DEPS_PREFIX)/libarchive/build $(DEPS_PREFIX)/lib/pkgconfig
 	$(TAR) xf $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz -C $(DEPS_PREFIX)/libarchive --strip-components=1 && \
 	cd $(DEPS_PREFIX)/libarchive && \
 	$(SED) -i -e 's|time_t ctime_sec, mtime_sec;|int64_t ctime_sec, mtime_sec;|' libarchive/archive_match.c && \
+	$(SED) -i -e 's|LIBS="$${LIBS} $${LIBICONV}"|LIBS="$${LIBS} $${LTLIBICONV}"|' configure && \
 	cd build && \
 	PKG_CONFIG="$(PKG_CONFIG_PLUS_BUNDLED_OSSL)" \
 	$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 		--disable-tools --disable-tests $(LT_WITH_GNU_LD) --disable-bsdtar --disable-bsdcat --disable-bsdcpio \
 		--disable-bsdunzip --without-xml2 --without-expat $(if $(OPENSSL_CFLAGS),--with-openssl --with-zstd,--without-openssl --without-zstd) \
-		--without-nettle --without-mbedtls --without-lzo2 --without-lz4 --without-libiconv-prefix \
-		--without-iconv --without-libb2 --with-lzma --with-zlib --with-bz2lib \
+		--without-nettle --without-mbedtls --without-lzo2 --without-lz4 --with-iconv \
+		$(if $(LIBICONV_PREFIX),--with-libiconv-prefix="$(LIBICONV_PREFIX)",--without-libiconv-prefix) \
+		--without-libb2 --with-lzma --with-zlib --with-bz2lib \
 		CC="$(CC)" RANLIB="$(RANLIB)" AR="$(AR)" CXX="$(CXX)" LD="$(LD)" \
 		CFLAGS="$(CFLAGS) -I$(DEPS_PREFIX)/include $(OPENSSL_CFLAGS) $(LIBACL_CFLAGS) $(LZMA_CFLAGS) $(BZIP2_CFLAGS) $(ZLIB_CFLAGS) -D_POSIX_C_SOURCE" \
 		LDFLAGS="$(LDFLAGS) -L$(DEPS_PREFIX)/lib $(OPENSSL_LIBS) $(LIBACL_LIBS) $(LZMA_LIBS) $(BZIP2_LIBS) $(ZLIB_LIBS)" && \
@@ -1316,6 +1348,7 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/discord-rpc-$(DISCORDRPC_COMMIT).built \
 	$(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built \
 	$(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built \
+	$(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built \
 	$(DEPS_PREFIX)/simdutf-$(SIMDUTF_VERSION).built \
 	$(DEPS_PREFIX)/ctre-$(CTRE_VERSION).built \
 	$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built \
@@ -1444,6 +1477,7 @@ neomod_LDFLAGS := \
 	$(FMT_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(LIBARCHIVE_LIBS) \
+	$(LIBICONV_LIBS) \
 	$(BZIP2_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(ZLIB_LIBS) \
@@ -1669,6 +1703,9 @@ if BUILD_SIMDUTF
 endif
 if BUILD_LIBARCHIVE
 	$(if $(STATICBUILD),,@`find $(LIBARCHIVE_PREFIX) -not -path '*.dSYM/*' '(' -iname '*archive*'$(DLLEXT) -o -iname '*archive*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+endif
+if BUILD_LIBICONV
+	$(if $(STATICBUILD),,@`find $(LIBICONV_PREFIX) -not -path '*.dSYM/*' '(' -iname '*iconv*'$(DLLEXT) -o -iname '*iconv*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 endif
 if BUILD_LIBACL
 	$(if $(STATICBUILD),,@`find $(LIBACL_PREFIX) -iname '*acl*''.so.*' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)

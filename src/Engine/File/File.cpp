@@ -937,11 +937,13 @@ bool File::openForReading() {
 
     // create and open input file stream
     this->ifstream = std::make_unique<std::ifstream>();
+    assert(this->ifstream);
     this->ifstream->open(this->fsPath, std::ios::in | std::ios::binary);
 
     // check if file opened successfully
-    if(!this->ifstream || !this->ifstream->good()) {
-        debugLog("File Error: Couldn't open file {:s}", this->sFilePath);
+    if(!this->ifstream->good()) {
+        debugLog("File Error: Couldn't open file {:s} (fsPath: {:s}) for reading", this->sFilePath,
+                 Env::cfg(OS::WINDOWS) ? UniString::to_utf8(this->fsPath.wstring()) : this->fsPath.string());
         return false;
     }
 
@@ -962,11 +964,13 @@ bool File::openForWriting() {
 
     // create and open output file stream
     this->ofstream = std::make_unique<std::ofstream>();
+    assert(this->ofstream);
     this->ofstream->open(this->fsPath, std::ios::out | std::ios::trunc | std::ios::binary);
 
     // check if file opened successfully
     if(!this->ofstream->good()) {
-        debugLog("File Error: Couldn't open file {:s} for writing", this->sFilePath);
+        debugLog("File Error: Couldn't open file {:s} (fsPath: {:s}) for writing", this->sFilePath,
+                 Env::cfg(OS::WINDOWS) ? UniString::to_utf8(this->fsPath.wstring()) : this->fsPath.string());
         return false;
     }
 

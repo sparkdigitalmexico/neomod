@@ -1636,8 +1636,10 @@ FMT_MIN_VERSION=11.0.0
 FMT_BUILD_VERSION=0e078f6ed0624be8babc43bd145371d9f3a08aab
 LZMA_MIN_VERSION=5.4.7
 LZMA_BUILD_VERSION=5.8.3
+LIBICONV_MIN_VERSION=1.17
+LIBICONV_BUILD_VERSION=1.19
 LIBARCHIVE_MIN_VERSION=3.6.2
-LIBARCHIVE_BUILD_VERSION=3.8.7
+LIBARCHIVE_BUILD_VERSION=3.8.8
 LIBACL_MIN_VERSION=2.3.1
 LIBACL_BUILD_VERSION=2.3.2
 CURL_MIN_VERSION=8.16.0 # due to websocket things, only very recent curl works
@@ -1713,6 +1715,7 @@ AS_IF([test "x$enable_system_deps" != "xno"], [
     PKG_CHECK_AUTO([FMT], [fmt >= $FMT_MIN_VERSION], [have_fmt=yes], [have_fmt=no])
     PKG_CHECK_AUTO([LZMA], [liblzma >= $LZMA_MIN_VERSION], [have_liblzma=yes], [have_liblzma=no])
     PKG_CHECK_AUTO([LIBARCHIVE], [libarchive >= $LIBARCHIVE_MIN_VERSION], [have_libarchive=yes], [have_libarchive=no])
+    AC_SEARCH_LIBS([iconv_open], [iconv], [have_libiconv=yes], [have_libiconv=no])
     PKG_CHECK_AUTO([SIMDUTF], [simdutf >= $SIMDUTF_MIN_VERSION], [have_simdutf=yes], [have_simdutf=no])
     PKG_CHECK_AUTO([CTRE], [ctre >= $CTRE_MIN_VERSION], [have_ctre=yes], [have_ctre=no])
     # check for standalone openssl if we have system curl
@@ -1820,6 +1823,17 @@ LIBARCHIVE_PREFIX="${DEPS_PREFIX}"
 AC_SUBST([LIBARCHIVE_VERSION])
 AC_SUBST([LIBARCHIVE_PREFIX])
 
+LIBICONV_PREFIX=
+AS_IF([test "x$have_libiconv" != "xyes"], [
+    # TODO: wasm should have this built in?
+    have_libiconv="build from source"
+    LIBICONV_PREFIX="${DEPS_PREFIX}"
+])
+LIBICONV_VERSION=$LIBICONV_BUILD_VERSION
+AC_SUBST([LIBICONV_VERSION])
+AC_SUBST([LIBICONV_PREFIX])
+AC_DEFINE([USE_LIBICONV], [1], [Defined if libiconv is directly available.])
+
 AS_IF([test "x$have_simdutf" != "xyes"], [have_simdutf="build from source"])
 SIMDUTF_VERSION=$SIMDUTF_BUILD_VERSION
 SIMDUTF_PREFIX="${DEPS_PREFIX}"
@@ -1895,6 +1909,7 @@ AM_CONDITIONAL([BUILD_BROTLI], [test "x$have_brotli" != "xyes"])
 AM_CONDITIONAL([BUILD_FMT], [test "x$have_fmt" != "xyes"])
 AM_CONDITIONAL([BUILD_LZMA], [test "x$have_liblzma" != "xyes"])
 AM_CONDITIONAL([BUILD_LIBARCHIVE], [test "x$have_libarchive" != "xyes"])
+AM_CONDITIONAL([BUILD_LIBICONV], [test "x$have_libiconv" != "xyes"])
 AM_CONDITIONAL([BUILD_SIMDUTF], [test "x$have_simdutf" != "xyes"])
 AM_CONDITIONAL([BUILD_CTRE], [test "x$have_ctre" != "xyes"])
 AM_CONDITIONAL([BUILD_LIBACL], [test "x$have_libacl" = "xbuild from source"])
@@ -2014,6 +2029,7 @@ Dependencies:
     curl:               ${have_curl-download}
     openssl:            ${have_openssl-download}
     liblzma:            ${have_liblzma-build from source}
+    libiconv:           ${have_libiconv-build from source}
     libarchive:         ${have_libarchive-build from source}
     simdutf:            ${have_simdutf-build from source}
     ctre:               ${have_ctre-build from source}

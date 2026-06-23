@@ -85,11 +85,12 @@ class Archive {
     class Reader {
         NOCOPY_NOMOVE(Reader)
        public:
-        // construct from file path
-        explicit Reader(const std::string& filePath);
+        // construct from file path; hdrCharset sets libarchive's assumed charset for non-UTF8-flagged
+        // entry names (e.g. "CP932" for Shift-JIS)
+        explicit Reader(const std::string& filePath, std::string_view hdrCharset = {});
 
         // construct from memory buffer
-        Reader(std::span<const u8> data);
+        Reader(std::span<const u8> data, std::string_view hdrCharset = {});
         ~Reader();
 
         // check if archive was opened successfully
@@ -119,6 +120,7 @@ class Archive {
         bool bValid;
         bool bIterationStarted;
         std::unique_ptr<Entry> currentEntry;
+        std::string sHdrCharset;  // assumed charset for non-UTF8-flagged entry names; empty = libarchive default
     };
 
     class Writer {

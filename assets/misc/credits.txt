@@ -4,7 +4,7 @@ It is licensed under GNU GPLv3, license text is included below.
 Full source code is available at https://github.com/neomodnet/neomod
 
 neomod was originally a fork of McEngine+McOsu by McKay:
-- https://github.com/mckay42/mcengine
+- https://github.com/McKay42/McEngine
 - https://github.com/McKay42/McOsu
 
 The default skin is made by:
@@ -50,6 +50,7 @@ External libraries (downloaded/built from source):
 - rapidjson (https://github.com/Tencent/rapidjson) - MIT
 - curl (https://github.com/curl/curl) - curl license (MIT-like)
 - DirectXShaderCompiler (https://github.com/microsoft/DirectXShaderCompiler) - LLVM Release License & Apache 2.0 with LLVM exceptions
+- libiconv (https://ftp.gnu.org/gnu/libiconv) - LGPLv3
 
 BASS audio library suite (https://www.un4seen.com/) - proprietary (free for non-commercial use):
 - BASS, BASS_FX, BASSFLAC, BASSMIX, BASSLOUD, BASSWASAPI, BASSASIO

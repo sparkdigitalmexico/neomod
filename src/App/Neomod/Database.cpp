@@ -513,8 +513,12 @@ std::pair<BeatmapSet *, bool /*added*/> Database::addBeatmapSet(std::string_view
             const auto &diff = *diffit;
             auto [existingit, inserted] = this->beatmap_difficulties.try_emplace(diff->getMD5(), diff.get());
             if(!inserted) {
-                // update the existing set's id if we just learned a real one (from an override or the .osu itself)
-                BeatmapDifficulty *diffparent = existingit->second->parentSet;
+                // update the existing diff's filename (believe the new one over an existing one, which may no longer exist!)
+                BeatmapDifficulty *collision = existingit->second;
+                collision->sFilePath = std::move(diff->sFilePath);
+
+                // also update the existing set's id if we just learned a real one (from an override or the .osu itself)
+                BeatmapSet *diffparent = collision->parentSet;
                 dedup_parent = diffparent;
                 if(const i32 old_set_id = diffparent->iSetID; old_set_id == -1 && real_set_id > 0) {
                     logIfCV(debug_db, "updating old set {} id {} -> {}", diffparent->getFolder(), old_set_id,

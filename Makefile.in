@@ -172,34 +172,36 @@ bin_PROGRAMS = neomod$(EXEEXT)
 @BUILD_LZMA_TRUE@am__append_66 = $(shell $(PKG_CONFIG) --libs liblzma)
 @BUILD_LZMA_TRUE@am__append_67 = $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built
 @BUILD_CTRE_TRUE@am__append_68 = $(shell $(PKG_CONFIG) --cflags ctre)
+@BUILD_LIBICONV_TRUE@am__append_69 = -L$(DEPS_PREFIX)/lib
+@BUILD_LIBICONV_TRUE@am__append_70 = $(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built
 
 # required for proper permissions support on linux
-@BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@am__append_69 = $(shell $(PKG_CONFIG) --cflags libacl)
-@BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@am__append_70 = $(shell $(PKG_CONFIG) --libs libacl)
-@BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@am__append_71 = $(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built
+@BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@am__append_71 = $(shell $(PKG_CONFIG) --cflags libacl)
+@BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@am__append_72 = $(shell $(PKG_CONFIG) --libs libacl)
+@BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@am__append_73 = $(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built
 
 # ugly hack to make pkg-config/libarchive find the bundled openssl libs
 # NOTE: if we have bundled openssl, then this assumes we also have zstd libs (since the static-curl project builds that and provides the static archive)
-@BUILD_LIBARCHIVE_TRUE@am__append_72 = $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --cflags libarchive)
-@BUILD_LIBARCHIVE_TRUE@am__append_73 = $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --libs libarchive)
-@BUILD_LIBARCHIVE_TRUE@am__append_74 = $(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built
-@DOWNLOAD_DXC_TRUE@@USE_SDLGPU_TRUE@am__append_75 = --dxc $(DEPS_CACHE)/linux_dxc_2025_07_14/bin/dxc
-@WASM_PLATFORM_FALSE@am__append_76 = $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem
-@BUILD_PCH_TRUE@@CLANG_BUILD_FALSE@am__append_77 = -fpch-preprocess
-@BUILD_PCH_TRUE@am__append_78 = $(PCH_OUTPUT) $(PCH_DEPS)
+@BUILD_LIBARCHIVE_TRUE@am__append_74 = $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --cflags libarchive)
+@BUILD_LIBARCHIVE_TRUE@am__append_75 = $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --libs libarchive)
+@BUILD_LIBARCHIVE_TRUE@am__append_76 = $(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built
+@DOWNLOAD_DXC_TRUE@@USE_SDLGPU_TRUE@am__append_77 = --dxc $(DEPS_CACHE)/linux_dxc_2025_07_14/bin/dxc
+@WASM_PLATFORM_FALSE@am__append_78 = $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem
+@BUILD_PCH_TRUE@@CLANG_BUILD_FALSE@am__append_79 = -fpch-preprocess
+@BUILD_PCH_TRUE@am__append_80 = $(PCH_OUTPUT) $(PCH_DEPS)
 
 # mimalloc new/delete override for windows
-@WIN_PLATFORM_TRUE@am__append_79 = $(MIMALLOC_OVERRIDE_DEP)
-@WIN_PLATFORM_FALSE@am__append_80 = lib/
-@WASM_PLATFORM_FALSE@am__append_81 = stamp-install-assets \
+@WIN_PLATFORM_TRUE@am__append_81 = $(MIMALLOC_OVERRIDE_DEP)
+@WIN_PLATFORM_FALSE@am__append_82 = lib/
+@WASM_PLATFORM_FALSE@am__append_83 = stamp-install-assets \
 @WASM_PLATFORM_FALSE@	stamp-install-sharedlibs
-@LINUX_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_82 = stamp-install-rpath
-@LINUX_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_83 = stamp-install-rpath
-@MACOS_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_84 = stamp-install-librpath stamp-install-exerpath
-@MACOS_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_85 = stamp-install-librpath stamp-install-exerpath
-@RUN_DSYMUTIL_TRUE@@WASM_PLATFORM_FALSE@am__append_86 = stamp-install-dsym
-@STRIPBINS_TRUE@@WASM_PLATFORM_FALSE@am__append_87 = stamp-install-strip
-@AUDIO_SHORTCUTS_TRUE@@WASM_PLATFORM_FALSE@am__append_88 = stamp-install-wine-shortcuts
+@LINUX_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_84 = stamp-install-rpath
+@LINUX_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_85 = stamp-install-rpath
+@MACOS_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_86 = stamp-install-librpath stamp-install-exerpath
+@MACOS_PLATFORM_TRUE@@WASM_PLATFORM_FALSE@am__append_87 = stamp-install-librpath stamp-install-exerpath
+@RUN_DSYMUTIL_TRUE@@WASM_PLATFORM_FALSE@am__append_88 = stamp-install-dsym
+@STRIPBINS_TRUE@@WASM_PLATFORM_FALSE@am__append_89 = stamp-install-strip
+@AUDIO_SHORTCUTS_TRUE@@WASM_PLATFORM_FALSE@am__append_90 = stamp-install-wine-shortcuts
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_compile_flag.m4 \
@@ -1104,14 +1106,16 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
-LIBACL_CFLAGS = @LIBACL_CFLAGS@ $(am__append_69)
-LIBACL_LIBS = @LIBACL_LIBS@ $(am__append_70)
+LIBACL_CFLAGS = @LIBACL_CFLAGS@ $(am__append_71)
+LIBACL_LIBS = @LIBACL_LIBS@ $(am__append_72)
 LIBACL_PREFIX = @LIBACL_PREFIX@
 LIBACL_VERSION = @LIBACL_VERSION@
-LIBARCHIVE_CFLAGS = @LIBARCHIVE_CFLAGS@ $(am__append_72)
-LIBARCHIVE_LIBS = @LIBARCHIVE_LIBS@ $(am__append_73)
+LIBARCHIVE_CFLAGS = @LIBARCHIVE_CFLAGS@ $(am__append_74)
+LIBARCHIVE_LIBS = @LIBARCHIVE_LIBS@ $(am__append_75)
 LIBARCHIVE_PREFIX = @LIBARCHIVE_PREFIX@
 LIBARCHIVE_VERSION = @LIBARCHIVE_VERSION@
+LIBICONV_PREFIX = @LIBICONV_PREFIX@
+LIBICONV_VERSION = @LIBICONV_VERSION@
 LIBJPEG_CFLAGS = @LIBJPEG_CFLAGS@ $(am__append_33)
 LIBJPEG_LIBS = @LIBJPEG_LIBS@ $(am__append_34)
 LIBJPEG_PREFIX = @LIBJPEG_PREFIX@
@@ -1523,7 +1527,7 @@ neomod_SOURCES = libraries/MD5.cpp libraries/base64.cpp \
 	$(GL_CORE_SOURCES) $(GLES_SOURCES) $(DX11_SOURCES) \
 	$(SDLGPU_SOURCES) $(GLAD_SOURCES) $(SOLOUD_SOURCES) \
 	$(BASS_SOURCES) $(WIN_SOURCES) $(FFMPEG_SOURCES) \
-	$(TEST_SOURCES) $(NULL) $(EMBED_OUTPUT) $(am__append_79)
+	$(TEST_SOURCES) $(NULL) $(EMBED_OUTPUT) $(am__append_81)
 
 # generated by ./autogen.sh (includes conditional source blocks)
 CLEANFILES = $(EMBED_OUTPUT) $(builddir)/gen/binary_embed.h \
@@ -1533,7 +1537,7 @@ CLEANFILES = $(EMBED_OUTPUT) $(builddir)/gen/binary_embed.h \
 	$(builddir)/gen/shaders/sdlgpu_shaders.manifest \
 	$(builddir)/gen/shaders/.stamp $(GEN_TRANSLATIONS_STAMP) \
 	$(TRANSLATIONS_HEADER) $(TRANSLATIONS_LOCALE_MANIFEST) \
-	$(MO_FILES) $(am__append_78)
+	$(MO_FILES) $(am__append_80)
 
 #####################################################################################################################################################
 #####################################################################################################################################################
@@ -1566,8 +1570,8 @@ INSTALL_LIB_DEPS = $(am__append_12) $(am__append_16) $(am__append_19) \
 	$(am__append_32) $(am__append_35) $(am__append_39) \
 	$(am__append_42) $(am__append_45) $(am__append_49) \
 	$(am__append_53) $(am__append_56) $(am__append_59) \
-	$(am__append_64) $(am__append_67) $(am__append_71) \
-	$(am__append_74)
+	$(am__append_64) $(am__append_67) $(am__append_70) \
+	$(am__append_73) $(am__append_76)
 CACERT_INCDIR := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle
 PKG_CONFIG_PLUS_BUNDLED_OSSL = $(PKG_CONFIG) $(am__append_4)
 
@@ -1663,6 +1667,7 @@ NSYNC_CFLAGS = -DNSYNC_ATOMIC_CPP11 -DNSYNC_USE_CPP11_TIMEPOINT \
 NSYNC_LIBS = $(am__append_52)
 @BUILD_SIMDUTF_TRUE@SIMDUTF_EXTRA_BUILDFLAGS := $(am__append_60) \
 @BUILD_SIMDUTF_TRUE@	$(am__append_61)
+LIBICONV_LIBS := -liconv $(am__append_69)
 
 #####################################################################################################################################################
 #####################################################################################################################################################
@@ -1722,7 +1727,7 @@ EMBED_DEPFILE := $(builddir)/gen/binary_embed.d
 @USE_SDLGPU_TRUE@SDLGPU_EMBED_MANIFEST_FLAG := -F $(SDLGPU_SHADER_MANIFEST)
 @USE_SDLGPU_TRUE@SDLGPU_GLSLC_FLAG := $(if $(GLSLC),--glslc $(GLSLC),)
 @USE_SDLGPU_TRUE@SDLGPU_DXC_FLAG := $(if $(DXC),--dxc $(DXC),) \
-@USE_SDLGPU_TRUE@	$(am__append_75)
+@USE_SDLGPU_TRUE@	$(am__append_77)
 @DOWNLOAD_DXC_FALSE@@USE_SDLGPU_TRUE@SDLGPU_DXC_DEP := 
 @DOWNLOAD_DXC_TRUE@@USE_SDLGPU_TRUE@SDLGPU_DXC_DEP := $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.source
 
@@ -1758,12 +1763,13 @@ BUILT_SOURCES := $(DEPS_PREFIX)/winpthread-noversion.built \
 	$(DEPS_PREFIX)/discord-rpc-$(DISCORDRPC_COMMIT).built \
 	$(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built \
 	$(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built \
+	$(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built \
 	$(DEPS_PREFIX)/simdutf-$(SIMDUTF_VERSION).built \
 	$(DEPS_PREFIX)/ctre-$(CTRE_VERSION).built \
 	$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built \
 	$(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built \
 	$(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built \
-	$(am__append_76)
+	$(am__append_78)
 
 # --- pch setup section (TODO: move flags to configure to check for support instead of hardcoding here) ---
 
@@ -1776,7 +1782,7 @@ BUILT_SOURCES := $(DEPS_PREFIX)/winpthread-noversion.built \
 @BUILD_PCH_TRUE@PCH_DEPS := $(builddir)/pch.h.d
 @BUILD_PCH_FALSE@PCH_FLAGS := 
 @BUILD_PCH_TRUE@PCH_FLAGS := -Winvalid-pch -Wno-error=invalid-pch \
-@BUILD_PCH_TRUE@	-include $(builddir)/pch.h $(am__append_77)
+@BUILD_PCH_TRUE@	-include $(builddir)/pch.h $(am__append_79)
 @BUILD_PCH_TRUE@@CLANG_BUILD_FALSE@PCH_BUILD_FLAGS := 
 @BUILD_PCH_TRUE@@CLANG_BUILD_TRUE@PCH_BUILD_FLAGS := -Xclang -fno-pch-timestamp -Xclang -fpch-instantiate-templates
 
@@ -1853,6 +1859,7 @@ neomod_LDFLAGS := \
 	$(FMT_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(LIBARCHIVE_LIBS) \
+	$(LIBICONV_LIBS) \
 	$(BZIP2_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(ZLIB_LIBS) \
@@ -1872,14 +1879,14 @@ EXTRA_neomod_DEPENDENCIES := $(EXTRACTED_MAPS_DEP) $(WASM_POLYFILL_DEP)
 
 # windows' loader has no concept of rpaths (so keep all built/required libs in the same level as the main exe)
 # otherwise we can tuck them away neatly in lib/ (besides ffmpeg, for self-inflicted reasons (dlopen in SoLoud, which won't find stuff in rpath))
-LIBDEST := $(am__append_80)
+LIBDEST := $(am__append_82)
 
 # more conditionals for each individual dependency depending on whether they were built locally, and also if they were built shared
 # if they're external or built statically we don't need to do anything
 # use stamp files for incremental installs so that we only re-run the necessary steps
-INSTALL_STAMPS = $(am__append_81) $(am__append_83) $(am__append_85) \
-	$(am__append_86) $(am__append_87) $(am__append_88)
-INSTALL_RPATH_STAMP = $(am__append_82) $(am__append_84)
+INSTALL_STAMPS = $(am__append_83) $(am__append_85) $(am__append_87) \
+	$(am__append_88) $(am__append_89) $(am__append_90)
+INSTALL_RPATH_STAMP = $(am__append_84) $(am__append_86)
 
 # WASM: assets are preloaded into the .wasm via --preload-file, just install the web files
 @WASM_PLATFORM_TRUE@WASM_INSTALL_FILES = neomod.js neomod.wasm
@@ -7491,6 +7498,11 @@ $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz:
 	$(MKDIR_P) $(DEPS_CACHE)
 	$(CURLCOMMAND) "https://github.com/libarchive/libarchive/releases/download/v$(LIBARCHIVE_VERSION)/libarchive-$(LIBARCHIVE_VERSION).tar.gz" || { rm -f $@; exit 1; }
 
+# always needed (if not on host)
+$(DEPS_CACHE)/libiconv-$(LIBICONV_VERSION).tar.gz:
+	$(MKDIR_P) $(DEPS_CACHE)
+	$(CURLCOMMAND) "https://ftp.gnu.org/gnu/libiconv/libiconv-$(LIBICONV_VERSION).tar.gz" || { rm -f $@; exit 1; }
+
 # needed for libarchive on linux (if not on host)
 $(DEPS_CACHE)/libacl-$(LIBACL_VERSION).tar.xz:
 	$(MKDIR_P) $(DEPS_CACHE)
@@ -8300,7 +8312,7 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-macosaarch64.source: $(DEPS_CACHE)/curl-
 @BUILD_LZMA_TRUE@		-D XZ_TOOL_SYMLINKS_LZMA=OFF \
 @BUILD_LZMA_TRUE@		-D XZ_TOOL_XZ=OFF \
 @BUILD_LZMA_TRUE@		-D XZ_TOOL_XZDEC=OFF \
-@BUILD_LZMA_TRUE@		-D XZ_NLS=OFF \
+@BUILD_LZMA_TRUE@		-D XZ_NLS=ON \
 @BUILD_LZMA_TRUE@		-D XZ_SANDBOX=no \
 @BUILD_LZMA_TRUE@		-D XZ_THREADS="$(if $(ubercompat),win95,yes)" \
 @BUILD_LZMA_TRUE@		$(CMAKERCOPT) $(CMAKEIDOPT) \
@@ -8332,6 +8344,21 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-macosaarch64.source: $(DEPS_CACHE)/curl-
 @BUILD_CTRE_TRUE@	$(CMAKE) --install build
 @BUILD_CTRE_TRUE@	$(PKG_CONFIG) --exists --print-errors ctre
 @BUILD_CTRE_TRUE@	touch $@
+# no pkg-config for iconv
+@BUILD_LIBICONV_TRUE@$(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built: $(DEPS_CACHE)/libiconv-$(LIBICONV_VERSION).tar.gz
+@BUILD_LIBICONV_TRUE@	rm -rf $(DEPS_PREFIX)/libiconv
+@BUILD_LIBICONV_TRUE@	$(MKDIR_P) $(DEPS_PREFIX)/libiconv/build
+@BUILD_LIBICONV_TRUE@	$(TAR) xf $(DEPS_CACHE)/libiconv-$(LIBICONV_VERSION).tar.gz -C $(DEPS_PREFIX)/libiconv --strip-components=1 && \
+@BUILD_LIBICONV_TRUE@	cd $(DEPS_PREFIX)/libiconv/build && PKG_CONFIG="$(PKG_CONFIG)" \
+@BUILD_LIBICONV_TRUE@		$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
+@BUILD_LIBICONV_TRUE@		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
+@BUILD_LIBICONV_TRUE@		--disable-tools --disable-tests --disable-rpath --enable-threads=posix $(LT_WITH_GNU_LD) \
+@BUILD_LIBICONV_TRUE@			CC="$(CC)" RANLIB="$(RANLIB)" AR="$(AR)" CXX="$(CXX)" LD="$(LD)" \
+@BUILD_LIBICONV_TRUE@			CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" WINDRES="$(WINDRES)" && \
+@BUILD_LIBICONV_TRUE@	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) && \
+@BUILD_LIBICONV_TRUE@	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
+@BUILD_LIBICONV_TRUE@	test -f $(DEPS_PREFIX)/lib/*iconv$(if $(STATICBUILD),.a,$(DLLEXT))*
+@BUILD_LIBICONV_TRUE@	touch $@
 @BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built: $(DEPS_CACHE)/libacl-$(LIBACL_VERSION).tar.xz
 @BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@	rm -rf $(DEPS_PREFIX)/libacl
 @BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@	$(MKDIR_P) $(DEPS_PREFIX)/libacl/build $(DEPS_PREFIX)/lib/pkgconfig
@@ -8345,22 +8372,28 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-macosaarch64.source: $(DEPS_CACHE)/curl-
 @BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
 @BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@	$(PKG_CONFIG) --exists --print-errors libacl
 @BUILD_LIBACL_TRUE@@BUILD_LIBARCHIVE_TRUE@	touch $@
+# gettext records a static-only libiconv by absolute path in libarchive's global LIBS, and emscripten's
+# libtool then bakes that whole .a into the static libarchive.a (a nested archive that corrupts it). rewrite
+# LIBS to the -l form; iconv is still linked via libarchive_la_LIBADD = $(LTLIBICONV).
 @BUILD_LIBARCHIVE_TRUE@$(DEPS_PREFIX)/libarchive-$(LIBARCHIVE_VERSION).built: $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz $(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built \
 @BUILD_LIBARCHIVE_TRUE@											$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built \
-@BUILD_LIBARCHIVE_TRUE@											$(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built
+@BUILD_LIBARCHIVE_TRUE@											$(DEPS_PREFIX)/bzip2-$(BZIP2_VERSION).built $(DEPS_PREFIX)/zlib-$(ZLIB_VERSION).built \
+@BUILD_LIBARCHIVE_TRUE@											$(DEPS_PREFIX)/libiconv-$(LIBICONV_VERSION).built
 @BUILD_LIBARCHIVE_TRUE@	rm -rf $(DEPS_PREFIX)/libarchive
 @BUILD_LIBARCHIVE_TRUE@	$(MKDIR_P) $(DEPS_PREFIX)/libarchive/build $(DEPS_PREFIX)/lib/pkgconfig
 @BUILD_LIBARCHIVE_TRUE@	$(TAR) xf $(DEPS_CACHE)/libarchive-$(LIBARCHIVE_VERSION).tar.gz -C $(DEPS_PREFIX)/libarchive --strip-components=1 && \
 @BUILD_LIBARCHIVE_TRUE@	cd $(DEPS_PREFIX)/libarchive && \
 @BUILD_LIBARCHIVE_TRUE@	$(SED) -i -e 's|time_t ctime_sec, mtime_sec;|int64_t ctime_sec, mtime_sec;|' libarchive/archive_match.c && \
+@BUILD_LIBARCHIVE_TRUE@	$(SED) -i -e 's|LIBS="$${LIBS} $${LIBICONV}"|LIBS="$${LIBS} $${LTLIBICONV}"|' configure && \
 @BUILD_LIBARCHIVE_TRUE@	cd build && \
 @BUILD_LIBARCHIVE_TRUE@	PKG_CONFIG="$(PKG_CONFIG_PLUS_BUNDLED_OSSL)" \
 @BUILD_LIBARCHIVE_TRUE@	$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
 @BUILD_LIBARCHIVE_TRUE@		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
 @BUILD_LIBARCHIVE_TRUE@		--disable-tools --disable-tests $(LT_WITH_GNU_LD) --disable-bsdtar --disable-bsdcat --disable-bsdcpio \
 @BUILD_LIBARCHIVE_TRUE@		--disable-bsdunzip --without-xml2 --without-expat $(if $(OPENSSL_CFLAGS),--with-openssl --with-zstd,--without-openssl --without-zstd) \
-@BUILD_LIBARCHIVE_TRUE@		--without-nettle --without-mbedtls --without-lzo2 --without-lz4 --without-libiconv-prefix \
-@BUILD_LIBARCHIVE_TRUE@		--without-iconv --without-libb2 --with-lzma --with-zlib --with-bz2lib \
+@BUILD_LIBARCHIVE_TRUE@		--without-nettle --without-mbedtls --without-lzo2 --without-lz4 --with-iconv \
+@BUILD_LIBARCHIVE_TRUE@		$(if $(LIBICONV_PREFIX),--with-libiconv-prefix="$(LIBICONV_PREFIX)",--without-libiconv-prefix) \
+@BUILD_LIBARCHIVE_TRUE@		--without-libb2 --with-lzma --with-zlib --with-bz2lib \
 @BUILD_LIBARCHIVE_TRUE@		CC="$(CC)" RANLIB="$(RANLIB)" AR="$(AR)" CXX="$(CXX)" LD="$(LD)" \
 @BUILD_LIBARCHIVE_TRUE@		CFLAGS="$(CFLAGS) -I$(DEPS_PREFIX)/include $(OPENSSL_CFLAGS) $(LIBACL_CFLAGS) $(LZMA_CFLAGS) $(BZIP2_CFLAGS) $(ZLIB_CFLAGS) -D_POSIX_C_SOURCE" \
 @BUILD_LIBARCHIVE_TRUE@		LDFLAGS="$(LDFLAGS) -L$(DEPS_PREFIX)/lib $(OPENSSL_LIBS) $(LIBACL_LIBS) $(LZMA_LIBS) $(BZIP2_LIBS) $(ZLIB_LIBS)" && \
@@ -8565,6 +8598,7 @@ compile-commands: $(abs_top_srcdir)/.clangd
 @BUILD_LZMA_TRUE@@WASM_PLATFORM_FALSE@	$(if $(STATICBUILD),,@`find $(LZMA_PREFIX) -not -path '*.dSYM/*' '(' -iname '*lzma*'$(DLLEXT) -o -iname '*lzma*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 @BUILD_SIMDUTF_TRUE@@WASM_PLATFORM_FALSE@	$(if $(STATICBUILD),,@`find $(SIMDUTF_PREFIX) -not -path '*.dSYM/*' '(' -iname '*simdutf*'$(DLLEXT) -o -iname '*simdutf*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 @BUILD_LIBARCHIVE_TRUE@@WASM_PLATFORM_FALSE@	$(if $(STATICBUILD),,@`find $(LIBARCHIVE_PREFIX) -not -path '*.dSYM/*' '(' -iname '*archive*'$(DLLEXT) -o -iname '*archive*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
+@BUILD_LIBICONV_TRUE@@WASM_PLATFORM_FALSE@	$(if $(STATICBUILD),,@`find $(LIBICONV_PREFIX) -not -path '*.dSYM/*' '(' -iname '*iconv*'$(DLLEXT) -o -iname '*iconv*''.so.*' ')' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 @BUILD_LIBACL_TRUE@@WASM_PLATFORM_FALSE@	$(if $(STATICBUILD),,@`find $(LIBACL_PREFIX) -iname '*acl*''.so.*' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'`)
 @WASM_PLATFORM_FALSE@	@# copy the .dSYM bundles already during dependency builds (TODO: some are missing, like cmake-based builds and ffmpeg)
 @WASM_PLATFORM_FALSE@	$(if $(STATICBUILD),,@find $(DEPS_PREFIX) -name '*$(DLLEXT).dSYM' -type d -prune -exec $(CP_INSTALL) -R '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)/" ';' 2>/dev/null || true)

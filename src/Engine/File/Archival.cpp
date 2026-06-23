@@ -35,7 +35,14 @@ Archive::Entry::Entry(struct archive* archive, struct archive_entry* entry) {
         return;
     }
 
-    this->sFilename = archive_entry_pathname(entry);
+    // prefer the UTF-8 accessor: with hdrcharset set it decodes legacy names (e.g. Shift-JIS) to UTF-8
+    // independent of the current locale; fall back to the locale-charset name if it has no UTF-8 form
+    if(const char* utf8_name = archive_entry_pathname_utf8(entry)) {
+        this->sFilename = utf8_name;
+    } else {
+        this->sFilename = archive_entry_pathname(entry);
+    }
+
     this->iUncompressedSize = archive_entry_size(entry);
     this->iCompressedSize = 0;  // libarchive doesn't always provide compressed size
     this->iPermissions = archive_entry_perm(entry);
@@ -110,11 +117,13 @@ bool Archive::Entry::extractToFile(std::string_view outputPath) const {
 // Archive::Reader implementation
 //------------------------------------------------------------------------------
 
-Archive::Reader::Reader(const std::string& filePath) : archive(nullptr), bValid(false), bIterationStarted(false) {
+Archive::Reader::Reader(const std::string& filePath, std::string_view hdrCharset)
+    : archive(nullptr), bValid(false), bIterationStarted(false), sHdrCharset(hdrCharset) {
     initFromFile(filePath);
 }
 
-Archive::Reader::Reader(std::span<const u8> data) : archive(nullptr), bValid(false), bIterationStarted(false) {
+Archive::Reader::Reader(std::span<const u8> data, std::string_view hdrCharset)
+    : archive(nullptr), bValid(false), bIterationStarted(false), sHdrCharset(hdrCharset) {
     initFromMemory(data);
 }
 
@@ -130,6 +139,13 @@ void Archive::Reader::initFromFile(const std::string& filePath) {
     // enable all supported formats and filters
     archive_read_support_format_all(this->archive);
     archive_read_support_filter_all(this->archive);
+
+    if(!this->sHdrCharset.empty()) {
+        const std::string opt = fmt::format("hdrcharset={:s}", this->sHdrCharset);
+        if(archive_read_set_options(this->archive, opt.c_str()) != ARCHIVE_OK)
+            logIfCV(debug_file, "hdrcharset={:s} not applied: {:s}", this->sHdrCharset,
+                    archive_error_string(this->archive));
+    }
 
     int r = archive_read_open_filename(this->archive, filePath.c_str(), 10240);
     if(r != ARCHIVE_OK) {
@@ -159,6 +175,13 @@ void Archive::Reader::initFromMemory(std::span<const u8> data) {
     // enable all supported formats and filters
     archive_read_support_format_all(this->archive);
     archive_read_support_filter_all(this->archive);
+
+    if(!this->sHdrCharset.empty()) {
+        const std::string opt = fmt::format("hdrcharset={:s}", this->sHdrCharset);
+        if(archive_read_set_options(this->archive, opt.c_str()) != ARCHIVE_OK)
+            logIfCV(debug_file, "hdrcharset={:s} not applied: {:s}", this->sHdrCharset,
+                    archive_error_string(this->archive));
+    }
 
     int r = archive_read_open_memory(this->archive, this->vMemoryBuffer.data(), this->vMemoryBuffer.size());
     if(r != ARCHIVE_OK) {
@@ -675,7 +698,7 @@ bool Archive::Writer::writeEntries(struct archive* a, const Sync::stop_token& st
             return false;
         }
 
-        archive_entry_set_pathname(entry, pending.archivePath.c_str());
+        archive_entry_set_pathname_utf8(entry, pending.archivePath.c_str());
         archive_entry_set_mtime(entry, now, 0);
 
         if(pending.isDirectory) {

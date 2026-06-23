@@ -28,11 +28,10 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-	/**
+/**
 	 * Convert mojibake string by treating UTF-8 as CP850, then as SHIFT-JIS.
 	 *
 	 * @param input Input bytes
@@ -44,9 +43,9 @@ extern "C"
 	 *         -2: Conversion failed
 	 *         -3: Output buffer too small
 	 */
-	ptrdiff_t demoji_fwd(const char *input, size_t input_len, char *output, size_t output_len);
+ptrdiff_t demoji_fwd(const char *input, size_t input_len, char *output, size_t output_len);
 
-	/**
+/**
 	 * Reverse operation: convert UTF-8 to SHIFT-JIS, then treat as CP850.
 	 *
 	 * @param input Input bytes
@@ -58,7 +57,7 @@ extern "C"
 	 *         -2: Conversion failed
 	 *         -3: Output buffer too small
 	 */
-	ptrdiff_t demoji_bwd(const char *input, size_t input_len, char *output, size_t output_len);
+ptrdiff_t demoji_bwd(const char *input, size_t input_len, char *output, size_t output_len);
 
 #ifdef __cplusplus
 }

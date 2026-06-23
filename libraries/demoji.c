@@ -22,18 +22,25 @@
  * SOFTWARE.
  */
 
+#if defined(__has_include) && __has_include("config.h")
+#include "config.h"
+#endif
+
 #include "demoji.h"
 
+/* NOLINTBEGIN(cppcoreguidelines-init-variables) */
+
 /* platform detection */
-#if defined(_WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
+#if !defined(USE_LIBICONV) && (defined(_WIN32) || defined(_MSC_VER) || defined(__CYGWIN__))
 
 #define WINDOWS_VERSION_
 
-#if (defined(WINVER) && WINVER < 0x0600) || (defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0600) || (defined(_WIN32_WINDOWS) && _WIN32_WINDOWS < 0x0600)
+#if (defined(WINVER) && WINVER < 0x0600) || (defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0600) || \
+    (defined(_WIN32_WINDOWS) && _WIN32_WINDOWS < 0x0600)
 #define XP_COMPAT_
 #endif
 
-#elif defined(__unix__) || defined(__linux__) || defined(__APPLE__)
+#elif defined(USE_LIBICONV) || defined(__unix__) || defined(__linux__) || defined(__APPLE__)
 
 #define UNIX_VERSION_
 
@@ -42,20 +49,21 @@
 #if !(defined(WINDOWS_VERSION_) || defined(UNIX_VERSION_))
 
 /* no implementation for this platform */
-ptrdiff_t demoji_fwd(const char * /* input */, size_t /* input_len */, char * /* output */, size_t /* output_len */)
-{
-	return -1;
+ptrdiff_t demoji_fwd(const char * /* input */, size_t /* input_len */, char * /* output */, size_t /* output_len */) {
+    return -1;
 }
 
-ptrdiff_t demoji_bwd(const char * /* input */, size_t /* input_len */, char * /* output */, size_t /* output_len */)
-{
-	return -1;
+ptrdiff_t demoji_bwd(const char * /* input */, size_t /* input_len */, char * /* output */, size_t /* output_len */) {
+    return -1;
 }
 
 #else
 
 #include <stdlib.h>
 #include <string.h>
+
+/* dynamic dispatch things below only apply if we aren't linked to libiconv */
+#if !defined(USE_LIBICONV)
 
 #ifdef WINDOWS_VERSION_
 #ifndef NOMINMAX
@@ -107,69 +115,65 @@ typedef void *lib_handle_t;
 #define lib_sym(x, y) dlsym(x, y)
 #define lib_close(x) dlclose(x)
 #define LIB_PREFIX "lib"
+#if defined(__APPLE__) && defined(__MACH__)
+#define LIB_SUFFIX ".dylib"
+#else
 #define LIB_SUFFIX ".so"
+#endif
 #endif
 
 #define LIB_NAME(x) LIB_PREFIX #x LIB_SUFFIX
 
 /* thread-safe initialization */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__) && !(defined(__has_include) && !__has_include(<threads.h>))
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__) && \
+    !(defined(__has_include) && !__has_include(<threads.h>))
 #include <threads.h>
 #define ONCE_FLAG once_flag
 #define ONCE_INIT ONCE_FLAG_INIT
 #define CALL_ONCE(flag, func) call_once(flag, func)
 #elif defined(XP_COMPAT_)
 /* XP fallback */
-typedef struct
-{
-	CRITICAL_SECTION cs;
-	volatile long state; /* 0=uninitialized, 1=initializing, 2=initialized, 3=complete */
+typedef struct {
+    CRITICAL_SECTION cs;
+    volatile long state; /* 0=uninitialized, 1=initializing, 2=initialized, 3=complete */
 } ONCE_FLAG;
 #if defined(__cplusplus) && __cplusplus >= 201103L
-#define ONCE_INIT {}
+#define ONCE_INIT \
+    {             \
+    }
 #elif defined(__cplusplus)
 #define ONCE_INIT {{0}, 0}
 #else
 #define ONCE_INIT {0}
 #endif
-static inline void call_once_xp(ONCE_FLAG *flag, void (*func)(void))
-{
-	if (flag->state == 3)
-		return;
+static inline void call_once_xp(ONCE_FLAG *flag, void (*func)(void)) {
+    if(flag->state == 3) return;
 
-	if (flag->state < 2)
-	{
-		if (InterlockedCompareExchange(&flag->state, 1, 0) == 0)
-		{
-			InitializeCriticalSection(&flag->cs);
-			InterlockedExchange(&flag->state, 2);
-		}
-		else
-		{
-			while (flag->state < 2)
-				YieldProcessor();
-		}
-	}
+    if(flag->state < 2) {
+        if(InterlockedCompareExchange(&flag->state, 1, 0) == 0) {
+            InitializeCriticalSection(&flag->cs);
+            InterlockedExchange(&flag->state, 2);
+        } else {
+            while(flag->state < 2) YieldProcessor();
+        }
+    }
 
-	/* check again quickly to avoid unnecessarily entering the critsect */
-	if (flag->state == 3)
-		return;
+    /* check again quickly to avoid unnecessarily entering the critsect */
+    if(flag->state == 3) return;
 
-	EnterCriticalSection(&flag->cs);
-	if (flag->state == 2)
-	{
-		func();
-		InterlockedExchange(&flag->state, 3);
-	}
-	LeaveCriticalSection(&flag->cs);
+    EnterCriticalSection(&flag->cs);
+    if(flag->state == 2) {
+        func();
+        InterlockedExchange(&flag->state, 3);
+    }
+    LeaveCriticalSection(&flag->cs);
 }
 #define CALL_ONCE(flag, func) call_once_xp(flag, func)
 #elif defined(WINDOWS_VERSION_)
 #define ONCE_FLAG INIT_ONCE
 #define ONCE_INIT INIT_ONCE_STATIC_INIT
-static inline void call_once_wrapper(ONCE_FLAG *flag, void (*func)(void))
-{
-	InitOnceExecuteOnce(flag, (PINIT_ONCE_FN)func, NULL, NULL);
+static inline void call_once_wrapper(ONCE_FLAG *flag, void (*func)(void)) {
+    InitOnceExecuteOnce(flag, (PINIT_ONCE_FN)func, NULL, NULL);
 }
 #define CALL_ONCE(flag, func) call_once_wrapper(flag, func)
 #elif defined(UNIX_VERSION_)
@@ -191,209 +195,194 @@ static int init_failed = 0;
 
 static ONCE_FLAG init_once = ONCE_INIT;
 
-static inline lib_handle_t lib_load(const char *libname)
-{
+static inline lib_handle_t lib_load(const char *libname) {
 #ifdef WINDOWS_VERSION_
-	if (!libname)
-		return GetModuleHandle(NULL);
+    if(!libname) return GetModuleHandle(NULL);
 #endif
-	return lib_load_(libname);
+    return lib_load_(libname);
 #undef lib_load_
 }
 
-static void cleanup(void)
-{
-	if (iconv_lib)
-	{
+static void cleanup(void) {
+    if(iconv_lib) {
 #ifdef WINDOWS_VERSION_
-		if (iconv_lib != GetModuleHandle(NULL))
+        if(iconv_lib != GetModuleHandle(NULL))
 #endif
-			lib_close(iconv_lib);
-		iconv_lib = NULL;
-	}
+            lib_close(iconv_lib);
+        iconv_lib = NULL;
+    }
 }
 
-static void init_library(void)
-{
-	static const char *libs[] = {NULL, /* try currently loaded module's symbols first */
-	                             LIB_NAME(iconv)};
-	size_t i;
+static void init_library(void) {
+    static const char *libs[] = {NULL, /* try currently loaded module's symbols first */
+                                 LIB_NAME(iconv)};
+    size_t i;
 
-	for (i = 0; i < sizeof(libs) / sizeof(libs[0]); i++)
-	{
-		iconv_lib = lib_load(libs[i]);
-		if (!iconv_lib)
-			continue;
+    for(i = 0; i < sizeof(libs) / sizeof(libs[0]); i++) {
+        iconv_lib = lib_load(libs[i]);
+        if(!iconv_lib) continue;
 
-		iconv_close_func = (int (*)(iconv_t))lib_sym(iconv_lib, "iconv_close");
-		iconv_open_func = (iconv_t (*)(const char *, const char *))lib_sym(iconv_lib, "iconv_open");
-		iconv_func = (size_t (*)(iconv_t, char **, size_t *, char **, size_t *))lib_sym(iconv_lib, "iconv");
+        iconv_close_func = (int (*)(iconv_t))lib_sym(iconv_lib, "iconv_close");
+        iconv_open_func = (iconv_t (*)(const char *, const char *))lib_sym(iconv_lib, "iconv_open");
+        iconv_func = (size_t (*)(iconv_t, char **, size_t *, char **, size_t *))lib_sym(iconv_lib, "iconv");
 
-		if (iconv_close_func && iconv_open_func && iconv_func)
-		{
-			use_iconv = 1;
-			atexit(cleanup);
-			return;
-		}
+        if(iconv_close_func && iconv_open_func && iconv_func) {
+            use_iconv = 1;
+            atexit(cleanup);
+            return;
+        }
 
-		cleanup();
-	}
+        cleanup();
+    }
 
 #ifdef WINDOWS_VERSION_
-	/* Windows API fallback doesn't need iconv */
-	return;
+    /* Windows API fallback doesn't need iconv */
+    return;
 #else
-	init_failed = 1;
+    init_failed = 1;
 #endif
 }
 
-static int init(void)
-{
-	CALL_ONCE(&init_once, init_library);
-	return !init_failed;
+static int init(void) {
+    CALL_ONCE(&init_once, init_library);
+    return !init_failed;
 }
 
-static ptrdiff_t convert_via_iconv(const char *to, const char *from, const char *input, size_t input_len, char *output, size_t output_len)
-{
-	iconv_t cd;
-	char *inbuf, *outbuf;
-	size_t inbytesleft, outbytesleft;
-	size_t result;
-
-	cd = iconv_open_func(to, from);
-	if (cd == (iconv_t)-1)
-		return -2;
-
-	inbuf = (char *)input;
-	inbytesleft = input_len;
-	outbuf = output;
-	outbytesleft = output_len;
-
-	result = iconv_func(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
-	iconv_close_func(cd);
-
-	if (result == (size_t)-1)
-		return -2;
-
-	return (ptrdiff_t)(output_len - outbytesleft);
-}
-
-#ifdef WINDOWS_VERSION_
-static ptrdiff_t convert_via_winapi(UINT to_cp, UINT from_cp, const char *input, size_t input_len, char *output, size_t output_len)
-{
-	wchar_t *wide;
-	int wide_len, result_len;
-
-	wide_len = MultiByteToWideChar(from_cp, 0, input, (int)input_len, NULL, 0);
-	if (wide_len <= 0)
-		return -2;
-
-	wide = (wchar_t *)malloc(wide_len * sizeof(wchar_t));
-	if (!wide)
-		return -2;
-
-	if (MultiByteToWideChar(from_cp, 0, input, (int)input_len, wide, wide_len) <= 0)
-	{
-		free(wide);
-		return -2;
-	}
-
-	result_len = WideCharToMultiByte(to_cp, 0, wide, wide_len, NULL, 0, NULL, NULL);
-	if (result_len <= 0 || (size_t)result_len > output_len)
-	{
-		free(wide);
-		return result_len <= 0 ? -2 : -3;
-	}
-
-	if (WideCharToMultiByte(to_cp, 0, wide, wide_len, output, (int)output_len, NULL, NULL) <= 0)
-	{
-		free(wide);
-		return -2;
-	}
-
-	free(wide);
-	return result_len;
-}
-#endif
-
-typedef enum _EncType
-{
-	ENC_CP850,
-	ENC_SHIFTJIS,
-	ENC_UTF8,
-	ENC_MAX
-} EncType;
-
-static ptrdiff_t convert_encoding(EncType to, EncType from, const char *input, size_t input_len, char *output, size_t output_len)
-{
-#ifdef WINDOWS_VERSION_
-	static const UINT enc_cps[ENC_MAX] = {850, 932, 65001 /* CP_UTF8 */};
-#endif
-	static const char *enc_strs[ENC_MAX] = {"CP850", "SHIFT-JIS", "UTF-8"};
-
-	if (use_iconv)
-		return convert_via_iconv(enc_strs[to], enc_strs[from], input, input_len, output, output_len);
-#ifdef WINDOWS_VERSION_
-	return convert_via_winapi(enc_cps[to], enc_cps[from], input, input_len, output, output_len);
 #else
-	return -2;
+/* we are linked to libiconv directly */
+
+#include "iconv.h"
+
+static int (*iconv_close_func)(iconv_t) = iconv_close;
+static iconv_t (*iconv_open_func)(const char *, const char *) = iconv_open;
+static size_t (*iconv_func)(iconv_t, char **, size_t *, char **, size_t *) = iconv;
+
+static const int use_iconv = 1;
+static int init(void) { return 1; }
+
+#endif /* !USE_LIBICONV */
+
+static ptrdiff_t convert_via_iconv(const char *to, const char *from, const char *input, size_t input_len, char *output,
+                                   size_t output_len) {
+    iconv_t cd;
+    char *inbuf, *outbuf;
+    size_t inbytesleft, outbytesleft;
+    size_t result;
+
+    cd = iconv_open_func(to, from);
+    if(cd == (iconv_t)-1) return -2;
+
+    inbuf = (char *)input;
+    inbytesleft = input_len;
+    outbuf = output;
+    outbytesleft = output_len;
+
+    result = iconv_func(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
+    iconv_close_func(cd);
+
+    if(result == (size_t)-1) return -2;
+
+    return (ptrdiff_t)(output_len - outbytesleft);
+}
+
+#ifdef WINDOWS_VERSION_
+static ptrdiff_t convert_via_winapi(UINT to_cp, UINT from_cp, const char *input, size_t input_len, char *output,
+                                    size_t output_len) {
+    wchar_t *wide;
+    int wide_len, result_len;
+
+    wide_len = MultiByteToWideChar(from_cp, 0, input, (int)input_len, NULL, 0);
+    if(wide_len <= 0) return -2;
+
+    wide = (wchar_t *)malloc(wide_len * sizeof(wchar_t));
+    if(!wide) return -2;
+
+    if(MultiByteToWideChar(from_cp, 0, input, (int)input_len, wide, wide_len) <= 0) {
+        free(wide);
+        return -2;
+    }
+
+    result_len = WideCharToMultiByte(to_cp, 0, wide, wide_len, NULL, 0, NULL, NULL);
+    if(result_len <= 0 || (size_t)result_len > output_len) {
+        free(wide);
+        return result_len <= 0 ? -2 : -3;
+    }
+
+    if(WideCharToMultiByte(to_cp, 0, wide, wide_len, output, (int)output_len, NULL, NULL) <= 0) {
+        free(wide);
+        return -2;
+    }
+
+    free(wide);
+    return result_len;
+}
+#endif
+
+typedef enum _EncType { ENC_CP850, ENC_SHIFTJIS, ENC_UTF8, ENC_MAX } EncType;
+
+static ptrdiff_t convert_encoding(EncType to, EncType from, const char *input, size_t input_len, char *output,
+                                  size_t output_len) {
+#ifdef WINDOWS_VERSION_
+    static const UINT enc_cps[ENC_MAX] = {850, 932, 65001 /* CP_UTF8 */};
+#endif
+    static const char *enc_strs[ENC_MAX] = {"CP850", "SHIFT-JIS", "UTF-8"};
+
+    if(use_iconv) return convert_via_iconv(enc_strs[to], enc_strs[from], input, input_len, output, output_len);
+#ifdef WINDOWS_VERSION_
+    return convert_via_winapi(enc_cps[to], enc_cps[from], input, input_len, output, output_len);
+#else
+    return -2;
 #endif
 }
 
-ptrdiff_t demoji_fwd(const char *input, size_t input_len, char *output, size_t output_len)
-{
-	char *intermediate;
-	size_t intermediate_capacity;
-	ptrdiff_t intermediate_len, final_len;
+ptrdiff_t demoji_fwd(const char *input, size_t input_len, char *output, size_t output_len) {
+    char *intermediate;
+    size_t intermediate_capacity;
+    ptrdiff_t intermediate_len, final_len;
 
-	if (!init())
-		return -1;
+    if(!init()) return -1;
 
-	/* UTF-8 to CP850 shouldn't expand, but give some headroom */
-	intermediate_capacity = input_len * 2;
-	intermediate = (char *)malloc(intermediate_capacity);
-	if (!intermediate)
-		return -2;
+    /* UTF-8 to CP850 shouldn't expand, but give some headroom */
+    intermediate_capacity = input_len * 2;
+    intermediate = (char *)malloc(intermediate_capacity);
+    if(!intermediate) return -2;
 
-	intermediate_len = convert_encoding(ENC_CP850, ENC_UTF8, input, input_len, intermediate, intermediate_capacity);
-	if (intermediate_len < 0)
-	{
-		free(intermediate);
-		return intermediate_len;
-	}
+    intermediate_len = convert_encoding(ENC_CP850, ENC_UTF8, input, input_len, intermediate, intermediate_capacity);
+    if(intermediate_len < 0) {
+        free(intermediate);
+        return intermediate_len;
+    }
 
-	/* SHIFT-JIS to UTF-8 can expand up to 3x */
-	final_len = convert_encoding(ENC_UTF8, ENC_SHIFTJIS, intermediate, (size_t)intermediate_len, output, output_len);
-	free(intermediate);
-	return final_len;
+    /* SHIFT-JIS to UTF-8 can expand up to 3x */
+    final_len = convert_encoding(ENC_UTF8, ENC_SHIFTJIS, intermediate, (size_t)intermediate_len, output, output_len);
+    free(intermediate);
+    return final_len;
 }
 
-ptrdiff_t demoji_bwd(const char *input, size_t input_len, char *output, size_t output_len)
-{
-	char *intermediate;
-	size_t intermediate_capacity;
-	ptrdiff_t intermediate_len, final_len;
+ptrdiff_t demoji_bwd(const char *input, size_t input_len, char *output, size_t output_len) {
+    char *intermediate;
+    size_t intermediate_capacity;
+    ptrdiff_t intermediate_len, final_len;
 
-	if (!init())
-		return -1;
+    if(!init()) return -1;
 
-	/* UTF-8 to SHIFT-JIS typically doesn't expand much */
-	intermediate_capacity = input_len * 2;
-	intermediate = (char *)malloc(intermediate_capacity);
-	if (!intermediate)
-		return -2;
+    /* UTF-8 to SHIFT-JIS typically doesn't expand much */
+    intermediate_capacity = input_len * 2;
+    intermediate = (char *)malloc(intermediate_capacity);
+    if(!intermediate) return -2;
 
-	intermediate_len = convert_encoding(ENC_SHIFTJIS, ENC_UTF8, input, input_len, intermediate, intermediate_capacity);
-	if (intermediate_len < 0)
-	{
-		free(intermediate);
-		return intermediate_len;
-	}
+    intermediate_len = convert_encoding(ENC_SHIFTJIS, ENC_UTF8, input, input_len, intermediate, intermediate_capacity);
+    if(intermediate_len < 0) {
+        free(intermediate);
+        return intermediate_len;
+    }
 
-	/* CP850 to UTF-8 can expand */
-	final_len = convert_encoding(ENC_UTF8, ENC_CP850, intermediate, (size_t)intermediate_len, output, output_len);
-	free(intermediate);
-	return final_len;
+    /* CP850 to UTF-8 can expand */
+    final_len = convert_encoding(ENC_UTF8, ENC_CP850, intermediate, (size_t)intermediate_len, output, output_len);
+    free(intermediate);
+    return final_len;
 }
 
 #endif
+
+/* NOLINTEND(cppcoreguidelines-init-variables) */

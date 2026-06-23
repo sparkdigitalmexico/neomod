@@ -700,6 +700,8 @@ BUILD_CTRE_FALSE
 BUILD_CTRE_TRUE
 BUILD_SIMDUTF_FALSE
 BUILD_SIMDUTF_TRUE
+BUILD_LIBICONV_FALSE
+BUILD_LIBICONV_TRUE
 BUILD_LIBARCHIVE_FALSE
 BUILD_LIBARCHIVE_TRUE
 BUILD_LZMA_FALSE
@@ -736,6 +738,8 @@ CTRE_PREFIX
 CTRE_VERSION
 SIMDUTF_PREFIX
 SIMDUTF_VERSION
+LIBICONV_PREFIX
+LIBICONV_VERSION
 LIBARCHIVE_PREFIX
 LIBARCHIVE_VERSION
 LZMA_PREFIX
@@ -14737,8 +14741,10 @@ FMT_MIN_VERSION=11.0.0
 FMT_BUILD_VERSION=0e078f6ed0624be8babc43bd145371d9f3a08aab
 LZMA_MIN_VERSION=5.4.7
 LZMA_BUILD_VERSION=5.8.3
+LIBICONV_MIN_VERSION=1.17
+LIBICONV_BUILD_VERSION=1.19
 LIBARCHIVE_MIN_VERSION=3.6.2
-LIBARCHIVE_BUILD_VERSION=3.8.7
+LIBARCHIVE_BUILD_VERSION=3.8.8
 LIBACL_MIN_VERSION=2.3.1
 LIBACL_BUILD_VERSION=2.3.2
 CURL_MIN_VERSION=8.16.0 # due to websocket things, only very recent curl works
@@ -16969,6 +16975,69 @@ fi ;;
 esac
 fi
 
+    { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for library containing iconv_open" >&5
+printf %s "checking for library containing iconv_open... " >&6; }
+if test ${ac_cv_search_iconv_open+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+namespace conftest {
+  extern "C" int iconv_open ();
+}
+int
+main (void)
+{
+return conftest::iconv_open ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' iconv
+do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_cxx_try_link "$LINENO"
+then :
+  ac_cv_search_iconv_open=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext
+  if test ${ac_cv_search_iconv_open+y}
+then :
+  break
+fi
+done
+if test ${ac_cv_search_iconv_open+y}
+then :
+
+else case e in #(
+  e) ac_cv_search_iconv_open=no ;;
+esac
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS ;;
+esac
+fi
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_iconv_open" >&5
+printf '%s\n' "$ac_cv_search_iconv_open" >&6; }
+ac_res=$ac_cv_search_iconv_open
+if test "$ac_res" != no
+then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  have_libiconv=yes
+else case e in #(
+  e) have_libiconv=no ;;
+esac
+fi
+
 
     if test "x$enable_static" = "xyes"
 then :
@@ -18081,6 +18150,22 @@ LIBARCHIVE_PREFIX="${DEPS_PREFIX}"
 
 
 
+LIBICONV_PREFIX=
+if test "x$have_libiconv" != "xyes"
+then :
+
+    # TODO: wasm should have this built in?
+    have_libiconv="build from source"
+    LIBICONV_PREFIX="${DEPS_PREFIX}"
+
+fi
+LIBICONV_VERSION=$LIBICONV_BUILD_VERSION
+
+
+
+printf '%s\n' "#define USE_LIBICONV 1" >>confdefs.h
+
+
 if test "x$have_simdutf" != "xyes"
 then :
   have_simdutf="build from source"
@@ -18267,6 +18352,14 @@ fi
 else
   BUILD_LIBARCHIVE_TRUE='#'
   BUILD_LIBARCHIVE_FALSE=
+fi
+
+ if test "x$have_libiconv" != "xyes"; then
+  BUILD_LIBICONV_TRUE=
+  BUILD_LIBICONV_FALSE='#'
+else
+  BUILD_LIBICONV_TRUE='#'
+  BUILD_LIBICONV_FALSE=
 fi
 
  if test "x$have_simdutf" != "xyes"; then
@@ -18737,6 +18830,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${BUILD_LIBARCHIVE_TRUE}" && test -z "${BUILD_LIBARCHIVE_FALSE}"; then
   as_fn_error $? "conditional \"BUILD_LIBARCHIVE\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${BUILD_LIBICONV_TRUE}" && test -z "${BUILD_LIBICONV_FALSE}"; then
+  as_fn_error $? "conditional \"BUILD_LIBICONV\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${BUILD_SIMDUTF_TRUE}" && test -z "${BUILD_SIMDUTF_FALSE}"; then
@@ -20257,6 +20354,7 @@ Dependencies:
     curl:               ${have_curl-download}
     openssl:            ${have_openssl-download}
     liblzma:            ${have_liblzma-build from source}
+    libiconv:           ${have_libiconv-build from source}
     libarchive:         ${have_libarchive-build from source}
     simdutf:            ${have_simdutf-build from source}
     ctre:               ${have_ctre-build from source}
@@ -20319,6 +20417,7 @@ Dependencies:
     curl:               ${have_curl-download}
     openssl:            ${have_openssl-download}
     liblzma:            ${have_liblzma-build from source}
+    libiconv:           ${have_libiconv-build from source}
     libarchive:         ${have_libarchive-build from source}
     simdutf:            ${have_simdutf-build from source}
     ctre:               ${have_ctre-build from source}

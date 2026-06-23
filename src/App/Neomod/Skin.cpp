@@ -55,7 +55,8 @@ bool Skin::unpack(std::string_view filepath) {
         // close the file here
     }
 
-    Archive::Reader archive({fileBuffer.get(), fileSize});
+    // osu! .osk entry names are Shift-JIS too (i think)
+    Archive::Reader archive({fileBuffer.get(), fileSize}, "CP932");
     if(!archive.isValid()) {
         debugLog("Failed to open .osk file");
         return false;
@@ -75,6 +76,8 @@ bool Skin::unpack(std::string_view filepath) {
         if(entry.isDirectory()) continue;
 
         std::string filename = entry.getFilename();
+        File::normalizeSlashes(filename, '\\', '/');
+
         const auto folders = SString::split(filename, '/');
         std::string file_path = skin_root;
 

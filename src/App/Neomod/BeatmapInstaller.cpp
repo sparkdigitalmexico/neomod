@@ -140,9 +140,10 @@ bool write_entries_to_dir(const std::vector<Archive::Entry>& entries, std::strin
     for(const auto& entry : entries) {
         if(entry.isDirectory()) continue;
 
-        const std::string& filename = entry.getFilename();
-        if(filename.find("../") != std::string::npos || filename.find("..\\") != std::string::npos)
-            continue;  // path traversal guard
+        std::string filename = entry.getFilename();
+        File::normalizeSlashes(filename, '\\', '/');
+
+        if(filename.find("../") != std::string::npos) continue;  // path traversal guard
 
         std::string dir_path{base};
         const auto folders = SString::split(filename, '/');
@@ -151,7 +152,8 @@ bool write_entries_to_dir(const std::vector<Archive::Entry>& entries, std::strin
             env->createDirectory(dir_path);
         }
 
-        if(entry.extractToFile(fmt::format("{}/{}", base, filename))) {
+        const std::string extract_to = fmt::format("{}/{}", base, filename);
+        if(entry.extractToFile(extract_to)) {
             wrote_any = true;
         } else {
             debugLog("Failed to extract file {:s}", filename);
@@ -168,6 +170,10 @@ bool write_entries_to_dir(const std::vector<Archive::Entry>& entries, std::strin
     return wrote_any;
 }
 
+// osu! always stores .osz entry names as Shift-JIS (CP932)
+// TODO: should we be exporting them like that too?
+constexpr std::string_view ARCHIVE_CHARSET{"CP932"};
+
 }  // namespace
 
 // static helpers
@@ -175,7 +181,7 @@ bool write_entries_to_dir(const std::vector<Archive::Entry>& entries, std::strin
 bool BeatmapInstaller::extract_beatmapset(std::span<const u8> data, const std::string& map_dir) {
     debugLog("Extracting beatmapset ({:d} bytes)", data.size());
 
-    Archive::Reader archive(data);
+    Archive::Reader archive(data, ARCHIVE_CHARSET);
     if(!archive.isValid()) {
         debugLog("Failed to open .osz file");
         return false;
@@ -193,7 +199,7 @@ bool BeatmapInstaller::extract_beatmapset(std::span<const u8> data, const std::s
 i32 BeatmapInstaller::resolve_and_extract_osz(std::span<const u8> data, std::string_view osz_name) {
     debugLog("Reading beatmapset {:s} ({:d} bytes)", osz_name, data.size());
 
-    Archive::Reader archive(data);
+    Archive::Reader archive(data, ARCHIVE_CHARSET);
     if(!archive.isValid()) {
         debugLog("Failed to open .osz file");
         return -1;
