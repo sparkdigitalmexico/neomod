@@ -5,9 +5,13 @@
 
 set -e
 
-# Make sure we're in the right directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+pushd "$SCRIPT_DIR" >/dev/null
+trap 'popd >/dev/null' EXIT
+
+# sanity check that the script lives at the project root
 if [ ! -f "configure.ac" ]; then
-    echo "Error: configure.ac not found. Run this script from the project root directory."
+    echo "Error: configure.ac not found next to autogen.sh."
     exit 1
 fi
 
@@ -94,7 +98,7 @@ cond_sources "if BUILD_TESTS"  "TEST_SOURCES"      src/App/Tests
 EOF
 } >> "$SOURCES_FILE"
 
-mkdir -p "$(dirname build-aux)"
+mkdir -p build-aux
 
 ########################################
 
