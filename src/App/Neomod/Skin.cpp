@@ -885,6 +885,8 @@ bool Skin::parseSkinINI(std::string filepath) {
                 std::string name, value;
 
                 // XXX: shouldn't be setting cvars directly in parsing method
+                // TODO: collect cvars to set and set them after the skin has loaded
+                // (and ideally, reload skin if any of them would affect the skin load (or parse neomod section early?))
                 if(Parsing::parse(curLine.substr(0, pos), &name) && Parsing::parse(curLine.substr(pos + 1), &value)) {
                     auto *cvar = cvars().getConVarByName(name, false);
                     if(cvar) {

@@ -839,8 +839,8 @@ CONVAR(scrubbing_smooth, true, CLIENT | SKINS | SERVER);
 CONVAR(seek_delta, 5, CLIENT | SKINS | SERVER, "how many seconds to skip backward/forward when quick seeking");
 CONVAR(show_approach_circle_on_first_hidden_object, true, CLIENT | SKINS | SERVER);
 CONVAR(simulate_replays, false, CLIENT | SKINS | SERVER, "experimental \"improved\" replay playback");
-CONVAR(skin, "default"sv, CLIENT | SKINS | SERVER);
-CONVAR(skin_fallback, ""sv, CLIENT | SKINS | SERVER, "fallback skin for missing elements");
+CONVAR(skin, "default"sv, CLIENT | SERVER);
+CONVAR(skin_fallback, ""sv, CLIENT | SERVER, "fallback skin for missing elements");
 CONVAR(skin_animation_force, false, CLIENT | SKINS | SERVER);
 CONVAR(skin_animation_fps_override, -1.0f, CLIENT | SKINS | SERVER);
 CONVAR(skin_async, true, CLIENT | SKINS | SERVER, "load in background without blocking");
@@ -854,7 +854,7 @@ CONVAR(skin_mipmaps, false, CLIENT | SKINS | SERVER,
 CONVAR(skin_random, false, CLIENT | SKINS | SERVER, "select random skin from list on every skin load/reload");
 CONVAR(skin_random_elements, false, CLIENT | SKINS | SERVER, "sElECt RanDOM sKIn eLemENTs FRoM ranDom SkINs");
 CONVAR(skin_reload);
-CONVAR(skin_use_skin_hitsounds, true, CLIENT | SKINS | SERVER,
+CONVAR(skin_use_skin_hitsounds, true, CLIENT | SERVER,
        "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
 CONVAR(
     skin_use_spinner_metre, false, CLIENT | SKINS | SERVER,
