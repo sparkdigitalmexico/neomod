@@ -86,6 +86,7 @@ static f32 TOAST_SCREEN_RIGHT_MARGIN{DEF_TOAST_SCREEN_RIGHT_MARGIN};
 ToastElement::ToastElement(std::string text, Color borderColor, ToastElement::TYPE type)
     : CBaseUIButton(0.f, 0.f, 0.f, 0.f, "", std::move(text)), type(type) {
     this->setDrawsOnTop(true);
+    this->setHandleRightMouse(true);
 
     // TODO: animations
 
@@ -110,7 +111,12 @@ void ToastElement::onClicked(bool left, bool right) {
         std::max<f64>(1., ((this->creation_time + (this->timeout - 0.5)) - engine->getTime()) - 1.);
     this->creation_time -= time_remaining_until_fadeout;
 
-    CBaseUIButton::onClicked(left, right);
+    // TODO: toast click callbacks should also take left/right so that they can respond to them independently
+    // (e.g. right click -> dismissed -> do something else)
+    // for now just avoid calling onClicked (which calls the callback) entirely if we got a right click
+    if(left) {
+        CBaseUIButton::onClicked(left, right);
+    }
 }
 
 void ToastElement::draw() {
