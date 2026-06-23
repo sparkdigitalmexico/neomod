@@ -10,8 +10,6 @@ struct Packet {
     u8 *memory{nullptr};
     size_t size{0};
     size_t pos{0};
-    u8 *extra{nullptr};
-    i32 extra_int{0};  // lazy
 
     void reserve(u32 newsize) {
         if(newsize <= this->size) return;

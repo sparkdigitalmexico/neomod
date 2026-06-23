@@ -367,7 +367,7 @@ MAIN_FUNC /* int argc, char *argv[] */
 #else
 
     // otherwise just put it on the stack
-    SDLMain fmain{*appDesc, std::move(arg_map), std::move(arg_cmdline)};
+    SDLMain fmain{*appDesc, std::move(arg_map), arg_cmdline};
     if(fmain.initialize() == SDL_APP_FAILURE) {
         SDL_AppQuit(&fmain, SDL_APP_FAILURE);
     }
