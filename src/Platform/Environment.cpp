@@ -118,7 +118,8 @@ Environment::Environment(const Mc::AppDescriptor &appDesc,
     m_bEnvDebug = false;
 
     m_bRestoreFullscreen = false;  // if minimizing, whether we need to restore fullscreen state on restore
-    m_bMinimizeSupported = true;   // will set to false if our minimize request didn't actually result in minimizing
+    m_bMinimizeSupported =
+        !Env::cfg(OS::WASM);  // will set to false if our minimize request didn't actually result in minimizing
 
     m_sUsername = {};
     m_sProgDataPath = {};  // local data for McEngine files
@@ -984,10 +985,6 @@ bool Environment::minimizeWindow() {
 
     // TODO: make minimize-on-focus-lost an option in options menu and stop trying to be smart about it,
     // i don't think it's possible to cover all edge cases automatically
-
-    if constexpr(Env::cfg(OS::WASM)) {
-        m_bMinimizeSupported = false;
-    }
 
     // also somehow disableFullscreen seems to go into an "infinite loop" on i3wm? so really try to avoid it...
     // on KDE Wayland, calling disableFullscreen() before SDL_MinimizeWindow() makes the window unrestorable

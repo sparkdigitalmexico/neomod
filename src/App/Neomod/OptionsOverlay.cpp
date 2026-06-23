@@ -2995,6 +2995,7 @@ void OptionsOverlayImpl::onLanguageSelected(std::string_view newLanguage, int /*
 
         cv::language.setValue(lang.code);
         engine->restart();  // calls onShutdown() which calls save()
+        break;
     }
 }
 

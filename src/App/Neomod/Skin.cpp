@@ -780,14 +780,20 @@ bool Skin::parseSkinINI(std::string filepath) {
         hasNonEmptyLines = true;
 
         // section detection
-        if(curLine.find("[General]") != std::string::npos)
+        if(curLine.find("[General]") != std::string::npos) {
             curBlock = GENERAL;
-        else if(curLine.find("[Colours]") != std::string::npos || curLine.find("[Colors]") != std::string::npos)
+            continue;
+        } else if(curLine.find("[Colours]") != std::string::npos || curLine.find("[Colors]") != std::string::npos) {
             curBlock = COLOURS;
-        else if(curLine.find("[Fonts]") != std::string::npos)
+            continue;
+        } else if(curLine.find("[Fonts]") != std::string::npos) {
             curBlock = FONTS;
-        else if(curLine.find("[" PACKAGE_NAME "]") != std::string::npos || curLine.find("[neosu]") != std::string::npos)
+            continue;
+        } else if(curLine.find("[" PACKAGE_NAME "]") != std::string::npos ||
+                  curLine.find("[neosu]") != std::string::npos) {
             curBlock = NEOMOD;
+            continue;
+        }
 
         switch(curBlock) {
 // to go to the next line after we successfully parse a line
@@ -802,6 +808,7 @@ bool Skin::parseSkinINI(std::string filepath) {
                     } else {
                         PARSE_LINE("Version", ':', &this->version);
                     }
+                    break;
                 }
 
                 PARSE_LINE("CursorRotate", ':', &this->o_cursor_rotate);
@@ -820,10 +827,12 @@ bool Skin::parseSkinINI(std::string filepath) {
 
                 if(Parsing::parse(curLine, "SliderStyle", ':', &this->slider_style)) {
                     if(this->slider_style != 1 && this->slider_style != 2) this->slider_style = 2;
+                    break;
                 }
 
                 if(Parsing::parse(curLine, "AnimationFramerate", ':', &this->anim_framerate)) {
                     if(this->anim_framerate < 0.f) this->anim_framerate = 0.f;
+                    break;
                 }
 
                 break;
@@ -834,9 +843,8 @@ bool Skin::parseSkinINI(std::string filepath) {
                 u8 r, g, b;
 
                 if(Parsing::parse(curLine, "Combo", &comboNum, ':', &r, ',', &g, ',', &b)) {
-                    if(comboNum >= 1 && comboNum <= 8) {
-                        tempColors[comboNum - 1] = rgb(r, g, b);
-                    }
+                    if(comboNum >= 1 && comboNum <= 8) tempColors[comboNum - 1] = rgb(r, g, b);
+                    break;
                 } else if(Parsing::parse(curLine, "SpinnerApproachCircle", ':', &r, ',', &g, ',', &b))
                     this->c_spinner_approach_circle = rgb(r, g, b);
                 else if(Parsing::parse(curLine, "SpinnerBackground", ':', &r, ',', &g, ',', &b))

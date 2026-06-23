@@ -482,6 +482,7 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
             if(auto it = std::ranges::find(blocksUnseen, curLine, &MetadataBlock::str); it != blocksUnseen.end()) {
                 curBlock = it->id;
                 blocksUnseen.erase(it);
+                continue;  // we just parsed a block header, keep going
             }
         }
 
@@ -512,15 +513,16 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                     } else if(sampleSet == "drum") {
                         c.defaultSampleSet = SampleSetType::DRUM;
                     }
+                } else {
+                    Parsing::parse(curLine, "StackLeniency", ':', &c.stackLeniency);
                 }
 
-                Parsing::parse(curLine, "StackLeniency", ':', &c.stackLeniency);
                 break;
             }
 
             case Difficulty: {
-                Parsing::parse(curLine, "SliderMultiplier", ':', &c.sliderMultiplier);
-                Parsing::parse(curLine, "SliderTickRate", ':', &c.sliderTickRate);
+                if(Parsing::parse(curLine, "SliderMultiplier", ':', &c.sliderMultiplier)) break;
+                if(Parsing::parse(curLine, "SliderTickRate", ':', &c.sliderTickRate)) break;
                 break;
             }
 
@@ -530,6 +532,8 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                     if(type == 2) {
                         BREAK b{.startTime = startTime, .endTime = endTime};
                         c.breaks.push_back(b);
+                        // also update total break duration as we go along here
+                        c.totalBreakDuration += (u32)(endTime - startTime);
                     }
                 }
                 break;
@@ -783,11 +787,6 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
         if(tempCol.has_value()) {
             c.combocolors.push_back(tempCol.value());
         }
-    }
-
-    // calculate total break duration
-    for(const auto &brk : c.breaks) {
-        c.totalBreakDuration += (u32)(brk.endTime - brk.startTime);
     }
 
     if(!tempTimingpoints.empty()) {
@@ -1456,6 +1455,7 @@ DatabaseBeatmap::LOAD_META_RESULT DatabaseBeatmap::loadMetadata(bool compute_md5
             if(auto it = std::ranges::find(blocksUnseen, curLine, &MetadataBlock::str); it != blocksUnseen.end()) {
                 curBlock = it->id;
                 blocksUnseen.erase(it);
+                continue;  // we just parsed a block header, keep going
             }
         }
 
