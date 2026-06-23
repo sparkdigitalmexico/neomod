@@ -41,6 +41,10 @@
 #include <charconv>
 #include <cmath>
 
+namespace cv {
+static ConVar direct_autoselect("direct_autoselect", true, CLIENT, "auto-select and play downloaded beatmaps");
+}
+
 // represents: one single beatmapset element inside the OsuDirectScreen scrollview
 // it's a container because it contains UIIcons with tooltips for difficulties
 class OnlineMapListing : public CBaseUIContainer {
@@ -131,7 +135,7 @@ void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
             if(!!(state.stage & (Queued | Downloading | Extracting | Installing))) {
                 installer->cancel(this->meta.set_id);
             } else {
-                installer->enqueue(this->meta.set_id, /*auto_select=*/true,
+                installer->enqueue(this->meta.set_id, cv::direct_autoselect.getBool(),
                                    fmt::format("{} - {}", this->meta.artist, this->meta.title));
             }
         }
@@ -386,16 +390,37 @@ OsuDirectScreen::OsuDirectScreen() {
     this->results->setHorizontalScrolling(false);
     this->results->setVerticalScrolling(true);
     this->addBaseUIElement(this->results);
+
+    cv::direct_ranking_status_filter.setCallback(SA::MakeDelegate<&OsuDirectScreen::onRankedStatusCvarChange>(this));
 }
 
 OsuDirectScreen::~OsuDirectScreen() {
     // cancel any in-flight search so its callback can't fire against this destroyed screen
     this->search_cancel.request_stop();
+
+    cv::direct_ranking_status_filter.removeAllCallbacks();
 }
 
 void OsuDirectScreen::onRankedCheckboxChange(CBaseUICheckbox* checkbox) {
-    cv::direct_ranking_status_filter.setValue(checkbox->isChecked() ? (u8)RankingStatusFilter::RANKED
-                                                                    : (u8)RankingStatusFilter::ALL);
+    cv::direct_ranking_status_filter.setValue(
+        checkbox->isChecked() ? (u8)RankingStatusFilter::RANKED : (u8)RankingStatusFilter::ALL, false);
+
+    this->reset();
+    this->search(this->current_query);
+}
+
+void OsuDirectScreen::onRankedStatusCvarChange(float oldValue, float newValue) {
+    const auto oldEnum = static_cast<RankingStatusFilter>(oldValue);
+    const auto newEnum = static_cast<RankingStatusFilter>(newValue);
+    using enum RankingStatusFilter;
+    if(newEnum != RANKED && newEnum != ALL) {
+        // set back to previous (valid) value
+        cv::direct_ranking_status_filter.setValue((u8)oldEnum, false);
+        return;
+    }
+    if((newEnum == RANKED) == this->ranked_only->isChecked()) return;
+    if(!this->isVisible()) return;
+
     this->reset();
     this->search(this->current_query);
 }

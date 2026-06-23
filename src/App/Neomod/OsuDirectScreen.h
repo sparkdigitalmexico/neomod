@@ -35,6 +35,7 @@ class OsuDirectScreen final : public ScreenBackable {
 
    private:
     void onRankedCheckboxChange(CBaseUICheckbox* checkbox);
+    void onRankedStatusCvarChange(float oldValue, float newValue);
 
     CBaseUILabel* title{nullptr};
     CBaseUITextbox* search_bar{nullptr};
