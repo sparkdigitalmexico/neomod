@@ -61,6 +61,9 @@ AboutScreen::AboutScreen() : ScreenBackable() {
     CHANGELOG v43_11;
     v43_11.title = "43.11 (" CHANGELOG_TIMESTAMP ")";
     v43_11.changes = {
+        R"(- Online beatmaps screen:)",
+        R"(  - Added direct_autoselect ConVar to configure post-download behavior)",
+        R"(  - Added right-click-to-open-beatmapset)",
         R"(- Fixed skin dropdown in options menu blocking drag-scrolling)",
         R"(- Updated mod selector screen in song browser to be transparent)",
         R"(- Refactored and improved UI element focus behavior overall (please report bugs/regressions))",

@@ -70,7 +70,9 @@ class OnlineMapListing : public CBaseUIContainer {
     McFont* font;
     Downloader::BeatmapSetMetadata meta;
 
-    vec2 mousedown_coords{-999.f, -999.f};
+    // TODO: is this really necessary anymore?
+    static constexpr vec2 NO_MOUSEDOWN{-999.f, -999.f};
+    vec2 mbtndown_coords[2]{/*left*/ {NO_MOUSEDOWN}, /*right*/ {NO_MOUSEDOWN}};
     AnimFloat hover_anim;
     AnimFloat click_anim;
 
@@ -94,6 +96,9 @@ OnlineMapListing::OnlineMapListing(Downloader::BeatmapSetMetadata meta)
     // click-through by default since the single-target dispatch)
     this->bClickThroughSelf = false;
 
+    // right click: open browser to web
+    this->setHandleRightMouse(true);
+
     if(this->meta.beatmaps.size() > 1) {
         // reverse
         std::ranges::sort(this->meta.beatmaps, std::ranges::greater{}, [](const auto& bm) { return bm.star_rating; });
@@ -106,14 +111,18 @@ OnlineMapListing::OnlineMapListing(Downloader::BeatmapSetMetadata meta)
 
 OnlineMapListing::~OnlineMapListing() { osu->getThumbnailManager()->discard_image(this->thumb_id); }
 
-void OnlineMapListing::onMouseDownInside(bool /*left*/, bool /*right*/) { this->mousedown_coords = mouse->getPos(); }
+void OnlineMapListing::onMouseDownInside(bool left, bool /*right*/) { this->mbtndown_coords[!left] = mouse->getPos(); }
 
-void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
-    const f32 distance = vec::distance(mouse->getPos(), this->mousedown_coords);
-    if(distance < 5.f) {
-        this->click_anim = 1.f;
-        this->click_anim.set(0.0f, 0.15f, anim::QuadInOut);
+void OnlineMapListing::onMouseUpInside(bool left, bool /*right*/) {
+    if(const f32 distance = vec::distance(mouse->getPos(), this->mbtndown_coords[!left]); distance >= 5.f) {
+        this->mbtndown_coords[!left] = NO_MOUSEDOWN;
+        return;
+    }
 
+    this->click_anim = 1.f;
+    this->click_anim.set(0.0f, 0.15f, anim::QuadInOut);
+
+    if(left) {
         const bool installed = db->getBeatmapSet(this->meta.set_id) != nullptr;
         if(installed) {
             // Select map, or go to song browser if already selected
@@ -139,12 +148,17 @@ void OnlineMapListing::onMouseUpInside(bool /*left*/, bool /*right*/) {
                                    fmt::format("{} - {}", this->meta.artist, this->meta.title));
             }
         }
+    } else {
+        const auto scheme = cv::use_https.getBool() ? "https://"sv : "http://"sv;
+        const auto url = fmt::format("{}osu.{}/s/{}", scheme, BanchoState::endpoint, this->meta.set_id);
+        debugLog("opening map link {:s}", url);
+        env->openURLInDefaultBrowser(url);
     }
 
-    this->mousedown_coords = {-999.f, -999.f};
+    this->mbtndown_coords[!left] = NO_MOUSEDOWN;
 }
 
-void OnlineMapListing::onMouseUpOutside(bool /*left*/, bool /*right*/) { this->mousedown_coords = {-999.f, -999.f}; }
+void OnlineMapListing::onMouseUpOutside(bool left, bool /*right*/) { this->mbtndown_coords[!left] = NO_MOUSEDOWN; }
 
 void OnlineMapListing::onMouseInside() { this->hover_anim.set(0.25f, 0.15f, anim::QuadInOut); }
 void OnlineMapListing::onMouseOutside() { this->hover_anim.set(0.f, 0.15f, anim::QuadInOut); }
