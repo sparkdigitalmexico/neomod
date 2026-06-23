@@ -179,7 +179,7 @@ void ConVarHandler::ConVarBuiltins::find(std::string_view args) {
     }
 
     if(matchingConVars.size() > 0) {
-        std::ranges::sort(matchingConVars, SString::str_comp, &ConVar::getName);
+        std::ranges::sort(matchingConVars, {}, &ConVar::getName);
     }
 
     if(matchingConVars.size() < 1) {
@@ -255,7 +255,7 @@ void ConVarHandler::ConVarBuiltins::listcommands(void) {
     logRaw("----------------------------------------------");
     {
         std::vector<ConVar *> convars = cvars().getConVarArray();
-        std::ranges::sort(convars, SString::str_comp, &ConVar::getName);
+        std::ranges::sort(convars, {}, &ConVar::getName);
 
         for(auto &convar : convars) {
             if(convar->isFlagSet(cv::HIDDEN)) continue;
@@ -291,7 +291,7 @@ void ConVarHandler::ConVarBuiltins::dumpcommands(void) {
     std::string html_template{ALL_BINMAP.at("convar_template")};
 
     std::vector<ConVar *> convars = cvars().getConVarArray();
-    std::ranges::sort(convars, SString::str_comp, &ConVar::getName);
+    std::ranges::sort(convars, {}, &ConVar::getName);
 
     std::string html = R"(<section class="variables">)";
     for(auto var : convars) {
@@ -327,7 +327,7 @@ void ConVarHandler::ConVarBuiltins::dumpcommands(void) {
     size_t pos = html_template.find(marker);
     html_template.replace(pos, marker.length(), html);
 
-    io->write(MCENGINE_DATA_DIR "variables.htm", html_template, [](bool success) -> void {
+    io->write(MCENGINE_DATA_DIR "variables.htm", std::move(html_template), [](bool success) -> void {
         if(success) {
             logRaw("ConVars dumped to variables.htm");
         } else {

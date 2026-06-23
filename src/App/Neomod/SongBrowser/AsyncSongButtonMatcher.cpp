@@ -156,7 +156,7 @@ static Query parse_query(std::string_view search) {
 // (like SString::contains_ncase, but it skips re-lowercasing the needle every call).
 static forceinline INLINE_BODY bool haystack_contains_needle(std::string_view haystack, std::string_view lower_needle) {
     return !std::ranges::search(haystack, lower_needle, [](unsigned char hay, unsigned char ndl) {
-                return std::tolower(hay) == ndl;
+                return SString::ascii_tolower(hay) == ndl;
             }).empty();
 }
 

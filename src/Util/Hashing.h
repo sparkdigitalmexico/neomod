@@ -36,12 +36,19 @@ struct StableStringHash {
 template <typename T>
 using stable_stringmap = std::unordered_map<std::string, T, StableStringHash, std::equal_to<>>;
 
+namespace detail {
+// duplicated here to avoid including SString.h
+constexpr unsigned char ascii_tolower(unsigned char c) noexcept {
+    return (c >= 'A' && c <= 'Z') ? static_cast<unsigned char>(c + 32) : c;
+}
+}  // namespace detail
+
 struct StringHashNcase {
    private:
     [[nodiscard]] inline uint64_t hashFunc(std::string_view str) const {
         uint64_t hash = 0;
         for(auto &c : str) {
-            hash = hash * 31 + std::tolower(static_cast<unsigned char>(c));
+            hash = hash * 31 + detail::ascii_tolower(static_cast<unsigned char>(c));
         }
         return hash;
     }
@@ -56,8 +63,9 @@ struct StringHashNcase {
 struct StringEqualNcase {
    private:
     [[nodiscard]] inline bool equality(std::string_view lhs, std::string_view rhs) const {
-        return std::ranges::equal(
-            lhs, rhs, [](unsigned char a, unsigned char b) -> bool { return std::tolower(a) == std::tolower(b); });
+        return std::ranges::equal(lhs, rhs, [](unsigned char a, unsigned char b) -> bool {
+            return detail::ascii_tolower(a) == detail::ascii_tolower(b);
+        });
     }
 
    public:

@@ -12,15 +12,55 @@
 
 namespace SString {
 
-// strcmp accepting string_views
-bool str_comp(std::string_view a, std::string_view b);
+constexpr forceinline unsigned char ascii_tolower(unsigned char c) noexcept {
+    return (c >= 'A' && c <= 'Z') ? static_cast<unsigned char>(c + 32) : c;
+}
+constexpr forceinline bool ascii_isalnum(unsigned char c) noexcept {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+constexpr int alnum_cmp3(std::string_view a, std::string_view b) noexcept {
+    size_t i = 0, j = 0;
+    for(;;) {
+        while(i < a.size() && !ascii_isalnum(static_cast<unsigned char>(a[i]))) ++i;
+        while(j < b.size() && !ascii_isalnum(static_cast<unsigned char>(b[j]))) ++j;
+        if(i == a.size() || j == b.size()) break;
+        const unsigned char ca = ascii_tolower(static_cast<unsigned char>(a[i]));
+        const unsigned char cb = ascii_tolower(static_cast<unsigned char>(b[j]));
+        if(ca != cb) return static_cast<int>(ca) - static_cast<int>(cb);
+        ++i;
+        ++j;
+    }
+    // The break guarantees at least one string reached its end,
+    // so at most one of these is true.
+    const bool a_has = i < a.size();
+    const bool b_has = j < b.size();
+    if(a_has != b_has) return a_has ? 1 : -1;
+    return 0;
+}
+
+constexpr int strcase_cmp3(std::string_view a, std::string_view b) noexcept {
+    const size_t n = a.size() < b.size() ? a.size() : b.size();
+    for(size_t i = 0; i < n; ++i) {
+        const unsigned char ca = ascii_tolower(static_cast<unsigned char>(a[i]));
+        const unsigned char cb = ascii_tolower(static_cast<unsigned char>(b[i]));
+        if(ca != cb) return static_cast<int>(ca) - static_cast<int>(cb);
+    }
+    // common prefix is equal: shorter sorts first
+    if(a.size() != b.size()) return a.size() < b.size() ? -1 : 1;
+    return 0;
+}
 
 // strcasecmp accepting string_views
-bool strcase_comp(std::string_view a, std::string_view b);
-bool strcase_equal(std::string_view a, std::string_view b);
+constexpr forceinline bool strcase_comp(std::string_view a, std::string_view b) noexcept {
+    return strcase_cmp3(a, b) < 0;
+}
+constexpr forceinline bool strcase_equal(std::string_view a, std::string_view b) noexcept {
+    return strcase_cmp3(a, b) == 0;
+}
 
 // alphanumeric string comparator that ignores special characters at the start of strings
-bool alnum_comp(std::string_view a, std::string_view b);
+constexpr forceinline bool alnum_comp(std::string_view a, std::string_view b) noexcept { return alnum_cmp3(a, b) < 0; }
 
 template <typename S = char>
 using split_join_enabled_t =

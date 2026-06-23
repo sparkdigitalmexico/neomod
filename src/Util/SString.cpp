@@ -21,43 +21,11 @@
 
 namespace SString {
 
-bool str_comp(std::string_view a, std::string_view b) {
-    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
-    return strncmp(a.data(), b.data(), std::min<size_t>(a.length(), b.length())) < 0;
-}
-
-bool strcase_comp(std::string_view a, std::string_view b) {
-    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
-    return strncasecmp(a.data(), b.data(), std::min<size_t>(a.length(), b.length())) < 0;
-}
-
-bool strcase_equal(std::string_view a, std::string_view b) {
-    if (a.length() != b.length()) return false;
-    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
-    return strncasecmp(a.data(), b.data(), a.length()) == 0;
-}
-
-// alphanumeric string comparator that ignores special characters at the start of strings
-bool alnum_comp(std::string_view a, std::string_view b) {
-    int i = 0;
-    int j = 0;
-    while(i < a.length() && j < b.length()) {
-        if(!isalnum((unsigned char)a[i])) {
-            i++;
-            continue;
-        }
-        if(!isalnum((unsigned char)b[j])) {
-            j++;
-            continue;
-        }
-        auto la = tolower(a[i]);
-        auto lb = tolower(b[j]);
-        if(la != lb) return la < lb;
-        i++;
-        j++;
-    }
-    return false;
-}
+static_assert(strcase_comp("ab", "ABC"));  // "ab" < "abc"
+static_assert(!strcase_comp("ABC", "ab"));
+static_assert(strcase_equal("Hello", "hello"));
+static_assert(alnum_cmp3("!!cat", "Cat...") == 0);
+static_assert(alnum_comp("cat", "category"));  // shorter alnum run first
 
 void trim_inplace(std::string& str) {
     if(str.empty()) return;
@@ -79,7 +47,7 @@ void trim_inplace(std::string_view& str) {
 
 bool contains_ncase(const std::string_view haystack, const std::string_view needle) {
     return !haystack.empty() && !std::ranges::search(haystack, needle, [](unsigned char ch1, unsigned char ch2) {
-                                     return std::tolower(ch1) == std::tolower(ch2);
+                                     return ascii_tolower(ch1) == ascii_tolower(ch2);
                                  }).empty();
 }
 
@@ -95,7 +63,7 @@ bool is_comment(const std::string_view str, const std::string_view token) {
 
 void lower_inplace(std::string& str) {
     if(str.empty()) return;
-    std::ranges::transform(str, str.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(str, str.begin(), [](unsigned char c) { return ascii_tolower(c); });
 }
 
 std::string to_lower(const std::string_view str) {
