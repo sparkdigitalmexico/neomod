@@ -281,102 +281,6 @@ $(DEPS_CACHE)/bass-$(BASS_VERSION)-linux.source: $(DEPS_CACHE)/bass-$(BASS_VERSI
 	$(MKDIR_P) bassloud/lib/linux/x86_64 && $(UNZIP) -qjo bassloud24-linux.zip libs/x86_64/libbassloud.so -d bassloud/lib/linux/x86_64
 	touch $@
 
-# NOTE: curl 8.18.0 is the last version that supported windows XP, so we use that for windows 32bit compat builds
-CURL_VERSION_REAL := $(if $(ubercompat),8.18.0,$(CURL_VERSION))
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle && \
-	$(CURLCOMMAND) "https://curl.se/ca/cacert.pem" || { rm -f $@; exit 1; }
-
-# architecture-specific download targets
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsi686.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	$(CURLCOMMAND) "https://github.com/whrvt/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-windows-i686-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsx86_64.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	$(CURLCOMMAND) "https://github.com/whrvt/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-windows-x86_64-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsaarch64.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	$(CURLCOMMAND) "https://github.com/stunnel/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-windows-aarch64-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxi686.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	$(CURLCOMMAND) "https://github.com/whrvt/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-linux-i686-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxx86_64.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	$(CURLCOMMAND) "https://github.com/whrvt/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-linux-x86_64-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxaarch64.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	$(CURLCOMMAND) "https://github.com/whrvt/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-linux-aarch64-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-macosaarch64.tar.xz:
-	$(MKDIR_P) $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	$(CURLCOMMAND) "https://github.com/stunnel/static-curl/releases/download/$(CURL_VERSION_REAL)/curl-macos-arm64-dev-$(CURL_VERSION_REAL).tar.xz" || { rm -f $@; exit 1; }
-
-# architecture-specific extraction targets
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-windowsi686.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsi686.tar.xz
-	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	rm -rf windowsi686 && \
-	$(MKDIR_P) windowsi686 && $(TAR) xf curl-windowsi686.tar.xz -C windowsi686 --strip-components=1 --wildcards --no-anchored \
-		include lib/'*'.a lib/pkgconfig/'*'ssl'*' lib/pkgconfig/'*'crypto'*' && \
-	rm -rf windowsi686/lib/*zlib*.a windowsi686/lib/*libz.*a windowsi686/lib/*brotli*.a
-	touch $@
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-windowsx86_64.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsx86_64.tar.xz
-	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	rm -rf windowsx86_64 && \
-	$(MKDIR_P) windowsx86_64 && $(TAR) xf curl-windowsx86_64.tar.xz -C windowsx86_64 --strip-components=1 --wildcards --no-anchored \
-		include lib/'*'.a lib64/'*'.a lib64/pkgconfig/'*' && \
-	mv windowsx86_64/lib64/* windowsx86_64/lib/ && \
-	rm -rf windowsx86_64/lib/*zlib*.a windowsx86_64/lib/*libz.*a windowsx86_64/lib/*brotli*.a
-	touch $@
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-windowsaarch64.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-windowsaarch64.tar.xz
-	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	rm -rf windowsaarch64 && \
-	$(MKDIR_P) windowsaarch64 && $(TAR) xf curl-windowsaarch64.tar.xz -C windowsaarch64 --strip-components=1 --wildcards --no-anchored \
-		include lib/'*'.a lib-arm64/'*'.a lib-arm64/pkgconfig/'*' && \
-	mv windowsaarch64/lib-arm64/* windowsaarch64/lib/ && \
-	rm -rf windowsaarch64/lib/*zlib*.a windowsaarch64/lib/*libz.*a windowsaarch64/lib/*brotli*.a
-	touch $@
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-linuxi686.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxi686.tar.xz
-	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	rm -rf linuxi686 && \
-	$(MKDIR_P) linuxi686 && $(TAR) xf curl-linuxi686.tar.xz -C linuxi686 --strip-components=1 --wildcards --no-anchored \
-		include lib/'*'.a lib/pkgconfig/'*'ssl'*' lib/pkgconfig/'*'crypto'*' && \
-	rm -rf linuxi686/lib/libz.a linuxi686/lib/*brotli*.a
-	touch $@
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-linuxx86_64.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxx86_64.tar.xz
-	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	rm -rf linuxx86_64 && \
-	$(MKDIR_P) linuxx86_64 && $(TAR) xf curl-linuxx86_64.tar.xz -C linuxx86_64 --strip-components=1 --wildcards --no-anchored \
-		include lib/'*'.a lib64/'*'.a lib64/pkgconfig/'*' && \
-	mv linuxx86_64/lib64/* linuxx86_64/lib/ && \
-	rm -rf linuxx86_64/lib/libz.a linuxx86_64/lib/*brotli*.a
-	touch $@
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-linuxaarch64.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-linuxaarch64.tar.xz
-	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	rm -rf linuxaarch64 && \
-	$(MKDIR_P) linuxaarch64 && $(TAR) xf curl-linuxaarch64.tar.xz -C linuxaarch64 --strip-components=1 --wildcards --no-anchored \
-		include lib/'*'.a lib/pkgconfig/'*'ssl'*' lib/pkgconfig/'*'crypto'*' && \
-	rm -rf linuxaarch64/lib/libz.a linuxaarch64/lib/*brotli*.a
-	touch $@
-
-$(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-macosaarch64.source: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/curl-macosaarch64.tar.xz
-	cd $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL) && \
-	rm -rf macosaarch64 && \
-	$(MKDIR_P) macosaarch64 && $(TAR) xf curl-macosaarch64.tar.xz -C macosaarch64 --strip-components=1 --wildcards --no-anchored \
-		include lib/'*'.a lib/pkgconfig/'*'ssl'*' lib/pkgconfig/'*'crypto'*' && \
-	rm -rf macosaarch64/lib/libz.a macosaarch64/lib/*brotli*.a
-	touch $@
-
 #####################################################################################################################################################
 ## END EXTERNAL DEPENDENCY SOURCE SECTION
 #####################################################################################################################################################
@@ -397,49 +301,16 @@ $(DEPS_PREFIX)/%.built:
 LT_GNU_LD_CACHE := $(if $(filter darwin%,$(host_os)),,lt_cv_prog_gnu_ld=yes)
 LT_WITH_GNU_LD := $(if $(filter darwin%,$(host_os)),,--with-gnu-ld)
 
-CACERT_INCDIR := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/
-
-PKG_CONFIG_PLUS_BUNDLED_OSSL = $(PKG_CONFIG)
-
-if BUILD_CURL
-
-lb := (
-lbq := '('
-rb := )
-rbq := ')'
-
-# use prebuilt binaries
-CURL_INCLUDEDIR := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/$(SYSNAME)$(host_cpu)/include
-CURL_LIBDIR := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/$(SYSNAME)$(host_cpu)/lib
-CURL_CFLAGS += -I$(CURL_INCLUDEDIR) -DWITH_GZFILEOP -DCURL_STATICLIB
-CURL_LIBS += -L$(CURL_LIBDIR) $(shell find $(CURL_LIBDIR) -mindepth 1 -maxdepth 1 -type f -not $(lbq) -name '*dll*' $(rbq) -execdir printf '%s ' '{''}' ';' | $(SED) -e 's|\./||g' -e 's|lib|-l|g' -e 's|\.a||g')
-
-PKG_CONFIG_PLUS_BUNDLED_OSSL += --with-path=$(CURL_LIBDIR)/pkgconfig
-OPENSSL_CFLAGS += -I$(CURL_INCLUDEDIR) $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --cflags openssl)
-OPENSSL_LIBS += -L$(CURL_LIBDIR) $(shell $(PKG_CONFIG_PLUS_BUNDLED_OSSL) --libs openssl)
-
-if WIN_PLATFORM
-CURL_LIBS += -lws2_32 -lwldap32 -lcrypt32 -lsecur32 -liphlpapi
-if !WIN32_PLATFORM
-CURL_LIBS += -lbcrypt
-endif
-else
-CURL_LIBS += -ldl -pthread -lc
-endif
-$(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built: $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-$(SYSNAME)$(host_cpu).source
-	$(MKDIR_P) $(DEPS_PREFIX)
-	touch $@
-else # from host
-CURL_CFLAGS += $(OPENSSL_CFLAGS)
-CURL_LIBS += $(OPENSSL_LIBS)
-endif # BUILD_CURL
-
 # accumulated by each dependency's build block below, used by stamp-install-sharedlibs
 INSTALL_LIB_DEPS =
 
+# curl has a bunch of extra stuff, so put it in its own directory
+# defines: CACERT_INCDIR; PKG_CONFIG_PLUS_BUNDLED_OSSL; CURL_VERSION_REAL
+include $(top_srcdir)/mk/deps/curl.am
+
 if BUILD_MIMALLOC
 if WIN_PLATFORM
-MIMALLOC_DYNAMIC_LIBS := -L$(DEPS_PREFIX)/bin -L$(DEPS_PREFIX)/lib -Wl,--whole-archive -Wl,--undefined=mi_redirect_enable -l:mimalloc-redirect$(if $(filter x86_64,$(host_cpu)),,32).lib -Wl,--no-whole-archive -lmimalloc -lmimalloc-redirect -l:libmimalloc.dll.a
+MIMALLOC_DYNAMIC_LIBS := -L$(DEPS_PREFIX)/bin -L$(DEPS_PREFIX)/lib -Wl,--whole-archive -Wl,--undefined=mi_redirect_enable -l:mimalloc-redirect$(if $(filter i686,$(host_cpu)),32,).lib -Wl,--no-whole-archive -lmimalloc -lmimalloc-redirect -l:libmimalloc.dll.a
 MIMALLOC_OBJ :=
 MIMALLOC_OVERRIDE_DEP := $(DEPS_PREFIX)/mimalloc/mimalloc_new_delete.cpp
 $(MIMALLOC_OVERRIDE_DEP): $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built
@@ -632,7 +503,7 @@ $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built: $(DEPS_CACHE
 	$(MAKE_PFX) $(MAKE) $(MAKEFLAGS) install
 	touch $@
 INSTALL_LIB_DEPS += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
-endif
+endif # USE_FFMPEG
 
 $(DEPS_PREFIX)/SoLoud-$(SOLOUD_VERSION).built: $(DEPS_CACHE)/SoLoud-$(SOLOUD_VERSION).tar.gz $(SOLOUD_FFMPEG_DEP) $(DEPS_PREFIX)/SDL3-$(SDL3_VERSION).built $(DEPS_PREFIX)/mpg123-$(MPG123_VERSION).built
 	rm -rf $(DEPS_PREFIX)/SoLoud
@@ -1223,8 +1094,7 @@ $(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built: $(DEPS_CACHE)/libacl-$(LIBACL_VER
 	rm -rf $(DEPS_PREFIX)/libacl
 	$(MKDIR_P) $(DEPS_PREFIX)/libacl/build $(DEPS_PREFIX)/lib/pkgconfig
 	$(TAR) xf $(DEPS_CACHE)/libacl-$(LIBACL_VERSION).tar.xz -C $(DEPS_PREFIX)/libacl --strip-components=1 && \
-	cd $(DEPS_PREFIX)/libacl && \
-	cd build && \
+	cd $(DEPS_PREFIX)/libacl/build && \
 	PKG_CONFIG="$(PKG_CONFIG)" \
 	$(CONFIGURE_PFX) ../configure $(LT_GNU_LD_CACHE) --host=$(host) --build=$(build) --prefix="$(DEPS_PREFIX)" \
 		$(if $(STATICBUILD),--enable-static --disable-shared,--enable-shared --disable-static) \
@@ -1293,8 +1163,8 @@ if WASM_PLATFORM
 EMBED_CACERT_DEPS :=
 EMBED_CACERT_ARGS :=
 else
-EMBED_CACERT_DEPS := $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem
-EMBED_CACERT_ARGS := curl_ca_embed:$(CACERT_INCDIR)cacert.pem
+EMBED_CACERT_DEPS := $(CACERT_INCDIR)/cacert.pem
+EMBED_CACERT_ARGS := curl_ca_embed:$(EMBED_CACERT_DEPS)
 endif
 
 #####################################################################################################################################################
@@ -1450,13 +1320,11 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/simdutf-$(SIMDUTF_VERSION).built \
 	$(DEPS_PREFIX)/ctre-$(CTRE_VERSION).built \
 	$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built \
-	$(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built
+	$(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built \
+	$(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 
 if !WASM_PLATFORM
 BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem
-endif
-if USE_FFMPEG
-BUILT_SOURCES += $(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
 endif
 
 # --- pch setup section (TODO: move flags to configure to check for support instead of hardcoding here) ---
