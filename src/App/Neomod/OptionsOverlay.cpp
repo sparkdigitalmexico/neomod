@@ -632,8 +632,13 @@ class SliderPreviewElement final : public CBaseUIElement {
                 // the options menu is animating
                 if(this->bDrawSliderHack) {
                     if(useLegacyRenderer)
-                        SliderRenderer::draw(points, emptyVector, hitcircleDiameter, 0, 1,
-                                             osu->getSkin()->getComboColorForCounter(420, 0));
+                        SliderRenderer::draw(SliderRenderer::DrawLegacyParams{
+                            .points = points,
+                            .alwaysPoints = emptyVector,
+                            .hitcircleDiameter = hitcircleDiameter,
+                            .from = 0,
+                            .to = 1,
+                            .undimmedColor = osu->getSkin()->getComboColorForCounter(420, 0)});
                     else {
                         // (lazy generate vao)
                         if(!this->vao || length != this->fPrevLength) {
@@ -644,8 +649,16 @@ class SliderPreviewElement final : public CBaseUIElement {
                             this->vao = SliderRenderer::generateVAO(points, hitcircleDiameter, vec3{}, false);
                         }
                         vec4 emptyBounds{};
-                        SliderRenderer::draw(this->vao.get(), emptyBounds, emptyVector, this->getPos(), 1,
-                                             hitcircleDiameter, 0, 1, osu->getSkin()->getComboColorForCounter(420, 0));
+                        SliderRenderer::draw(SliderRenderer::DrawVAOParams{
+                            .vao = this->vao.get(),
+                            .bounds = emptyBounds,
+                            .alwaysPoints = emptyVector,
+                            .translation = this->getPos(),
+                            .scale = 1,
+                            .hitcircleDiameter = hitcircleDiameter,
+                            .from = 0,
+                            .to = 1,
+                            .undimmedColor = osu->getSkin()->getComboColorForCounter(420, 0)});
                     }
                 }
             }

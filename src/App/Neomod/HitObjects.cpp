@@ -1234,9 +1234,10 @@ void Slider::draw() {
         if(!cv::slider_shrink.getBool())
             drawBody(1.0f - m_endSliderBodyFadeAnimation, 0, 1);
         else if(cv::slider_body_lazer_fadeout_style.getBool())
-            SliderRenderer::draw(emptyVector, alwaysPoints, m_pf->fHitcircleDiameter, 0.0f, 0.0f,
-                                 m_pf->getSkin()->getComboColorForCounter(m_colorCounter, m_colorOffset), 1.0f,
-                                 1.0f - m_endSliderBodyFadeAnimation, m_clickTimeMS);
+            SliderRenderer::draw(SliderRenderer::DrawLegacyParams{
+                emptyVector, alwaysPoints, m_pf->fHitcircleDiameter, 0.0f, 0.0f,
+                m_pf->getSkin()->getComboColorForCounter(m_colorCounter, m_colorOffset), 1.0f,
+                1.0f - m_endSliderBodyFadeAnimation, m_clickTimeMS});
     }
 
     const bool do_endhit_animations = !tc && !hd && !instafade_slider_head;  // no animations with traceable/hidden here
@@ -1469,8 +1470,15 @@ void Slider::drawBody(f32 alpha, f32 from, f32 to) {
         }
 
         // peppy sliders
-        SliderRenderer::draw(screenPoints, alwaysPoints, m_pf->fHitcircleDiameter, from, to, undimmedComboColor,
-                             m_hittableDimRGBColorMultiplierPct, alpha, m_clickTimeMS);
+        SliderRenderer::draw(SliderRenderer::DrawLegacyParams{.points = screenPoints,
+                                                              .alwaysPoints = alwaysPoints,
+                                                              .hitcircleDiameter = m_pf->fHitcircleDiameter,
+                                                              .from = from,
+                                                              .to = to,
+                                                              .undimmedColor = undimmedComboColor,
+                                                              .colorRGBMultiplier = m_hittableDimRGBColorMultiplierPct,
+                                                              .alpha = alpha,
+                                                              .sliderTimeForRainbow = m_clickTimeMS});
     } else {
         // vertex buffered sliders
         // as the base mesh is centered at (0, 0, 0) and in raw osu coordinates, we have to scale and translate it to
@@ -1497,9 +1505,18 @@ void Slider::drawBody(f32 alpha, f32 from, f32 to) {
         minBounds += translation;
         maxBounds += translation;
 
-        SliderRenderer::draw(m_vao.get(), vec4{minBounds, maxBounds}, alwaysPoints, translation, scale,
-                             m_pf->fHitcircleDiameter, from, to, undimmedComboColor, m_hittableDimRGBColorMultiplierPct,
-                             alpha, m_clickTimeMS);
+        SliderRenderer::draw(SliderRenderer::DrawVAOParams{.vao = m_vao.get(),
+                                                           .bounds = vec4{minBounds, maxBounds},
+                                                           .alwaysPoints = alwaysPoints,
+                                                           .translation = translation,
+                                                           .scale = scale,
+                                                           .hitcircleDiameter = m_pf->fHitcircleDiameter,
+                                                           .from = from,
+                                                           .to = to,
+                                                           .undimmedColor = undimmedComboColor,
+                                                           .colorRGBMultiplier = m_hittableDimRGBColorMultiplierPct,
+                                                           .alpha = alpha,
+                                                           .sliderTimeForRainbow = m_clickTimeMS});
     }
 }
 
