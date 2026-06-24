@@ -75,13 +75,14 @@ struct ModFPoSu::FPoSuImpl {
                            const std::list<VertexPair>::iterator &end, int n, float edgeDistance);
     static vec3 normalFromTriangle(vec3 p1, vec3 p2, vec3 p3);
 
+    Camera camera{{0, 0, 0}, {0, 0, -1}};
+
     Matrix4 modelMatrix;
     Matrix4 projectionMatrix;
 
     VertexArrayObject *vao{nullptr};
     VertexArrayObject *vaoCube{nullptr};
 
-    std::unique_ptr<Camera> camera{nullptr};
     std::unique_ptr<ModFPoSu3DModel> skyboxModel{nullptr};  // lazy loaded
 
     std::list<VertexPair> meshList;
@@ -110,9 +111,6 @@ struct ModFPoSu::FPoSuImpl {
 };
 
 ModFPoSu::ModFPoSu() : m_impl() {
-    // vars
-    m_impl->camera = std::make_unique<Camera>(vec3(0, 0, 0), vec3(0, 0, -1));
-
     // load resources
     m_impl->vao = resourceManager->createVertexArrayObject();
     m_impl->vaoCube = resourceManager->createVertexArrayObject();
@@ -157,9 +155,9 @@ static CONSTINIT VertexArrayObject lineVAO{DrawPrimitive::LINES};
 void ModFPoSu::draw() {
     if(!cv::mod_fposu.getBool()) return;
 
-    Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_impl->camera->getPos(),
-                                                   m_impl->camera->getPos() + m_impl->camera->getViewDirection(),
-                                                   m_impl->camera->getViewUp());
+    Matrix4 viewMatrix =
+        Camera::buildMatrixLookAt(m_impl->camera.getPos(), m_impl->camera.getPos() + m_impl->camera.getViewDirection(),
+                                  m_impl->camera.getViewUp());
 
     g->pushViewport();
     g->setViewport(osu->getVirtScreenSize());
@@ -355,14 +353,14 @@ void ModFPoSu::update() {
 
         // update camera
         if(rawDelta.x != 0.)
-            m_impl->camera->rotateY((float)(rawDelta.x * (cv::fposu_invert_horizontal.getBool() ? 1. : -1.)));
+            m_impl->camera.rotateY((float)(rawDelta.x * (cv::fposu_invert_horizontal.getBool() ? 1. : -1.)));
         if(rawDelta.y != 0.)
-            m_impl->camera->rotateX((float)(rawDelta.y * (cv::fposu_invert_vertical.getBool() ? 1. : -1.)));
+            m_impl->camera.rotateX((float)(rawDelta.y * (cv::fposu_invert_vertical.getBool() ? 1. : -1.)));
 
         // don't touch mouse pos if the os cursor is visible or we are unfocused
         if(!(env->isCursorVisible() || !env->isCursorInWindow() || !env->winFocused())) {
             // calculate ray-mesh intersection and set new mouse pos
-            vec2 newMousePos = m_impl->intersectRayMesh(m_impl->camera->getPos(), m_impl->camera->getViewDirection());
+            vec2 newMousePos = m_impl->intersectRayMesh(m_impl->camera.getPos(), m_impl->camera.getViewDirection());
             if(newMousePos.x != 0.f || newMousePos.y != 0.f) {
                 m_impl->setMousePosCompensated(newMousePos);
             } else {
@@ -379,12 +377,12 @@ void ModFPoSu::update() {
         }
 
         m_impl->bCrosshairIntersectsScreen = true;
-        m_impl->camera->lookAt(m_impl->calculateUnProjectedVector(mousePos));
+        m_impl->camera.lookAt(m_impl->calculateUnProjectedVector(mousePos));
     }
 }
 
 void ModFPoSu::resetCamera() {
-    m_impl->camera->lookAt(m_impl->calculateUnProjectedVector(osu->getVirtScreenRect().getCenter()));
+    m_impl->camera.lookAt(m_impl->calculateUnProjectedVector(osu->getVirtScreenRect().getCenter()));
 }
 
 void ModFPoSu::FPoSuImpl::noclipMove() {
@@ -396,12 +394,12 @@ void ModFPoSu::FPoSuImpl::noclipMove() {
     // build direction vector based on player key inputs
     vec3 wishdir{0.f};
     {
-        wishdir += (this->bKeyUpDown ? this->camera->getViewDirection() : vec3());
-        wishdir -= (this->bKeyDownDown ? this->camera->getViewDirection() : vec3());
-        wishdir += (this->bKeyLeftDown ? this->camera->getViewRight() : vec3());
-        wishdir -= (this->bKeyRightDown ? this->camera->getViewRight() : vec3());
+        wishdir += (this->bKeyUpDown ? this->camera.getViewDirection() : vec3{});
+        wishdir -= (this->bKeyDownDown ? this->camera.getViewDirection() : vec3{});
+        wishdir += (this->bKeyLeftDown ? this->camera.getViewRight() : vec3{});
+        wishdir -= (this->bKeyRightDown ? this->camera.getViewRight() : vec3{});
         wishdir +=
-            (this->bKeySpaceDown ? (this->bKeySpaceUpDown ? vec3(0.0f, 1.0f, 0.0f) : vec3(0.0f, -1.0f, 0.0f)) : vec3());
+            (this->bKeySpaceDown ? (this->bKeySpaceUpDown ? vec3(0.0f, 1.0f, 0.0f) : vec3(0.0f, -1.0f, 0.0f)) : vec3{});
     }
 
     // normalize
@@ -450,7 +448,7 @@ void ModFPoSu::FPoSuImpl::noclipMove() {
     if(vec::length(this->vVelocity) > noclipSpeed) vec::setLength(this->vVelocity, noclipSpeed);
 
     // move
-    this->camera->setPos(this->camera->getPos() + this->vVelocity * static_cast<float>(engine->getFrameTime()));
+    this->camera.setPos(this->camera.getPos() + this->vVelocity * static_cast<float>(engine->getFrameTime()));
 }
 
 void ModFPoSu::onResolutionChange(vec2 newResolution) {
@@ -806,10 +804,10 @@ void ModFPoSu::onDistanceChange() { m_impl->makePlayfield(); }
 
 void ModFPoSu::onNoclipChange() {
     if(cv::fposu_noclip.getBool())
-        m_impl->camera->setPos(m_impl->vPrevNoclipCameraPos);
+        m_impl->camera.setPos(m_impl->vPrevNoclipCameraPos);
     else {
-        m_impl->vPrevNoclipCameraPos = m_impl->camera->getPos();
-        m_impl->camera->setPos(vec3(0, 0, 0));
+        m_impl->vPrevNoclipCameraPos = m_impl->camera.getPos();
+        m_impl->camera.setPos(vec3(0, 0, 0));
     }
 }
 
@@ -858,140 +856,125 @@ ModFPoSu3DModel::ModFPoSu3DModel(std::string_view objFilePathOrContents, Image *
     this->vao = resourceManager->createVertexArrayObject(DrawPrimitive::TRIANGLES);
 
     // load
+    struct RAW_FACE {
+        int vertexIndex1{};
+        int vertexIndex2{};
+        int vertexIndex3{};
+        int uvIndex1{};
+        int uvIndex2{};
+        int uvIndex3{};
+        int normalIndex1{};
+        int normalIndex2{};
+        int normalIndex3{};
+    };
+
+    // load model data
+    std::vector<vec3> rawVertices;
+    std::vector<vec2> rawTexcoords;
+    std::vector<Color> rawColors;
+    std::vector<vec3> rawNormals;
+    std::vector<RAW_FACE> rawFaces;
     {
-        struct RAW_FACE {
-            int vertexIndex1;
-            int vertexIndex2;
-            int vertexIndex3;
-            int uvIndex1;
-            int uvIndex2;
-            int uvIndex3;
-            int normalIndex1;
-            int normalIndex2;
-            int normalIndex3;
+        std::string fileContents;
+        if(!source) {
+            std::string filePath = "models/";
+            filePath.append(objFilePathOrContents);
 
-            RAW_FACE() {
-                vertexIndex1 = 0;
-                vertexIndex2 = 0;
-                vertexIndex3 = 0;
-                uvIndex1 = 0;
-                uvIndex2 = 0;
-                uvIndex3 = 0;
-                normalIndex1 = 0;
-                normalIndex2 = 0;
-                normalIndex3 = 0;
+            std::string stdFileContents;
+            {
+                std::ifstream f(filePath, std::ios::in | std::ios::binary);
+                if(f.good()) {
+                    f.seekg(0, std::ios::end);
+                    const std::streampos numBytes = f.tellg();
+                    f.seekg(0, std::ios::beg);
+
+                    stdFileContents.resize(numBytes);
+                    f.read(&stdFileContents[0], numBytes);
+                } else
+                    debugLog("Failed to load {:s}", objFilePathOrContents);
             }
-        };
+            fileContents = UniString::to_utf8(stdFileContents.c_str(), stdFileContents.size());
+        }
 
-        // load model data
-        std::vector<vec3> rawVertices;
-        std::vector<vec2> rawTexcoords;
-        std::vector<Color> rawColors;
-        std::vector<vec3> rawNormals;
-        std::vector<RAW_FACE> rawFaces;
-        {
-            std::string fileContents;
-            if(!source) {
-                std::string filePath = "models/";
-                filePath.append(objFilePathOrContents);
+        std::istringstream iss(source ? std::string{objFilePathOrContents} : fileContents);
+        std::string line;
+        while(std::getline(iss, line)) {
+            if(line.starts_with("v ")) {
+                vec3 vertex{0.f};
+                vec3 rgb{0.f};
 
-                std::string stdFileContents;
-                {
-                    std::ifstream f(filePath, std::ios::in | std::ios::binary);
-                    if(f.good()) {
-                        f.seekg(0, std::ios::end);
-                        const std::streampos numBytes = f.tellg();
-                        f.seekg(0, std::ios::beg);
-
-                        stdFileContents.resize(numBytes);
-                        f.read(&stdFileContents[0], numBytes);
-                    } else
-                        debugLog("Failed to load {:s}", objFilePathOrContents);
-                }
-                fileContents = UniString::to_utf8(stdFileContents.c_str(), stdFileContents.size());
-            }
-
-            std::istringstream iss(source ? std::string{objFilePathOrContents} : fileContents);
-            std::string line;
-            while(std::getline(iss, line)) {
-                if(line.starts_with("v ")) {
-                    vec3 vertex{0.f};
-                    vec3 rgb{0.f};
-
-                    if(sscanf(line.c_str(), "v %f %f %f %f %f %f ", &vertex.x, &vertex.y, &vertex.z, &rgb.x, &rgb.y,
-                              &rgb.z) == 6) {
-                        rawVertices.push_back(vertex);
-                        rawColors.push_back(argb(1.0f, rgb.x, rgb.y, rgb.z));
-                    } else if(sscanf(line.c_str(), "v %f %f %f ", &vertex.x, &vertex.y, &vertex.z) == 3)
-                        rawVertices.push_back(vertex);
-                } else if(line.starts_with("vt ")) {
-                    vec2 uv{0.f};
-                    if(sscanf(line.c_str(), "vt %f %f ", &uv.x, &uv.y) == 2)
-                        rawTexcoords.emplace_back(uv.x, 1.0f - uv.y);
-                } else if(line.starts_with("vn ")) {
-                    vec3 normal{0.f};
-                    if(sscanf(line.c_str(), "vn %f %f %f ", &normal.x, &normal.y, &normal.z) == 3)
-                        rawNormals.push_back(normal);
-                } else if(line.starts_with("f ")) {
-                    RAW_FACE face;
-                    if(sscanf(line.c_str(), "f %i/%i/%i %i/%i/%i %i/%i/%i ", &face.vertexIndex1, &face.uvIndex1,
-                              &face.normalIndex1, &face.vertexIndex2, &face.uvIndex2, &face.normalIndex2,
-                              &face.vertexIndex3, &face.uvIndex3, &face.normalIndex3) == 9 ||
-                       sscanf(line.c_str(), "f %i//%i %i//%i %i//%i ", &face.vertexIndex1, &face.normalIndex1,
-                              &face.vertexIndex2, &face.normalIndex2, &face.vertexIndex3, &face.normalIndex3) == 6 ||
-                       sscanf(line.c_str(), "f %i/%i/ %i/%i/ %i/%i/ ", &face.vertexIndex1, &face.uvIndex1,
-                              &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6 ||
-                       sscanf(line.c_str(), "f %i/%i %i/%i %i/%i ", &face.vertexIndex1, &face.uvIndex1,
-                              &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6) {
-                        rawFaces.push_back(face);
-                    }
+                if(sscanf(line.c_str(), "v %f %f %f %f %f %f ", &vertex.x, &vertex.y, &vertex.z, &rgb.x, &rgb.y,
+                          &rgb.z) == 6) {
+                    rawVertices.push_back(vertex);
+                    rawColors.push_back(argb(1.0f, rgb.x, rgb.y, rgb.z));
+                } else if(sscanf(line.c_str(), "v %f %f %f ", &vertex.x, &vertex.y, &vertex.z) == 3)
+                    rawVertices.push_back(vertex);
+            } else if(line.starts_with("vt ")) {
+                vec2 uv{0.f};
+                if(sscanf(line.c_str(), "vt %f %f ", &uv.x, &uv.y) == 2) rawTexcoords.emplace_back(uv.x, 1.0f - uv.y);
+            } else if(line.starts_with("vn ")) {
+                vec3 normal{0.f};
+                if(sscanf(line.c_str(), "vn %f %f %f ", &normal.x, &normal.y, &normal.z) == 3)
+                    rawNormals.push_back(normal);
+            } else if(line.starts_with("f ")) {
+                RAW_FACE face;
+                if(sscanf(line.c_str(), "f %i/%i/%i %i/%i/%i %i/%i/%i ", &face.vertexIndex1, &face.uvIndex1,
+                          &face.normalIndex1, &face.vertexIndex2, &face.uvIndex2, &face.normalIndex2,
+                          &face.vertexIndex3, &face.uvIndex3, &face.normalIndex3) == 9 ||
+                   sscanf(line.c_str(), "f %i//%i %i//%i %i//%i ", &face.vertexIndex1, &face.normalIndex1,
+                          &face.vertexIndex2, &face.normalIndex2, &face.vertexIndex3, &face.normalIndex3) == 6 ||
+                   sscanf(line.c_str(), "f %i/%i/ %i/%i/ %i/%i/ ", &face.vertexIndex1, &face.uvIndex1,
+                          &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6 ||
+                   sscanf(line.c_str(), "f %i/%i %i/%i %i/%i ", &face.vertexIndex1, &face.uvIndex1, &face.vertexIndex2,
+                          &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6) {
+                    rawFaces.push_back(face);
                 }
             }
         }
+    }
 
-        // build vao
-        if(rawVertices.size() > 0) {
-            const bool hasTexcoords = (rawTexcoords.size() > 0);
-            const bool hasColors = (rawColors.size() > 0);
-            const bool hasNormals = (rawNormals.size() > 0);
+    // build vao
+    if(rawVertices.size() > 0) {
+        const bool hasTexcoords = (rawTexcoords.size() > 0);
+        const bool hasColors = (rawColors.size() > 0);
+        const bool hasNormals = (rawNormals.size() > 0);
 
-            bool hasAtLeastOneTriangle = false;
+        bool hasAtLeastOneTriangle = false;
 
-            for(const auto &face : rawFaces) {
-                if((size_t)(face.vertexIndex1 - 1) < rawVertices.size() &&
-                   (size_t)(face.vertexIndex2 - 1) < rawVertices.size() &&
-                   (size_t)(face.vertexIndex3 - 1) < rawVertices.size() &&
-                   (!hasTexcoords || (size_t)(face.uvIndex1 - 1) < rawTexcoords.size()) &&
-                   (!hasTexcoords || (size_t)(face.uvIndex2 - 1) < rawTexcoords.size()) &&
-                   (!hasTexcoords || (size_t)(face.uvIndex3 - 1) < rawTexcoords.size()) &&
-                   (!hasColors || (size_t)(face.vertexIndex1 - 1) < rawColors.size()) &&
-                   (!hasColors || (size_t)(face.vertexIndex2 - 1) < rawColors.size()) &&
-                   (!hasColors || (size_t)(face.vertexIndex3 - 1) < rawColors.size()) &&
-                   (!hasNormals || (size_t)(face.normalIndex1 - 1) < rawNormals.size()) &&
-                   (!hasNormals || (size_t)(face.normalIndex2 - 1) < rawNormals.size()) &&
-                   (!hasNormals || (size_t)(face.normalIndex3 - 1) < rawNormals.size())) {
-                    hasAtLeastOneTriangle = true;
+        for(const auto &face : rawFaces) {
+            if((size_t)(face.vertexIndex1 - 1) < rawVertices.size() &&
+               (size_t)(face.vertexIndex2 - 1) < rawVertices.size() &&
+               (size_t)(face.vertexIndex3 - 1) < rawVertices.size() &&
+               (!hasTexcoords || (size_t)(face.uvIndex1 - 1) < rawTexcoords.size()) &&
+               (!hasTexcoords || (size_t)(face.uvIndex2 - 1) < rawTexcoords.size()) &&
+               (!hasTexcoords || (size_t)(face.uvIndex3 - 1) < rawTexcoords.size()) &&
+               (!hasColors || (size_t)(face.vertexIndex1 - 1) < rawColors.size()) &&
+               (!hasColors || (size_t)(face.vertexIndex2 - 1) < rawColors.size()) &&
+               (!hasColors || (size_t)(face.vertexIndex3 - 1) < rawColors.size()) &&
+               (!hasNormals || (size_t)(face.normalIndex1 - 1) < rawNormals.size()) &&
+               (!hasNormals || (size_t)(face.normalIndex2 - 1) < rawNormals.size()) &&
+               (!hasNormals || (size_t)(face.normalIndex3 - 1) < rawNormals.size())) {
+                hasAtLeastOneTriangle = true;
 
-                    this->vao->addVertex(rawVertices[(size_t)(face.vertexIndex1 - 1)]);
-                    if(hasTexcoords) this->vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex1 - 1)]);
-                    if(hasColors) this->vao->addColor(rawColors[(size_t)(face.vertexIndex1 - 1)]);
-                    if(hasNormals) this->vao->addNormal(rawNormals[(size_t)(face.normalIndex1 - 1)]);
+                this->vao->addVertex(rawVertices[(size_t)(face.vertexIndex1 - 1)]);
+                if(hasTexcoords) this->vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex1 - 1)]);
+                if(hasColors) this->vao->addColor(rawColors[(size_t)(face.vertexIndex1 - 1)]);
+                if(hasNormals) this->vao->addNormal(rawNormals[(size_t)(face.normalIndex1 - 1)]);
 
-                    this->vao->addVertex(rawVertices[(size_t)(face.vertexIndex2 - 1)]);
-                    if(hasTexcoords) this->vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex2 - 1)]);
-                    if(hasColors) this->vao->addColor(rawColors[(size_t)(face.vertexIndex2 - 1)]);
-                    if(hasNormals) this->vao->addNormal(rawNormals[(size_t)(face.normalIndex2 - 1)]);
+                this->vao->addVertex(rawVertices[(size_t)(face.vertexIndex2 - 1)]);
+                if(hasTexcoords) this->vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex2 - 1)]);
+                if(hasColors) this->vao->addColor(rawColors[(size_t)(face.vertexIndex2 - 1)]);
+                if(hasNormals) this->vao->addNormal(rawNormals[(size_t)(face.normalIndex2 - 1)]);
 
-                    this->vao->addVertex(rawVertices[(size_t)(face.vertexIndex3 - 1)]);
-                    if(hasTexcoords) this->vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex3 - 1)]);
-                    if(hasColors) this->vao->addColor(rawColors[(size_t)(face.vertexIndex3 - 1)]);
-                    if(hasNormals) this->vao->addNormal(rawNormals[(size_t)(face.normalIndex3 - 1)]);
-                }
+                this->vao->addVertex(rawVertices[(size_t)(face.vertexIndex3 - 1)]);
+                if(hasTexcoords) this->vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex3 - 1)]);
+                if(hasColors) this->vao->addColor(rawColors[(size_t)(face.vertexIndex3 - 1)]);
+                if(hasNormals) this->vao->addNormal(rawNormals[(size_t)(face.normalIndex3 - 1)]);
             }
-
-            // bake it for performance
-            if(hasAtLeastOneTriangle) resourceManager->loadResource(this->vao);
         }
+
+        // bake it for performance
+        if(hasAtLeastOneTriangle) resourceManager->loadResource(this->vao);
     }
 }
 

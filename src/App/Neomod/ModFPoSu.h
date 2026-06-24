@@ -39,5 +39,5 @@ class ModFPoSu final {
     void makeBackgroundCube();
 
     struct FPoSuImpl;
-    StaticPImpl<FPoSuImpl, 276> m_impl;
+    StaticPImpl<FPoSuImpl, 500> m_impl;
 };
