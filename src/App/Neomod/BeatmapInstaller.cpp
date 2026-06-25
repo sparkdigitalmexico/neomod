@@ -374,6 +374,14 @@ std::vector<BeatmapInstaller::EntryView> BeatmapInstaller::snapshot() const {
     return out;
 }
 
+bool BeatmapInstaller::has_pending() const {
+    using enum MapInstallStage;
+    for(const Entry& e : m->entries) {
+        if(e.stage != Done && e.stage != Failed && e.stage != None) return true;
+    }
+    return false;
+}
+
 void BeatmapInstaller::update() {
     if(m->entries.empty()) return;
 

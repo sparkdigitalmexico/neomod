@@ -170,7 +170,7 @@ msgstr "{} wysłał ci wiadomość"
 msgid "You were mentioned in {:s}"
 msgstr "Wspomniano o tobie na {:s}"
 
-#: src/App/Neomod/Chat.cpp
+#: src/App/Neomod/Chat.cpp src/App/Neomod/Osu.cpp
 msgid "You must log in to chat!"
 msgstr "Musisz się zalogować, aby czatować!"
 
@@ -2797,6 +2797,64 @@ msgstr "Usuń przypisanie"
 #: src/App/Neomod/OptionsOverlay.cpp
 msgid "Failed to save osu.cfg"
 msgstr "Nie udało się zapisać osu.cfg"
+
+#: src/App/Neomod/Osu.cpp
+msgid "This replay's beatmap is not installed."
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+#, c++-format
+msgid "Skin reloaded!{:s}"
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+msgid "Mouse buttons are disabled."
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+msgid "Mouse buttons are enabled."
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+#, fuzzy
+msgid "No beatmap is currently selected."
+msgstr "Nie wybrano mapy"
+
+#: src/App/Neomod/Osu.cpp
+msgid "In-game interface has been enabled."
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+msgid "In-game interface has been disabled."
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+msgid "Scoreboard is hidden."
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+msgid "Scoreboard is shown."
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+#, c++-format
+msgid "Local beatmap offset set to {:d} ms"
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+#, fuzzy
+msgid "Error: Couldn't grab a screenshot :("
+msgstr "Błąd: Nie można znaleźć żadnych skinów"
+
+#: src/App/Neomod/Osu.cpp
+#, c++-format
+msgid "Screenshot copied to clipboard and saved to {:s}"
+msgstr ""
+
+#: src/App/Neomod/Osu.cpp
+#, fuzzy, c++-format
+msgid "Screenshot saved to {:s}"
+msgstr "Zrzuty ekranu"
 
 #: src/App/Neomod/OsuDirectScreen.cpp
 msgid "Newest maps"

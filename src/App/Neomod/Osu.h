@@ -164,7 +164,6 @@ class Osu final : public App, public MouseListener, public TouchListener {
     [[nodiscard]] inline BeatmapInterface *getMapInterface() const { return this->map_iface.get(); }
     [[nodiscard]] inline ThumbnailManager *getThumbnailManager() const { return this->thumbnailManager.get(); }
     [[nodiscard]] inline BeatmapInstaller *getBeatmapInstaller() const { return this->beatmapInstaller.get(); }
-
     [[nodiscard]] inline RenderTarget *getBackBuffer() const { return this->backBuffer; }
     [[nodiscard]] inline RenderTarget *getPlayfieldBuffer() const { return this->playfieldBuffer; }
     [[nodiscard]] inline RenderTarget *getSliderFrameBuffer() const { return this->sliderFrameBuffer; }
@@ -216,6 +215,11 @@ class Osu final : public App, public MouseListener, public TouchListener {
     [[nodiscard]] inline bool isSkipScheduled() const { return this->bSkipScheduled; }
     [[nodiscard]] inline bool isSeeking() const { return this->bSeeking; }
     [[nodiscard]] inline u32 getQuickSaveTimeMS() const { return this->iQuickSaveMS; }
+
+    // open the ranking screen for a score once its beatmap is in the db. used for command-line score
+    // imports (e.g. the website's score-preview link), where the beatmap may still be installing from a
+    // .osz passed alongside the replay, or the db may still be loading. polled in update().
+    void openScoreScreenWhenReady(const FinishedScore &score);
 
     [[nodiscard]] bool shouldFallBackToLegacySliderRenderer()
         const;  // certain mods or actions require Sliders to render dynamically
@@ -347,6 +351,11 @@ class Osu final : public App, public MouseListener, public TouchListener {
     McFont *songBrowserFontBold{nullptr};
 
     // replay
+
+    // a score awaiting its beatmap to land in the db before its ranking screen is shown (see
+    // openScoreScreenWhenReady + the poll in update()); null when nothing is pending
+    std::unique_ptr<FinishedScore> pendingScoreOpen{nullptr};
+
    public:
     std::string watched_user_name;
     i32 watched_user_id{0};

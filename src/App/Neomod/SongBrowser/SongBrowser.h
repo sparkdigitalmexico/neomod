@@ -163,7 +163,7 @@ class SongBrowser final : public ScreenBackable {
     }
 
     void refreshBeatmaps();
-    void refreshBeatmaps(UIScreen *next_screen, std::function<void()> on_refreshed = nullptr);
+    void refreshBeatmaps(UIScreen *next_screen);
     void addBeatmapSet(BeatmapSet *beatmap, bool initialSongBrowserLoad = false);
 
     void requestNextScrollToSongButtonJumpFix(SongDifficultyButton *diffButton);

@@ -1453,9 +1453,8 @@ class SongBrowser::BeatmapLoadingOverlay final : public LoadingScreen {
     NOCOPY_NOMOVE(BeatmapLoadingOverlay)
    public:
     BeatmapLoadingOverlay() = delete;
-    BeatmapLoadingOverlay(SongBrowser *songbrowser, BGImageHandler *bghandler, UIScreen *parent,
-                          std::function<void()> on_refreshed)
-        : LoadingScreen(parent), sbr(songbrowser), bgih(bghandler), on_refreshed(std::move(on_refreshed)) {}
+    BeatmapLoadingOverlay(SongBrowser *songbrowser, BGImageHandler *bghandler, UIScreen *parent)
+        : LoadingScreen(parent), sbr(songbrowser), bgih(bghandler) {}
     ~BeatmapLoadingOverlay() override = default;
 
     [[nodiscard]] bool isFinished() const override { return this->progress >= 1.f || db->isFinished(); }
@@ -1514,28 +1513,19 @@ class SongBrowser::BeatmapLoadingOverlay final : public LoadingScreen {
         // finish loading
         this->sbr->onDatabaseLoadingFinished();
 
-        auto on_refresh_cb = std::move(this->on_refreshed);
         // kill ourselves
-        {
-            auto tmp = ui->popOverlay(this);
-            // (tmp == this) is deleted here
-        }
-
-        // call callback (if it exists)
-        if(on_refresh_cb) {
-            on_refresh_cb();
-        }
+        auto tmp = ui->popOverlay(this);
+        // (tmp == this) is deleted here
     }
 
    private:
     SongBrowser *sbr;
     BGImageHandler *bgih;
-    std::function<void()> on_refreshed;
 };
 
 void SongBrowser::refreshBeatmaps() { return this->refreshBeatmaps(this); }
 
-void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> on_refreshed) {
+void SongBrowser::refreshBeatmaps(UIScreen *next_screen) {
     if(osu->isInPlayMode()) return;
 
     if(!!this->loadingOverlay) {
@@ -1606,8 +1596,7 @@ void SongBrowser::refreshBeatmaps(UIScreen *next_screen, std::function<void()> o
     //     this->groupByNothingBtn->setTextBrightColor(highlightColor);
     // }
 
-    auto loading_screen = std::make_unique<BeatmapLoadingOverlay>(this, osu->getBackgroundImageHandler(), next_screen,
-                                                                  std::move(on_refreshed));
+    auto loading_screen = std::make_unique<BeatmapLoadingOverlay>(this, osu->getBackgroundImageHandler(), next_screen);
     this->loadingOverlay = loading_screen.get();
 
     // start loading

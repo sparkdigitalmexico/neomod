@@ -54,6 +54,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
     using namespace neomod;
 
     bool got_db_related_import = false;
+    std::vector<std::string> osz_imports;
     std::vector<std::string> replay_imports;
     bool need_to_reload_database = false;
 
@@ -76,9 +77,7 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
                 debugLog("Handling {}...", arg);
 
                 if(extension == "osz") {
-                    // external file: import async through the installer and navigate to it, but never
-                    // delete the user's file. the installer defers the import until the db is loaded.
-                    osu->getBeatmapInstaller()->enqueue_local(arg, /*auto_select=*/true, /*delete_after=*/false);
+                    osz_imports.push_back(arg);
                     need_to_reload_database |= (!db->isFinished() || db->isCancelled());
                     got_db_related_import = true;
                 } else if(extension == "osr") {
@@ -98,44 +97,38 @@ bool NeomodEnvInterop::handle_cmdline_args(const std::vector<std::string> &args)
 
     if(!got_db_related_import) return false;
 
-    // Don't import maps, replays or reload database while playing
+    // external files: import async through the installer, but never delete the user's file. the
+    // installer defers the actual db import until the db is loaded. enqueued even while playing (a
+    // background import); we just don't navigate or reload the db in that case.
+    for(const auto &path : osz_imports) {
+        osu->getBeatmapInstaller()->enqueue_local(path, /*auto_select=*/true, /*delete_after=*/false);
+    }
+
+    // Don't navigate, import replays or reload the database while playing
     // TODO: bug prone since there are many other possible edge cases...
-    if(!osu->isInPlayMode()) {
-        SongBrowser *sbr = ui->getSongBrowser();
-        RankingScreen *rankingscreen = ui->getRankingScreen();
-        // .osz imports run through the installer (enqueued above); only replays need post-load handling.
-        auto finish_importing = [sbr, rankingscreen, notif = ui->getNotificationOverlay(), replay_imports] {
-            FinishedScore last_imported_replay;
+    if(osu->isInPlayMode()) return true;
 
-            for(const auto &path : replay_imports) {
-                FinishedScore replay;
-                if(LegacyReplay::load_osr(path, replay)) {
-                    last_imported_replay = replay;
-                } else {
-                    notif->addToast("Failed to load replay.", ERROR_TOAST);
-                }
-            }
-
-            if(last_imported_replay != FinishedScore{}) {
-                BeatmapDifficulty *map = db->getBeatmapDifficulty(last_imported_replay.beatmap_hash);
-                if(map) {
-                    last_imported_replay.map = map;
-                    sbr->onDifficultySelected(map, false);
-                    rankingscreen->setScore(last_imported_replay);
-                    ui->setScreen(rankingscreen);
-                } else {
-                    // TODO: auto-download
-                    notif->addToast("This replay's beatmap is not installed.", ERROR_TOAST);
-                }
-            }
-        };
-
-        if(need_to_reload_database) {
-            sbr->refreshBeatmaps(ui->getActiveScreen(), std::move(finish_importing));
+    // load the replays now (local files, no db needed); we only open the score screen of the last one.
+    // resolving its beatmap and navigating is deferred to Osu::openScoreScreenWhenReady, since the
+    // beatmap may still be installing from a .osz above, or the db may still be loading below.
+    FinishedScore last_replay;
+    for(const auto &path : replay_imports) {
+        FinishedScore replay;
+        if(LegacyReplay::load_osr(path, replay)) {
+            last_replay = replay;
         } else {
-            finish_importing();
+            ui->getNotificationOverlay()->addToast("Failed to load replay.", ERROR_TOAST);
         }
     }
+
+    if(need_to_reload_database) {
+        ui->getSongBrowser()->refreshBeatmaps(ui->getActiveScreen());
+    }
+
+    if(last_replay != FinishedScore{}) {
+        osu->openScoreScreenWhenReady(last_replay);
+    }
+
     return true;
 }
 

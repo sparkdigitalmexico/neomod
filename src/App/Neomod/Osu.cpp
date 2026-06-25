@@ -73,6 +73,7 @@
 #include "VolumeOverlay.h"
 #include "Logging.h"
 #include "Graphics.h"
+#include "i18n.h"
 
 #include "score.h"
 #include "NeomodEnvInterop.h"
@@ -586,6 +587,25 @@ void Osu::update() {
     // gated out of play mode so we don't auto-select a map mid-gameplay.
     if(!this->isInPlayMode()) {
         this->beatmapInstaller->update();
+
+        // a score opened from the command line (e.g. the website's score-preview link) can't show its
+        // ranking screen until its beatmap is in the db: the map may still be installing from a .osz
+        // passed alongside it, or the db may still be (re)loading, both of which finish asynchronously
+        // after handle_cmdline_args returns. poll until the map lands, or until nothing is left that
+        // could produce it (db settled and the installer idle).
+        if(this->pendingScoreOpen && db->isFinished() && !db->isCancelled()) {
+            if(BeatmapDifficulty *map = db->getBeatmapDifficulty(this->pendingScoreOpen->beatmap_hash)) {
+                this->pendingScoreOpen->map = map;
+                ui->getSongBrowser()->onDifficultySelected(map, false);
+                ui->getRankingScreen()->setScore(*this->pendingScoreOpen);
+                ui->setScreen(ui->getRankingScreen());
+                this->pendingScoreOpen.reset();
+            } else if(!this->beatmapInstaller->has_pending()) {
+                // TODO: auto-download
+                ui->getNotificationOverlay()->addToast(_("This replay's beatmap is not installed."), ERROR_TOAST);
+                this->pendingScoreOpen.reset();
+            }
+        }
     }
 
     // thumbnails (avatars/beatmap thumbnails) are currently only relevant when online
@@ -765,8 +785,8 @@ void Osu::update() {
                 this->bSkinLoadWasReload = false;
 
                 ui->getNotificationOverlay()->addNotification(
-                    this->skin->name.length() > 0 ? fmt::format("Skin reloaded! ({})", this->skin->name.c_str())
-                                                  : "Skin reloaded!",
+                    tformat("Skin reloaded!{:s}",
+                            !this->skin->name.empty() ? fmt::format(" ({:s})", this->skin->name) : ""),
                     0xffffffff, false, 0.75f);
             }
         }
@@ -869,14 +889,14 @@ void Osu::onKeyDown(KeyboardEvent &key) {
     if(key == binds::DISABLE_MOUSE_BUTTONS) {
         const bool postToggledState = !cv::disable_mousebuttons.getBool();
         cv::disable_mousebuttons.setValue(postToggledState);
-        ui->getNotificationOverlay()->addNotification(postToggledState ? "Mouse buttons are disabled."
-                                                                       : "Mouse buttons are enabled.");
+        ui->getNotificationOverlay()->addNotification(postToggledState ? _("Mouse buttons are disabled.")
+                                                                       : _("Mouse buttons are enabled."));
     }
 
     if(key == binds::TOGGLE_MAP_BACKGROUND) {
         auto *diff = this->map_iface->getBeatmapMutable();
         if(!diff) {
-            ui->getNotificationOverlay()->addNotification("No beatmap is currently selected.");
+            ui->getNotificationOverlay()->addNotification(_("No beatmap is currently selected."));
         } else {
             diff->draw_background = !diff->draw_background;
             db->update_overrides(diff);
@@ -890,7 +910,7 @@ void Osu::onKeyDown(KeyboardEvent &key) {
     if(key == binds::TOGGLE_CHAT) {
         auto *chat = ui->getChat();
         if(!BanchoState::is_online()) {
-            ui->getNotificationOverlay()->addNotification("You must log in to chat!");
+            ui->getNotificationOverlay()->addNotification(_("You must log in to chat!"));
             ui->getOptionsOverlay()->askForLoginDetails();
         } else if(ui->getOptionsOverlay()->isVisible()) {
             // When options menu is open, instead of toggling chat, always open chat
@@ -907,7 +927,7 @@ void Osu::onKeyDown(KeyboardEvent &key) {
     if(key == binds::TOGGLE_EXTENDED_CHAT) {
         auto *chat = ui->getChat();
         if(!BanchoState::is_online()) {
-            ui->getNotificationOverlay()->addNotification("You must log in to chat!");
+            ui->getNotificationOverlay()->addNotification(_("You must log in to chat!"));
             ui->getOptionsOverlay()->askForLoginDetails();
         } else if(ui->getOptionsOverlay()->isVisible()) {
             // When options menu is open, instead of toggling extended chat, always enable it
@@ -1006,8 +1026,8 @@ void Osu::onKeyDown(KeyboardEvent &key) {
                         const bool postToggledState = !cv::draw_hud.getBool();
                         cv::draw_hud.setValue(postToggledState);
                         ui->getNotificationOverlay()->addNotification(postToggledState
-                                                                          ? "In-game interface has been enabled."
-                                                                          : "In-game interface has been disabled.",
+                                                                          ? _("In-game interface has been enabled.")
+                                                                          : _("In-game interface has been disabled."),
                                                                       0xffffffff, false, 0.1f);
 
                         key.consume();
@@ -1018,7 +1038,8 @@ void Osu::onKeyDown(KeyboardEvent &key) {
                     const bool postToggledState = !scoreboardCvar->getBool();
                     scoreboardCvar->setValue(postToggledState);
                     ui->getNotificationOverlay()->addNotification(
-                        postToggledState ? "Scoreboard is shown." : "Scoreboard is hidden.", 0xffffffff, false, 0.1f);
+                        postToggledState ? _("Scoreboard is shown.") : _("Scoreboard is hidden."), 0xffffffff, false,
+                        0.1f);
 
                     key.consume();
                 }
@@ -1105,23 +1126,17 @@ void Osu::onKeyDown(KeyboardEvent &key) {
         }
 
         // local offset
-        if(key == binds::INCREASE_LOCAL_OFFSET) {
+        if(key == binds::INCREASE_LOCAL_OFFSET || key == binds::DECREASE_LOCAL_OFFSET) {
             auto *curMap = this->map_iface->getBeatmapMutable();
 
             i32 offsetAdd = keyboard->isAltDown() ? 1 : 5;
-            curMap->setLocalOffset(curMap->getLocalOffset() + offsetAdd);
+            if(key == binds::DECREASE_LOCAL_OFFSET) {
+                offsetAdd = -offsetAdd;
+            }
+            const i32 newOffset = curMap->getLocalOffset() + offsetAdd;
+            curMap->setLocalOffset((i16)newOffset);
             db->update_overrides(curMap);
-            ui->getNotificationOverlay()->addNotification(
-                fmt::format("Local beatmap offset set to {} ms", curMap->getLocalOffset()));
-        }
-        if(key == binds::DECREASE_LOCAL_OFFSET) {
-            auto *curMap = this->map_iface->getBeatmapMutable();
-
-            i32 offsetAdd = -(keyboard->isAltDown() ? 1 : 5);
-            curMap->setLocalOffset(curMap->getLocalOffset() + offsetAdd);
-            db->update_overrides(curMap);
-            ui->getNotificationOverlay()->addNotification(
-                fmt::format("Local beatmap offset set to {} ms", curMap->getLocalOffset()));
+            ui->getNotificationOverlay()->addNotification(tformat("Local beatmap offset set to {:d} ms", newOffset));
         }
     }
 }
@@ -1352,8 +1367,8 @@ void Osu::saveScreenshot() {
         if(pixelData.empty()) {
             static uint8_t once = 0;
             if(!once++)
-                ui->getNotificationOverlay()->addNotification("Error: Couldn't grab a screenshot :(", 0xffff0000, false,
-                                                              3.0f);
+                ui->getNotificationOverlay()->addNotification(_("Error: Couldn't grab a screenshot :("), 0xffff0000,
+                                                              false, 3.0f);
             debugLog("failed to get pixel data for screenshot");
             return;
         }
@@ -1457,10 +1472,9 @@ void Osu::saveScreenshot() {
                     std::string toastString;
                     // put it in the clipboard as well
                     if(cv::screenshot_clipboard.getBool() && env->setClipBoardImage(std::move(pngData))) {
-                        toastString =
-                            fmt::format("Screenshot copied to clipboard and saved to {:s}", screenshotFilename);
+                        toastString = tformat("Screenshot copied to clipboard and saved to {:s}", screenshotFilename);
                     } else {
-                        toastString = fmt::format("Screenshot saved to {:s}", screenshotFilename);
+                        toastString = tformat("Screenshot saved to {:s}", screenshotFilename);
                     }
 
                     notif->addToast(std::move(toastString), CHAT_TOAST,
@@ -1470,6 +1484,10 @@ void Osu::saveScreenshot() {
     };
 
     g->takeScreenshot({.savePath = {}, .dataCB = std::move(saveFunc), .withAlpha = screenshotChannels > 3});
+}
+
+void Osu::openScoreScreenWhenReady(const FinishedScore &score) {
+    this->pendingScoreOpen = std::make_unique<FinishedScore>(score);
 }
 
 void Osu::onPlayEnd(const FinishedScore &score, bool quit) {

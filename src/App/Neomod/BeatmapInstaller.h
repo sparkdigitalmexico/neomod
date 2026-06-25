@@ -97,7 +97,11 @@ class BeatmapInstaller final {
     void snapshot(std::vector<EntryView>& out) const;  // "out" is immediately cleared
     [[nodiscard]] std::vector<EntryView> snapshot() const;
 
+    // true while any entry is still working toward an import (not yet Done/Failed). callers poll this
+    // to tell "still installing, keep waiting" apart from "nothing left that could land in the db".
+    [[nodiscard]] bool has_pending() const;
+
    private:
-   struct BMInstallerImpl;
-   StaticPImpl<BMInstallerImpl, 32> m;
+    struct BMInstallerImpl;
+    StaticPImpl<BMInstallerImpl, 32> m;
 };
