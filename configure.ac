@@ -886,7 +886,12 @@ AS_CASE(["$_cc_prog"],
 )
 AC_PROG_CXX([$CXX])
 
-AC_CHECK_PROG([STRIP], [strip], [strip]) # don't use mingw-strip, seems to not work as well as regular binutils strip even for windows builds...
+AS_IF([test "$host_arch" = "$build_arch"], [
+    AC_CHECK_PROG([STRIP], [strip], [strip]) # don't use mingw-strip, seems to not work as well as regular binutils strip even for windows builds...
+], [
+    AC_CHECK_TOOL([STRIP], [strip], [strip])
+])
+
 # macOS strip -s means "save symbols listed in file", not "strip all"; -x is the equivalent
 AS_IF([test "$SYSNAME" = "macos"],
     [AC_SUBST([STRIP_ALL_FLAGS], [-x])],
