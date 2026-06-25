@@ -310,17 +310,19 @@ LT_WITH_GNU_LD := $(if $(filter darwin%,$(host_os)),,--with-gnu-ld)
 INSTALL_LIB_DEPS =
 
 # curl has a bunch of extra stuff, so put it in its own directory
-# defines: CACERT_INCDIR; PKG_CONFIG_PLUS_BUNDLED_OSSL; CURL_VERSION_REAL
+# defines: CACERT_INCDIR; CACERT_DOWNLOAD_DEP; PKG_CONFIG_PLUS_BUNDLED_OSSL; CURL_VERSION_REAL
 include $(top_srcdir)/mk/deps/curl.am
 
 if BUILD_MIMALLOC
 if WIN_PLATFORM
-MIMALLOC_DYNAMIC_LIBS := -L$(DEPS_PREFIX)/bin -L$(DEPS_PREFIX)/lib -Wl,--whole-archive -Wl,--undefined=mi_redirect_enable -l:mimalloc-redirect$(if $(filter i686,$(host_cpu)),32,).lib -Wl,--no-whole-archive -lmimalloc -lmimalloc-redirect -l:libmimalloc.dll.a
+MIMALLOC_REDIRECT_DLL_NAME := mimalloc-redirect$(if $(filter i686,$(host_cpu)),32,$(if $(filter aarch64,$(host_cpu)),-arm64,))
+MIMALLOC_DYNAMIC_LIBS := -L$(DEPS_PREFIX)/bin -L$(DEPS_PREFIX)/lib -Wl,--whole-archive -Wl,--undefined=mi_redirect_enable -l:$(MIMALLOC_REDIRECT_DLL_NAME).lib -Wl,--no-whole-archive -lmimalloc -l$(MIMALLOC_REDIRECT_DLL_NAME) -l:libmimalloc.dll.a
 MIMALLOC_OBJ :=
 MIMALLOC_OVERRIDE_DEP := $(DEPS_PREFIX)/mimalloc/mimalloc_new_delete.cpp
 $(MIMALLOC_OVERRIDE_DEP): $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built
 	@( printf '%s\n%s\n%s' "#include \"mimalloc-new-delete.h\"" "extern \"C\" { __declspec(dllimport) bool mi_redirect_enable(void); }" "void __attribute__((used)) *pmi_redirect_enable = (void*)&mi_redirect_enable;" ) > $(MIMALLOC_OVERRIDE_DEP)
 else
+MIMALLOC_REDIRECT_DLL_NAME :=
 MIMALLOC_DYNAMIC_LIBS :=
 MIMALLOC_OBJ := $(DEPS_PREFIX)/lib/mimalloc$(if $(ENABLE_ASAN),-asan-debug,$(if $(ENABLE_DEBUG),-debug,)).o
 MIMALLOC_OVERRIDE_DEP :=
@@ -364,6 +366,7 @@ $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built: $(DEPS_CACHE)/mimalloc-$(MIMA
 	touch $@
 INSTALL_LIB_DEPS += $(DEPS_PREFIX)/mimalloc-$(MIMALLOC_VERSION).built
 else
+MIMALLOC_REDIRECT_DLL_NAME :=
 MIMALLOC_DYNAMIC_LIBS :=
 MIMALLOC_OBJ :=
 MIMALLOC_OVERRIDE_DEP :=
@@ -1049,7 +1052,7 @@ $(DEPS_PREFIX)/liblzma-$(LZMA_VERSION).built: $(DEPS_CACHE)/liblzma-$(LZMA_VERSI
 		-D XZ_TOOL_SYMLINKS_LZMA=OFF \
 		-D XZ_TOOL_XZ=OFF \
 		-D XZ_TOOL_XZDEC=OFF \
-		-D XZ_NLS=ON \
+		-D XZ_NLS=OFF \
 		-D XZ_SANDBOX=no \
 		-D XZ_THREADS="$(if $(ubercompat),win95,yes)" \
 		$(CMAKERCOPT) $(CMAKEIDOPT) \
@@ -1353,11 +1356,8 @@ BUILT_SOURCES := \
 	$(DEPS_PREFIX)/ctre-$(CTRE_VERSION).built \
 	$(DEPS_PREFIX)/libacl-$(LIBACL_VERSION).built \
 	$(DEPS_PREFIX)/curl-$(CURL_VERSION_REAL).built \
+	$(CACERT_DOWNLOAD_DEP) \
 	$(DEPS_PREFIX)/ffmpeg-$(FFMPEG_VERSION_REAL)-$(FFMPEG_EPOCH).built
-
-if !WASM_PLATFORM
-BUILT_SOURCES += $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)/certbundle/cacert.pem
-endif
 
 # --- pch setup section (TODO: move flags to configure to check for support instead of hardcoding here) ---
 if BUILD_PCH
@@ -1641,7 +1641,7 @@ INSTALL_STAMPS += stamp-install-assets
 stamp-install-sharedlibs: $(INSTALL_LIB_DEPS) | install-dirs
 if BUILD_MIMALLOC
 if WIN_PLATFORM
-	@$(CP_INSTALL) "$(DEPS_PREFIX)/bin/mimalloc"{,-redirect$(if $(filter i686,$(host_cpu)),32,)}".dll" "$(DESTDIR)$(bindir)/$(LIBDEST)"
+	@$(CP_INSTALL) "$(DEPS_PREFIX)/bin/mimalloc.dll" "$(DEPS_PREFIX)/bin/$(MIMALLOC_REDIRECT_DLL_NAME).dll" "$(DESTDIR)$(bindir)/$(LIBDEST)"
 else
 	@find $(DEPS_PREFIX)/lib/ -iname '*mimalloc*''.so*' -exec $(CP_INSTALL) '{''}' "$(DESTDIR)$(bindir)/$(LIBDEST)" ';'
 endif
