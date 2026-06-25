@@ -1633,7 +1633,8 @@ CURL_VERSION_REAL := $(if $(ubercompat),8.18.0,$(CURL_VERSION))
 @USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	darwin,$(host_os)),darwin,linux)) \
 @USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	--ranlib=$(RANLIB) \
 @USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	--ar=$(AR) --cc=$(CC) \
-@USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	--cxx=$(CXX) --ld=$(CC) $(if \
+@USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	--cxx=$(CXX) --ld=$(CC) \
+@USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	--strip=$(STRIP) $(if \
 @USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	$(findstring \
 @USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	mingw,$(host_os)),--disable-w32threads \
 @USE_FFMPEG_TRUE@@USE_SOLOUD_TRUE@	--enable-pthreads \

@@ -486,7 +486,7 @@ FFMPEG_CONFIGURE_FLAGS += --enable-parser=aac,flac,mpegaudio,vorbis,opus,mjpeg
 FFMPEG_CONFIGURE_FLAGS += --enable-protocol=file
 FFMPEG_CONFIGURE_FLAGS += --arch=$(host_cpu)
 FFMPEG_CONFIGURE_FLAGS += --target-os=$(if $(findstring mingw,$(host_os)),mingw32,$(if $(findstring darwin,$(host_os)),darwin,linux))
-FFMPEG_CONFIGURE_FLAGS += --ranlib=$(RANLIB) --ar=$(AR) --cc=$(CC) --cxx=$(CXX) --ld=$(CC)
+FFMPEG_CONFIGURE_FLAGS += --ranlib=$(RANLIB) --ar=$(AR) --cc=$(CC) --cxx=$(CXX) --ld=$(CC) --strip=$(STRIP)
 FFMPEG_CONFIGURE_FLAGS += $(if $(findstring mingw,$(host_os)),--disable-w32threads --enable-pthreads --windres=$(WINDRES),)
 FFMPEG_CONFIGURE_FLAGS += $(if $(ffmpeg_strip),,--disable-stripping)
 FFMPEG_CONFIGURE_FLAGS += $(if $(findstring $(host),$(build)),,--enable-cross-compile)
