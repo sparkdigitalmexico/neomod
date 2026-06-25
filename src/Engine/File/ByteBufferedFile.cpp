@@ -12,10 +12,10 @@
 #include <vector>
 
 namespace {
-constexpr size_t NUM_FILE_LOCKS = 16;
+constexpr uSz NUM_FILE_LOCKS = 16;
 
 std::array<Sync::shared_mutex, NUM_FILE_LOCKS> file_locks;
-size_t path_to_lock_index(std::string_view path) { return std::hash<std::string_view>{}(path) % NUM_FILE_LOCKS; }
+uSz path_to_lock_index(std::string_view path) { return std::hash<std::string_view>{}(path) % NUM_FILE_LOCKS; }
 }  // namespace
 
 ByteBufferedFile::Reader::Reader(std::string_view readPath_param)
@@ -161,6 +161,13 @@ bool ByteBufferedFile::Reader::read_string(std::string &inout) {
     if(empty_check == 0) return false;
 
     u32 len = this->read_uleb128();
+    if(len > READ_BUFFER_SIZE) {
+        // a corrupt length would otherwise request a multi-GB allocation
+        // read_bytes can't return more than the ring buffer anyway
+        inout.clear();
+        this->set_oversized_error(len);
+        return false;
+    }
 
     inout.resize_and_overwrite(
         len, [this](char *data, uSz size) -> uSz { return this->read_bytes(reinterpret_cast<u8 *>(data), size); });
@@ -193,7 +200,13 @@ bool ByteBufferedFile::Reader::read_cstring(std::unique_ptr<char[]> &inout) {
     if(empty_check == 0) goto out;
 
     len = this->read_uleb128();
-    inout = std::make_unique_for_overwrite<char[]>(len + 1);
+    if(len > READ_BUFFER_SIZE) {
+        // reject before allocating: len+1 would wrap a u32 at UINT32_MAX (0-byte alloc, then
+        // an oversized read_bytes overruns it), and read_bytes can't return more than the buffer.
+        this->set_oversized_error(len);
+        goto out;
+    }
+    inout = std::make_unique_for_overwrite<char[]>(static_cast<uSz>(len) + 1);
     read = this->read_bytes(reinterpret_cast<u8 *>(inout.get()), len);
 
     inout[len] = '\0';
@@ -227,9 +240,9 @@ u32 ByteBufferedFile::Reader::read_uleb128() {
 
     do {
         byte = this->read<u8>();
-        result |= (byte & 0x7f) << shift;
+        result |= static_cast<u32>(byte & 0x7f) << shift;
         shift += 7;
-    } while(byte & 0x80);
+    } while((byte & 0x80) && shift < 32);  // stop after 5 bytes; shift >= 32 would be UB
 
     return result;
 }

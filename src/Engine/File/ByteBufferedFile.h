@@ -44,18 +44,15 @@ class ByteBufferedFile {
 
         // always_inline is a 2x speedup here
         [[nodiscard]] default_inline_attr uSz read_bytes(u8 *out, uSz len) {
+            // these paths don't read, and read_bytes can't know `out`'s capacity, so they must not
+            // zero-fill `len` bytes into it (len can exceed the caller's buffer). just
+            // return 0; callers that need zero-fill on a short read (read<T>) do it themselves.
             if(this->error_flag) {
-                if(out != nullptr) {
-                    memset(out, 0, len);
-                }
                 return 0;
             }
 
             if(len > READ_BUFFER_SIZE) {
                 this->set_oversized_error(len);
-                if(out != nullptr) {
-                    memset(out, 0, len);
-                }
                 return 0;
             }
 
@@ -273,4 +270,5 @@ class ByteBufferedFile {
     };
 };
 
+#undef never_inline_attr
 #undef default_inline_attr

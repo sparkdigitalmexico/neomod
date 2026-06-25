@@ -124,23 +124,21 @@ void refreshStatus() {
 void setBanchoStatus(const char* info_text, Action action) {
     if(osu == nullptr) return;
 
-    MD5Hash map_md5;
-    i32 map_id = 0;
-
-    if(const auto* map = osu->getMapInterface()->getBeatmap(); map != nullptr) {
-        map_md5 = map->getMD5();
-        map_id = map->getID();
-    }
-
     std::string fancy_text{fmt::format("\n{:s}", info_text)};
     if(fancy_text.length() > 1023) fancy_text.resize(1023);
 
     // Don't send status update if it's the same as our current status
     // (prevents situations like spamming main menu updates if song fails to loop)
     if(last_status == fancy_text && last_action == action) return;
-
     last_status = fancy_text;
     last_action = action;
+
+    MD5Hash map_md5;
+    i32 map_id = 0;
+    if(const auto* map = osu->getMapInterface()->getBeatmap(); map != nullptr) {
+        map_md5 = map->getMD5();
+        map_id = map->getID();
+    }
 
     Packet packet;
     packet.id = OUTP_CHANGE_ACTION;
