@@ -24,7 +24,7 @@ on:
 
 env:
   CCACHE_DIR: /tmp/.ccache
-  LLVM_MINGW_VERSION: 20260602
+  LLVM_MINGW_VERSION: 20260616
 
 jobs:
   build:
@@ -32,12 +32,14 @@ jobs:
     container: archlinux:multilib-devel
     strategy:
       matrix:
-        arch: [x64, x32]
+        arch: [x64, x32, arm64]
         include:
           - arch: x64
             host: x86_64-w64-mingw32
           - arch: x32
             host: i686-w64-mingw32
+          - arch: arm64
+            host: aarch64-w64-mingw32
     defaults:
       run:
         working-directory: .
@@ -51,7 +53,7 @@ jobs:
             libjpeg-turbo libglvnd sdl3 zlib wget \
             cmake meson nasm git autoconf automake libtool autoconf-archive \
             mingw-w64-gcc ccache unzip wine freetype2 curl shaderc
-          if [[ "${{ matrix.arch }}" == "x64" ]]; then
+          if [[ "${{ matrix.arch }}" != "x32" ]]; then
             mkdir -p /opt/llvm-mingw && \
             wget -qO /opt/llvm-mingw/llvm-mingw.tar.xz "https://github.com/mstorsjo/llvm-mingw/releases/download/${{ env.LLVM_MINGW_VERSION }}/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64.tar.xz" && \
             tar xf /opt/llvm-mingw/llvm-mingw.tar.xz -C /opt/llvm-mingw --strip-components=1
