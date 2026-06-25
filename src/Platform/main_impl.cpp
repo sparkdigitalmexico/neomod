@@ -647,7 +647,8 @@ SDL_AppResult SDLMain::handleEvent(SDL_Event *event) {
 
         // mouse events
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            mouse->onButtonChange({event->button.timestamp, (MouseButtonFlags)(1 << (event->button.button - 1)), true, false});
+            mouse->onButtonChange(
+                {event->button.timestamp, (MouseButtonFlags)(1 << (event->button.button - 1)), true, false});
             break;
 
         case SDL_EVENT_MOUSE_BUTTON_UP:
@@ -851,6 +852,9 @@ bool SDLMain::createWindow() {
         SDL_SetHintWithPriority(SDL_HINT_MOUSE_AUTO_CAPTURE, "0", SDL_HINT_NORMAL);
     } else if constexpr(Env::cfg(OS::WASM)) {
         SDL_SetHintWithPriority(SDL_HINT_MOUSE_AUTO_CAPTURE, "1", SDL_HINT_NORMAL);
+    } else if constexpr(Env::cfg(OS::WINDOWS)) {
+        // improve raw input performance
+        SDL_SetHintWithPriority("SDL_WINDOWS_RAW_MOUSE_NOLEGACY", "1", SDL_HINT_NORMAL);
     }
 
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "0", SDL_HINT_NORMAL);
