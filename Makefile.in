@@ -1210,6 +1210,7 @@ SPDLOG_CFLAGS = @SPDLOG_CFLAGS@ -USPDLOG_SHARED_LIB \
 SPDLOG_LIBS = @SPDLOG_LIBS@
 SPDLOG_PREFIX = @SPDLOG_PREFIX@
 SPDLOG_VERSION = @SPDLOG_VERSION@
+SPIRV_CROSS = @SPIRV_CROSS@
 STATICBUILD = @STATICBUILD@
 STRIP = @STRIP@
 STRIP_ALL_FLAGS = @STRIP_ALL_FLAGS@
@@ -1533,7 +1534,8 @@ neomod_SOURCES = libraries/MD5.cpp libraries/base64.cpp \
 CLEANFILES = $(EMBED_OUTPUT) $(builddir)/gen/binary_embed.h \
 	$(EMBED_DEPFILE) $(EMBED_CONFIG_STAMP) \
 	$(builddir)/gen/shaders/*.shdpk $(builddir)/gen/shaders/*.spv \
-	$(builddir)/gen/shaders/*.dxil \
+	$(builddir)/gen/shaders/*.dxil $(builddir)/gen/shaders/*.hlsl \
+	$(builddir)/gen/shaders/*.msl \
 	$(builddir)/gen/shaders/sdlgpu_shaders.manifest \
 	$(builddir)/gen/shaders/.stamp $(GEN_TRANSLATIONS_STAMP) \
 	$(TRANSLATIONS_HEADER) $(TRANSLATIONS_LOCALE_MANIFEST) \
@@ -1725,13 +1727,12 @@ EMBED_DEPFILE := $(builddir)/gen/binary_embed.d
 @USE_SDLGPU_TRUE@SDLGPU_SHADER_DIR := $(builddir)/gen/shaders
 @USE_SDLGPU_TRUE@SDLGPU_SHADER_MANIFEST := $(SDLGPU_SHADER_DIR)/sdlgpu_shaders.manifest
 @USE_SDLGPU_TRUE@SDLGPU_GLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].glsl)
-@USE_SDLGPU_TRUE@SDLGPU_HLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].hlsl)
-@USE_SDLGPU_TRUE@SDLGPU_MSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].msl)
 @USE_SDLGPU_FALSE@SDLGPU_EMBED_DEPS := 
 @USE_SDLGPU_TRUE@SDLGPU_EMBED_DEPS := $(SDLGPU_SHADER_MANIFEST)
 @USE_SDLGPU_FALSE@SDLGPU_EMBED_MANIFEST_FLAG := 
 @USE_SDLGPU_TRUE@SDLGPU_EMBED_MANIFEST_FLAG := -F $(SDLGPU_SHADER_MANIFEST)
 @USE_SDLGPU_TRUE@SDLGPU_GLSLC_FLAG := $(if $(GLSLC),--glslc $(GLSLC),)
+@USE_SDLGPU_TRUE@SDLGPU_SPIRV_CROSS_FLAG := $(if $(SPIRV_CROSS),--spirv-cross $(SPIRV_CROSS),)
 @USE_SDLGPU_TRUE@SDLGPU_DXC_FLAG := $(if $(DXC),--dxc $(DXC),) \
 @USE_SDLGPU_TRUE@	$(am__append_77)
 @DOWNLOAD_DXC_FALSE@@USE_SDLGPU_TRUE@SDLGPU_DXC_DEP := 
@@ -8433,13 +8434,14 @@ $(DEPS_CACHE)/curl-$(CURL_VERSION_REAL)-macosaarch64.source: $(DEPS_CACHE)/curl-
 
 # the manifest is the natural "stamp". pack_sdlgpu_shader.py always writes it,
 # so its mtime reflects when shaders were last compiled/packed
-@USE_SDLGPU_TRUE@$(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_HLSL_INPUTS) $(SDLGPU_MSL_INPUTS) $(SDLGPU_PACK_SCRIPT)
+@USE_SDLGPU_TRUE@$(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_PACK_SCRIPT)
 @USE_SDLGPU_TRUE@	$(MKDIR_P) $(SDLGPU_SHADER_DIR)
 @USE_SDLGPU_TRUE@	$(PYTHON) $(SDLGPU_PACK_SCRIPT) \
 @USE_SDLGPU_TRUE@		--shader-dir $(srcdir)/$(ASSETS_DIR)/shaders \
 @USE_SDLGPU_TRUE@		--output-dir $(SDLGPU_SHADER_DIR) \
 @USE_SDLGPU_TRUE@		--manifest $(SDLGPU_SHADER_MANIFEST) \
 @USE_SDLGPU_TRUE@		$(SDLGPU_GLSLC_FLAG) \
+@USE_SDLGPU_TRUE@		$(SDLGPU_SPIRV_CROSS_FLAG) \
 @USE_SDLGPU_TRUE@		$(SDLGPU_DXC_FLAG)
 
 # individual .shdpk files are side effects of the manifest rule;

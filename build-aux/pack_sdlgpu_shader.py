@@ -2,12 +2,13 @@
 # Copyright (c) 2026, WH, All rights reserved.
 # Compiles and packs all SDLGPU shaders into .shdpk shader pack files.
 #
-# Finds SDLGPU_*_{v,f}.glsl in --shader-dir, compiles each to SPIR-V
-# via glslc or glslangValidator (if available), includes matching .msl
-# and .hlsl sources, and packs everything into .shdpk files.
+# Finds SDLGPU_*_{v,f}.glsl in --shader-dir (the single canonical source),
+# compiles each to SPIR-V via glslc or glslangValidator, transpiles that
+# SPIR-V to HLSL (then to DXIL via dxc) and to MSL via spirv-cross, and
+# packs everything into .shdpk files. HLSL/MSL are generated, not authored.
 #
 # Usage:
-#   pack_sdlgpu_shader.py --shader-dir <dir> --output-dir <dir> --manifest <file> [--glslc <path>] [--dxc <path>]
+#   pack_sdlgpu_shader.py --shader-dir <dir> --output-dir <dir> --manifest <file> [--glslc <path>] [--dxc <path>] [--spirv-cross <path>]
 #
 # .shdpk format:
 #   [4B] magic "SGSH"
@@ -92,6 +93,33 @@ def compile_glsl(glslc, glsl_path, spv_path, stage):
     return True
 
 
+def transpile_hlsl(spirv_cross, spv_path, hlsl_path, shader_model):
+    """Transpile SPIR-V to HLSL via spirv-cross. Returns True on success."""
+    os.makedirs(os.path.dirname(hlsl_path) or '.', exist_ok=True)
+    cmd = [spirv_cross, spv_path, '--hlsl', '--shader-model', shader_model, '--output', hlsl_path]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f'spirv-cross (HLSL) failed for {spv_path}:', file=sys.stderr)
+        print(result.stderr, file=sys.stderr)
+        return False
+    return True
+
+
+def transpile_msl(spirv_cross, spv_path, msl_path, stage):
+    """Transpile SPIR-V to MSL via spirv-cross. Returns True on success."""
+    # entry point must be main0: 'main' is reserved in MSL and SDLGPUShader expects main0
+    stage_flag = 'vert' if stage == 'v' else 'frag'
+    os.makedirs(os.path.dirname(msl_path) or '.', exist_ok=True)
+    cmd = [spirv_cross, spv_path, '--msl', '--msl-decoration-binding',
+           '--rename-entry-point', 'main', 'main0', stage_flag, '--output', msl_path]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f'spirv-cross (MSL) failed for {spv_path}:', file=sys.stderr)
+        print(result.stderr, file=sys.stderr)
+        return False
+    return True
+
+
 def find_shaders(shader_dir):
     """Find all SDLGPU_*_{v,f}.glsl files. Returns list of (name, stage, path)."""
     pattern = os.path.join(shader_dir, 'SDLGPU_*_[vf].glsl')
@@ -111,6 +139,8 @@ def main():
     parser.add_argument('--manifest', required=True, help='Output manifest file for gen_binary_embed.py')
     parser.add_argument('--glslc', default=None, help='Path to glslc (optional; SPIR-V is skipped if not provided)')
     parser.add_argument('--dxc', default=None, help='Path to dxc (optional, for HLSL->DXIL)')
+    parser.add_argument('--spirv-cross', dest='spirv_cross', default=None,
+                        help='Path to spirv-cross (optional; transpiles SPIR-V to HLSL/MSL)')
     args = parser.parse_args()
 
     shaders = find_shaders(args.shader_dir)
@@ -126,14 +156,14 @@ def main():
     for name, stage, glsl_path in shaders:
         shdpk_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.shdpk')
         symbol = f'SDLGPU_{name}_{stage}sh'
-        shader_dir = os.path.dirname(glsl_path)
 
-        # always include GLSL source (needed for runtime uniform block parsing)
+        # always include GLSL source (the canonical source; needed for runtime uniform block parsing)
         with open(glsl_path, 'rb') as f:
             glsl_data = f.read()
         sections = [(FMT_GLSL, glsl_data)]
 
-        # compile GLSL -> SPIR-V (if glslc is available)
+        # compile GLSL -> SPIR-V (required to transpile to the other formats)
+        spv_path = None
         if args.glslc:
             spv_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.spv')
             if not compile_glsl(args.glslc, glsl_path, spv_path, stage):
@@ -142,20 +172,23 @@ def main():
             with open(spv_path, 'rb') as f:
                 sections.append((FMT_SPIRV, f.read()))
 
-        # optionally compile matching HLSL -> DXIL
-        if args.dxc:
-            hlsl_path = os.path.join(shader_dir, f'SDLGPU_{name}_{stage}.hlsl')
-            if os.path.exists(hlsl_path):
-                dxil_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.dxil')
-                if not compile_hlsl(args.dxc, hlsl_path, dxil_path, stage):
-                    ok = False
-                    continue
-                with open(dxil_path, 'rb') as f:
-                    sections.append((FMT_DXIL, f.read()))
+        # transpile SPIR-V -> HLSL (SM6.0) -> DXIL (needs spirv-cross + dxc, e.g. for D3D12)
+        if spv_path and args.spirv_cross and args.dxc:
+            hlsl_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.hlsl')
+            dxil_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.dxil')
+            if not transpile_hlsl(args.spirv_cross, spv_path, hlsl_path, '60') or \
+               not compile_hlsl(args.dxc, hlsl_path, dxil_path, stage):
+                ok = False
+                continue
+            with open(dxil_path, 'rb') as f:
+                sections.append((FMT_DXIL, f.read()))
 
-        # include matching MSL source (no compilation needed; SDL3 compiles at runtime)
-        msl_path = os.path.join(shader_dir, f'SDLGPU_{name}_{stage}.msl')
-        if os.path.exists(msl_path):
+        # transpile SPIR-V -> MSL (needs spirv-cross; SDL3 compiles MSL at runtime, e.g. for Metal)
+        if spv_path and args.spirv_cross:
+            msl_path = os.path.join(args.output_dir, f'SDLGPU_{name}_{stage}.msl')
+            if not transpile_msl(args.spirv_cross, spv_path, msl_path, stage):
+                ok = False
+                continue
             with open(msl_path, 'rb') as f:
                 sections.append((FMT_MSL, f.read()))
 
@@ -163,7 +196,7 @@ def main():
         has_binary = any(fmt != FMT_GLSL for fmt, _ in sections)
         if not has_binary:
             print(f'error: no binary shader format produced for SDLGPU_{name}_{stage} '
-                  f'(need glslc for SPIR-V, or .msl file for Metal)', file=sys.stderr)
+                  f'(need glslc for SPIR-V, plus spirv-cross for MSL/HLSL)', file=sys.stderr)
             ok = False
             continue
 

@@ -1258,12 +1258,11 @@ SDLGPU_PACK_SCRIPT := $(srcdir)/build-aux/pack_sdlgpu_shader.py
 SDLGPU_SHADER_DIR := $(builddir)/gen/shaders
 SDLGPU_SHADER_MANIFEST := $(SDLGPU_SHADER_DIR)/sdlgpu_shaders.manifest
 SDLGPU_GLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].glsl)
-SDLGPU_HLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].hlsl)
-SDLGPU_MSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].msl)
 SDLGPU_EMBED_DEPS := $(SDLGPU_SHADER_MANIFEST)
 SDLGPU_EMBED_MANIFEST_FLAG := -F $(SDLGPU_SHADER_MANIFEST)
 
 SDLGPU_GLSLC_FLAG := $(if $(GLSLC),--glslc $(GLSLC),)
+SDLGPU_SPIRV_CROSS_FLAG := $(if $(SPIRV_CROSS),--spirv-cross $(SPIRV_CROSS),)
 SDLGPU_DXC_FLAG := $(if $(DXC),--dxc $(DXC),)
 if DOWNLOAD_DXC
 $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.source: $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.tar.gz
@@ -1280,13 +1279,14 @@ endif
 
 # the manifest is the natural "stamp". pack_sdlgpu_shader.py always writes it,
 # so its mtime reflects when shaders were last compiled/packed
-$(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_HLSL_INPUTS) $(SDLGPU_MSL_INPUTS) $(SDLGPU_PACK_SCRIPT)
+$(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_PACK_SCRIPT)
 	$(MKDIR_P) $(SDLGPU_SHADER_DIR)
 	$(PYTHON) $(SDLGPU_PACK_SCRIPT) \
 		--shader-dir $(srcdir)/$(ASSETS_DIR)/shaders \
 		--output-dir $(SDLGPU_SHADER_DIR) \
 		--manifest $(SDLGPU_SHADER_MANIFEST) \
 		$(SDLGPU_GLSLC_FLAG) \
+		$(SDLGPU_SPIRV_CROSS_FLAG) \
 		$(SDLGPU_DXC_FLAG)
 
 # individual .shdpk files are side effects of the manifest rule;
@@ -1317,6 +1317,7 @@ $(EMBED_OUTPUT): $(EMBED_SCRIPT) $(EMBED_MANIFESTS) $(BUILD_EMBED_MANIFESTS) $(E
 neomod_SOURCES += $(EMBED_OUTPUT)
 CLEANFILES += $(EMBED_OUTPUT) $(builddir)/gen/binary_embed.h $(EMBED_DEPFILE) $(EMBED_CONFIG_STAMP) \
 	$(builddir)/gen/shaders/*.shdpk $(builddir)/gen/shaders/*.spv $(builddir)/gen/shaders/*.dxil \
+	$(builddir)/gen/shaders/*.hlsl $(builddir)/gen/shaders/*.msl \
 	$(builddir)/gen/shaders/sdlgpu_shaders.manifest $(builddir)/gen/shaders/.stamp \
 	$(GEN_TRANSLATIONS_STAMP) $(TRANSLATIONS_HEADER) $(TRANSLATIONS_LOCALE_MANIFEST) $(MO_FILES)
 

@@ -237,7 +237,8 @@ AC_DEFUN([AC_PROG_GETTEXT_TOOLS], [
     ])
 ])
 
-# needed for building SPIR-V shaders (optional on macOS where MSL suffices)
+# needed for building SPIR-V shaders (the canonical GLSL source is compiled to SPIR-V,
+# then transpiled to HLSL/MSL via spirv-cross)
 # tries glslc first (from shaderc), falls back to glslangValidator (from glslang-tools)
 AC_DEFUN([AC_PROG_GLSLC], [
     AC_CHECK_PROG([GLSLC], [glslc], [glslc])
@@ -247,6 +248,12 @@ AC_DEFUN([AC_PROG_GLSLC], [
             GLSLC="$GLSLANG_VALIDATOR"
         fi
     fi
+])
+
+# needed for transpiling the compiled SPIR-V to HLSL and MSL, so each shader is
+# authored once in GLSL instead of separately per backend (from SPIRV-Cross)
+AC_DEFUN([AC_PROG_SPIRV_CROSS], [
+    AC_CHECK_PROG([SPIRV_CROSS], [spirv-cross], [spirv-cross])
 ])
 
 # needed for dep resolver
@@ -515,10 +522,12 @@ AS_IF([test "x$use_dx11" = "xyes" ], [
 
 AS_IF([test "x$use_sdlgpu" = "xyes"], [
     AC_PROG_GLSLC
-    AS_CASE(["$host_os"], [darwin*], [], [
-        AS_IF([test -z "$GLSLC"], [
-            AC_MSG_ERROR([neither glslc nor glslangValidator found - required for compiling GLSL shaders to SPIR-V])
-        ])
+    AC_PROG_SPIRV_CROSS
+    AS_IF([test -z "$GLSLC"], [
+        AC_MSG_ERROR([neither glslc nor glslangValidator found - required for compiling GLSL shaders to SPIR-V])
+    ])
+    AS_IF([test -z "$SPIRV_CROSS"], [
+        AC_MSG_ERROR([spirv-cross not found - required for transpiling shaders to HLSL/MSL (try: brew install spirv-cross, or apt install spirv-cross)])
     ])
     AS_IF([test "$host_os" = "mingw32"], [
         # needed for compiling HLSL shaders to DXIL (Windows/D3D12 only)
