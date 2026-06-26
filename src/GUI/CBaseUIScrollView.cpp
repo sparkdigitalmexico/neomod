@@ -631,7 +631,12 @@ void CBaseUIScrollView::scrollToYInt(int scrollPosY, bool animated, bool slow) {
     // a scroll to where we already sit (and aren't animating away from) is a no-op: don't re-dirty
     // clipping. the songbrowser's left-edge auto-recenter calls this every frame, and a full O(n)
     // clip rebuild over thousands of carousel elements that changes nothing is pure waste
-    if(!this->vScrollPos.y.animating() && std::round(this->vScrollPos.y) == std::round(targetY)) return;
+    if(!this->vScrollPos.y.animating() && std::round(this->vScrollPos.y) == std::round(targetY)) {
+        // still pin the velocity to the resting position, a scrollbar drag zeroes vVelocity every
+        // frame and relies on us to restore it
+        this->vVelocity.y = targetY;
+        return;
+    }
 
     this->bClippingDirty = true;
 
@@ -657,7 +662,10 @@ void CBaseUIScrollView::scrollToXInt(int scrollPosX, bool animated, bool slow) {
     const f64 targetX = std::clamp<f64>(scrollPosX, lowerBounds, upperBounds);
 
     // no-op scroll (already at target, not animating): don't re-dirty clipping (see scrollToYInt)
-    if(!this->vScrollPos.x.animating() && std::round(this->vScrollPos.x) == std::round(targetX)) return;
+    if(!this->vScrollPos.x.animating() && std::round(this->vScrollPos.x) == std::round(targetX)) {
+        this->vVelocity.x = targetX;  // keep velocity consistent on no-op (see scrollToYInt)
+        return;
+    }
 
     this->bClippingDirty = true;
 
