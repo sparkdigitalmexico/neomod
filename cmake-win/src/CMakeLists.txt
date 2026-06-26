@@ -143,7 +143,6 @@ set(EMBED_SCRIPT "${CMAKE_SOURCE_DIR}/../../build-aux/gen_binary_embed.py")
 set(EMBED_MANIFESTS
     "${CMAKE_SOURCE_DIR}/../../assets/binary/misc_embed.manifest"
     "${CMAKE_SOURCE_DIR}/../../assets/binary/gl_shaders_embed.manifest"
-    "${CMAKE_SOURCE_DIR}/../../assets/binary/dx_shaders_embed.manifest"
 )
 set(EMBED_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/gen")
 set(EMBED_SOURCE "${EMBED_OUTPUT_DIR}/binary_embed.asm")
@@ -168,12 +167,41 @@ endforeach()
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+# the DX11 backend's HLSL is generated from the canonical VK_*.glsl (mirrors the autotools build);
+# requires glslc/glslangValidator + spirv-cross (e.g. from the Vulkan SDK) on PATH
+find_program(GLSLC_EXECUTABLE NAMES glslc glslangValidator)
+find_program(SPIRV_CROSS_EXECUTABLE NAMES spirv-cross)
+if(NOT GLSLC_EXECUTABLE OR NOT SPIRV_CROSS_EXECUTABLE)
+    message(FATAL_ERROR "glslc/glslangValidator and spirv-cross are required to generate the DX11 shaders (install the Vulkan SDK)")
+endif()
+
+set(SHADER_PACK_SCRIPT "${CMAKE_SOURCE_DIR}/../../build-aux/pack_shaders.py")
+set(SHADER_SRC_DIR "${CMAKE_SOURCE_DIR}/../../assets/shaders")
+set(DX11_SHADER_GEN_DIR "${EMBED_OUTPUT_DIR}/shaders")
+set(DX11_SHADER_MANIFEST "${DX11_SHADER_GEN_DIR}/dx11_shaders.manifest")
+file(GLOB VK_SHADER_INPUTS "${SHADER_SRC_DIR}/VK_*_v.glsl" "${SHADER_SRC_DIR}/VK_*_f.glsl")
+
+add_custom_command(
+    OUTPUT ${DX11_SHADER_MANIFEST}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${DX11_SHADER_GEN_DIR}
+    COMMAND ${Python3_EXECUTABLE} ${SHADER_PACK_SCRIPT}
+        --shader-dir ${SHADER_SRC_DIR}
+        --output-dir ${DX11_SHADER_GEN_DIR}
+        --dx11-manifest ${DX11_SHADER_MANIFEST}
+        --dx11-output-dir ${DX11_SHADER_GEN_DIR}
+        --glslc ${GLSLC_EXECUTABLE}
+        --spirv-cross ${SPIRV_CROSS_EXECUTABLE}
+    DEPENDS ${SHADER_PACK_SCRIPT} ${VK_SHADER_INPUTS}
+    COMMENT "Generating DX11 SM5.0 HLSL from canonical VK_*.glsl"
+)
+
+# the generated DX11 manifest holds absolute paths, so it's passed via -F (build manifest, no base-dir prepend)
 add_custom_command(
     OUTPUT ${EMBED_SOURCE} ${EMBED_HEADER}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${EMBED_OUTPUT_DIR}
     COMMAND ${Python3_EXECUTABLE} ${EMBED_SCRIPT}
-        -t nasm -b "${CMAKE_SOURCE_DIR}/../.." ${EMBED_MANIFEST_FLAGS} ${EMBED_SOURCE}
-    DEPENDS ${EMBED_SCRIPT} ${EMBED_MANIFESTS} ${EMBED_FILE_DEPS}
+        -t nasm -b "${CMAKE_SOURCE_DIR}/../.." ${EMBED_MANIFEST_FLAGS} -F ${DX11_SHADER_MANIFEST} ${EMBED_SOURCE}
+    DEPENDS ${EMBED_SCRIPT} ${EMBED_MANIFESTS} ${EMBED_FILE_DEPS} ${DX11_SHADER_MANIFEST}
     COMMENT "Generating binary embed NASM source"
 )
 

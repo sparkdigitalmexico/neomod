@@ -259,6 +259,11 @@ def main():
         depfile_content = f'{args.output}: \\\n'
         depfile_content += ' \\\n'.join(f'  {d}' for d in deps)
         depfile_content += '\n'
+        # emit a phony target per prerequisite (gcc -MP style) so that a later-deleted or renamed
+        # embedded file/manifest doesn't break the build with "No rule to make target" before the
+        # depfile can be regenerated
+        for d in deps:
+            depfile_content += f'{d}:\n'
         write_if_changed(args.depfile, depfile_content)
 
 

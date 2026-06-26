@@ -666,6 +666,8 @@ USE_DISCORDRPC_FALSE
 USE_DISCORDRPC_TRUE
 DOWNLOAD_DXC_FALSE
 DOWNLOAD_DXC_TRUE
+USE_SHADERGEN_FALSE
+USE_SHADERGEN_TRUE
 USE_SDLGPU_FALSE
 USE_SDLGPU_TRUE
 USE_DX11_FALSE
@@ -7831,7 +7833,9 @@ else case e in #(
 esac
 fi
 
-if test "x$use_sdlgpu" = "xyes"
+# the DX11 and SDL_gpu backends both derive their shaders from the canonical VK_*.glsl, so both need
+# glslc (GLSL->SPIR-V) + spirv-cross (SPIR-V->HLSL/MSL); require them whenever either backend is enabled
+if test "x$use_sdlgpu" = "xyes" || test "x$use_dx11" = "xyes"
 then :
 
 
@@ -7984,10 +7988,16 @@ then :
         as_fn_error $? "spirv-cross not found - required for transpiling shaders to HLSL/MSL (try: brew install spirv-cross, or apt install spirv-cross)" "$LINENO" 5
 
 fi
+
+fi
+
+if test "x$use_sdlgpu" = "xyes"
+then :
+
     if test "$host_os" = "mingw32"
 then :
 
-        # needed for compiling HLSL shaders to DXIL (Windows/D3D12 only)
+        # dxc compiles the SDL_gpu HLSL down to DXIL (Windows/D3D12 only); the DX11 backend needs no dxc
         # will download & cache a release from github if not available (only if building on linux though (lazy))
         # Extract the first word of "dxc", so it can be a program name with args.
 set dummy dxc; ac_word=$2
@@ -8067,15 +8077,8 @@ then :
     EMBED_MANIFESTS="$EMBED_MANIFESTS \$(srcdir)/\$(ASSETS_DIR)/binary/gl_shaders_embed.manifest"
 
 fi
-if test "x$use_dx11" = "xyes"
-then :
-
-    EMBED_MANIFESTS="$EMBED_MANIFESTS \$(srcdir)/\$(ASSETS_DIR)/binary/dx_shaders_embed.manifest"
-
-fi
-
-# SDL_gpu shader packs are compiled and embedded via pack_sdlgpu_shader.py,
-# not through a static manifest (see Makefile.am).
+# SDL_gpu (.shdpk) and DX11 (.hlsl) shaders are both generated from the canonical VK_*.glsl and embedded
+# via build manifests produced by pack_shaders.py (see Makefile.am), not through a static manifest.
 
 
 
@@ -18818,7 +18821,16 @@ else
   USE_SDLGPU_FALSE=
 fi
 
- if test -z "$DXC" && test "$host_os" = "mingw32"; then
+# the shader generator (pack_shaders.py) runs whenever DX11 or SDL_gpu is enabled
+ if test "$use_sdlgpu" = "yes" || test "$use_dx11" = "yes"; then
+  USE_SHADERGEN_TRUE=
+  USE_SHADERGEN_FALSE='#'
+else
+  USE_SHADERGEN_TRUE='#'
+  USE_SHADERGEN_FALSE=
+fi
+
+ if test -z "$DXC" && test "$host_os" = "mingw32" && test "$use_sdlgpu" = "yes"; then
   DOWNLOAD_DXC_TRUE=
   DOWNLOAD_DXC_FALSE='#'
 else
@@ -19218,6 +19230,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${USE_SDLGPU_TRUE}" && test -z "${USE_SDLGPU_FALSE}"; then
   as_fn_error $? "conditional \"USE_SDLGPU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${USE_SHADERGEN_TRUE}" && test -z "${USE_SHADERGEN_FALSE}"; then
+  as_fn_error $? "conditional \"USE_SHADERGEN\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DOWNLOAD_DXC_TRUE}" && test -z "${DOWNLOAD_DXC_FALSE}"; then

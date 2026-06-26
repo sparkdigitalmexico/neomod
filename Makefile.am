@@ -1249,20 +1249,26 @@ TRANSLATIONS_LOCALE_MANIFEST :=
 endif # ENABLE_I18N
 
 #####################################################################################################################################################
-## SDL_GPU SHADER COMPILATION (GLSL → SPIR-V / MSL → .shdpk shader packs)
+## SHADER GENERATION (canonical VK_*.glsl → SPIR-V → SDL_gpu .shdpk packs and/or DX11 SM5.0 .hlsl)
 #####################################################################################################################################################
 
-if USE_SDLGPU
+if USE_SHADERGEN
 
-SDLGPU_PACK_SCRIPT := $(srcdir)/build-aux/pack_sdlgpu_shader.py
-SDLGPU_SHADER_DIR := $(builddir)/gen/shaders
-SDLGPU_SHADER_MANIFEST := $(SDLGPU_SHADER_DIR)/sdlgpu_shaders.manifest
-SDLGPU_GLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/SDLGPU_*_[vf].glsl)
+# pipeline-wide: the canonical VK_*.glsl are compiled to SPIR-V (glslc) then transpiled (spirv-cross)
+# into whatever each enabled backend needs - see build-aux/pack_shaders.py
+SHADER_PACK_SCRIPT := $(srcdir)/build-aux/pack_shaders.py
+SHADER_GEN_DIR := $(builddir)/gen/shaders
+SHADER_GLSL_INPUTS := $(wildcard $(srcdir)/$(ASSETS_DIR)/shaders/VK_*_[vf].glsl)
+SHADER_GEN_STAMP := $(SHADER_GEN_DIR)/.pack_stamp
+SHADER_GLSLC_FLAG := $(if $(GLSLC),--glslc $(GLSLC),)
+SHADER_SPIRV_CROSS_FLAG := $(if $(SPIRV_CROSS),--spirv-cross $(SPIRV_CROSS),)
+
+if USE_SDLGPU
+# SDL_gpu: pack GLSL + SPIR-V + (HLSL->DXIL) + MSL into .shdpk; dxc is only needed here (D3D12 DXIL)
+SDLGPU_SHADER_MANIFEST := $(SHADER_GEN_DIR)/sdlgpu_shaders.manifest
+SDLGPU_PACK_ARGS := --manifest $(SDLGPU_SHADER_MANIFEST)
 SDLGPU_EMBED_DEPS := $(SDLGPU_SHADER_MANIFEST)
 SDLGPU_EMBED_MANIFEST_FLAG := -F $(SDLGPU_SHADER_MANIFEST)
-
-SDLGPU_GLSLC_FLAG := $(if $(GLSLC),--glslc $(GLSLC),)
-SDLGPU_SPIRV_CROSS_FLAG := $(if $(SPIRV_CROSS),--spirv-cross $(SPIRV_CROSS),)
 SDLGPU_DXC_FLAG := $(if $(DXC),--dxc $(DXC),)
 if DOWNLOAD_DXC
 $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.source: $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.tar.gz
@@ -1276,38 +1282,61 @@ SDLGPU_DXC_DEP := $(DEPS_CACHE)/linux_dxc_2025_07_14.x86_64.source
 else
 SDLGPU_DXC_DEP :=
 endif
-
-# the manifest is the natural "stamp". pack_sdlgpu_shader.py always writes it,
-# so its mtime reflects when shaders were last compiled/packed
-$(SDLGPU_SHADER_MANIFEST): $(SDLGPU_DXC_DEP) $(SDLGPU_GLSL_INPUTS) $(SDLGPU_PACK_SCRIPT)
-	$(MKDIR_P) $(SDLGPU_SHADER_DIR)
-	$(PYTHON) $(SDLGPU_PACK_SCRIPT) \
-		--shader-dir $(srcdir)/$(ASSETS_DIR)/shaders \
-		--output-dir $(SDLGPU_SHADER_DIR) \
-		--manifest $(SDLGPU_SHADER_MANIFEST) \
-		$(SDLGPU_GLSLC_FLAG) \
-		$(SDLGPU_SPIRV_CROSS_FLAG) \
-		$(SDLGPU_DXC_FLAG)
-
-# individual .shdpk files are side effects of the manifest rule;
-# the depfile lists them, so make needs to know how to "build" them
-$(SDLGPU_SHADER_DIR)/%.shdpk: $(SDLGPU_SHADER_MANIFEST) ;
-
 else # !USE_SDLGPU
+SDLGPU_PACK_ARGS :=
+SDLGPU_EMBED_DEPS :=
+SDLGPU_EMBED_MANIFEST_FLAG :=
+SDLGPU_DXC_FLAG :=
+SDLGPU_DXC_DEP :=
+endif # USE_SDLGPU
+
+if USE_DX11
+# DX11: emit SM5.0 HLSL (D3DCompile'd at runtime; no dxc), embedded via a generated build manifest
+DX11_SHADER_MANIFEST := $(SHADER_GEN_DIR)/dx11_shaders.manifest
+DX11_PACK_ARGS := --dx11-manifest $(DX11_SHADER_MANIFEST) --dx11-output-dir $(SHADER_GEN_DIR)
+DX11_EMBED_DEPS := $(DX11_SHADER_MANIFEST)
+DX11_EMBED_MANIFEST_FLAG := -F $(DX11_SHADER_MANIFEST)
+else # !USE_DX11
+DX11_PACK_ARGS :=
+DX11_EMBED_DEPS :=
+DX11_EMBED_MANIFEST_FLAG :=
+endif # USE_DX11
+
+# one pack run produces every enabled backend's outputs; the stamp is the single target and the
+# manifests + packed/transpiled files are its side effects (the embed depfile lists them)
+$(SHADER_GEN_STAMP): $(SDLGPU_DXC_DEP) $(SHADER_GLSL_INPUTS) $(SHADER_PACK_SCRIPT)
+	$(MKDIR_P) $(SHADER_GEN_DIR)
+	$(PYTHON) $(SHADER_PACK_SCRIPT) \
+		--shader-dir $(srcdir)/$(ASSETS_DIR)/shaders \
+		--output-dir $(SHADER_GEN_DIR) \
+		$(SDLGPU_PACK_ARGS) \
+		$(DX11_PACK_ARGS) \
+		$(SHADER_GLSLC_FLAG) \
+		$(SHADER_SPIRV_CROSS_FLAG) \
+		$(SDLGPU_DXC_FLAG)
+	@touch $@
+
+$(SDLGPU_SHADER_MANIFEST) $(DX11_SHADER_MANIFEST): $(SHADER_GEN_STAMP) ;
+$(SHADER_GEN_DIR)/%.shdpk: $(SHADER_GEN_STAMP) ;
+$(SHADER_GEN_DIR)/%.hlsl: $(SHADER_GEN_STAMP) ;
+
+else # !USE_SHADERGEN
 
 SDLGPU_EMBED_DEPS :=
 SDLGPU_EMBED_MANIFEST_FLAG :=
+DX11_EMBED_DEPS :=
+DX11_EMBED_MANIFEST_FLAG :=
 
-endif # USE_SDLGPU
+endif # USE_SHADERGEN
 
 # content-based stamp: only updates (and triggers re-embed) when the manifest list actually changes
 EMBED_CONFIG_STAMP := $(builddir)/gen/.embed_config
-EMBED_FULL_MANIFEST_FLAGS := $(EMBED_MANIFEST_FLAGS) $(SDLGPU_EMBED_MANIFEST_FLAG)
+EMBED_FULL_MANIFEST_FLAGS := $(EMBED_MANIFEST_FLAGS) $(SDLGPU_EMBED_MANIFEST_FLAG) $(DX11_EMBED_MANIFEST_FLAG)
 $(EMBED_CONFIG_STAMP): FORCE
 	@$(MKDIR_P) $(dir $@)
 	@echo '$(EMBED_FULL_MANIFEST_FLAGS)' | cmp -s - $@ || echo '$(EMBED_FULL_MANIFEST_FLAGS)' > $@
 
-$(EMBED_OUTPUT): $(EMBED_SCRIPT) $(EMBED_MANIFESTS) $(BUILD_EMBED_MANIFESTS) $(EMBED_CACERT_DEPS) $(SDLGPU_EMBED_DEPS) $(EMBED_CONFIG_STAMP) $(MO_FILES)
+$(EMBED_OUTPUT): $(EMBED_SCRIPT) $(EMBED_MANIFESTS) $(BUILD_EMBED_MANIFESTS) $(EMBED_CACERT_DEPS) $(SDLGPU_EMBED_DEPS) $(DX11_EMBED_DEPS) $(EMBED_CONFIG_STAMP) $(MO_FILES)
 	$(MKDIR_P) $(dir $@)
 	$(PYTHON) $(EMBED_SCRIPT) -t $(EMBED_TYPE) -b $(srcdir) -d $(EMBED_DEPFILE) $(EMBED_FULL_MANIFEST_FLAGS) $@ \
 		$(EMBED_CACERT_ARGS)
@@ -1318,7 +1347,8 @@ neomod_SOURCES += $(EMBED_OUTPUT)
 CLEANFILES += $(EMBED_OUTPUT) $(builddir)/gen/binary_embed.h $(EMBED_DEPFILE) $(EMBED_CONFIG_STAMP) \
 	$(builddir)/gen/shaders/*.shdpk $(builddir)/gen/shaders/*.spv $(builddir)/gen/shaders/*.dxil \
 	$(builddir)/gen/shaders/*.hlsl $(builddir)/gen/shaders/*.msl \
-	$(builddir)/gen/shaders/sdlgpu_shaders.manifest $(builddir)/gen/shaders/.stamp \
+	$(builddir)/gen/shaders/sdlgpu_shaders.manifest $(builddir)/gen/shaders/dx11_shaders.manifest \
+	$(builddir)/gen/shaders/.pack_stamp $(builddir)/gen/shaders/.stamp \
 	$(GEN_TRANSLATIONS_STAMP) $(TRANSLATIONS_HEADER) $(TRANSLATIONS_LOCALE_MANIFEST) $(MO_FILES)
 
 #####################################################################################################################################################

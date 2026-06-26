@@ -589,7 +589,7 @@ Shader *ResourceManager::createShaderAuto(std::string_view shaderBasename) {
 
     // create instance and load it
     if(!env->usingNullGraphics()) {
-        const std::string_view pfx = env->usingDX11() ? "DX11" : env->usingSDLGPU() ? "SDLGPU" : "GL";
+        const std::string_view pfx = env->usingDX11() ? "DX11" : env->usingSDLGPU() ? "VK" : "GL";
         assert(ALL_BINMAP.contains(fmt::format("{}_{}_vsh", pfx, shaderBasename)) &&
                ALL_BINMAP.contains(fmt::format("{}_{}_fsh", pfx, shaderBasename)));
         shader = g->createShaderFromSource(std::string{ALL_BINMAP.at(fmt::format("{}_{}_vsh", pfx, shaderBasename))},

@@ -520,7 +520,9 @@ AS_IF([test "x$use_dx11" = "xyes" ], [
     use_dx11=no
 ])
 
-AS_IF([test "x$use_sdlgpu" = "xyes"], [
+# the DX11 and SDL_gpu backends both derive their shaders from the canonical VK_*.glsl, so both need
+# glslc (GLSL->SPIR-V) + spirv-cross (SPIR-V->HLSL/MSL); require them whenever either backend is enabled
+AS_IF([test "x$use_sdlgpu" = "xyes" || test "x$use_dx11" = "xyes"], [
     AC_PROG_GLSLC
     AC_PROG_SPIRV_CROSS
     AS_IF([test -z "$GLSLC"], [
@@ -529,8 +531,11 @@ AS_IF([test "x$use_sdlgpu" = "xyes"], [
     AS_IF([test -z "$SPIRV_CROSS"], [
         AC_MSG_ERROR([spirv-cross not found - required for transpiling shaders to HLSL/MSL (try: brew install spirv-cross, or apt install spirv-cross)])
     ])
+])
+
+AS_IF([test "x$use_sdlgpu" = "xyes"], [
     AS_IF([test "$host_os" = "mingw32"], [
-        # needed for compiling HLSL shaders to DXIL (Windows/D3D12 only)
+        # dxc compiles the SDL_gpu HLSL down to DXIL (Windows/D3D12 only); the DX11 backend needs no dxc
         # will download & cache a release from github if not available (only if building on linux though (lazy))
         AC_CHECK_PROG([DXC], [dxc], [dxc])
         AS_IF([test -z "$DXC" && test "$build_os" != "linux-gnu"], [
@@ -555,12 +560,8 @@ BUILD_EMBED_MANIFESTS="\$(builddir)/gen/locale_embed.manifest"
 AS_IF([test "x$use_opengl" = "xyes" || test "x$use_opengles32" = "xyes"], [
     EMBED_MANIFESTS="$EMBED_MANIFESTS \$(srcdir)/\$(ASSETS_DIR)/binary/gl_shaders_embed.manifest"
 ])
-AS_IF([test "x$use_dx11" = "xyes"], [
-    EMBED_MANIFESTS="$EMBED_MANIFESTS \$(srcdir)/\$(ASSETS_DIR)/binary/dx_shaders_embed.manifest"
-])
-
-# SDL_gpu shader packs are compiled and embedded via pack_sdlgpu_shader.py,
-# not through a static manifest (see Makefile.am).
+# SDL_gpu (.shdpk) and DX11 (.hlsl) shaders are both generated from the canonical VK_*.glsl and embedded
+# via build manifests produced by pack_shaders.py (see Makefile.am), not through a static manifest.
 AC_SUBST([EMBED_MANIFESTS])
 AC_SUBST([BUILD_EMBED_MANIFESTS])
 
@@ -1951,7 +1952,9 @@ AM_CONDITIONAL([USE_OPENGL], [test "$use_opengl" = "yes"])
 AM_CONDITIONAL([USE_OPENGLES], [test "$use_opengles32" = "yes"])
 AM_CONDITIONAL([USE_DX11], [test "$use_dx11" = "yes"])
 AM_CONDITIONAL([USE_SDLGPU], [test "$use_sdlgpu" = "yes"])
-AM_CONDITIONAL([DOWNLOAD_DXC], [test -z "$DXC" && test "$host_os" = "mingw32"])
+# the shader generator (pack_shaders.py) runs whenever DX11 or SDL_gpu is enabled
+AM_CONDITIONAL([USE_SHADERGEN], [test "$use_sdlgpu" = "yes" || test "$use_dx11" = "yes"])
+AM_CONDITIONAL([DOWNLOAD_DXC], [test -z "$DXC" && test "$host_os" = "mingw32" && test "$use_sdlgpu" = "yes"])
 AM_CONDITIONAL([USE_DISCORDRPC], [test "$with_discord" = "yes"])
 AM_CONDITIONAL([ENABLE_I18N], [test "x$with_i18n" = "xyes"])
 AM_CONDITIONAL([WIN_PLATFORM], [test "$SYSNAME" = "windows"])

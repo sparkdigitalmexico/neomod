@@ -437,8 +437,8 @@ void DirectX11Interface::setColor(Color color) {
 
     m_data->color = color;
     if(this->bTexturingEnabled) {
-        this->shaderTexturedGeneric->setUniform4f("col", m_data->color.Af(), m_data->color.Rf(), m_data->color.Gf(),
-                                                  m_data->color.Bf());
+        this->shaderTexturedGeneric->setUniform4f("col", m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(),
+                                                  m_data->color.Af());
     }
 }
 
@@ -697,7 +697,11 @@ void DirectX11Interface::drawVAO(VertexArrayObject *vao) {
         const size_t maxColorIndex = (hasColors ? finalColors.size() - 1 : 0);
         const size_t maxTexcoords0Index = (hasTexcoords0 ? finalTexcoords.size() - 1 : 0);
 
-        const vec4 color = vec4(m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(), m_data->color.Af());
+        // textured draws with no per-vertex colors use white (the col uniform carries m_color); non-textured
+        // draws use m_color directly (the col uniform is unused)
+        const vec4 color = hasTexcoords0
+                               ? vec4(1.f, 1.f, 1.f, 1.f)
+                               : vec4(m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(), m_data->color.Af());
 
         for(size_t i = 0; i < finalVertices.size(); i++) {
             this->vertices[i].pos = finalVertices[i];
@@ -1185,6 +1189,11 @@ void DirectX11Interface::setTexturing(bool enabled, bool force) {
 
     this->bTexturingEnabled = enabled;
     this->shaderTexturedGeneric->setUniform4f("misc", enabled ? 1.f : 0.f, this->bColorInversion ? 1.f : 0.f, 0.f, 0.f);
+    if(enabled) {
+        // re-apply the current color: setColor skips the col uniform while texturing is off, so refresh it here
+        this->shaderTexturedGeneric->setUniform4f("col", m_data->color.Rf(), m_data->color.Gf(), m_data->color.Bf(),
+                                                  m_data->color.Af());
+    }
 }
 
 Image *DirectX11Interface::createImage(std::string filePath, bool mipmapped, bool keepInSystemMemory) {

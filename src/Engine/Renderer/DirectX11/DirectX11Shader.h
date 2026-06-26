@@ -17,6 +17,7 @@
 
 #include "Hashing.h"
 
+#include <cstdint>
 #include <vector>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -47,24 +48,15 @@ using lib_obj = struct lib_obj;
 #endif
 
 // d3d blob interface
-typedef struct D3D_Blob D3D_Blob;
-typedef struct D3D_BlobVtbl {
-    HRESULT(D3D_CALL *QueryInterface)(D3D_Blob *This, REFIID riid, void **ppvObject);
-    ULONG(D3D_CALL *AddRef)(D3D_Blob *This);
-    ULONG(D3D_CALL *Release)(D3D_Blob *This);
-    void *(D3D_CALL *GetBufferPointer)(D3D_Blob *This);
-    SIZE_T(D3D_CALL *GetBufferSize)(D3D_Blob *This);
-} D3D_BlobVtbl;
-
-struct D3D_Blob {
-    const D3D_BlobVtbl *lpVtbl;
-};
 
 // function pointer type for D3DCompile with proper calling convention
 typedef HRESULT(D3D_CALL D3DCompile_t)(LPCVOID pSrcData, SIZE_T SrcDataSize, LPCSTR pSourceName,
                                        const D3D_SHADER_MACRO *pDefines, ID3DInclude *pInclude, LPCSTR pEntrypoint,
                                        LPCSTR pTarget, UINT Flags1, UINT Flags2, ID3DBlob **ppCode,
                                        ID3DBlob **ppErrorMsgs);
+
+// function pointer type for D3DReflect
+typedef HRESULT(D3D_CALL D3DReflect_t)(LPCVOID pSrcData, SIZE_T SrcDataSize, REFIID pInterface, void **ppReflector);
 
 class DirectX11Shader final : public Shader {
     NOCOPY_NOMOVE(DirectX11Shader);
@@ -88,39 +80,22 @@ class DirectX11Shader final : public Shader {
     static bool loadLibs();
 
    private:
-    struct INPUT_DESC_LINE {
-        std::string type;        // e.g. "VS_INPUT"
-        std::string dataType;    // e.g. "POSITION", "COLOR0", "TEXCOORD0", etc.
-        DXGI_FORMAT dxgiFormat;  // e.g. DXGI_FORMAT_R32G32B32_FLOAT, etc.
-        int dxgiFormatBytes;     // e.g. "DXGI_FORMAT_R32G32B32_FLOAT" -> 12, etc.
-        D3D11_INPUT_CLASSIFICATION
-        classification;  // e.g. D3D11_INPUT_PER_INSTANCE_DATA
+    enum class Stage : uint8_t { VERTEX, PIXEL };
+
+    // one D3D constant buffer, reflected from the compiled shader. The canonical GLSL puts the vertex
+    // uniform block at set=1 and the fragment block at set=3, both binding=0; spirv-cross maps these to a
+    // register(b0) cbuffer per stage, so vertex and pixel cbuffers are bound separately (VS/PS slots).
+    struct CONSTANT_BUFFER {
+        Stage stage{Stage::VERTEX};
+        UINT registerSlot{0};
+        std::vector<float> cpuData;  // CPU-side mirror; byteWidth/sizeof(float) floats
+        ID3D11Buffer *buffer{nullptr};
     };
 
-    struct BIND_DESC_LINE {
-        std::string type;          // e.g. "D3D11_BUFFER_DESC"
-        D3D11_BIND_FLAG bindFlag;  // e.g. D3D11_BIND_CONSTANT_BUFFER
-        std::string name;          // e.g. "ModelViewProjectionConstantBuffer"
-        std::string variableName;  // e.g. "mvp", "col", "misc", etc.
-        std::string variableType;  // e.g. "float4x4", "float4", "float3", "float2", "float", etc.
-        int variableBytes;  // e.g. 16 -> "float4x4", 4 -> "float4", 3 -> "float3, 2 -> "float2", 1 -> "float", etc.
-    };
-
-    struct INPUT_DESC {
-        std::string type;  // INPUT_DESC_LINE::type
-        std::vector<INPUT_DESC_LINE> lines;
-    };
-
-    struct BIND_DESC {
-        std::string name;  // BIND_DESC_LINE::name
-        std::vector<BIND_DESC_LINE> lines;
-        std::vector<float> floats;
-    };
-
-   private:
     struct CACHE_ENTRY {
-        int bindIndex{-1};  // into m_bindDescs[bindIndex] and m_constantBuffers[bindIndex]
-        int offsetBytes{-1};
+        int bufferIndex{-1};          // into this->constantBuffers
+        unsigned int offsetBytes{0};  // byte offset of the uniform within that buffer
+        unsigned int sizeBytes{0};    // byte size of the uniform
     };
 
    protected:
@@ -129,20 +104,23 @@ class DirectX11Shader final : public Shader {
     void destroy() override;
 
     bool compile(const std::string &vertexShader, const std::string &fragmentShader);
+    // reflect a compiled blob's constant buffers into this->constantBuffers + uniformLocationCache (+ create the
+    // GPU buffers and record them in vs/psBuffers by register slot). returns false on a hard error.
+    bool reflectConstantBuffers(ID3DBlob *blob, Stage stage);
 
     void writeUniform(std::string_view name, UniformType type, const void *const data, unsigned int dataSize) override;
 
-    const CACHE_ENTRY getAndCacheUniformLocation(std::string_view name);
-
    private:
-    static constexpr const CACHE_ENTRY invalidCacheEntry{-1, -1};
-
     std::string sVsh, sFsh;
 
     ID3D11VertexShader *vs{nullptr};
     ID3D11PixelShader *ps{nullptr};
     ID3D11InputLayout *inputLayout{nullptr};
-    std::vector<ID3D11Buffer *> constantBuffers;
+
+    // every constant buffer across both stages; vs/psBuffers index those buffers by register slot for binding
+    std::vector<CONSTANT_BUFFER> constantBuffers;
+    std::vector<ID3D11Buffer *> vsBuffers;
+    std::vector<ID3D11Buffer *> psBuffers;
     bool bConstantBuffersUpToDate{false};
     bool bStateBackedUp{false};
 
@@ -150,10 +128,8 @@ class DirectX11Shader final : public Shader {
     ID3D11VertexShader *prevVS{nullptr};
     ID3D11PixelShader *prevPS{nullptr};
     ID3D11InputLayout *prevInputLayout{nullptr};
-    std::vector<ID3D11Buffer *> prevConstantBuffers;
-
-    std::vector<INPUT_DESC> inputDescs;
-    std::vector<BIND_DESC> bindDescs;
+    std::vector<ID3D11Buffer *> prevVSConstantBuffers;
+    std::vector<ID3D11Buffer *> prevPSConstantBuffers;
 
     Hash::unstable_stringmap<CACHE_ENTRY> uniformLocationCache;
 
@@ -164,11 +140,7 @@ class DirectX11Shader final : public Shader {
     // dynloading
     static dynutils::lib_obj *s_d3dCompilerHandle;
     static D3DCompile_t *s_d3dCompileFunc;
-
-    // wrapper functions for dx blob ops
-    static void *getBlobBufferPointer(ID3DBlob *blob);
-    static SIZE_T getBlobBufferSize(ID3DBlob *blob);
-    static void releaseBlob(ID3DBlob *blob);
+    static D3DReflect_t *s_d3dReflectFunc;
 };
 
 #endif
