@@ -30,8 +30,23 @@
 #ifdef MCENGINE_PLATFORM_WINDOWS
 #define stat64 __stat64
 #endif
-#ifdef __APPLE__
+
+#ifdef MCENGINE_PLATFORM_MACOS
+#ifndef stat64
 #define stat64 stat
+#endif
+#ifndef openat64
+#define openat64 openat
+#endif
+#ifndef readdir64
+#define readdir64 readdir
+#endif
+#ifndef dirent64
+#define dirent64 dirent
+#endif
+#ifndef fstatat64
+#define fstatat64 fstatat
+#endif
 #endif
 
 class ConVar;

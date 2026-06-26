@@ -165,23 +165,6 @@ class DirectoryCache final {
 #include <fcntl.h>
 #include <unistd.h>
 
-#ifdef MCENGINE_PLATFORM_MACOS
-
-#ifndef openat64
-#define openat64 openat
-#endif
-#ifndef readdir64
-#define readdir64 readdir
-#endif
-#ifndef dirent64
-#define dirent64 dirent
-#endif
-#ifndef fstatat64
-#define fstatat64 fstatat
-#endif
-
-#endif
-
 bool File::getDirectoryEntries(std::string_view pathToEnumView, DirContents types,
                                std::vector<std::string> &utf8NamesOut) noexcept {
     if(pathToEnumView.empty()) return false;
