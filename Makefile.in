@@ -8479,39 +8479,40 @@ $(neomod_OBJECTS): $(BUILT_SOURCES) $(PCH_OUTPUT) | $(EMBED_OUTPUT) $(TRANSLATIO
 @WIN_PLATFORM_TRUE@neomod_resource.o: $(srcdir)/$(ASSETS_DIR)/resource.rc $(srcdir)/$(ASSETS_DIR)/neomod.manifest $(srcdir)/$(ASSETS_DIR)/icon.ico
 @WIN_PLATFORM_TRUE@	$(WINDRES) -I $(srcdir)/$(ASSETS_DIR) -i $(srcdir)/$(ASSETS_DIR)/resource.rc -o neomod_resource.o
 
-# bear doesn't work on macos, so use clang's -MJ flag instead (emits compile_commands fragments) and concatenate them at the end
-@MACOS_PLATFORM_TRUE@compile_commands.json: mostlyclean-compile
-@MACOS_PLATFORM_TRUE@	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
-@MACOS_PLATFORM_TRUE@	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) 'CFLAGS=$(CFLAGS) -MJ$$@.compdb' 'CXXFLAGS=$(CXXFLAGS) -MJ$$@.compdb' $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \
-@MACOS_PLATFORM_TRUE@	$(PYTHON) $(srcdir)/build-aux/gen_compdb.py --strip-pch --delete -o $@ .
-@MACOS_PLATFORM_FALSE@bear-check-version:
-@MACOS_PLATFORM_FALSE@	@$(BEAR) --version || { echo bear is unavailable to generate a compile_commands.json, install bear && exit 1; }
-@MACOS_PLATFORM_FALSE@	@if [ `$(BEAR) --version | cut -d' ' -f2 | cut -d'.' -f1` -ge 4 ]; then { \
-@MACOS_PLATFORM_FALSE@	  echo "bear 4.0 support is broken, downgrade to bear 3.x" && exit 1; \
-@MACOS_PLATFORM_FALSE@	}; else { \
-@MACOS_PLATFORM_FALSE@	  exit 0; \
-@MACOS_PLATFORM_FALSE@	}; fi
+# clang's -MJ flag instead (emits compile_commands fragments) and concatenate them at the end
+# this is more reliable than bear, which gets easily confused by compiler wrappers
+@CLANG_BUILD_TRUE@compile_commands.json: mostlyclean-compile
+@CLANG_BUILD_TRUE@	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
+@CLANG_BUILD_TRUE@	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) 'CFLAGS=$(CFLAGS) -MJ$$@.compdb' 'CXXFLAGS=$(CXXFLAGS) -MJ$$@.compdb' $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \
+@CLANG_BUILD_TRUE@	$(PYTHON) $(srcdir)/build-aux/gen_compdb.py --strip-pch --delete -o $@ .
+@CLANG_BUILD_FALSE@bear-check-version:
+@CLANG_BUILD_FALSE@	@$(BEAR) --version || { echo bear is unavailable to generate a compile_commands.json, install bear && exit 1; }
+@CLANG_BUILD_FALSE@	@if [ `$(BEAR) --version | cut -d' ' -f2 | cut -d'.' -f1` -ge 4 ]; then { \
+@CLANG_BUILD_FALSE@	  echo "bear 4.0 support is broken, downgrade to bear 3.x" && exit 1; \
+@CLANG_BUILD_FALSE@	}; else { \
+@CLANG_BUILD_FALSE@	  exit 0; \
+@CLANG_BUILD_FALSE@	}; fi
 
-@MACOS_PLATFORM_FALSE@bear.cfg: bear-check-version
-@MACOS_PLATFORM_FALSE@	@(echo '{'; \
-@MACOS_PLATFORM_FALSE@	  echo '"compilation": {'; \
-@MACOS_PLATFORM_FALSE@	  echo '"compilers_to_recognize": ['; \
-@MACOS_PLATFORM_FALSE@	  echo '{'; \
-@MACOS_PLATFORM_FALSE@	  echo '"executable": "emcc"'; \
-@MACOS_PLATFORM_FALSE@	  echo '},'; \
-@MACOS_PLATFORM_FALSE@	  echo '{'; \
-@MACOS_PLATFORM_FALSE@	  echo '"executable": "em++"'; \
-@MACOS_PLATFORM_FALSE@	  echo '},'; \
-@MACOS_PLATFORM_FALSE@	  echo '{'; \
-@MACOS_PLATFORM_FALSE@	  echo '"executable": "$(CC_REAL)"'; \
-@MACOS_PLATFORM_FALSE@	  echo '},'; \
-@MACOS_PLATFORM_FALSE@	  echo '{'; \
-@MACOS_PLATFORM_FALSE@	  echo '"executable": "$(CXX_REAL)"'; \
-@MACOS_PLATFORM_FALSE@	  echo '}'; \
-@MACOS_PLATFORM_FALSE@	  echo '],'; \
-@MACOS_PLATFORM_FALSE@	  echo '"compilers_to_exclude": ["$(CXX)", "$(CC)"]'; \
-@MACOS_PLATFORM_FALSE@	  echo '}'; \
-@MACOS_PLATFORM_FALSE@	  echo '}' ) > bear.cfg
+@CLANG_BUILD_FALSE@bear.cfg: bear-check-version
+@CLANG_BUILD_FALSE@	@(echo '{'; \
+@CLANG_BUILD_FALSE@	  echo '"compilation": {'; \
+@CLANG_BUILD_FALSE@	  echo '"compilers_to_recognize": ['; \
+@CLANG_BUILD_FALSE@	  echo '{'; \
+@CLANG_BUILD_FALSE@	  echo '"executable": "emcc"'; \
+@CLANG_BUILD_FALSE@	  echo '},'; \
+@CLANG_BUILD_FALSE@	  echo '{'; \
+@CLANG_BUILD_FALSE@	  echo '"executable": "em++"'; \
+@CLANG_BUILD_FALSE@	  echo '},'; \
+@CLANG_BUILD_FALSE@	  echo '{'; \
+@CLANG_BUILD_FALSE@	  echo '"executable": "$(CC_REAL)"'; \
+@CLANG_BUILD_FALSE@	  echo '},'; \
+@CLANG_BUILD_FALSE@	  echo '{'; \
+@CLANG_BUILD_FALSE@	  echo '"executable": "$(CXX_REAL)"'; \
+@CLANG_BUILD_FALSE@	  echo '}'; \
+@CLANG_BUILD_FALSE@	  echo '],'; \
+@CLANG_BUILD_FALSE@	  echo '"compilers_to_exclude": ["$(CXX)", "$(CC)"]'; \
+@CLANG_BUILD_FALSE@	  echo '}'; \
+@CLANG_BUILD_FALSE@	  echo '}' ) > bear.cfg
 
 # bear 4.0 is BROKEN and i have no idea what the hell it wants
 # this is what i had for future reference when it becomes unbroken
@@ -8532,10 +8533,10 @@ $(neomod_OBJECTS): $(BUILT_SOURCES) $(PCH_OUTPUT) | $(EMBED_OUTPUT) $(TRANSLATIO
 # interactions with sub-makes and parallel jobs
 # also run an extra step to exclude PCH flags
 # this is so that you avoid missing includes when it's already in the PCH and clangd then thinks it's already included
-@MACOS_PLATFORM_FALSE@compile_commands.json: bear.cfg mostlyclean-compile
-@MACOS_PLATFORM_FALSE@	$(BEAR) --config bear.cfg --append -- $(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
-@MACOS_PLATFORM_FALSE@	$(BEAR) --config bear.cfg --append -- $(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \
-@MACOS_PLATFORM_FALSE@	$(SED) -i '/"-include",/{N;/"\.\/pch\.h",/d;}' $@
+@CLANG_BUILD_FALSE@compile_commands.json: bear.cfg mostlyclean-compile
+@CLANG_BUILD_FALSE@	$(BEAR) --config bear.cfg --append -- $(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
+@CLANG_BUILD_FALSE@	$(BEAR) --config bear.cfg --append -- $(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \
+@CLANG_BUILD_FALSE@	$(SED) -i '/"-include",/{N;/"\.\/pch\.h",/d;}' $@
 
 $(abs_top_srcdir)/.clangd: compile_commands.json
 	@if [ -f $@ ]; then { \

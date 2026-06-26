@@ -1505,8 +1505,9 @@ neomod_resource.o: $(srcdir)/$(ASSETS_DIR)/resource.rc $(srcdir)/$(ASSETS_DIR)/n
 neomod_LDADD = neomod_resource.o $(WINPTHREAD_LDFLAGS)
 endif
 
-if MACOS_PLATFORM
-# bear doesn't work on macos, so use clang's -MJ flag instead (emits compile_commands fragments) and concatenate them at the end
+if CLANG_BUILD
+# clang's -MJ flag instead (emits compile_commands fragments) and concatenate them at the end
+# this is more reliable than bear, which gets easily confused by compiler wrappers
 compile_commands.json: mostlyclean-compile
 	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) $(BUILT_SOURCES) && \
 	$(MAKE_PFX) $(MAKE) $(AM_MAKEFLAGS) 'CFLAGS=$(CFLAGS) -MJ$$@.compdb' 'CXXFLAGS=$(CXXFLAGS) -MJ$$@.compdb' $(neomod_OBJECTS) $(neomod_DEPENDENCIES) $(EXTRA_neomod_DEPENDENCIES) && \

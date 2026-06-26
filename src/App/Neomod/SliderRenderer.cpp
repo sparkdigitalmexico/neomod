@@ -106,12 +106,12 @@ forceinline Color getBorderColor(bool doRainbow, i32 rainbowTime, f32 colorRGBMu
     }
 }
 
-forceinline void preDrawColorSetup(bool gradient, i32 sliderTime, f32 colorRGBMultiplier, Color undimmedColor) {
+forceinline void preDrawColorSetup(const Image *gradient, i32 sliderTime, f32 colorRGBMultiplier, Color undimmedColor) {
     if(gradient) {
         // this only affects the gradient image if used (meaning shaders
         // either don't work or are disabled on purpose)
         g->setColor(argb(1.0f, colorRGBMultiplier, colorRGBMultiplier, colorRGBMultiplier));
-        osu->getSkin()->i_slider_gradient.bind();
+        gradient->bind();
     } else {
         const bool doRainbow = cv::slider_rainbow.getBool();
 
@@ -246,8 +246,13 @@ void draw(const DrawLegacyParams &p) {
     {
         sliderFrameBuffer->enable();
         {
+            const Image *gradient = nullptr;
             const bool useGradientImage = cv::slider_use_gradient_image.getBool();
-            preDrawColorSetup(useGradientImage, p.sliderTimeForRainbow, p.colorRGBMultiplier, p.undimmedColor);
+            if(useGradientImage) {
+                gradient = osu->getSkin()->i_slider_gradient;
+            }
+            // enables shader if gradient is not being used
+            preDrawColorSetup(gradient, p.sliderTimeForRainbow, p.colorRGBMultiplier, p.undimmedColor);
 
             // draw curve mesh
             drawFillSliderBodyPeppy(
@@ -261,7 +266,7 @@ void draw(const DrawLegacyParams &p) {
             if(!useGradientImage) {
                 s_BLEND_SHADER->disable();
             } else {
-                osu->getSkin()->i_slider_gradient.unbind();
+                gradient->unbind();
             }
         }
         sliderFrameBuffer->disable();
@@ -310,8 +315,13 @@ void draw(const DrawVAOParams &p) {
 
         // render
         {
+            const Image *gradient = nullptr;
             const bool useGradientImage = cv::slider_use_gradient_image.getBool();
-            preDrawColorSetup(useGradientImage, p.sliderTimeForRainbow, p.colorRGBMultiplier, p.undimmedColor);
+            if(useGradientImage) {
+                gradient = osu->getSkin()->i_slider_gradient;
+            }
+            // enables shader if gradient is not being used
+            preDrawColorSetup(gradient, p.sliderTimeForRainbow, p.colorRGBMultiplier, p.undimmedColor);
 
             // when smoothsnake's alwaysPoint cone sits between the VAO's last cone and the next one,
             // over-extend the VAO by a cone so its last cone hides the alwaysPoint and the cap is
@@ -343,7 +353,7 @@ void draw(const DrawVAOParams &p) {
             if(!useGradientImage) {
                 s_BLEND_SHADER->disable();
             } else {
-                osu->getSkin()->i_slider_gradient.unbind();
+                gradient->unbind();
             }
         }
 
@@ -353,19 +363,18 @@ void draw(const DrawVAOParams &p) {
     g->setDepthBuffer(false);
 
     // optional bounds performance optimization to reduce rt blending overdraw
+    const vec2 screen = osu->getVirtScreenSize();
     if(p.bounds.x != 0.0f || p.bounds.y != 0.0f || p.bounds.z != 0.0f || p.bounds.w != 0.0f) {
         const f32 pixelFudge = 2.0f;
         s_fBoundingBoxMinX = std::max(0.0f, p.bounds.x - p.hitcircleDiameter / 2.0f - pixelFudge);
-        s_fBoundingBoxMaxX =
-            std::min((f32)osu->getVirtScreenWidth(), p.bounds.z + p.hitcircleDiameter / 2.0f + pixelFudge);
+        s_fBoundingBoxMaxX = std::min(screen.x, p.bounds.z + p.hitcircleDiameter / 2.0f + pixelFudge);
         s_fBoundingBoxMinY = std::max(0.0f, p.bounds.y - p.hitcircleDiameter / 2.0f - pixelFudge);
-        s_fBoundingBoxMaxY =
-            std::min((f32)osu->getVirtScreenHeight(), p.bounds.w + p.hitcircleDiameter / 2.0f + pixelFudge);
+        s_fBoundingBoxMaxY = std::min(screen.y, p.bounds.w + p.hitcircleDiameter / 2.0f + pixelFudge);
     } else {
         s_fBoundingBoxMinX = 0.0f;
-        s_fBoundingBoxMaxX = (f32)osu->getVirtScreenWidth();
+        s_fBoundingBoxMaxX = screen.x;
         s_fBoundingBoxMinY = 0.0f;
-        s_fBoundingBoxMaxY = (f32)osu->getVirtScreenHeight();
+        s_fBoundingBoxMaxY = screen.y;
     }
 
     if(p.doDrawSliderFrameBufferToScreen) {
