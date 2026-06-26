@@ -1,5 +1,6 @@
 // Copyright (c) 2024, kiwec & 2025, WH, All rights reserved.
 #pragma once
+#include "config.h"
 
 #include <cassert>
 #include <cstring>
