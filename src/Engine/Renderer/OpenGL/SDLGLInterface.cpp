@@ -16,6 +16,9 @@
 namespace cv {
 static ConVar debug_opengl_v("debug_opengl_v", false, CLIENT | HIDDEN,
                              [](float val) -> void { SDLGLInterface::setGLLog(!!static_cast<int>(val)); });
+static ConVar r_gl_block_immediate(
+    "r_gl_block_immediate", true, CLIENT,
+    "whether to wait on OpenGL commands to finish on the GPU immediately or before the next draw batch");
 }  // namespace cv
 
 #ifndef MCENGINE_PLATFORM_WASM
@@ -123,7 +126,9 @@ SDLGLInterface::~SDLGLInterface() { unload(); }
 
 void SDLGLInterface::beginScene() {
     // block on frame queue (if enabled)
-    this->syncobj->begin();
+    if(!cv::r_gl_block_immediate.getBool()) {
+        this->syncobj->begin();
+    }
 }
 
 void SDLGLInterface::endScene() {
@@ -131,6 +136,12 @@ void SDLGLInterface::endScene() {
 
     // create sync obj for the gl commands this frame (if enabled)
     this->syncobj->end();
+
+    // blocking immediately here means we will wait until the
+    // last possible moment before acting on new user input for the next frame
+    if(cv::r_gl_block_immediate.getBool()) {
+        this->syncobj->begin();
+    }
 }
 
 void SDLGLInterface::setVSync(bool vsync) {
