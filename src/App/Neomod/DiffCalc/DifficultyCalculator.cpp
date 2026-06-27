@@ -9,6 +9,7 @@
 #include <numbers>
 #include <utility>
 #include <cstring>
+#include <type_traits>
 
 #ifndef BUILD_TOOLS_ONLY
 #include "OsuConVars.h"
@@ -1105,7 +1106,51 @@ struct RhythmIsland {
     }
 };
 
-CONSTINIT thread_local std::vector<std::pair<RhythmIsland, int>> g_islandCounts{};
+struct IslandCount {
+    RhythmIsland island;
+    int count;
+};
+
+template <typename T, uSz N>
+struct InlineVector {
+    static_assert(std::is_trivially_copyable_v<T>, "InlineVector relies on trivial relocation/destruction");
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+    InlineVector() = default;
+    ~InlineVector() = default;
+
+    InlineVector(InlineVector &&) = default;
+    InlineVector &operator=(InlineVector &&) = default;
+
+    InlineVector(const InlineVector &) = delete;
+    InlineVector &operator=(const InlineVector &) = delete;
+
+    [[nodiscard]] T *begin() noexcept { return data_; }
+    [[nodiscard]] T *end() noexcept { return data_ + size_; }
+    [[nodiscard]] uSz size() const noexcept { return size_; }
+
+    void clear() noexcept { size_ = 0; }
+
+    template <typename... Args>
+    void emplace_back(Args &&...args) {
+        if(size_ == cap_) grow();
+        data_[size_++] = T(std::forward<Args>(args)...);
+    }
+
+   private:
+    void grow() {
+        cap_ *= 2;
+        auto bigger = std::make_unique_for_overwrite<T[]>(cap_);
+        std::memcpy(bigger.get(), data_, size_ * sizeof(T));
+        heap_ = std::move(bigger);
+        data_ = heap_.get();
+    }
+
+    T inline_[N];
+    T *data_{&inline_[0]};
+    uSz size_{0};
+    uSz cap_{N};
+    std::unique_ptr<T[]> heap_{};
+};
 }  // namespace
 
 // new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
@@ -1165,7 +1210,7 @@ f64 DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject 
             RhythmIsland island{INT_MAX, 0};
             RhythmIsland previousIsland{INT_MAX, 0};
 
-            g_islandCounts.clear();
+            InlineVector<IslandCount, 16> islandCounts;
 
             f64 startRatio = 0.0;  // store the ratio of the current start of an island to buff for tighter rhythms
 
@@ -1247,25 +1292,25 @@ f64 DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject 
                            island.deltaCount)  // repeated island size (ex: triplet -> triplet)
                             effectiveRatio *= 0.5;
 
-                        std::pair<RhythmIsland, int> *islandCount = nullptr;
-                        for(auto &i : g_islandCounts) {
-                            if(i.first.equals(island, deltaDifferenceEpsilon)) {
-                                islandCount = &i;
+                        IslandCount *islandCount = nullptr;
+                        for(auto &ic : islandCounts) {
+                            if(ic.island.equals(island, deltaDifferenceEpsilon)) {
+                                islandCount = &ic;
                                 break;
                             }
                         }
 
                         if(islandCount != nullptr) {
                             // only add island to island counts if they're going one after another
-                            if(previousIsland.equals(island, deltaDifferenceEpsilon)) islandCount->second++;
+                            if(previousIsland.equals(island, deltaDifferenceEpsilon)) islandCount->count++;
 
                             // repeated island (ex: triplet -> triplet)
                             static constexpr f64 E = 2.7182818284590451;
                             f64 power = 2.75 / (1.0 + std::pow(E, 14.0 - (0.24 * island.delta)));
                             effectiveRatio *=
-                                std::min(3.0 / islandCount->second, std::pow(1.0 / islandCount->second, power));
+                                std::min(3.0 / islandCount->count, std::pow(1.0 / islandCount->count, power));
                         } else {
-                            g_islandCounts.emplace_back(island, 1);
+                            islandCounts.emplace_back(island, 1);
                         }
 
                         // scale down the difficulty if the object is doubletappable
@@ -1311,7 +1356,6 @@ f64 DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject 
             rhythm = (std::sqrt(4.0 + rhythmComplexitySum * rhythm_overall_multiplier) / 2.0) *
                      (1.0 - get_doubletapness(get_next(0), hitWindow300));
 
-            g_islandCounts.clear();
             return raw_speed_strain;
         } break;
 
