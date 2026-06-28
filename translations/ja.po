@@ -2840,6 +2840,11 @@ msgid "Screenshot saved to {:s}"
 msgstr "スクリーンショット"
 
 #: src/App/Neomod/OsuDirectScreen.cpp
+#, c++-format
+msgid "+{:d} more"
+msgstr ""
+
+#: src/App/Neomod/OsuDirectScreen.cpp
 msgid "Newest maps"
 msgstr "最新のマップ"
 

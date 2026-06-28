@@ -33,11 +33,13 @@
 #include "Skin.h"
 #include "SongBrowser/SongBrowser.h"
 #include "SString.h"
+#include "TooltipOverlay.h"
 #include "UI.h"
 #include "UIButton.h"
 #include "UIIcon.h"
 #include "DatabaseBeatmap.h"
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 
@@ -54,6 +56,7 @@ class OnlineMapListing : public CBaseUIContainer {
     ~OnlineMapListing() override;
 
     void draw() override;
+    void updateInput(CBaseUIEventCtx& c) override;
 
     // NOT inherited, called manually
     void onResolutionChange(vec2 newResolution);
@@ -81,6 +84,11 @@ class OnlineMapListing : public CBaseUIContainer {
     ThumbIdentifier thumb_id;
 
     f32 creator_width{0.f};
+
+    // "+N more" overflow indicator (drawn by the card itself, not a child element)
+    std::string overflow_indicator_str;               // empty => no overflow
+    std::vector<std::string> overflow_tooltip_lines;  // hidden diff names (icon-tooltip format)
+    McRect overflow_indicator_relrect;                // card-relative draw + hit rect
 };
 
 OnlineMapListing::OnlineMapListing(Downloader::BeatmapSetMetadata meta)
@@ -163,6 +171,22 @@ void OnlineMapListing::onMouseUpOutside(bool left, bool /*right*/) { this->mbtnd
 void OnlineMapListing::onMouseInside() { this->hover_anim.set(0.25f, 0.15f, anim::QuadInOut); }
 void OnlineMapListing::onMouseOutside() { this->hover_anim.set(0.f, 0.15f, anim::QuadInOut); }
 
+void OnlineMapListing::updateInput(CBaseUIEventCtx& c) {
+    CBaseUIContainer::updateInput(c);
+
+    // the "+N more" indicator is drawn by the card (not a child), so handle its hover tooltip here
+    if(this->overflow_indicator_str.empty() || !this->isMouseInside()) return;
+
+    const McRect r(this->getPos() + this->overflow_indicator_relrect.getPos(),
+                   this->overflow_indicator_relrect.getSize());
+    if(!r.contains(mouse->getPos())) return;
+
+    auto* tt = ui->getTooltipOverlay();
+    tt->begin();
+    for(const auto& line : this->overflow_tooltip_lines) tt->addLine(line);
+    tt->end();
+}
+
 namespace {
 enum class RankingStatusFilter : u8 {
     RANKED = 0,
@@ -227,37 +251,73 @@ void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
     this->creator_width = this->font->getStringWidth(this->meta.creator);
 
     const f32 scale = Osu::getUIScale();
-    vec2 pos_counter = this->getSize() - (40.f * scale);
+    const f32 ICON = 30.f * scale;
+    const f32 STEP = 40.f * scale;
+    const f32 GAP = STEP - ICON;  // natural inter-icon spacing (10*scale)
+
+    const vec2 card = this->getSize();
+    const f32 thumb_w = card.y * (4.f / 3.f);  // matches draw()'s map_bg_size.x
+    const f32 left_limit = thumb_w + GAP;      // icons/indicator must stay right of the thumbnail
+    const f32 row_y = card.y - STEP;           // top of the icon row
+    const f32 icon_region = card.x - left_limit;
+    const sSz max_slots = icon_region >= STEP ? (sSz)(icon_region / STEP) : 0;
+
+    // only standard-mode diffs get an icon; meta.beatmaps is sorted descending by star rating
+    const sSz n_std = std::ranges::count_if(this->meta.beatmaps, [](const auto& bm) { return bm.mode == 0; });
+
+    // if there are too many to fit, reserve room on the left for a "+N more" indicator and
+    // collapse the lowest-star tail into it
+    sSz visible_count = n_std;
+    if(n_std > max_slots) {
+        const f32 probe_w = this->font->getStringWidth(tformat("+{:d} more", n_std));  // worst-case digits
+        const sSz chip_slots = std::max<sSz>(1, (sSz)std::ceil((probe_w + GAP) / STEP));
+        visible_count = std::max<sSz>(0, max_slots - chip_slots);
+    }
+
+    this->overflow_indicator_str.clear();
+    this->overflow_tooltip_lines.clear();
+    if(visible_count < n_std) {
+        const sSz hidden = n_std - visible_count;
+        this->overflow_indicator_str = tformat("+{:d} more", hidden);
+        const f32 chip_w = this->font->getStringWidth(this->overflow_indicator_str);
+        // right-anchored just left of the leftmost visible icon, clamped to never cross the thumbnail
+        const f32 chip_left = std::max(left_limit, card.x - (f32)visible_count * STEP - GAP - chip_w);
+        this->overflow_indicator_relrect = McRect(vec2(chip_left, row_y), vec2(chip_w, ICON));
+    }
+
+    vec2 pos_counter = {card.x - STEP, row_y};
 
     auto icon_elems_copy = reinterpret_cast<std::vector<UIIcon*>&>(this->vElements);
     this->invalidate();  // clear this->vElements and rebuild
 
-    for(sSz added_elem_i = 0; const auto& diff : this->meta.beatmaps) {
+    for(sSz si = 0; const auto& diff : this->meta.beatmaps) {
         if(diff.mode != 0) continue;
 
+        std::string label = diff.star_rating > 0.f ? fmt::format("{:s} ({:.2f} ⭐)", diff.diffname, diff.star_rating)
+                                                   : std::string{diff.diffname};
+
+        if(si >= visible_count) {
+            // overflowed: fold the lowest-star tail into the "+N more" tooltip
+            this->overflow_tooltip_lines.push_back(std::move(label));
+            ++si;
+            continue;
+        }
+
         UIIcon* icon = nullptr;
-        if(added_elem_i < icon_elems_copy.size()) {
-            icon = icon_elems_copy[added_elem_i];
-            icon_elems_copy[added_elem_i] = nullptr;  // set to null so we don't delete it later
+        if(si < icon_elems_copy.size()) {
+            icon = icon_elems_copy[si];
+            icon_elems_copy[si] = nullptr;  // set to null so we don't delete it later
         } else {
             icon = new UIIcon(Icons::CIRCLE);
         }
 
         icon->setPos(pos_counter);
-        icon->setSize(30.f * scale, 30.f * scale);
+        icon->setSize(ICON, ICON);
         icon->setDrawTextShadow(false);  // only outline
         icon->setAutoscaleFX(false);     // use osu scaling
 
-        Color text_color = (Color)-1;
-        if(diff.star_rating > 0.f) {
-            // has star rating
-            text_color = get_difficulty_color(diff.star_rating);
-            icon->setTooltipText(fmt::format("{:s} ({:.2f} ⭐)", diff.diffname, diff.star_rating));
-        } else {
-            // didn't parse star rating for this difficulty
-            icon->setTooltipText(diff.diffname);
-        }
-
+        const Color text_color = diff.star_rating > 0.f ? get_difficulty_color(diff.star_rating) : (Color)-1;
+        icon->setTooltipText(label);
         icon->setTextFX({.col_text = text_color,
                          .col_shadow = 0,
                          .col_outline = Colors::invert(text_color),  // TODO: this is kind of ugly
@@ -266,12 +326,12 @@ void OnlineMapListing::onResolutionChange(vec2 /*newResolution*/) {
 
         this->addBaseUIElement(icon);
 
-        pos_counter.x -= 40.f * scale;
+        pos_counter.x -= STEP;
 
-        ++added_elem_i;
+        ++si;
     }
 
-    // delete any excess items in the container (if we somehow rebuilt with fewer than we originally had)
+    // delete any excess items in the container (if we rebuilt with fewer than we originally had)
     // we set the element to NULL if we put it back into the container, so SAFE_DELETE won't delete those
     for(auto* icon : icon_elems_copy) {
         SAFE_DELETE(icon);
@@ -347,10 +407,13 @@ void OnlineMapListing::draw() {
                                   .outline_px = 1.f * outline_scale,
                                   .shadow_softness_px = 0.5f * outline_scale};
 
+        // ellipsize the title so it stops before the right-aligned creator name
+        const f32 title_max_w = std::max(0.f, progress_size.x - this->creator_width - 4.f * padding);
+
         g->pushTransform();
         {
             g->translate(pos_counter.x + padding, pos_counter.y + padding + this->font->getHeight());
-            g->drawString(this->font, this->full_title, string_style);
+            g->drawString(this->font, this->font->ellipsize(this->full_title, title_max_w), string_style);
         }
         g->popTransform();
 
@@ -361,6 +424,17 @@ void OnlineMapListing::draw() {
             g->drawString(this->font, this->meta.creator, string_style);
         }
         g->popTransform();
+
+        if(!this->overflow_indicator_str.empty()) {
+            const McRect r(this->getPos() + this->overflow_indicator_relrect.getPos(),
+                           this->overflow_indicator_relrect.getSize());
+            g->pushTransform();
+            {
+                g->translate(r.getMinX(), r.getCenter().y + this->font->getHeight() / 2.f);
+                g->drawString(this->font, this->overflow_indicator_str, string_style);
+            }
+            g->popTransform();
+        }
     }
     g->popClipRect();
 }
