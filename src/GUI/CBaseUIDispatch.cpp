@@ -109,6 +109,7 @@ const CBaseUIEventCtx::HitCandidate *topCandidate(const CBaseUIEventCtx &c, Pred
         int bestTier = 0;
         for(uSz i = begin; i < end; ++i) {
             const auto &cand = c.hitCandidates[i];
+            if(cand.clipped) continue;  // hit-clipped by an ancestor surface: never the top (but still retracted)
             if(!pred(cand)) continue;
             if(best == nullptr || cand.tier >= bestTier) {
                 best = &cand;
@@ -382,6 +383,7 @@ void State::dispatchEvents(CBaseUIEventCtx &c, Root root) {
                 bool groupHasScrollSurface = false;
                 for(const uSz i : order) {
                     if(this->elemGeneration != startGeneration) return;  // a handler mutated the UI
+                    if(c.hitCandidates[i].clipped) continue;  // clipped by an ancestor surface: not under the cursor
                     CBaseUIElement *elem = c.hitCandidates[i].elem;
                     groupHasScrollSurface |= elem->bWheelSurface;
                     if(elem->onWheel(this->wheelVertical, this->wheelHorizontal)) {

@@ -69,6 +69,9 @@ struct CBaseUIEventCtx {
         CBaseUIElement *elem;
         int tier;
         bool wheelOnly{false};
+        // hit-clipped by an ancestor surface: the dispatcher skips clipped candidates when
+        // ranking the top one but still retracts any stale hover they hold
+        bool clipped{false};
         std::vector<CBaseUIElement *> path;
     };
     std::vector<HitCandidate> hitCandidates;

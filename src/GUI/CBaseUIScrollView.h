@@ -204,6 +204,10 @@ class CBaseUIScrollView : public CBaseUIElement {
     void updateClipping();
     void updateScrollbars();
 
+    // the visible clip rect pushed in draw() (and mirrored for child hit-testing in updateInput);
+    // axes with clipping disabled span the whole screen so only the clipped axis constrains
+    [[nodiscard]] McRect getClipRect() const;
+
     // drag-scroll gesture pieces shared by the self-press (onMouseDownInside) and the
     // observed-child steal (onCapturedMoveThrough) paths
     void beginDragScroll(dvec2 pos);

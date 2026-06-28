@@ -193,11 +193,7 @@ void CBaseUIScrollView::draw() {
 
     // draw elements & scrollbars
     if(this->bHorizontalClipping || this->bVerticalClipping) {
-        auto clip_rect =
-            McRect(this->bHorizontalClipping ? this->getPos().x : 0, this->bVerticalClipping ? this->getPos().y : 0,
-                   this->bHorizontalClipping ? this->getSize().x : engine->getScreenWidth(),
-                   this->bVerticalClipping ? this->getSize().y : engine->getScreenHeight());
-        g->pushClipRect(clip_rect);
+        g->pushClipRect(this->getClipRect());
     }
 
     this->container.draw();
@@ -339,11 +335,17 @@ void CBaseUIScrollView::updateInput(CBaseUIEventCtx &c) {
     CBaseUIElement::updateInput(c);
     // our content inherits our draws-on-top bias (e.g. UIContextMenu items out-rank the carousel)
     c.currentHitTier += this->bDrawsOnTop;
+    const uSz firstChildCandidate = c.hitCandidates.size();
     {
         CBaseUIEventCtx::HitPathScope scope(c, this);
         this->container.updateInput(c);
     }
     c.currentHitTier -= this->bDrawsOnTop;
+
+    // updateClipping()'s PVS slack keeps just-off elements in the walk so they don't pop in late;
+    // they're clipped out of draw(), so clip them out of hit-testing too.
+    if(!this->getClipRect().contains(mouse->getPos()))
+        for(uSz i = firstChildCandidate; i < c.hitCandidates.size(); i++) c.hitCandidates[i].clipped = true;
 }
 
 bool CBaseUIScrollView::onWheel(int deltaVertical, int deltaHorizontal) {
@@ -769,6 +771,12 @@ void CBaseUIScrollView::updateClipping() {
     }
 
     this->previousClippingVisibleElements = visElements.size();
+}
+
+McRect CBaseUIScrollView::getClipRect() const {
+    return {this->bHorizontalClipping ? this->getPos().x : 0, this->bVerticalClipping ? this->getPos().y : 0,
+            this->bHorizontalClipping ? this->getSize().x : (f32)engine->getScreenWidth(),
+            this->bVerticalClipping ? this->getSize().y : (f32)engine->getScreenHeight()};
 }
 
 void CBaseUIScrollView::updateScrollbars() {
