@@ -840,6 +840,7 @@ void Osu::updateMods() {
         // onModUpdate already updates speed
         // do this to update nightcore/dt things outside gameplay
         this->map_iface->setMusicSpeed(this->map_iface->getSpeedMultiplier());
+        this->map_iface->invalidateWholeMapPPInfo();
     }
 
     // handle windows key disable/enable

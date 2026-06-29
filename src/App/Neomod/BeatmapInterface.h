@@ -251,6 +251,7 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     static bool sortHitObjectByStartTimeComp(HitObject const *a, HitObject const *b);
     static bool sortHitObjectByEndTimeComp(HitObject const *a, HitObject const *b);
 
+    void invalidateWholeMapPPInfo();
     [[nodiscard]] inline f32 live_pp() const { return this->ppv2_calc.get_pp(); }
     [[nodiscard]] inline f32 live_stars() const { return this->ppv2_calc.get_stars(); }
 
@@ -406,7 +407,6 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
 
     // live and precomputed pp/stars
     void resetLiveStarsTasks();
-    void invalidateWholeMapPPInfo();
 
     mutable AsyncPPC::pp_res full_ppinfo;
     mutable AsyncPPC::pp_calc_request full_calc_req_params;
