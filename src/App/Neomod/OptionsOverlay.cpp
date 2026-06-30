@@ -633,6 +633,9 @@ class SliderPreviewElement final : public CBaseUIElement {
                 if(this->bDrawSliderHack) {
                     if(useLegacyRenderer)
                         SliderRenderer::draw(SliderRenderer::DrawLegacyParams{
+                            .screenRect = osu->getVirtScreenSize(),
+                            .rt = osu->getSliderFrameBuffer(),
+                            .skinSettings = {osu->getSkin()},
                             .points = points,
                             .alwaysPoints = emptyVector,
                             .hitcircleDiameter = hitcircleDiameter,
@@ -646,10 +649,13 @@ class SliderPreviewElement final : public CBaseUIElement {
 
                             debugLog("Regenerating options menu slider preview vao ...");
 
-                            this->vao = SliderRenderer::generateVAO(points, hitcircleDiameter, vec3{}, false);
+                            this->vao = SliderRenderer::generateVAO(osu->getVirtScreenSize(), points, hitcircleDiameter, vec3{}, false);
                         }
                         vec4 emptyBounds{};
                         SliderRenderer::draw(SliderRenderer::DrawVAOParams{
+                            .screenRect = osu->getVirtScreenSize(),
+                            .rt = osu->getSliderFrameBuffer(),
+                            .skinSettings = {osu->getSkin()},
                             .vao = this->vao.get(),
                             .bounds = emptyBounds,
                             .alwaysPoints = emptyVector,

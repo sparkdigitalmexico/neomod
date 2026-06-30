@@ -1235,6 +1235,7 @@ void Slider::draw() {
             drawBody(1.0f - m_endSliderBodyFadeAnimation, 0, 1);
         else if(cv::slider_body_lazer_fadeout_style.getBool())
             SliderRenderer::draw(SliderRenderer::DrawLegacyParams{
+                osu->getVirtScreenSize(), osu->getSliderFrameBuffer(), SliderRenderer::SkinSettings{m_pf->getSkin()},
                 emptyVector, alwaysPoints, m_pf->fHitcircleDiameter, 0.0f, 0.0f,
                 m_pf->getSkin()->getComboColorForCounter(m_colorCounter, m_colorOffset), 1.0f,
                 1.0f - m_endSliderBodyFadeAnimation, m_clickTimeMS});
@@ -1470,7 +1471,10 @@ void Slider::drawBody(f32 alpha, f32 from, f32 to) {
         }
 
         // peppy sliders
-        SliderRenderer::draw(SliderRenderer::DrawLegacyParams{.points = screenPoints,
+        SliderRenderer::draw(SliderRenderer::DrawLegacyParams{.screenRect = osu->getVirtScreenSize(),
+                                                              .rt = osu->getSliderFrameBuffer(),
+                                                              .skinSettings = {m_pf->getSkin()},
+                                                              .points = screenPoints,
                                                               .alwaysPoints = alwaysPoints,
                                                               .hitcircleDiameter = m_pf->fHitcircleDiameter,
                                                               .from = from,
@@ -1505,7 +1509,10 @@ void Slider::drawBody(f32 alpha, f32 from, f32 to) {
         minBounds += translation;
         maxBounds += translation;
 
-        SliderRenderer::draw(SliderRenderer::DrawVAOParams{.vao = m_vao.get(),
+        SliderRenderer::draw(SliderRenderer::DrawVAOParams{.screenRect = osu->getVirtScreenSize(),
+                                                           .rt = osu->getSliderFrameBuffer(),
+                                                           .skinSettings = {m_pf->getSkin()},
+                                                           .vao = m_vao.get(),
                                                            .bounds = vec4{minBounds, maxBounds},
                                                            .alwaysPoints = alwaysPoints,
                                                            .translation = translation,
@@ -2359,7 +2366,8 @@ void Slider::rebuildVertexBuffer(bool useRawCoords) {
     } else {
         for(auto &p : osuCoordPoints) p = m_pi->osuCoords2LegacyPixels(p - m_stackOffset);
     }
-    m_vao = SliderRenderer::generateVAO(osuCoordPoints, m_pi->fRawHitcircleDiameter, /*translation=*/vec3{});
+    m_vao = SliderRenderer::generateVAO(osu->getVirtScreenSize(), osuCoordPoints, m_pi->fRawHitcircleDiameter,
+                                        /*translation=*/vec3{});
 }
 
 Slider::~Slider() { onReset(0); }

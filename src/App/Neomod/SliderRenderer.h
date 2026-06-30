@@ -9,12 +9,32 @@
 
 class Shader;
 class VertexArrayObject;
+class RenderTarget;
+class Image;
+struct Skin;
 
 namespace SliderRenderer {
-std::unique_ptr<VertexArrayObject> generateVAO(std::span<const vec2> points, f32 hitcircleDiameter, vec3 translation,
-                                               bool skipOOBPoints = true);
+
+struct SkinSettings {
+    // NULL is valid for debug purposes
+    SkinSettings(const Skin *skin);
+
+    const Image *i_slider_gradient{nullptr};
+    const Image *i_hitcircle{nullptr};
+    bool o_slider_track_overridden{false};
+    Color c_slider_track_override{};
+    Color c_slider_border{};
+};
+
+std::unique_ptr<VertexArrayObject> generateVAO(vec2 screenRect, std::span<const vec2> points, f32 hitcircleDiameter,
+                                               vec3 translation, bool skipOOBPoints = true);
+
+
 
 struct DrawLegacyParams final {
+    vec2 screenRect;
+    RenderTarget *rt;
+    SkinSettings skinSettings;
     std::span<const vec2> points;
     std::span<const vec2> alwaysPoints;
     f32 hitcircleDiameter;
@@ -29,6 +49,9 @@ struct DrawLegacyParams final {
 void draw(const DrawLegacyParams &p);
 
 struct DrawVAOParams final {
+    vec2 screenRect;
+    RenderTarget *rt;
+    SkinSettings skinSettings;
     VertexArrayObject *vao;
     vec4 bounds;
     std::span<const vec2> alwaysPoints;
