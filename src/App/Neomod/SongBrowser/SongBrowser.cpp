@@ -390,13 +390,16 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
 
     this->filterScoresDropdown = new UIButtonRounded(0, 0, 0, 0, "", _("Local"), 5);
     this->filterScoresDropdown->setClickCallback(SA::MakeDelegate<&SongBrowser::onFilterScoresClicked>(this));
+    this->filterScoresDropdown->setDrawShadow(true)->setDrawBackground(false);
     this->topbarLeft->addBaseUIElement(this->filterScoresDropdown);
 
     this->sortScoresDropdown = new UIButtonRounded(0, 0, 0, 0, "", _("By score"), 5);
+    this->sortScoresDropdown->setDrawShadow(true)->setDrawBackground(false);
     this->sortScoresDropdown->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortScoresClicked>(this));
     this->topbarLeft->addBaseUIElement(this->sortScoresDropdown);
 
     this->webButton = new UIButtonRounded(0, 0, 0, 0, "", _("Web"), 5);
+    this->webButton->setDrawShadow(true)->setDrawBackground(false);
     this->webButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onWebClicked>(this));
     this->topbarLeft->addBaseUIElement(this->webButton);
 
@@ -416,6 +419,7 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
         this->topbarRight->addBaseUIElement(this->groupLabel);
 
         this->groupButton = new UIButtonRounded(0, 0, 0, 0, "", _("No Grouping"), 5);
+        this->groupButton->setDrawShadow(true)->setDrawBackground(false);
         this->groupButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onGroupClicked>(this));
         this->groupButton->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupButton);
@@ -433,27 +437,32 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
         this->topbarRight->addBaseUIElement(this->sortLabel);
 
         this->sortButton = new UIButtonRounded(0, 0, 0, 0, "", _("By Date Added"), 5);
+        this->sortButton->setDrawShadow(true)->setDrawBackground(false);
         this->sortButton->setClickCallback(SA::MakeDelegate<&SongBrowser::onSortClicked>(this));
         this->sortButton->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->sortButton);
 
         // "hardcoded" grouping tabs
         this->groupByCollectionBtn = new UIButtonRounded(0, 0, 0, 0, "", _("Collections"), 5);
+        this->groupByCollectionBtn->setDrawShadow(true)->setDrawBackground(false);
         this->groupByCollectionBtn->setHandleRightMouse(true);
         this->groupByCollectionBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByCollectionBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByCollectionBtn);
         this->groupByArtistBtn = new UIButtonRounded(0, 0, 0, 0, "", _("By Artist"), 5);
+        this->groupByArtistBtn->setDrawShadow(true)->setDrawBackground(false);
         this->groupByArtistBtn->setHandleRightMouse(true);
         this->groupByArtistBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByArtistBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByArtistBtn);
         this->groupByDifficultyBtn = new UIButtonRounded(0, 0, 0, 0, "", _("By Difficulty"), 5);
+        this->groupByDifficultyBtn->setDrawShadow(true)->setDrawBackground(false);
         this->groupByDifficultyBtn->setHandleRightMouse(true);
         this->groupByDifficultyBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByDifficultyBtn->setDrawsOnTop(true);
         this->topbarRight->addBaseUIElement(this->groupByDifficultyBtn);
         this->groupByNothingBtn = new UIButtonRounded(0, 0, 0, 0, "", _("No Grouping"), 5);
+        this->groupByNothingBtn->setDrawShadow(true)->setDrawBackground(false);
         this->groupByNothingBtn->setHandleRightMouse(true);
         this->groupByNothingBtn->setClickCallback(SA::MakeDelegate<&SongBrowser::onQuickGroupClicked>(this));
         this->groupByNothingBtn->setDrawsOnTop(true);
