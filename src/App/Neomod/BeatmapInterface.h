@@ -207,8 +207,12 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     [[nodiscard]] const Skin *getSkin() const;  // maybe use this for beatmap skins, maybe
     [[nodiscard]] Skin *getSkinMutable();
 
+    // NOTE: these may not be current outside of gameplay!
     [[nodiscard]] inline i32 getCurMusicPos() const { return this->iCurMusicPos; }
     [[nodiscard]] inline i32 getCurMusicPosWithOffsets() const { return this->iCurMusicPosWithOffsets; }
+
+    // helper utility to avoid needing to apply convar/beatmap/audio engine related offsets to raw pos manually
+    [[nodiscard]] i32 convertRawToOffsetMusicPos(i32 rawMusicPos) const;
 
     [[nodiscard]] f32 getRawAR() const override;
     [[nodiscard]] f32 getAR() const override;

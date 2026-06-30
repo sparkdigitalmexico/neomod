@@ -2498,6 +2498,24 @@ void BeatmapInterface::update() {
     }
 }
 
+i32 BeatmapInterface::convertRawToOffsetMusicPos(i32 rawPos) const {
+    i32 ret = rawPos;
+    ret += (i32)((cv::universal_offset.getFloat() + cv::universal_offset_hardcoded_blamepeppy.getFloat()) *
+                 this->getSpeedMultiplier());
+    ret += cv::universal_offset_norate.getInt();
+    if(this->music) {
+        ret -= this->music->getRateBasedStreamDelayMS();
+    }
+    if(this->beatmap) {
+        ret -= this->beatmap->getLocalOffset();
+        ret -= this->beatmap->getOnlineOffset();
+        if(this->beatmap->getVersion() < 5) {
+            ret -= cv::old_beatmap_offset.getInt();
+        }
+    }
+    return ret;
+}
+
 i32 BeatmapInterface::getInterpedMusicPos() const {
     const auto currentTime = Timing::getTimeReal<f64>();
 
@@ -2659,12 +2677,7 @@ void BeatmapInterface::update2() {
         }
 
         // ugh. force update all hitobjects while waiting (necessary because of pvs optimization)
-        i32 curPos = this->iCurMusicPos +
-                     (i32)((cv::universal_offset.getFloat() + cv::universal_offset_hardcoded_blamepeppy.getFloat()) *
-                           this->getSpeedMultiplier()) +
-                     cv::universal_offset_norate.getInt() - this->music->getRateBasedStreamDelayMS() -
-                     this->beatmap->getLocalOffset() - this->beatmap->getOnlineOffset() -
-                     (this->beatmap->getVersion() < 5 ? cv::old_beatmap_offset.getInt() : 0);
+        i32 curPos = this->convertRawToOffsetMusicPos(this->iCurMusicPos);
         if(curPos > -1)  // otherwise auto would already click elements that start at exactly 0 (while the map has not
                          // even started)
             curPos = -1;
@@ -2732,17 +2745,7 @@ void BeatmapInterface::update2() {
     }
 
     // update timing (with offsets)
-    this->iCurMusicPosWithOffsets = this->iCurMusicPos;
-    this->iCurMusicPosWithOffsets +=
-        (i32)((cv::universal_offset.getFloat() + cv::universal_offset_hardcoded_blamepeppy.getFloat()) *
-              this->getSpeedMultiplier());
-    this->iCurMusicPosWithOffsets += cv::universal_offset_norate.getInt();
-    this->iCurMusicPosWithOffsets -= this->music->getRateBasedStreamDelayMS();
-    this->iCurMusicPosWithOffsets -= this->beatmap->getLocalOffset();
-    this->iCurMusicPosWithOffsets -= this->beatmap->getOnlineOffset();
-    if(this->beatmap->getVersion() < 5) {
-        this->iCurMusicPosWithOffsets -= cv::old_beatmap_offset.getInt();
-    }
+    this->iCurMusicPosWithOffsets = this->convertRawToOffsetMusicPos(this->iCurMusicPos);
 
     // get timestamp from the previous update cycle
     const u64 lastUpdateTime = this->iLastMusicPosUpdateTime;
