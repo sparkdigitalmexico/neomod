@@ -263,7 +263,7 @@ void Database::startLoader() {
     this->beatmapsets.clear();
 
     // append, the copy will only be cleared if loading them succeeded
-    Mc::append_range(this->extern_db_paths_to_import_async_copy, std::move(this->extern_db_paths_to_import));
+    Mc::ranges::append(this->extern_db_paths_to_import_async_copy, std::move(this->extern_db_paths_to_import));
     this->extern_db_paths_to_import.clear();
 
     // reset after destroyLoader() set it to true (subroutines still check it)

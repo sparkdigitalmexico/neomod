@@ -375,7 +375,7 @@ void VolNormalization::start_calc_instance(const std::vector<DatabaseBeatmap *> 
         std::vector<DatabaseBeatmap *> chunk;
         for(int j = 0; j < cur_chunk_size; j++) {
             auto &group = *(it + j);
-            Mc::append_range(chunk, group);
+            Mc::ranges::append(chunk, group);
         }
         it += cur_chunk_size;
 

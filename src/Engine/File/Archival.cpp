@@ -164,7 +164,7 @@ void Archive::Reader::initFromMemory(std::span<const u8> data) {
     }
 
     // copy data to our own buffer to ensure it stays alive
-    Mc::assign_range(this->vMemoryBuffer, data);
+    Mc::ranges::assign(this->vMemoryBuffer, data);
 
     this->archive = archive_read_new();
     if(!this->archive) {
@@ -531,7 +531,7 @@ bool Archive::Writer::addData(std::string_view archivePath, std::span<const u8> 
 
     PendingEntry entry;
     entry.archivePath = std::move(normalizedPath);
-    Mc::assign_range(entry.data, data);
+    Mc::ranges::assign(entry.data, data);
     entry.isDirectory = false;
 
     this->pendingEntries.push_back(std::move(entry));

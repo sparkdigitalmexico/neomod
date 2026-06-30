@@ -1016,7 +1016,7 @@ void Skin::createSkinImage(SkinImage &ref, const std::string &skinElementName, v
     this->skin_images.push_back(&ref);
     auto exportFiles =
         ref.init(this, skinElementName, baseSizeForScaling2x, osuSize, animationSeparator, ignoreDefaultSkin);
-    Mc::append_range(this->filepaths_for_export, std::move(exportFiles));
+    Mc::ranges::append(this->filepaths_for_export, std::move(exportFiles));
 }
 
 void Skin::loadUnsizedImage(BasicSkinImage &ref, const std::string &skinElementName, const std::string &resourceName,

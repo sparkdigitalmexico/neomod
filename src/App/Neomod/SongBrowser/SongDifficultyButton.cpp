@@ -52,7 +52,8 @@ void SongDifficultyButton::draw() {
     if(!this->bVisible) {
         return;
     }
-    CarouselButton::draw();
+    // we intentionally leapfrog SongButtons for some methods
+    CarouselButton::draw();  // NOLINT(bugprone-parent-virtual-call)
 
     const bool isIndependentDiff = this->isIndependentDiffButton();
 
@@ -63,7 +64,7 @@ void SongDifficultyButton::draw() {
     const vec2 size = this->getActualSize();
 
     // delay requesting the image itself a bit
-    if(this->fVisibleFor >= ((std::clamp<f32>(cv::background_image_loading_delay.getFloat(), 0.f, 2.f)) / 4.f)) {
+    if(this->fVisibleFor >= ((std::clamp<f32>(cv::songbrowser_thumbnail_delay.getFloat(), 0.f, 2.f)) / 4.f)) {
         // draw background image
         this->drawBeatmapBackgroundThumbnail(
             osu->getBackgroundImageHandler()->getLoadBackgroundImage(this->databaseBeatmap));
@@ -153,11 +154,11 @@ void SongDifficultyButton::updateInput(CBaseUIEventCtx& c) {
     if(!this->bVisible) {
         return;
     }
-    CarouselButton::updateInput(c);
+    CarouselButton::updateInput(c);  // NOLINT(bugprone-parent-virtual-call)
 }
 
 void SongDifficultyButton::tick() {
-    CarouselButton::tick();
+    CarouselButton::tick();  // NOLINT(bugprone-parent-virtual-call)
     if(!this->bVisible) {
         return;
     }
@@ -200,7 +201,7 @@ void SongDifficultyButton::resetAnimations() {
 
 void SongDifficultyButton::onClicked(bool left, bool right) {
     // NOTE: Intentionally not calling Button::onClicked(left, right), since that one plays another sound
-    CBaseUIButton::onClicked(left, right);
+    CBaseUIButton::onClicked(left, right);  // NOLINT(bugprone-parent-virtual-call)
 
     if(left) {
         soundEngine->play(osu->getSkin()->s_select_difficulty);
@@ -210,7 +211,7 @@ void SongDifficultyButton::onClicked(bool left, bool right) {
 }
 
 void SongDifficultyButton::onSelected(bool wasSelected, SelOpts opts) {
-    CarouselButton::onSelected(wasSelected, opts);
+    CarouselButton::onSelected(wasSelected, opts);  // NOLINT(bugprone-parent-virtual-call)
 
     const bool wasParentActuallySelected =
         !this->isIndependentDiffButton() && !(opts.parentUnselected) && this->parentSongButton->isSelected();

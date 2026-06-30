@@ -69,7 +69,7 @@ void SongButton::draw() {
     CarouselButton::draw();
 
     if(this->databaseBeatmap &&  // delay requesting the image itself a bit
-       this->fVisibleFor >= ((std::clamp<f32>(cv::background_image_loading_delay.getFloat(), 0.f, 2.f)) / 4.f)) {
+       this->fVisibleFor >= ((std::clamp<f32>(cv::songbrowser_thumbnail_delay.getFloat(), 0.f, 2.f)) / 4.f)) {
         // draw background image
         this->drawBeatmapBackgroundThumbnail(
             osu->getBackgroundImageHandler()->getLoadBackgroundImage(this->databaseBeatmap));
@@ -129,13 +129,12 @@ void SongButton::drawBeatmapBackgroundThumbnail(const Image *image) {
     if(!cv::draw_songbrowser_thumbnails.getBool() || osu->getSkin()->version < 2.2f) return;
 
     float alpha = 1.0f;
-    if(cv::songbrowser_thumbnail_fade_in_duration.getFloat() > 0.0f) {
+    if(const f32 fadein_time = cv::songbrowser_thumbnail_fade_in_duration.getFloat(); fadein_time > 0.0f) {
+        const f64 now = engine->getTime();
         if(image == nullptr || !image->isReady())
-            this->fThumbnailFadeInTime = engine->getTime();
-        else if(this->fThumbnailFadeInTime > 0.0f && engine->getTime() > this->fThumbnailFadeInTime) {
-            alpha = std::clamp<float>((engine->getTime() - this->fThumbnailFadeInTime) /
-                                          cv::songbrowser_thumbnail_fade_in_duration.getFloat(),
-                                      0.0f, 1.0f);
+            this->fThumbnailFadeInTime = (f32)now;
+        else if(this->fThumbnailFadeInTime > 0.0f && now > this->fThumbnailFadeInTime) {
+            alpha = std::clamp<float>((f32)(now - this->fThumbnailFadeInTime) / fadein_time, 0.0f, 1.0f);
             alpha = 1.0f - (1.0f - alpha) * (1.0f - alpha);
         }
     }
@@ -159,7 +158,7 @@ void SongButton::drawBeatmapBackgroundThumbnail(const Image *image) {
         g->scale(beatmapBackgroundScale, beatmapBackgroundScale);
         g->translate(pos.x + centerOffset.x, pos.y + centerOffset.y);
         // draw with smooth edge clipping
-        g->drawImage(image, {}, 1.f, clipRect);
+        g->drawImage(image, AnchorPoint::CENTER, 1.f, clipRect);
     }
     g->popTransform();
 

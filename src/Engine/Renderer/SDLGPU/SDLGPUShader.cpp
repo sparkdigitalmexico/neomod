@@ -67,7 +67,7 @@ void SDLGPUShader::init() {
     {
         // parse uniform blocks from both GLSL sources
         std::vector<UniformBlock> tmpUniformBlocks = parseUniformBlocks(vshGlsl);
-        Mc::append_range(tmpUniformBlocks, parseUniformBlocks(fshGlsl));
+        Mc::ranges::append(tmpUniformBlocks, parseUniformBlocks(fshGlsl));
         m_uniformBlocks = std::move(tmpUniformBlocks);
     }
 

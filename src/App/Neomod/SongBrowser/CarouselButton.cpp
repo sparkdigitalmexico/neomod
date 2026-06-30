@@ -359,7 +359,7 @@ void CarouselButton::addChild(SongButton *child) {
 
 void CarouselButton::addChildren(std::vector<SongButton *> children) {
     this->lastChildSortStarPrecalcIdx = 0xFF;
-    Mc::append_range(this->children, std::move(children));
+    Mc::ranges::append(this->children, std::move(children));
 }
 
 bool CarouselButton::childrenNeedSorting() const {

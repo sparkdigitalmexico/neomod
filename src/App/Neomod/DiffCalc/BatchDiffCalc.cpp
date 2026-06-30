@@ -245,7 +245,7 @@ void process_score_group(const BeatmapDifficulty* map, const ModParams& params, 
 
     {
         Sync::scoped_lock lock(results_mutex);
-        Mc::append_range(score_results, std::move(group_results));
+        Mc::ranges::append(score_results, std::move(group_results));
     }
     scores_processed.fetch_add(static_cast<u32>(scores.size()), std::memory_order_relaxed);
 }

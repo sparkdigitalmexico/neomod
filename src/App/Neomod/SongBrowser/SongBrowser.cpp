@@ -338,18 +338,15 @@ SongBrowser::SongBrowser() : ScreenBackable(), global_songbrowser_(this) {
                                     {_("By score"), Database::sortScoreByScore},
                                     {_("By pp"), Database::sortScoreByPP}}};
 
-    // TODO (ugly): remap possible string convars to numeric ids (old configs/defaults)
-    for(int type = 0; type < 2; ++type) {
-        ConVar *cvar = (type == 0 ? &cv::songbrowser_sortingtype : &cv::songbrowser_scores_sortingtype);
-        const std::string user_string = cvar->getString();
-        const size_t len = (type == 0 ? this->SORTING_METHODS.size() : this->SCORE_SORTING_METHODS.size());
-        for(int method_id = 0; method_id < len; ++method_id) {
-            if(user_string ==
-               (type == 0 ? this->SORTING_METHODS[method_id].name : this->SCORE_SORTING_METHODS[method_id].name)) {
-                cvar->setValue(method_id);
-                break;
-            }
-        }
+    {
+        // remap possible string convars to numeric ids (old configs/defaults)
+        auto remap = [](ConVar &cvar, auto &methods) -> void {
+            const auto str = cvar.getString();
+            for(int i = 0; i < methods.size(); ++i)
+                if(str == methods[i].name) return (void)cvar.setValue(i);
+        };
+        remap(cv::songbrowser_sortingtype, SORTING_METHODS);
+        remap(cv::songbrowser_scores_sortingtype, SCORE_SORTING_METHODS);
     }
 
     this->lastDiffSortModIndex = StarPrecalc::active_idx;
@@ -632,7 +629,7 @@ void SongBrowser::draw() {
         if(doDrawStrainGraph) {
             this->drawStrainGraphOverlay();
             if(this->localBestContainer->isVisible() &&
-               std::ranges::contains(this->localBestContainer->getElements(), noRecordsSetElem)) {
+               Mc::ranges::contains(this->localBestContainer->getElements(), noRecordsSetElem)) {
                 noRecordsSetOpacityHack = true;
                 noRecordsSetElem->setBackgroundColor(Color{oldNoRecordsSetBG}.setA(0.5f));
                 noRecordsSetElem->setFrameColor(Color{oldNoRecordsSetFrame}.setA(0.5f));
@@ -3328,7 +3325,7 @@ void SongBrowser::onCollectionButtonContextMenu(CollectionButton *collectionButt
             this->rebuildAfterGroupOrSortChange(GroupType::COLLECTIONS);
         }
     } else if(id == 3) {  // rename collection
-        const std::string &currentButtonName = collectionButton->getCollectionName();
+        const std::string_view currentButtonName = collectionButton->getCollectionName();
         if(!currentButtonName.empty()) {
             auto &existingCollection = Collections::get_or_create_collection(currentButtonName);
 
@@ -3548,7 +3545,7 @@ void SongBrowser::recreateCollectionsButtons() {
                 folder.push_back(parent);
             } else {
                 // only add matched diff buttons
-                Mc::append_range(folder, matching_diffs);
+                Mc::ranges::append(folder, matching_diffs);
             }
         }
 

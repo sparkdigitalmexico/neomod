@@ -618,7 +618,7 @@ size_t NetworkImpl::writeCallback(void* contents, size_t size, size_t nmemb, voi
         }
         if(!ws->in_partial.empty() && meta->bytesleft == 0) {
             Sync::scoped_lock lock{ws->io_mutex};
-            Mc::append_range(ws->in, std::move(ws->in_partial));
+            Mc::ranges::append(ws->in, std::move(ws->in_partial));
             ws->in_partial.clear();
         }
         if(meta->flags & CURLWS_CLOSE) {
@@ -626,7 +626,7 @@ size_t NetworkImpl::writeCallback(void* contents, size_t size, size_t nmemb, voi
             ws->status.store(WSStatus::DISCONNECTED, std::memory_order_relaxed);
         }
     } else if(!ws) {  // non-websocket path
-        Mc::append_range(request->response.body, std::span{static_cast<const u8*>(contents), real_size});
+        Mc::ranges::append(request->response.body, std::span{static_cast<const u8*>(contents), real_size});
     }
 
     return real_size;

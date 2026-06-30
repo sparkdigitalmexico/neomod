@@ -17,7 +17,7 @@ class CollectionButton final : public CarouselButton {
     [[nodiscard]] Color getActiveBackgroundColor() const override;
     [[nodiscard]] Color getInactiveBackgroundColor() const override;
 
-    [[nodiscard]] const std::string &getCollectionName() const { return this->sCollectionName; }
+    [[nodiscard]] std::string_view getCollectionName() const { return this->sCollectionName; }
     void setCollectionName(std::string_view newName) { this->sCollectionName = newName; }
 
     [[nodiscard]] i32 getNumVisibleChildren() const { return this->numVisibleChildren; }

@@ -1464,7 +1464,7 @@ void Slider::drawBody(f32 alpha, f32 from, f32 to) {
 
     if(osu->shouldFallBackToLegacySliderRenderer()) {
         std::vector<vec2> screenPoints;
-        Mc::assign_range(screenPoints, m_curve.getPoints());
+        Mc::ranges::assign(screenPoints, m_curve.getPoints());
         for(auto &screenPoint : screenPoints) {
             screenPoint = m_pf->osuCoords2Pixels(screenPoint - m_stackOffset);
         }

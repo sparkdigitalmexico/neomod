@@ -154,7 +154,7 @@ CONVAR(songbrowser_button_inactive_color_b, 153, CLIENT | SKINS);
 CONVAR(songbrowser_button_inactive_color_g, 73, CLIENT | SKINS);
 CONVAR(songbrowser_button_inactive_color_r, 235, CLIENT | SKINS);
 CONVAR(songbrowser_thumbnail_delay, 0.1f, CLIENT | SKINS);
-CONVAR(songbrowser_thumbnail_fade_in_duration, 0.1f, CLIENT | SKINS);
+CONVAR(songbrowser_thumbnail_fade_in_duration, 0.15f, CLIENT | SKINS);
 
 // Song browser (client only)
 CONVAR(prefer_cjk, false, CLIENT, "prefer metadata in original language");
