@@ -17,6 +17,7 @@
 #include "Logging.h"
 
 #include <cstring>
+#include <span>
 
 SDLGPUVertexArrayObject::SDLGPUVertexArrayObject(SDLGPUInterface *gpu, SDL_GPUDevice *device, DrawPrimitive primitive,
                                                  DrawUsageType usage, bool keepInSystemMemory)
@@ -81,115 +82,111 @@ void SDLGPUVertexArrayObject::init() {
 
     if(m_vertexBuffer != nullptr && !this->bKeepInSystemMemory) return;
 
-    // convert vertices (quads/fans → triangles)
-    m_convertedVertices.clear();
+    // convert primitives (quads/fans → triangles) and set up source data spans.
+    // for TRIANGLES, this avoids copying into intermediate vectors
+    // entirely, and for !keepInSystemMemory, interleaves directly into the mapped transfer buffer.
+    std::vector<vec3> convVertices;
+    std::vector<vec2> convTexcoords;
+    std::vector<vec4> convColors;
 
-    // maybe TODO: handle normals (not currently used in app code)
-    std::vector<vec3> finalVertices;
-    std::vector<vec2> finalTexcoords;
-    std::vector<vec4> colors;
-    std::vector<vec4> finalColors;
+    std::span<const vec3> srcVerts;
+    std::span<const vec2> srcTCs;
+    std::span<const vec4> srcColors;
 
-    for(auto clr : this->colors) {
-        const vec4 color = vec4(clr.Rf(), clr.Gf(), clr.Bf(), clr.Af());
-        colors.push_back(color);
-        finalColors.push_back(color);
-    }
-    const size_t maxColorIndex = (!finalColors.empty() ? finalColors.size() - 1 : 0);
+    constexpr const auto toVec4 = [] [[gnu::always_inline]] (Color c) { return vec4(c.Rf(), c.Gf(), c.Bf(), c.Af()); };
 
     if(this->primitive == DrawPrimitive::QUADS) {
-        finalVertices.clear();
-        finalTexcoords.clear();
-        finalColors.clear();
         m_convertedPrimitive = DrawPrimitive::TRIANGLES;
 
         if(this->vertices.size() > 3) {
+            const size_t numQuads = this->vertices.size() / 4;
+            convVertices.reserve(numQuads * 6);
+            if(!this->texcoords.empty()) convTexcoords.reserve(numQuads * 6);
+
+            const size_t maxColorIdx = this->colors.empty() ? 0 : this->colors.size() - 1;
+            if(!this->colors.empty()) convColors.reserve(numQuads * 6);
+
             for(size_t i = 0; i < this->vertices.size(); i += 4) {
-                finalVertices.push_back(this->vertices[i + 0]);
-                finalVertices.push_back(this->vertices[i + 1]);
-                finalVertices.push_back(this->vertices[i + 2]);
+                convVertices.push_back(this->vertices[i + 0]);
+                convVertices.push_back(this->vertices[i + 1]);
+                convVertices.push_back(this->vertices[i + 2]);
+                convVertices.push_back(this->vertices[i + 0]);
+                convVertices.push_back(this->vertices[i + 2]);
+                convVertices.push_back(this->vertices[i + 3]);
 
                 if(!this->texcoords.empty()) {
-                    finalTexcoords.push_back(this->texcoords[i + 0]);
-                    finalTexcoords.push_back(this->texcoords[i + 1]);
-                    finalTexcoords.push_back(this->texcoords[i + 2]);
+                    convTexcoords.push_back(this->texcoords[i + 0]);
+                    convTexcoords.push_back(this->texcoords[i + 1]);
+                    convTexcoords.push_back(this->texcoords[i + 2]);
+                    convTexcoords.push_back(this->texcoords[i + 0]);
+                    convTexcoords.push_back(this->texcoords[i + 2]);
+                    convTexcoords.push_back(this->texcoords[i + 3]);
                 }
 
-                if(!colors.empty()) {
-                    finalColors.push_back(colors[std::clamp<size_t>(i + 0, 0, maxColorIndex)]);
-                    finalColors.push_back(colors[std::clamp<size_t>(i + 1, 0, maxColorIndex)]);
-                    finalColors.push_back(colors[std::clamp<size_t>(i + 2, 0, maxColorIndex)]);
-                }
-
-                finalVertices.push_back(this->vertices[i + 0]);
-                finalVertices.push_back(this->vertices[i + 2]);
-                finalVertices.push_back(this->vertices[i + 3]);
-
-                if(!this->texcoords.empty()) {
-                    finalTexcoords.push_back(this->texcoords[i + 0]);
-                    finalTexcoords.push_back(this->texcoords[i + 2]);
-                    finalTexcoords.push_back(this->texcoords[i + 3]);
-                }
-
-                if(!colors.empty()) {
-                    finalColors.push_back(colors[std::clamp<size_t>(i + 0, 0, maxColorIndex)]);
-                    finalColors.push_back(colors[std::clamp<size_t>(i + 2, 0, maxColorIndex)]);
-                    finalColors.push_back(colors[std::clamp<size_t>(i + 3, 0, maxColorIndex)]);
+                if(!this->colors.empty()) {
+                    convColors.push_back(toVec4(this->colors[std::min(i + 0, maxColorIdx)]));
+                    convColors.push_back(toVec4(this->colors[std::min(i + 1, maxColorIdx)]));
+                    convColors.push_back(toVec4(this->colors[std::min(i + 2, maxColorIdx)]));
+                    convColors.push_back(toVec4(this->colors[std::min(i + 0, maxColorIdx)]));
+                    convColors.push_back(toVec4(this->colors[std::min(i + 2, maxColorIdx)]));
+                    convColors.push_back(toVec4(this->colors[std::min(i + 3, maxColorIdx)]));
                 }
             }
         }
+        srcVerts = convVertices;
+        srcTCs = convTexcoords;
+        srcColors = convColors;
     } else if(this->primitive == DrawPrimitive::TRIANGLE_FAN) {
-        finalVertices.clear();
-        finalTexcoords.clear();
-        finalColors.clear();
         m_convertedPrimitive = DrawPrimitive::TRIANGLES;
 
         if(this->vertices.size() > 2) {
+            const size_t numTris = this->vertices.size() - 2;
+            convVertices.reserve(numTris * 3);
+            if(!this->texcoords.empty()) convTexcoords.reserve(numTris * 3);
+
+            const size_t maxColorIdx = this->colors.empty() ? 0 : this->colors.size() - 1;
+            if(!this->colors.empty()) convColors.reserve(numTris * 3);
+
             for(size_t i = 2; i < this->vertices.size(); i++) {
-                finalVertices.push_back(this->vertices[0]);
-                finalVertices.push_back(this->vertices[i]);
-                finalVertices.push_back(this->vertices[i - 1]);
+                convVertices.push_back(this->vertices[0]);
+                convVertices.push_back(this->vertices[i]);
+                convVertices.push_back(this->vertices[i - 1]);
 
                 if(!this->texcoords.empty()) {
-                    finalTexcoords.push_back(this->texcoords[0]);
-                    finalTexcoords.push_back(this->texcoords[i]);
-                    finalTexcoords.push_back(this->texcoords[i - 1]);
+                    convTexcoords.push_back(this->texcoords[0]);
+                    convTexcoords.push_back(this->texcoords[i]);
+                    convTexcoords.push_back(this->texcoords[i - 1]);
                 }
 
-                if(!colors.empty()) {
-                    finalColors.push_back(colors[std::clamp<size_t>(0, 0, maxColorIndex)]);
-                    finalColors.push_back(colors[std::clamp<size_t>(i, 0, maxColorIndex)]);
-                    finalColors.push_back(colors[std::clamp<size_t>(i - 1, 0, maxColorIndex)]);
+                if(!this->colors.empty()) {
+                    convColors.push_back(toVec4(this->colors[std::min<size_t>(0, maxColorIdx)]));
+                    convColors.push_back(toVec4(this->colors[std::min(i, maxColorIdx)]));
+                    convColors.push_back(toVec4(this->colors[std::min(i - 1, maxColorIdx)]));
                 }
             }
         }
+        srcVerts = convVertices;
+        srcTCs = convTexcoords;
+        srcColors = convColors;
     } else {
-        finalVertices = this->vertices;
-        finalTexcoords = this->texcoords;
+        srcVerts = this->vertices;
+        srcTCs = this->texcoords;
+
+        if(!this->colors.empty()) {
+            const size_t maxColorIdx = this->colors.size() - 1;
+            convColors.resize(this->vertices.size());
+            for(size_t i = 0; i < this->vertices.size(); i++) {
+                convColors[i] = toVec4(this->colors[std::min(i, maxColorIdx)]);
+            }
+            srcColors = convColors;
+        }
     }
 
-    // build SDLGPUSimpleVertex array
-    m_convertedVertices.resize(finalVertices.size());
-    this->iNumVertices = m_convertedVertices.size();
+    const size_t numVerts = srcVerts.size();
+    if(numVerts == 0) return;
 
-    const bool hasColors = !finalColors.empty();
-    const bool hasTexCoords = (finalTexcoords.size() == m_convertedVertices.size());
-
-    for(size_t i = 0; i < finalVertices.size(); i++) {
-        m_convertedVertices[i].pos = finalVertices[i];
-
-        if(hasColors)
-            m_convertedVertices[i].col = finalColors[std::clamp<size_t>(i, 0, maxColorIndex)];
-        else
-            m_convertedVertices[i].col = vec4(1.f, 1.f, 1.f, 1.f);
-
-        if(hasTexCoords)
-            m_convertedVertices[i].tex = finalTexcoords[i];
-        else
-            m_convertedVertices[i].tex = vec2(0.f, 0.f);
-    }
-
-    const u32 bufSize = static_cast<u32>(sizeof(SDLGPUSimpleVertex) * m_convertedVertices.size());
+    this->iNumVertices = numVerts;
+    const u32 bufSize = static_cast<u32>(sizeof(SDLGPUSimpleVertex) * numVerts);
 
     // create GPU buffer
     if(!m_vertexBuffer) {
@@ -199,7 +196,7 @@ void SDLGPUVertexArrayObject::init() {
 
         m_vertexBuffer = SDL_CreateGPUBuffer(m_device, &bufInfo);
         if(!m_vertexBuffer) {
-            debugLog("SDLGPUVertexArrayObject Error: Couldn't CreateGPUBuffer({})", m_convertedVertices.size());
+            debugLog("SDLGPUVertexArrayObject Error: Couldn't CreateGPUBuffer({})", numVerts);
             return;
         }
     }
@@ -212,11 +209,54 @@ void SDLGPUVertexArrayObject::init() {
         return;
     }
 
-    // upload data
-    void *mapped = SDL_MapGPUTransferBuffer(m_device, transferBuffer, true);
-    if(mapped) {
-        std::memcpy(mapped, m_convertedVertices.data(), bufSize);
-        SDL_UnmapGPUTransferBuffer(m_device, transferBuffer);
+    // interleave source data into SDLGPUSimpleVertex layout
+    const bool hasColors = !srcColors.empty();
+    const bool hasTCs = (srcTCs.size() == numVerts);
+    const size_t maxColorIdx = hasColors ? srcColors.size() - 1 : 0;
+
+    auto interleave = [&](SDLGPUSimpleVertex *dst) {
+        if(hasColors && hasTCs) {
+            for(size_t i = 0; i < numVerts; i++) {
+                dst[i].pos = srcVerts[i];
+                dst[i].col = srcColors[std::min(i, maxColorIdx)];
+                dst[i].tex = srcTCs[i];
+            }
+        } else if(hasColors) {
+            for(size_t i = 0; i < numVerts; i++) {
+                dst[i].pos = srcVerts[i];
+                dst[i].col = srcColors[std::min(i, maxColorIdx)];
+                dst[i].tex = vec2(0.f, 0.f);
+            }
+        } else if(hasTCs) {
+            for(size_t i = 0; i < numVerts; i++) {
+                dst[i].pos = srcVerts[i];
+                dst[i].col = vec4(1.f, 1.f, 1.f, 1.f);
+                dst[i].tex = srcTCs[i];
+            }
+        } else {
+            for(size_t i = 0; i < numVerts; i++) {
+                dst[i].pos = srcVerts[i];
+                dst[i].col = vec4(1.f, 1.f, 1.f, 1.f);
+                dst[i].tex = vec2(0.f, 0.f);
+            }
+        }
+    };
+
+    if(this->bKeepInSystemMemory) {
+        m_convertedVertices.resize(numVerts);
+        interleave(m_convertedVertices.data());
+
+        void *mapped = SDL_MapGPUTransferBuffer(m_device, transferBuffer, true);
+        if(mapped) {
+            std::memcpy(mapped, m_convertedVertices.data(), bufSize);
+            SDL_UnmapGPUTransferBuffer(m_device, transferBuffer);
+        }
+    } else {
+        void *mapped = SDL_MapGPUTransferBuffer(m_device, transferBuffer, true);
+        if(mapped) {
+            interleave(static_cast<SDLGPUSimpleVertex *>(mapped));
+            SDL_UnmapGPUTransferBuffer(m_device, transferBuffer);
+        }
     }
 
     auto *cmdBuf = SDL_AcquireGPUCommandBuffer(m_device);

@@ -137,75 +137,68 @@ std::unique_ptr<VertexArrayObject> generateVAO(std::span<const vec2> points, f32
     checkUpdateVars(hitcircleDiameter);
 
     const auto screen = osu->getVirtScreenSize();
+    const vec4 bounds{
+        -hitcircleDiameter - GameRules::OSU_COORD_WIDTH * 2,            // x = minX
+        screen.x + hitcircleDiameter + GameRules::OSU_COORD_WIDTH * 2,  // y = maxX
+        -hitcircleDiameter - GameRules::OSU_COORD_HEIGHT * 2,           // z = minY
+        screen.y + hitcircleDiameter + GameRules::OSU_COORD_HEIGHT * 2  // w = maxY
+    };
+    const auto isOOB = [bounds](vec2 point) -> bool {
+        // fuck oob sliders
+        return point.x < bounds.x || point.x > bounds.y || point.y < bounds.z || point.y > bounds.w;
+    };
 
     const vec3 xOffset = vec3(hitcircleDiameter, 0, 0);
     const vec3 yOffset = vec3(0, hitcircleDiameter, 0);
 
-    const bool debugSquareVao = cv::slider_debug_draw_square_vao.getBool();
+    if(!cv::slider_debug_draw_square_vao.getBool()) {  // regular fast path
+        const std::span<const vec3> triangleMeshVerts = s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices();
+        const std::span<const vec2> triangleMeshTCs = s_UNIT_CIRCLE_VAO_TRIANGLES.getTexcoords();
+        std::vector<vec2> tempTexCoords{triangleMeshTCs.size() * points.size()};
+        std::vector<vec3> tempMeshVerts{triangleMeshVerts.size() * points.size()};
 
-    const auto &triangleMeshVerts = s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices();
-    const auto &triangleMeshTCs = s_UNIT_CIRCLE_VAO_TRIANGLES.getTexcoords();
-    std::vector<vec2> tempTexCoords{triangleMeshTCs.size() * points.size()};
-    std::vector<vec3> tempMeshVerts{triangleMeshVerts.size() * points.size()};
+        uSz tempMeshVertOffset = 0;
+        uSz tempMeshTCOffset = 0;
+        for(const auto &point : points) {
+            if(skipOOBPoints && isOOB(point)) continue;
 
-    const f32 screenMinX = -hitcircleDiameter - GameRules::OSU_COORD_WIDTH * 2;
-    const f32 screenMaxX = screen.x + hitcircleDiameter + GameRules::OSU_COORD_WIDTH * 2;
-    const f32 screenMinY = -hitcircleDiameter - GameRules::OSU_COORD_HEIGHT * 2;
-    const f32 screenMaxY = screen.y + hitcircleDiameter + GameRules::OSU_COORD_HEIGHT * 2;
-
-    uSz tempMeshVertOffset = 0;
-    uSz tempMeshTCOffset = 0;
-    for(const auto &point : points) {
-        // fuck oob sliders
-        if(skipOOBPoints) {
-            if(point.x < screenMinX ||  //
-               point.x > screenMaxX ||  //
-               point.y < screenMinY ||  //
-               point.y > screenMaxY) {  //
-                continue;
-            }
-        }
-
-        if(!debugSquareVao) {
             for(const auto &meshVertex : triangleMeshVerts) {
                 tempMeshVerts[tempMeshVertOffset++] = (meshVertex + vec3(point.x, point.y, 0) + translation);
             }
             std::memcpy(&tempTexCoords[tempMeshTCOffset], triangleMeshTCs.data(),
-                        triangleMeshTCs.size() * sizeof(vec2));
+                        triangleMeshTCs.size() * sizeof(decltype(tempTexCoords)::value_type));
             tempMeshTCOffset += triangleMeshTCs.size();
-        } else {
-            const vec3 topLeft = vec3(point.x, point.y, 0) - xOffset / 2.0f - yOffset / 2.0f + translation;
-            const vec3 topRight = topLeft + xOffset;
-            const vec3 bottomLeft = topLeft + yOffset;
-            const vec3 bottomRight = bottomLeft + xOffset;
-
-            vao->addVertex(topLeft);
-            vao->addTexcoord(0, 0);
-
-            vao->addVertex(bottomLeft);
-            vao->addTexcoord(0, 1);
-
-            vao->addVertex(bottomRight);
-            vao->addTexcoord(1, 1);
-
-            vao->addVertex(topLeft);
-            vao->addTexcoord(0, 0);
-
-            vao->addVertex(bottomRight);
-            vao->addTexcoord(1, 1);
-
-            vao->addVertex(topRight);
-            vao->addTexcoord(1, 0);
         }
-    }
 
-    if(!debugSquareVao) {
+        // resize to post-OOB-clipped amount
         tempMeshVerts.resize(tempMeshVertOffset);
         tempMeshVerts.shrink_to_fit();
         tempTexCoords.resize(tempMeshTCOffset);
         tempTexCoords.shrink_to_fit();
         vao->setVertices(std::move(tempMeshVerts));
         vao->setTexcoords(std::move(tempTexCoords));
+    } else {  // debug
+        for(const auto &point : points) {
+            if(skipOOBPoints && isOOB(point)) continue;
+
+            const vec3 topLeft = vec3(point.x, point.y, 0) - xOffset / 2.0f - yOffset / 2.0f + translation;
+            const vec3 topRight = topLeft + xOffset;
+            const vec3 bottomLeft = topLeft + yOffset;
+            const vec3 bottomRight = bottomLeft + xOffset;
+
+            vao->addVertices(std::array<vec3, 6>{topLeft,      //
+                                                 bottomLeft,   //
+                                                 bottomRight,  //
+                                                 topLeft,      //
+                                                 bottomRight,  //
+                                                 topRight});
+            vao->addTexcoords(std::array<vec2, 6>{vec2{0, 0},  //
+                                                  vec2{0, 1},  //
+                                                  vec2{1, 1},  //
+                                                  vec2{0, 0},  //
+                                                  vec2{1, 1},  //
+                                                  vec2{1, 0}});
+        }
     }
 
     if(vao->getNumVertices() > 0) {
@@ -238,7 +231,7 @@ void draw(const DrawLegacyParams &p) {
     s_fBoundingBoxMinY = (std::numeric_limits<f32>::max)();
     s_fBoundingBoxMaxY = 0.0f;
 
-    const auto sliderFrameBuffer = osu->getSliderFrameBuffer();
+    auto *sliderFrameBuffer = osu->getSliderFrameBuffer();
 
     // draw entire slider into framebuffer
     g->setDepthBuffer(true);
@@ -364,7 +357,7 @@ void draw(const DrawVAOParams &p) {
 
     // optional bounds performance optimization to reduce rt blending overdraw
     const vec2 screen = osu->getVirtScreenSize();
-    if(p.bounds.x != 0.0f || p.bounds.y != 0.0f || p.bounds.z != 0.0f || p.bounds.w != 0.0f) {
+    if(p.bounds != vec4{}) {
         const f32 pixelFudge = 2.0f;
         s_fBoundingBoxMinX = std::max(0.0f, p.bounds.x - p.hitcircleDiameter / 2.0f - pixelFudge);
         s_fBoundingBoxMaxX = std::min(screen.x, p.bounds.z + p.hitcircleDiameter / 2.0f + pixelFudge);
