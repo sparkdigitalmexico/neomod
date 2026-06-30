@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <tuple>
 #include <type_traits>
+#include <cassert>
 
 namespace SA {
 
@@ -89,6 +90,7 @@ struct delegate_traits<delegate<R(Args...)>> {
 // MakeDelegate for member functions (non-const)
 template <auto Method, typename Class>
 auto MakeDelegate(Class* instance) {
+    assert(!!instance && "MakeDelegate(Class* instance): tried to construct with NULL instance");
     using traits = member_function_traits<decltype(Method)>;
     using signature = typename traits::signature;
     using class_type = typename traits::class_type;
@@ -99,6 +101,7 @@ auto MakeDelegate(Class* instance) {
 // MakeDelegate for member functions (const)
 template <auto Method, typename Class>
 auto MakeDelegate(const Class* instance) {
+    assert(!!instance && "MakeDelegate(const Class* instance): tried to construct with NULL instance");
     using traits = member_function_traits<decltype(Method)>;
     using signature = typename traits::signature;
     using class_type = typename traits::class_type;

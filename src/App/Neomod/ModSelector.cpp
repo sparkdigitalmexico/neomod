@@ -119,16 +119,19 @@ class OvrSliderLockButton final : public CBaseUICheckbox {
     OvrSliderLockButton(float xPos, float yPos, float xSize, float ySize, std::string name, std::string text)
         : CBaseUICheckbox(xPos, yPos, xSize, ySize, std::move(name), std::move(text)) {
         this->fAnim = 1.0f;
+
+        constexpr bool CHECKED = true;
+        constexpr char32_t UNLOCKED_CHARRAY[]{Icons::UNLOCK, U'\0'};
+        constexpr char32_t LOCKED_CHARRAY[]{Icons::LOCK, U'\0'};
+
+        this->sIconStrings[!CHECKED] = UniString::to_utf8(std::u32string_view{&UNLOCKED_CHARRAY[0]});
+        this->sIconStrings[CHECKED] = UniString::to_utf8(std::u32string_view{&LOCKED_CHARRAY[0]});
     }
 
     void draw() override {
         if(!this->bVisible) return;
 
-        const auto icon = (this->bChecked ? Icons::LOCK : Icons::UNLOCK);
-
-        std::string iconString;
-        const char32_t charray[]{icon, U'\0'};
-        iconString.append(UniString::to_utf8(std::u32string_view{&charray[0]}));
+        std::string_view iconString = this->sIconStrings[this->bChecked];
 
         McFont *iconFont = osu->getFontIcons();
         const float scale = (this->getSize().y / iconFont->getHeight()) * this->fAnim;
@@ -160,6 +163,7 @@ class OvrSliderLockButton final : public CBaseUICheckbox {
     }
 
     AnimFloat fAnim;
+    std::string sIconStrings[2];
 };
 
 void add_text_outlines(std::span<CBaseUIElement *const> elements) {
@@ -232,15 +236,15 @@ ModSelector::ModSelector() : UIScreen() {
         slider->setChangeCallback(changeCallback);
     }
 
-    overrideAR.desc->setClickCallback(SA::MakeDelegate<&OvrSliderLockButton::click>(this->ARLock));
-    overrideOD.desc->setClickCallback(SA::MakeDelegate<&OvrSliderLockButton::click>(this->ODLock));
-
     this->CSSlider = overrideCS.slider;
     this->ARSlider = overrideAR.slider;
     this->ODSlider = overrideOD.slider;
     this->HPSlider = overrideHP.slider;
     this->ARLock = overrideAR.lock;
     this->ODLock = overrideOD.lock;
+
+    overrideAR.desc->setClickCallback(SA::MakeDelegate<&OvrSliderLockButton::click>(this->ARLock));
+    overrideOD.desc->setClickCallback(SA::MakeDelegate<&OvrSliderLockButton::click>(this->ODLock));
 
     this->CSSlider->setName("modsel_cs");
     this->ARSlider->setName("modsel_ar");
