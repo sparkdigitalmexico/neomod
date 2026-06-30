@@ -5,6 +5,7 @@
 #include "SliderCurves.h"
 #include "GameRules.h"
 #include "ModFlags.h"
+#include "InlineVec.h"
 
 #include <numbers>
 #include <utility>
@@ -1111,46 +1112,6 @@ struct IslandCount {
     int count;
 };
 
-template <typename T, uSz N>
-struct InlineVector {
-    static_assert(std::is_trivially_copyable_v<T>, "InlineVector relies on trivial relocation/destruction");
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-    InlineVector() = default;
-    ~InlineVector() = default;
-
-    InlineVector(InlineVector &&) = default;
-    InlineVector &operator=(InlineVector &&) = default;
-
-    InlineVector(const InlineVector &) = delete;
-    InlineVector &operator=(const InlineVector &) = delete;
-
-    [[nodiscard]] T *begin() noexcept { return data_; }
-    [[nodiscard]] T *end() noexcept { return data_ + size_; }
-    [[nodiscard]] uSz size() const noexcept { return size_; }
-
-    void clear() noexcept { size_ = 0; }
-
-    template <typename... Args>
-    void emplace_back(Args &&...args) {
-        if(size_ == cap_) grow();
-        data_[size_++] = T(std::forward<Args>(args)...);
-    }
-
-   private:
-    void grow() {
-        cap_ *= 2;
-        auto bigger = std::make_unique_for_overwrite<T[]>(cap_);
-        std::memcpy(bigger.get(), data_, size_ * sizeof(T));
-        heap_ = std::move(bigger);
-        data_ = heap_.get();
-    }
-
-    T inline_[N];
-    T *data_{&inline_[0]};
-    uSz size_{0};
-    uSz cap_{N};
-    std::unique_ptr<T[]> heap_{};
-};
 }  // namespace
 
 // new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
@@ -1210,7 +1171,7 @@ f64 DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject 
             RhythmIsland island{INT_MAX, 0};
             RhythmIsland previousIsland{INT_MAX, 0};
 
-            InlineVector<IslandCount, 16> islandCounts;
+            Mc::InlineVec<IslandCount, 16> islandCounts;
 
             f64 startRatio = 0.0;  // store the ratio of the current start of an island to buff for tighter rhythms
 

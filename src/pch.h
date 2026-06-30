@@ -59,6 +59,8 @@
 #include <deque>
 #include <functional>
 #include <future>
+#include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <queue>

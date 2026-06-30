@@ -26,7 +26,6 @@ using std::stop_token;
 #include <cmath>
 
 enum class ModFlags : u64;
-namespace neomod {}  // namespace neomod
 
 class ConVar;
 class AbstractBeatmapInterface;
