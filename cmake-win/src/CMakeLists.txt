@@ -259,6 +259,11 @@ target_include_directories(neomod PRIVATE
     ${PC_BROTLIDEC_STATIC_INCLUDE_DIRS}
 )
 
+# Precompiled header (C++ only, so filter out C sources from the glob)
+target_precompile_headers(neomod PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_SOURCE_DIR}/../../src/pch.h>"
+)
+
 # Strip default cmake exception handling flags
 string(REGEX REPLACE "/EH[^ ]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
