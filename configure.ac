@@ -942,7 +942,6 @@ AS_IF([test "$_HAVE_MD5SUM" = "yes"],
 
 cat > "$PWD/build/cc" <<EOF
 #!/usr/bin/env bash
-CCACHE_IGNOREOPTIONS="-MJ*" \\
 CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime \\
 CCACHE_COMPRESS=1 CCACHE_COMPRESSLEVEL=4 CCACHE_COMPILERTYPE=$_ccache_ctype CCACHE_COMPILERCHECK="string:$_cc_real_hash" \\
 $CCACHE $CC_REAL "\$@"
@@ -950,7 +949,6 @@ EOF
 chmod +x "$PWD/build/cc"
 cat > "$PWD/build/cxx" <<EOF
 #!/usr/bin/env bash
-CCACHE_IGNOREOPTIONS="-MJ*" \\
 CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime \\
 CCACHE_COMPRESS=1 CCACHE_COMPRESSLEVEL=4 CCACHE_COMPILERTYPE=$_ccache_ctype CCACHE_COMPILERCHECK="string:$_cxx_real_hash" \\
 $CCACHE $CXX_REAL "\$@"
