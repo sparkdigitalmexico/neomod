@@ -16,20 +16,19 @@ struct Skin;
 namespace SliderRenderer {
 
 struct SkinSettings {
-    // NULL is valid for debug purposes
+    // NULL/default ctor is valid for debug purposes
+    SkinSettings() = default;
     SkinSettings(const Skin *skin);
 
     const Image *i_slider_gradient{nullptr};
     const Image *i_hitcircle{nullptr};
     bool o_slider_track_overridden{false};
     Color c_slider_track_override{};
-    Color c_slider_border{};
+    Color c_slider_border{rgb(255, 255, 255)};
 };
 
 std::unique_ptr<VertexArrayObject> generateVAO(vec2 screenRect, std::span<const vec2> points, f32 hitcircleDiameter,
                                                vec3 translation, bool skipOOBPoints = true);
-
-
 
 struct DrawLegacyParams final {
     vec2 screenRect;
@@ -73,4 +72,7 @@ void draw(const DrawVAOParams &p);
 
 // for convar callbacks
 void onUniformConfigChanged();
+
+// true when slider bodies bake/draw the analytic SDF mesh (false = cone-disc fallback)
+bool usingSDF();
 };  // namespace SliderRenderer

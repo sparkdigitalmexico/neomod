@@ -56,6 +56,9 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
     // live (but also on start)
     void onModUpdate(bool rebuildSliderVertexBuffers = true, bool recomputeDrainRate = true);
 
+    // cv::slider_body_sdf / cv::slider_use_gradient_image cvars (slider body mesh format changes)
+    void onSliderSDFCvarChange(float oldValue, float newValue);
+
     // does things which needed to wait until loading finished, even outside of play mode (called by Osu::update)
     void checkHandleAsyncMusicLoadFinish();
     [[nodiscard]] inline bool isMusicLoadHandled() const { return this->bIsAsyncMusicLoadHandled; }

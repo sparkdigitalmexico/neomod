@@ -226,6 +226,14 @@ Osu::Osu()
         cv::slider_curve_points_separation.setValue(newValue, false);
     });
 
+    // rebuild when toggled mid-gameplay (both change whether slider bodies bake SDF or cone meshes)
+    static const auto sliderBodyMeshCvarCallback = [](float oldValue, float newValue) -> void {
+        if(osu && osu->isInPlayMode() && osu->getMapInterface())
+            osu->getMapInterface()->onSliderSDFCvarChange(oldValue, newValue);
+    };
+    cv::slider_body_sdf.setCallback(sliderBodyMeshCvarCallback);
+    cv::slider_use_gradient_image.setCallback(sliderBodyMeshCvarCallback);
+
     // renderer
     this->internalRect = engine->getScreenRect();
 
@@ -527,6 +535,8 @@ Osu::~Osu() {
         cv::confine_cursor_never.reset();
         cv::osu_folder.reset();
         cv::slider_curve_points_separation.reset();
+        cv::slider_body_sdf.reset();
+        cv::slider_use_gradient_image.reset();
         cv::skin.reset();
         cv::skin_reload.reset();
         cv::mod_mafham.reset();
