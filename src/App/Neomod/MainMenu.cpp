@@ -1203,6 +1203,13 @@ void MainMenu::tick() {
             }
         }
     }
+
+    if(!this->setToggleableVisibilitiesOnce) {
+        // due to broken appearance if they are not visible after the first updateLayout
+        this->setToggleableVisibilitiesOnce = true;
+        this->tipLabel->setVisible(cv::main_menu_tips.getBool());
+        this->onAdblockChangeCallback(cv::adblock.getFloat());
+    }
 }
 
 void MainMenu::updateInput(CBaseUIEventCtx &c) {

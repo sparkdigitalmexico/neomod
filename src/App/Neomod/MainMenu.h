@@ -119,6 +119,8 @@ class MainMenu final : public UIScreen, public MouseListener {
     UIButtonWithIcon *discordButton{nullptr};
     UIButtonWithIcon *twitterButton{nullptr};
 
+    bool setToggleableVisibilitiesOnce{false};
+
     bool drawVersionNotificationArrow;
     bool didUserUpdateFromOlderVersion;
 
