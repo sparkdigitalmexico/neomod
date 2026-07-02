@@ -276,6 +276,9 @@ void SDLGPUVertexArrayObject::init() {
     // free system memory
     if(!this->bKeepInSystemMemory) {
         this->clear();
+        // clear() re-derives iNumVertices from the unconverted source vertices; restore the converted count
+        // so draw()'s range math matches the uploaded buffer (fans/quads are baked as triangle lists)
+        this->iNumVertices = numVerts;
         m_convertedVertices.clear();
         m_convertedVertices.shrink_to_fit();
     }

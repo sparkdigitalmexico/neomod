@@ -249,6 +249,9 @@ void DirectX11VertexArrayObject::init() {
     // free memory
     if(!this->bKeepInSystemMemory) {
         this->clear();
+        // clear() re-derives iNumVertices from the unconverted source vertices; restore the converted count
+        // so draw()'s range math matches the GPU buffer (fans/quads are baked as triangle lists)
+        this->iNumVertices = this->convertedVertices.size();
         this->convertedVertices.clear();
         this->convertedVertices.shrink_to_fit();
     }
