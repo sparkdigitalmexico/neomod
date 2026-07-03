@@ -157,8 +157,9 @@ void ff_upload(VideoPlayerImpl *d, i32 w, i32 h) {
         d->image->setImageData(w, h, d->packed.data());
     }
 
-    // upload synchronously on this (render) thread, same as TextureAtlas
-    d->image->reload();
+    // Update the existing GPU texture in place (glTexSubImage2D) instead of destroying+recreating it.
+    // load() re-runs init() WITHOUT release(), so the texture is reused -> no per-frame flicker or realloc.
+    d->image->load();
 }
 
 void ff_seek(VideoPlayerImpl *d, i64 targetMS) {
