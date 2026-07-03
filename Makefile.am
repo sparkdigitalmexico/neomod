@@ -482,6 +482,10 @@ FFMPEG_CONFIGURE_FLAGS += --enable-pic --enable-small
 FFMPEG_CONFIGURE_FLAGS += --enable-decoder=mp3,aac,vorbis,opus,flac,pcm_s16le,pcm_f32le,mjpeg,bmp,gif,tiff,webp,tga
 FFMPEG_CONFIGURE_FLAGS += --enable-demuxer=mp3,aac,ogg,flac,wav,mov,m4a,matroska,image2,image2pipe,image_jpeg_pipe,image_bmp_pipe,image_gif_pipe,image_tiff_pipe,image_webp_pipe
 FFMPEG_CONFIGURE_FLAGS += --enable-parser=aac,flac,mpegaudio,vorbis,opus,mjpeg
+# neomod: enable beatmap background-video decoders/demuxers/parsers
+FFMPEG_CONFIGURE_FLAGS += --enable-decoder=h264,hevc,mpeg4,msmpeg4v1,msmpeg4v2,msmpeg4v3,mpeg2video,mpeg1video,vp6,vp6a,vp6f,vp8,vp9,av1,flv,wmv1,wmv2,wmv3,vc1,h263,theora,rv10,rv20,rv30,rv40,cinepak,svq1,svq3
+FFMPEG_CONFIGURE_FLAGS += --enable-demuxer=avi,flv,live_flv,mpegts,mpegps,asf,rm,dv,h264,hevc,m4v,mpegvideo
+FFMPEG_CONFIGURE_FLAGS += --enable-parser=h264,hevc,mpeg4video,mpegvideo,vc1,vp3,vp8,vp9,av1,h263,dvvideo
 FFMPEG_CONFIGURE_FLAGS += --enable-protocol=file
 FFMPEG_CONFIGURE_FLAGS += --arch=$(host_cpu)
 FFMPEG_CONFIGURE_FLAGS += --target-os=$(if $(findstring mingw,$(host_os)),mingw32,$(if $(findstring darwin,$(host_os)),darwin,linux))
