@@ -204,6 +204,12 @@ void BeatmapInterface::drawBackground() {
             if(!this->videoPlayer || this->videoPlayer->getPath() != videoPath) {
                 this->videoPlayer = std::make_unique<VideoPlayer>();
                 this->videoPlayer->load(videoPath, this->beatmap->getVideoStartOffsetMS());
+                const Image *vi = this->videoPlayer->getImage();
+                debugLog("VideoPlayer DRAW: ready={} video={}x{} image={}x{} screen={}x{}",
+                         (int)this->videoPlayer->isReady(),
+                         this->videoPlayer->getWidth(), this->videoPlayer->getHeight(),
+                         vi ? vi->getWidth() : -1, vi ? vi->getHeight() : -1,
+                         (int)osu->getVirtScreenSize().x, (int)osu->getVirtScreenSize().y);
             }
             this->videoPlayer->update(this->iCurMusicPos);
 
