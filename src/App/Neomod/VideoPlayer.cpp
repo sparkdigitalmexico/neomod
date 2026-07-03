@@ -195,30 +195,35 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
     return false;
 #else
     VideoPlayerImpl *d = this->impl.get();
-    auto fail = [d]() -> bool { d->failed = true; return false; };
+    auto fail = [d](const char *why) -> bool {
+        debugLog("VideoPlayer: load FAILED at [{}]", why);
+        d->failed = true;
+        return false;
+    };
 
     debugLog("VideoPlayer: loading \"{}\" (startOffset {}ms)", absPath, startOffsetMS);
 
     if(!Mc::FFmpeg::init()) {
         debugLog("VideoPlayer: FFmpeg unavailable: {}", Mc::FFmpeg::getInitError());
-        return fail();
+        return fail("ffmpeg-init");
     }
 
     // read the whole file into memory
     {
         std::ifstream f(absPath, std::ios::binary | std::ios::ate);
-        if(!f) return fail();
+        if(!f) return fail("open-file");
         const std::streamsize sz = f.tellg();
-        if(sz <= 0) return fail();
+        if(sz <= 0) return fail("file-size<=0");
         f.seekg(0, std::ios::beg);
         d->fileData.resize(static_cast<size_t>(sz));
-        if(!f.read(reinterpret_cast<char *>(d->fileData.data()), sz)) return fail();
+        if(!f.read(reinterpret_cast<char *>(d->fileData.data()), sz)) return fail("file-read");
         d->mem = MemReader{d->fileData.data(), static_cast<u64>(sz), 0};
+        debugLog("VideoPlayer: read {} bytes into memory", static_cast<u64>(sz));
     }
 
     constexpr int avioBufSize = 32768;
     auto *avioBuf = static_cast<u8 *>(ff::av_malloc(avioBufSize));
-    if(!avioBuf) return fail();
+    if(!avioBuf) return fail("av_malloc");
 
     d->avioCtx = ff::avio_alloc_context(
         avioBuf, avioBufSize, 0, &d->mem,
@@ -248,15 +253,21 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
         });
     if(!d->avioCtx) {
         ff::av_free(avioBuf);
-        return fail();
+        return fail("avio_alloc_context");
     }
 
     d->fmtCtx = ff::avformat_alloc_context();
-    if(!d->fmtCtx) return fail();
+    if(!d->fmtCtx) return fail("avformat_alloc_context");
     d->fmtCtx->pb = d->avioCtx;
 
-    if(ff::avformat_open_input(&d->fmtCtx, absPath.c_str(), nullptr, nullptr) != 0) return fail();
-    if(ff::avformat_find_stream_info(d->fmtCtx, nullptr) != 0) return fail();
+    if(int e = ff::avformat_open_input(&d->fmtCtx, absPath.c_str(), nullptr, nullptr); e != 0) {
+        debugLog("VideoPlayer: avformat_open_input error code {}", e);
+        return fail("avformat_open_input");
+    }
+    if(int e = ff::avformat_find_stream_info(d->fmtCtx, nullptr); e != 0) {
+        debugLog("VideoPlayer: find_stream_info error code {}", e);
+        return fail("find_stream_info");
+    }
 
     for(unsigned i = 0; i < d->fmtCtx->nb_streams; i++) {
         if(d->fmtCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
@@ -264,17 +275,20 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
             break;
         }
     }
-    if(d->videoIdx < 0) return fail();
+    if(d->videoIdx < 0) return fail("no-video-stream");
 
     AVStream *st = d->fmtCtx->streams[d->videoIdx];
     AVCodecParameters *cp = st->codecpar;
     const AVCodec *codec = ff::avcodec_find_decoder(cp->codec_id);
-    if(!codec) return fail();
+    if(!codec) {
+        debugLog("VideoPlayer: no decoder for codec_id {}", static_cast<int>(cp->codec_id));
+        return fail("no-decoder");
+    }
 
     d->codecCtx = ff::avcodec_alloc_context3(codec);
-    if(!d->codecCtx) return fail();
-    if(ff::avcodec_parameters_to_context(d->codecCtx, cp) != 0) return fail();
-    if(ff::avcodec_open2(d->codecCtx, codec, nullptr) != 0) return fail();
+    if(!d->codecCtx) return fail("alloc_context3");
+    if(ff::avcodec_parameters_to_context(d->codecCtx, cp) != 0) return fail("params_to_context");
+    if(ff::avcodec_open2(d->codecCtx, codec, nullptr) != 0) return fail("avcodec_open2");
 
     d->tbNum = st->time_base.num;
     d->tbDen = st->time_base.den > 0 ? st->time_base.den : 1;
@@ -284,18 +298,19 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
     d->frame = ff::av_frame_alloc();
     d->rgbaFrame = ff::av_frame_alloc();
     d->pkt = ff::av_packet_alloc();
-    if(!d->frame || !d->rgbaFrame || !d->pkt) return fail();
+    if(!d->frame || !d->rgbaFrame || !d->pkt) return fail("frame/packet-alloc");
 
     // decode first frame to establish dimensions and create the target image
     i64 firstMS = 0;
-    if(!ff_decode_next(d, firstMS)) return fail();
+    if(!ff_decode_next(d, firstMS)) return fail("first-frame-decode");
 
     this->iWidth = d->frame->width;
     this->iHeight = d->frame->height;
-    if(this->iWidth <= 0 || this->iHeight <= 0 || this->iWidth > 8192 || this->iHeight > 8192) return fail();
+    if(this->iWidth <= 0 || this->iHeight <= 0 || this->iWidth > 8192 || this->iHeight > 8192)
+        return fail("bad-dimensions");
 
     d->image = resourceManager->createImage(this->iWidth, this->iHeight, false, /*keepInSystemMemory=*/true);
-    if(!d->image) return fail();
+    if(!d->image) return fail("createImage");
 
     ff_upload(d, this->iWidth, this->iHeight);
     d->lastDisplayedMS = firstMS;
@@ -335,4 +350,3 @@ void VideoPlayer::update(i32 songPositionMS) {
     (void)songPositionMS;
 #endif
 }
-// neomod: beatmap background-video playback
