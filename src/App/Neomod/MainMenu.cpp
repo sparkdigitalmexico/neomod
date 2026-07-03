@@ -928,13 +928,29 @@ void MainMenu::draw() {
 
     // draw background
     if(cv::draw_menu_background.getBool()) {
-        auto *bgih = osu->getBackgroundImageHandler();
-        assert(bgih);
-        if(this->lastMap && this->lastMap != this->currentMap) {
-            bgih->draw(bgih->getLoadBackgroundImage(this->lastMap, true), 1.f - this->mapFadeAnim);
-        }
-        if(this->currentMap) {
-            bgih->draw(bgih->getLoadBackgroundImage(this->currentMap, true), this->mapFadeAnim);
+        if(!cv::main_menu_shuffle.getBool()) {
+            // neomod: static skin wallpaper (menu-background) instead of a random map's background
+            Image *bg = osu->getSkin()->i_menu_bg.img;
+            if(bg != nullptr && bg != MISSING_TEXTURE && bg->isReady()) {
+                const float scale = Osu::getImageScaleToFillResolution(bg, osu->getVirtScreenSize());
+                g->setColor(0xffffffff);
+                g->pushTransform();
+                {
+                    g->scale(scale, scale);
+                    g->translate(osu->getVirtScreenSize() / 2.f);
+                    g->drawImage(bg);
+                }
+                g->popTransform();
+            }
+        } else {
+            auto *bgih = osu->getBackgroundImageHandler();
+            assert(bgih);
+            if(this->lastMap && this->lastMap != this->currentMap) {
+                bgih->draw(bgih->getLoadBackgroundImage(this->lastMap, true), 1.f - this->mapFadeAnim);
+            }
+            if(this->currentMap) {
+                bgih->draw(bgih->getLoadBackgroundImage(this->currentMap, true), this->mapFadeAnim);
+            }
         }
     }
 
@@ -1156,11 +1172,11 @@ void MainMenu::tick() {
         }
 
         if(!music) {
-            this->selectRandomBeatmap();
+            if(cv::main_menu_shuffle.getBool()) this->selectRandomBeatmap();
         } else if(!resourceManager->isLoadingResource(music) &&
                   map_iface->isMusicLoadHandled() /* we are still loading */) {
             if(!music->isReady() || music->isFinished()) {
-                this->selectRandomBeatmap();
+                if(cv::main_menu_shuffle.getBool()) this->selectRandomBeatmap();
             } else if(music->isPlaying()) {
                 this->pauseButton->setPaused(false);
 

@@ -265,7 +265,7 @@ Osu::Osu()
     Console::execConfigFile("osu");
     Console::execConfigFile("override");  // used for quickfixing live builds without redeploying/recompiling
 
-    debugLog("======== NEOMOD VIDEO-BACKGROUND BUILD v9 (no per-frame reseek) ========");
+    debugLog("======== NEOMOD VIDEO-BACKGROUND BUILD v10 (menu shuffle toggle) ========");
 
     // if we don't have an osu.cfg, import
     if(!Environment::fileExists(NEOMOD_CFG_PATH "/osu.cfg")) {
