@@ -13,7 +13,13 @@
 
 #if defined(MCENGINE_FEATURE_FFMPEG)
 #include "FFmpegLoader.h"
-using namespace Mc::FFmpeg::funcs;
+// NOTE: FFmpegLoader.h also pulls in libav's C headers, which declare the real
+// av_*/sws_* functions in the GLOBAL namespace. The loader additionally declares
+// same-named function *pointers* in Mc::FFmpeg::funcs. A blanket
+// `using namespace Mc::FFmpeg::funcs;` at file scope makes the two collide
+// (ambiguous). So we alias the namespace and qualify every call with `ff::` to
+// bind explicitly to the dynamically-loaded function pointers.
+namespace ff = Mc::FFmpeg::funcs;
 #endif
 
 namespace {
@@ -59,17 +65,17 @@ struct VideoPlayerImpl {
     std::vector<u8> packed;    // tightly-packed RGBA scratch for upload
 
     ~VideoPlayerImpl() {
-        if(rgbaFrame) av_frame_free(&rgbaFrame);
-        if(swsCtx) sws_freeContext(swsCtx);
-        if(pkt) av_packet_free(&pkt);
-        if(frame) av_frame_free(&frame);
-        if(codecCtx) avcodec_free_context(&codecCtx);
-        if(fmtCtx) avformat_close_input(&fmtCtx);
+        if(rgbaFrame) ff::av_frame_free(&rgbaFrame);
+        if(swsCtx) ff::sws_freeContext(swsCtx);
+        if(pkt) ff::av_packet_free(&pkt);
+        if(frame) ff::av_frame_free(&frame);
+        if(codecCtx) ff::avcodec_free_context(&codecCtx);
+        if(fmtCtx) ff::avformat_close_input(&fmtCtx);
         if(avioCtx) {
             // ffmpeg may have reallocated the buffer internally, free the current one
-            av_free(avioCtx->buffer);
+            ff::av_free(avioCtx->buffer);
             avioCtx->buffer = nullptr;
-            avio_context_free(&avioCtx);
+            ff::avio_context_free(&avioCtx);
         }
     }
 #endif
@@ -89,11 +95,11 @@ i64 ff_pts_ms(VideoPlayerImpl *d, AVFrame *fr) {
 // decode the next video frame into d->frame; returns false at end of stream
 bool ff_decode_next(VideoPlayerImpl *d, i64 &outMS) {
     for(;;) {
-        int ret = av_read_frame(d->fmtCtx, d->pkt);
+        int ret = ff::av_read_frame(d->fmtCtx, d->pkt);
         if(ret < 0) {
             // flush: drain any remaining buffered frames
-            avcodec_send_packet(d->codecCtx, nullptr);
-            if(avcodec_receive_frame(d->codecCtx, d->frame) >= 0) {
+            ff::avcodec_send_packet(d->codecCtx, nullptr);
+            if(ff::avcodec_receive_frame(d->codecCtx, d->frame) >= 0) {
                 outMS = ff_pts_ms(d, d->frame);
                 return true;
             }
@@ -101,13 +107,13 @@ bool ff_decode_next(VideoPlayerImpl *d, i64 &outMS) {
             return false;
         }
         if(d->pkt->stream_index != d->videoIdx) {
-            av_packet_unref(d->pkt);
+            ff::av_packet_unref(d->pkt);
             continue;
         }
-        int sret = avcodec_send_packet(d->codecCtx, d->pkt);
-        av_packet_unref(d->pkt);
+        int sret = ff::avcodec_send_packet(d->codecCtx, d->pkt);
+        ff::av_packet_unref(d->pkt);
         if(sret < 0) continue;
-        if(avcodec_receive_frame(d->codecCtx, d->frame) >= 0) {
+        if(ff::avcodec_receive_frame(d->codecCtx, d->frame) >= 0) {
             outMS = ff_pts_ms(d, d->frame);
             return true;
         }
@@ -128,14 +134,14 @@ void ff_upload(VideoPlayerImpl *d, i32 w, i32 h) {
         default: break;
     }
 
-    if(!d->swsCtx) d->swsCtx = sws_alloc_context();
+    if(!d->swsCtx) d->swsCtx = ff::sws_alloc_context();
     if(!d->swsCtx || !d->image) return;
 
-    av_frame_unref(d->rgbaFrame);  // free previous conversion buffer
+    ff::av_frame_unref(d->rgbaFrame);  // free previous conversion buffer
     d->rgbaFrame->format = AV_PIX_FMT_RGBA;
     d->rgbaFrame->width = w;
     d->rgbaFrame->height = h;
-    if(sws_scale_frame(d->swsCtx, d->rgbaFrame, src) < 0) return;
+    if(ff::sws_scale_frame(d->swsCtx, d->rgbaFrame, src) < 0) return;
 
     const int dstStride = w * Image::NUM_CHANNELS;
     const int srcStride = d->rgbaFrame->linesize[0];
@@ -158,8 +164,8 @@ void ff_upload(VideoPlayerImpl *d, i32 w, i32 h) {
 void ff_seek(VideoPlayerImpl *d, i64 targetMS) {
     if(targetMS < 0) targetMS = 0;
     const i64 ts = (d->tbNum > 0) ? (targetMS * static_cast<i64>(d->tbDen)) / (1000 * static_cast<i64>(d->tbNum)) : 0;
-    if(av_seek_frame(d->fmtCtx, d->videoIdx, ts, AVSEEK_FLAG_BACKWARD) >= 0) {
-        avcodec_flush_buffers(d->codecCtx);
+    if(ff::av_seek_frame(d->fmtCtx, d->videoIdx, ts, AVSEEK_FLAG_BACKWARD) >= 0) {
+        ff::avcodec_flush_buffers(d->codecCtx);
         d->eof = false;
         d->lastDisplayedMS = INT64_MIN;  // force the next decoded frame to be shown
     }
@@ -209,10 +215,10 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
     }
 
     constexpr int avioBufSize = 32768;
-    auto *avioBuf = static_cast<u8 *>(av_malloc(avioBufSize));
+    auto *avioBuf = static_cast<u8 *>(ff::av_malloc(avioBufSize));
     if(!avioBuf) return fail();
 
-    d->avioCtx = avio_alloc_context(
+    d->avioCtx = ff::avio_alloc_context(
         avioBuf, avioBufSize, 0, &d->mem,
         [](void *opaque, u8 *buf, int buf_size) -> int {
             auto *r = static_cast<MemReader *>(opaque);
@@ -239,16 +245,16 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
             return newPos;
         });
     if(!d->avioCtx) {
-        av_free(avioBuf);
+        ff::av_free(avioBuf);
         return fail();
     }
 
-    d->fmtCtx = avformat_alloc_context();
+    d->fmtCtx = ff::avformat_alloc_context();
     if(!d->fmtCtx) return fail();
     d->fmtCtx->pb = d->avioCtx;
 
-    if(avformat_open_input(&d->fmtCtx, absPath.c_str(), nullptr, nullptr) != 0) return fail();
-    if(avformat_find_stream_info(d->fmtCtx, nullptr) != 0) return fail();
+    if(ff::avformat_open_input(&d->fmtCtx, absPath.c_str(), nullptr, nullptr) != 0) return fail();
+    if(ff::avformat_find_stream_info(d->fmtCtx, nullptr) != 0) return fail();
 
     for(unsigned i = 0; i < d->fmtCtx->nb_streams; i++) {
         if(d->fmtCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
@@ -260,22 +266,22 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
 
     AVStream *st = d->fmtCtx->streams[d->videoIdx];
     AVCodecParameters *cp = st->codecpar;
-    const AVCodec *codec = avcodec_find_decoder(cp->codec_id);
+    const AVCodec *codec = ff::avcodec_find_decoder(cp->codec_id);
     if(!codec) return fail();
 
-    d->codecCtx = avcodec_alloc_context3(codec);
+    d->codecCtx = ff::avcodec_alloc_context3(codec);
     if(!d->codecCtx) return fail();
-    if(avcodec_parameters_to_context(d->codecCtx, cp) != 0) return fail();
-    if(avcodec_open2(d->codecCtx, codec, nullptr) != 0) return fail();
+    if(ff::avcodec_parameters_to_context(d->codecCtx, cp) != 0) return fail();
+    if(ff::avcodec_open2(d->codecCtx, codec, nullptr) != 0) return fail();
 
     d->tbNum = st->time_base.num;
     d->tbDen = st->time_base.den > 0 ? st->time_base.den : 1;
     if(st->avg_frame_rate.num > 0 && st->avg_frame_rate.den > 0)
         d->frameDurationMS = static_cast<i64>(1000.0 * st->avg_frame_rate.den / st->avg_frame_rate.num);
 
-    d->frame = av_frame_alloc();
-    d->rgbaFrame = av_frame_alloc();
-    d->pkt = av_packet_alloc();
+    d->frame = ff::av_frame_alloc();
+    d->rgbaFrame = ff::av_frame_alloc();
+    d->pkt = ff::av_packet_alloc();
     if(!d->frame || !d->rgbaFrame || !d->pkt) return fail();
 
     // decode first frame to establish dimensions and create the target image
@@ -326,3 +332,4 @@ void VideoPlayer::update(i32 songPositionMS) {
     (void)songPositionMS;
 #endif
 }
+// neomod: beatmap background-video playback
