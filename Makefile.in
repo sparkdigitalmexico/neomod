@@ -393,6 +393,7 @@ am__neomod_SOURCES_DIST = libraries/MD5.cpp libraries/base64.cpp \
 	src/App/Tests/EmojiRenderTest/EmojiRenderTest.cpp \
 	src/App/Tests/Neomod/HitSoundTest.cpp \
 	src/App/Tests/Neomod/SkinLoadTest.cpp \
+	src/App/Tests/Neomod/SliderRenderTest.cpp \
 	src/App/Tests/NetworkTest.cpp $(builddir)/gen/binary_embed.cpp \
 	$(DEPS_PREFIX)/mimalloc/mimalloc_new_delete.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
@@ -436,6 +437,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @BUILD_TESTS_TRUE@	src/App/Tests/EmojiRenderTest/neomod-EmojiRenderTest.$(OBJEXT) \
 @BUILD_TESTS_TRUE@	src/App/Tests/Neomod/neomod-HitSoundTest.$(OBJEXT) \
 @BUILD_TESTS_TRUE@	src/App/Tests/Neomod/neomod-SkinLoadTest.$(OBJEXT) \
+@BUILD_TESTS_TRUE@	src/App/Tests/Neomod/neomod-SliderRenderTest.$(OBJEXT) \
 @BUILD_TESTS_TRUE@	src/App/Tests/neomod-NetworkTest.$(OBJEXT)
 am__objects_12 = $(builddir)/gen/neomod-binary_embed.$(OBJEXT)
 @BUILD_MIMALLOC_TRUE@@WIN_PLATFORM_TRUE@am__objects_13 = $(DEPS_PREFIX)/mimalloc/neomod-mimalloc_new_delete.$(OBJEXT)
@@ -784,6 +786,7 @@ am__depfiles_remade = $(DEPS_PREFIX)/mimalloc/$(DEPDIR)/neomod-mimalloc_new_dele
 	src/App/Tests/EmojiRenderTest/$(DEPDIR)/neomod-EmojiRenderTest.Po \
 	src/App/Tests/Neomod/$(DEPDIR)/neomod-HitSoundTest.Po \
 	src/App/Tests/Neomod/$(DEPDIR)/neomod-SkinLoadTest.Po \
+	src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Po \
 	src/Engine/$(DEPDIR)/neomod-AnimationHandler.Po \
 	src/Engine/$(DEPDIR)/neomod-ConsoleReader.Po \
 	src/Engine/$(DEPDIR)/neomod-DiscordInterface.Po \
@@ -1374,6 +1377,7 @@ PATH := $(DEPS_PREFIX):$(shell echo $$PATH)
 @BUILD_TESTS_TRUE@	src/App/Tests/EmojiRenderTest/EmojiRenderTest.cpp \
 @BUILD_TESTS_TRUE@	src/App/Tests/Neomod/HitSoundTest.cpp \
 @BUILD_TESTS_TRUE@	src/App/Tests/Neomod/SkinLoadTest.cpp \
+@BUILD_TESTS_TRUE@	src/App/Tests/Neomod/SliderRenderTest.cpp \
 @BUILD_TESTS_TRUE@	src/App/Tests/NetworkTest.cpp \
 @BUILD_TESTS_TRUE@	$(NULL)
 
@@ -2927,6 +2931,9 @@ src/App/Tests/Neomod/neomod-HitSoundTest.$(OBJEXT):  \
 src/App/Tests/Neomod/neomod-SkinLoadTest.$(OBJEXT):  \
 	src/App/Tests/Neomod/$(am__dirstamp) \
 	src/App/Tests/Neomod/$(DEPDIR)/$(am__dirstamp)
+src/App/Tests/Neomod/neomod-SliderRenderTest.$(OBJEXT):  \
+	src/App/Tests/Neomod/$(am__dirstamp) \
+	src/App/Tests/Neomod/$(DEPDIR)/$(am__dirstamp)
 src/App/Tests/neomod-NetworkTest.$(OBJEXT):  \
 	src/App/Tests/$(am__dirstamp) \
 	src/App/Tests/$(DEPDIR)/$(am__dirstamp)
@@ -3127,6 +3134,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/App/Tests/EmojiRenderTest/$(DEPDIR)/neomod-EmojiRenderTest.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/App/Tests/Neomod/$(DEPDIR)/neomod-HitSoundTest.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/App/Tests/Neomod/$(DEPDIR)/neomod-SkinLoadTest.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/Engine/$(DEPDIR)/neomod-AnimationHandler.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/Engine/$(DEPDIR)/neomod-ConsoleReader.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/Engine/$(DEPDIR)/neomod-DiscordInterface.Po@am__quote@ # am--include-marker
@@ -6492,6 +6500,20 @@ src/App/Tests/Neomod/neomod-SkinLoadTest.obj: src/App/Tests/Neomod/SkinLoadTest.
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(neomod_CPPFLAGS) $(CPPFLAGS) $(neomod_CXXFLAGS) $(CXXFLAGS) -c -o src/App/Tests/Neomod/neomod-SkinLoadTest.obj `if test -f 'src/App/Tests/Neomod/SkinLoadTest.cpp'; then $(CYGPATH_W) 'src/App/Tests/Neomod/SkinLoadTest.cpp'; else $(CYGPATH_W) '$(srcdir)/src/App/Tests/Neomod/SkinLoadTest.cpp'; fi`
 
+src/App/Tests/Neomod/neomod-SliderRenderTest.o: src/App/Tests/Neomod/SliderRenderTest.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(neomod_CPPFLAGS) $(CPPFLAGS) $(neomod_CXXFLAGS) $(CXXFLAGS) -MT src/App/Tests/Neomod/neomod-SliderRenderTest.o -MD -MP -MF src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Tpo -c -o src/App/Tests/Neomod/neomod-SliderRenderTest.o `test -f 'src/App/Tests/Neomod/SliderRenderTest.cpp' || echo '$(srcdir)/'`src/App/Tests/Neomod/SliderRenderTest.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Tpo src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/App/Tests/Neomod/SliderRenderTest.cpp' object='src/App/Tests/Neomod/neomod-SliderRenderTest.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(neomod_CPPFLAGS) $(CPPFLAGS) $(neomod_CXXFLAGS) $(CXXFLAGS) -c -o src/App/Tests/Neomod/neomod-SliderRenderTest.o `test -f 'src/App/Tests/Neomod/SliderRenderTest.cpp' || echo '$(srcdir)/'`src/App/Tests/Neomod/SliderRenderTest.cpp
+
+src/App/Tests/Neomod/neomod-SliderRenderTest.obj: src/App/Tests/Neomod/SliderRenderTest.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(neomod_CPPFLAGS) $(CPPFLAGS) $(neomod_CXXFLAGS) $(CXXFLAGS) -MT src/App/Tests/Neomod/neomod-SliderRenderTest.obj -MD -MP -MF src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Tpo -c -o src/App/Tests/Neomod/neomod-SliderRenderTest.obj `if test -f 'src/App/Tests/Neomod/SliderRenderTest.cpp'; then $(CYGPATH_W) 'src/App/Tests/Neomod/SliderRenderTest.cpp'; else $(CYGPATH_W) '$(srcdir)/src/App/Tests/Neomod/SliderRenderTest.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Tpo src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/App/Tests/Neomod/SliderRenderTest.cpp' object='src/App/Tests/Neomod/neomod-SliderRenderTest.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(neomod_CPPFLAGS) $(CPPFLAGS) $(neomod_CXXFLAGS) $(CXXFLAGS) -c -o src/App/Tests/Neomod/neomod-SliderRenderTest.obj `if test -f 'src/App/Tests/Neomod/SliderRenderTest.cpp'; then $(CYGPATH_W) 'src/App/Tests/Neomod/SliderRenderTest.cpp'; else $(CYGPATH_W) '$(srcdir)/src/App/Tests/Neomod/SliderRenderTest.cpp'; fi`
+
 src/App/Tests/neomod-NetworkTest.o: src/App/Tests/NetworkTest.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(neomod_CPPFLAGS) $(CPPFLAGS) $(neomod_CXXFLAGS) $(CXXFLAGS) -MT src/App/Tests/neomod-NetworkTest.o -MD -MP -MF src/App/Tests/$(DEPDIR)/neomod-NetworkTest.Tpo -c -o src/App/Tests/neomod-NetworkTest.o `test -f 'src/App/Tests/NetworkTest.cpp' || echo '$(srcdir)/'`src/App/Tests/NetworkTest.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/App/Tests/$(DEPDIR)/neomod-NetworkTest.Tpo src/App/Tests/$(DEPDIR)/neomod-NetworkTest.Po
@@ -7032,6 +7054,7 @@ distclean: distclean-am
 	-rm -f src/App/Tests/EmojiRenderTest/$(DEPDIR)/neomod-EmojiRenderTest.Po
 	-rm -f src/App/Tests/Neomod/$(DEPDIR)/neomod-HitSoundTest.Po
 	-rm -f src/App/Tests/Neomod/$(DEPDIR)/neomod-SkinLoadTest.Po
+	-rm -f src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Po
 	-rm -f src/Engine/$(DEPDIR)/neomod-AnimationHandler.Po
 	-rm -f src/Engine/$(DEPDIR)/neomod-ConsoleReader.Po
 	-rm -f src/Engine/$(DEPDIR)/neomod-DiscordInterface.Po
@@ -7313,6 +7336,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f src/App/Tests/EmojiRenderTest/$(DEPDIR)/neomod-EmojiRenderTest.Po
 	-rm -f src/App/Tests/Neomod/$(DEPDIR)/neomod-HitSoundTest.Po
 	-rm -f src/App/Tests/Neomod/$(DEPDIR)/neomod-SkinLoadTest.Po
+	-rm -f src/App/Tests/Neomod/$(DEPDIR)/neomod-SliderRenderTest.Po
 	-rm -f src/Engine/$(DEPDIR)/neomod-AnimationHandler.Po
 	-rm -f src/Engine/$(DEPDIR)/neomod-ConsoleReader.Po
 	-rm -f src/Engine/$(DEPDIR)/neomod-DiscordInterface.Po

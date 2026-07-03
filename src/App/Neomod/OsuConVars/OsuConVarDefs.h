@@ -644,7 +644,8 @@ CONVAR(cursor_trail_smooth_length, 0.5f, CLIENT | SKINS | SERVER, "how long smoo
 CONVAR(cursor_trail_spacing, 15.f, CLIENT | SKINS | SERVER,
        "how big the gap between consecutive unsmooth cursortrail images should be, in milliseconds");
 CONVAR(disable_mousebuttons, Env::cfg(OS::WASM) ? false : true, CLIENT | SKINS | SERVER);
-CONVAR(disable_mousewheel, true, CLIENT | SKINS | SERVER, "disallow mousewheel (AND UP/DOWN KEYS!) from changing volume during gameplay");
+CONVAR(disable_mousewheel, true, CLIENT | SKINS | SERVER,
+       "disallow mousewheel (AND UP/DOWN KEYS!) from changing volume during gameplay");
 CONVAR(drain_kill, true, CLIENT | SERVER | PROTECTED | GAMEPLAY, "whether to kill the player upon failing");
 CONVAR(drain_disabled, false, CLIENT | SERVER | PROTECTED | GAMEPLAY,
        "determines if HP drain should be disabled entirely");
@@ -873,6 +874,10 @@ CONVAR(slider_body_lazer_fadeout_style, true, CLIENT | SKINS | SERVER,
        "out the last remaining part of the body (instead of vanishing instantly)");
 CONVAR(slider_body_smoothsnake, true, CLIENT | SKINS | SERVER,
        "draw 1 extra interpolated circle mesh at the start & end of every slider for extra smooth snaking/shrinking");
+CONVAR(slider_body_sdf, true, CLIENT | SKINS | SERVER,
+       "render slider bodies as an analytic distance-field mesh (exact, low-overdraw, smooth at any quality) instead "
+       "of overlapping cone discs; far less GPU overhead. falls back to cone discs on GLES, for dynamic mods, and "
+       "when slider_use_gradient_image is enabled");
 CONVAR(slider_body_unit_circle_subdivisions, 42, CLIENT | SKINS | SERVER);
 CONVAR(slider_border_feather, 0.0f, CLIENT | SKINS | SERVER, CFUNC(SliderRenderer::onUniformConfigChanged));
 CONVAR(slider_border_size_multiplier, 1.0f, CLIENT | SKINS | SERVER, CFUNC(SliderRenderer::onUniformConfigChanged));

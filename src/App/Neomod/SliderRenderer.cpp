@@ -13,18 +13,28 @@
 #include "Logging.h"
 #include "Graphics.h"
 
+#include <algorithm>
+#include <cmath>
 #include <limits>
+#include <vector>
 
 namespace SliderRenderer {
 
 namespace {  // static namespace
 
 Shader *s_BLEND_SHADER{nullptr};
+Shader *s_BLEND_SHADER_SDF{nullptr};
 f32 s_UNIT_CIRCLE_VAO_DIAMETER{0.0f};
 
 // base mesh
 f32 s_MESH_CENTER_HEIGHT{0.5f};     // Camera::buildMatrixOrtho2D() uses -1 to 1 for zn/zf, so don't make this too high
 i32 s_UNIT_CIRCLE_SUBDIVISIONS{0};  // see slider_body_unit_circle_subdivisions now
+
+// analytic SDF body: each curve point emits one equal-size block = a body slab quad (6 verts) + a cap/join fan
+// (SDF_FAN_SLICES triangles). these must stay in lockstep: if VERTS_PER_SDF_BLOCK doesn't match the emitted count,
+// setDrawPercent() snake-snapping rounds the draw range to the wrong boundary and clips the static end cap
+constexpr i32 SDF_FAN_SLICES{4};
+constexpr i32 VERTS_PER_SDF_BLOCK{6 + SDF_FAN_SLICES * 3};
 std::vector<f32> s_UNIT_CIRCLE;
 // managed by RM (renderer-bound baking)
 VertexArrayObject *s_UNIT_CIRCLE_VAO_BAKED{nullptr};
@@ -32,6 +42,8 @@ VertexArrayObject *s_UNIT_CIRCLE_VAO_BAKED{nullptr};
 // unbaked, basic VAO containers
 static CONSTINIT VertexArrayObject s_UNIT_CIRCLE_VAO{DrawPrimitive::TRIANGLE_FAN};
 static CONSTINIT VertexArrayObject s_UNIT_CIRCLE_VAO_TRIANGLES{DrawPrimitive::TRIANGLES};
+// SDF snake-head disc: a centered 2r quad whose corner texcoords (+/-1) make length(texcoord) the radial distance
+static CONSTINIT VertexArrayObject s_UNIT_DISC_QUAD_SDF{DrawPrimitive::TRIANGLES};
 
 // tiny rendering optimization for RenderTarget
 f32 s_fBoundingBoxMinX{(std::numeric_limits<f32>::max)()};
@@ -52,14 +64,16 @@ struct UniformCache {
     Color lastBodyColor{0};
 
     bool needsConfigUpdate{true};  // for convar-based uniforms
+
+    Shader *cacheShader{nullptr};  // which program the cached values were applied to (switching forces a re-push)
 };
 
 static CONSTINIT UniformCache s_uniformCache{};
 
 // helper function to update color uniforms (after ->enable-ing the shader)
-void updateColorUniforms(Color borderColor, Color bodyColor);
+void updateColorUniforms(Shader *shader, Color borderColor, Color bodyColor);
 // check if convar-dependent uniforms need to be updated (after ->enable-ing the shader)
-void updateConfigUniforms();
+void updateConfigUniforms(Shader *shader);
 
 // forward decls
 void drawDebugLegacy(const Image *hitcircleImage, std::span<const vec2> points, f32 hitcircleDiameter,
@@ -106,7 +120,7 @@ forceinline Color getBorderColor(const SkinSettings &settings, bool doRainbow, i
     }
 }
 
-forceinline void preDrawColorSetup(const SkinSettings &settings, const Image *gradient, i32 sliderTime,
+forceinline void preDrawColorSetup(Shader *shader, const SkinSettings &settings, const Image *gradient, i32 sliderTime,
                                    f32 colorRGBMultiplier, Color undimmedColor) {
     if(gradient) {
         // this only affects the gradient image if used (meaning shaders
@@ -119,9 +133,9 @@ forceinline void preDrawColorSetup(const SkinSettings &settings, const Image *gr
         const Color borderColor = getBorderColor(settings, doRainbow, sliderTime, colorRGBMultiplier, undimmedColor);
         const Color bodyColor = getBodyColor(settings, doRainbow, sliderTime, colorRGBMultiplier, undimmedColor);
 
-        s_BLEND_SHADER->enable();
-        updateConfigUniforms();
-        updateColorUniforms(borderColor, bodyColor);
+        shader->enable();
+        updateConfigUniforms(shader);
+        updateColorUniforms(shader, borderColor, bodyColor);
     }
 }
 
@@ -139,6 +153,14 @@ SkinSettings::SkinSettings(const Skin *skin) {
 
 // invalidate config uniforms (convar callbacks)
 void onUniformConfigChanged() { s_uniformCache.needsConfigUpdate = true; }
+
+bool usingSDF() {
+    // the gradient image path draws fixed-function (no shader), which the SDF mesh can't support (its texcoords
+    // are offsets and the union needs the fragment depth write), so it forces the cone fallback. a failed shader
+    // compile (e.g. GLES, see GL_sliderSDF_f.glsl) falls back the same way via isReady().
+    return cv::slider_body_sdf.getBool() && !cv::slider_use_gradient_image.getBool() && s_BLEND_SHADER_SDF &&
+           s_BLEND_SHADER_SDF->isReady();
+}
 
 std::unique_ptr<VertexArrayObject> generateVAO(vec2 screenRect, std::span<const vec2> points, f32 hitcircleDiameter,
                                                vec3 translation, bool skipOOBPoints) {
@@ -161,7 +183,166 @@ std::unique_ptr<VertexArrayObject> generateVAO(vec2 screenRect, std::span<const 
     const vec3 xOffset = vec3(hitcircleDiameter, 0, 0);
     const vec3 yOffset = vec3(0, hitcircleDiameter, 0);
 
-    if(!cv::slider_debug_draw_square_vao.getBool()) {  // regular fast path
+    if(cv::slider_debug_draw_square_vao.getBool()) {  // debug
+        for(const auto &point : points) {
+            if(skipOOBPoints && isOOB(point)) continue;
+
+            const vec3 topLeft = vec3(point.x, point.y, 0) - xOffset / 2.0f - yOffset / 2.0f + translation;
+            const vec3 topRight = topLeft + xOffset;
+            const vec3 bottomLeft = topLeft + yOffset;
+            const vec3 bottomRight = bottomLeft + xOffset;
+
+            vao->addVertices(std::array<vec3, 6>{topLeft,      //
+                                                 bottomLeft,   //
+                                                 bottomRight,  //
+                                                 topLeft,      //
+                                                 bottomRight,  //
+                                                 topRight});
+            vao->addTexcoords(std::array<vec2, 6>{vec2{0, 0},  //
+                                                  vec2{0, 1},  //
+                                                  vec2{1, 1},  //
+                                                  vec2{0, 0},  //
+                                                  vec2{1, 1},  //
+                                                  vec2{1, 0}});
+        }
+    } else if(usingSDF()) {  // analytic distance-field body (regular fast path)
+        // render the body as an exact distance field instead of stamping a full cone disc at every curve point
+        // (massive overdraw: neighboring radius-r discs sit only ~2.5 osu!px apart). each primitive's texcoord
+        // carries (fragment - nearest curve feature)/r, and the sliderSDF shader writes length(texcoord) to
+        // gl_FragDepth: GL_LESS then unions overlapping primitives to the nearest feature and clips d >= 1
+        // against the 1.0 depth clear. geometry only has to COVER each feature; the rounding happens
+        // per-fragment, so caps/joins/cusps are exact at any tessellation density.
+        const f32 r = hitcircleDiameter / 2.0f;
+        const uSz n = points.size();
+
+        // primitives that abut without shared vertices leave 1px rasterization cracks (T-junctions), which a
+        // depth union shows as holes; so every slab/fan overlaps 1-2px into its neighbors. fragments past the
+        // true edge still clip at d >= 1, so the overlap never widens the silhouette.
+        const f32 seamMargin = std::min(2.0f / r, 0.5f);  // fan over-sweep, ~2px of rim arc in radians
+
+        // duplicated consecutive points (bezier piece anchors) yield segments too short for a usable direction,
+        // so every point takes its in/out direction from the nearest DISTINCT point instead ({0,0} if that side
+        // has none). the duplicates must still emit their own equal-size blocks, and skipOOBPoints is ignored:
+        // one block per input point keeps setDrawPercent()'s percent -> block snapping in lockstep with the
+        // caller's percent -> curve-point mapping (snake head position).
+        constexpr f32 DIR_EPS = 0.01f;
+        std::vector<vec2> dirIn(n, vec2{0.0f, 0.0f});
+        std::vector<vec2> dirOut(n, vec2{0.0f, 0.0f});
+        if(n >= 2) {
+            vec2 anchor = points[0];
+            vec2 dir{0.0f, 0.0f};
+            for(uSz i = 1; i < n; ++i) {
+                const vec2 d = points[i] - anchor;
+                if(const f32 l = vec::length(d); l > DIR_EPS) {
+                    dir = d / l;
+                    anchor = points[i];
+                }
+                dirIn[i] = dir;
+            }
+            anchor = points[n - 1];
+            dir = vec2{0.0f, 0.0f};
+            for(uSz i = n - 1; i-- > 0;) {
+                const vec2 d = anchor - points[i];
+                if(const f32 l = vec::length(d); l > DIR_EPS) {
+                    dir = d / l;
+                    anchor = points[i];
+                }
+                dirOut[i] = dir;
+            }
+        }
+
+        std::vector<vec3> meshVerts;
+        std::vector<vec2> meshTCs;
+        meshVerts.reserve(VERTS_PER_SDF_BLOCK * n);
+        meshTCs.reserve(VERTS_PER_SDF_BLOCK * n);
+
+        const auto emitVert = [&](vec2 p, vec2 tc) {
+            meshVerts.emplace_back(p.x + translation.x, p.y + translation.y, translation.z);
+            meshTCs.emplace_back(tc);
+        };
+
+        // segment slab a->b: a 2r-wide rectangle whose side texcoords (0, +/-1) make length(texcoord) the
+        // perpendicular distance to the segment's line. 6 verts.
+        const auto emitSlab = [&](vec2 a, vec2 b, vec2 dir) {
+            const vec2 side = vec2{-dir.y, dir.x} * r;
+            a -= dir;  // ~1px lengthwise overlap into the neighboring slabs/caps (see seamMargin); the fans
+            b += dir;  // still win the min-union with the exact round corner, so nothing visibly squares off
+            const vec2 tcL{0.0f, 1.0f}, tcR{0.0f, -1.0f};
+            emitVert(a + side, tcL);
+            emitVert(a - side, tcR);
+            emitVert(b - side, tcR);
+            emitVert(a + side, tcL);
+            emitVert(b - side, tcR);
+            emitVert(b + side, tcL);
+        };
+        // zero-area stand-in where a point has no incoming segment, keeping every block equally sized
+        const auto emitFillerSlab = [&](vec2 p) {
+            for(i32 k = 0; k < 6; ++k) emitVert(p, vec2{0.0f, 0.0f});
+        };
+
+        // cap/join fan at c, sweeping halfSweep (+ seamMargin) to each side of midDir: rim texcoords are
+        // circumscribed unit directions, making texcoord = (fragment - c)/r exact across every triangle, so the
+        // drawn arc is exactly round regardless of SDF_FAN_SLICES. midDir = {0,0} emits a zero-area filler.
+        const auto emitFan = [&](vec2 c, vec2 midDir, f32 halfSweep) {
+            if(midDir == vec2{0.0f, 0.0f}) {
+                for(i32 k = 0; k < SDF_FAN_SLICES * 3; ++k) emitVert(c, vec2{0.0f, 0.0f});
+                return;
+            }
+            const f32 from = (f32)std::atan2(midDir.y, midDir.x) - halfSweep - seamMargin;
+            const f32 sweep = 2.0f * (halfSweep + seamMargin);
+            const f32 circumscribe = 1.0f / (f32)std::cos(sweep / (2.0f * (f32)SDF_FAN_SLICES));
+            const auto rimTC = [&](i32 k) {
+                const f32 a = from + sweep * (f32)k / (f32)SDF_FAN_SLICES;
+                return vec2{(f32)std::cos(a), (f32)std::sin(a)} * circumscribe;
+            };
+            vec2 tcPrev = rimTC(0);
+            for(i32 k = 1; k <= SDF_FAN_SLICES; ++k) {
+                const vec2 tcCur = rimTC(k);
+                emitVert(c, vec2{0.0f, 0.0f});
+                emitVert(c + tcPrev * r, tcPrev);
+                emitVert(c + tcCur * r, tcCur);
+                tcPrev = tcCur;
+            }
+        };
+
+        // one block per input point: the slab of the segment arriving at the point + the fan rounding the point
+        for(uSz i = 0; i < n; ++i) {
+            const vec2 seg = i >= 1 ? points[i] - points[i - 1] : vec2{0.0f, 0.0f};
+            const f32 segLen = vec::length(seg);
+            if(segLen > DIR_EPS)
+                emitSlab(points[i - 1], points[i], seg / segLen);
+            else  // first point or a duplicate
+                emitFillerSlab(points[i]);
+
+            if(i == 0 || i == n - 1) {
+                // cap: a half-disc facing away from the curve, or a full disc if the curve degenerates to a point
+                const vec2 away = i == 0 ? -dirOut[i] : dirIn[i];
+                if(away == vec2{0.0f, 0.0f})
+                    emitFan(points[i], vec2{1.0f, 0.0f}, PI_F);
+                else
+                    emitFan(points[i], away, PI_F * 0.5f);
+            } else if(dirIn[i] == vec2{0.0f, 0.0f} || dirOut[i] == vec2{0.0f, 0.0f}) {
+                // inside a duplicate run at the curve's start/end: the cap fan already rounds this spot
+                emitFan(points[i], vec2{0.0f, 0.0f}, 0.0f);
+            } else {
+                // join: round the outer corner (the slabs already cover the concave side), sweeping symmetrically
+                // about the outer-wedge bisector dIn - dOut. unlike picking a side from the cross-product sign,
+                // the bisector stays well-conditioned at reversals (retraced lines fold with cross == fp noise)
+                // and only degenerates near-collinear, where either side works because the slabs overlap.
+                const vec2 dIn = dirIn[i], dOut = dirOut[i];
+                const f32 turn = std::acos(std::clamp(vec::dot(dIn, dOut), -1.0f, 1.0f));
+                vec2 bisector = dIn - dOut;
+                if(const f32 l = vec::length(bisector); l > 1e-3f)
+                    bisector /= l;
+                else
+                    bisector = (dIn.x * dOut.y - dIn.y * dOut.x) > 0.0f ? vec2{dIn.y, -dIn.x} : vec2{-dIn.y, dIn.x};
+                emitFan(points[i], bisector, turn * 0.5f);
+            }
+        }
+
+        vao->setVertices(std::move(meshVerts));
+        vao->setTexcoords(std::move(meshTCs));
+    } else {  // legacy cone discs (one full cone per curve point)
         const std::span<const vec3> triangleMeshVerts = s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices();
         const std::span<const vec2> triangleMeshTCs = s_UNIT_CIRCLE_VAO_TRIANGLES.getTexcoords();
         std::vector<vec2> tempTexCoords{triangleMeshTCs.size() * points.size()};
@@ -187,28 +368,6 @@ std::unique_ptr<VertexArrayObject> generateVAO(vec2 screenRect, std::span<const 
         tempTexCoords.shrink_to_fit();
         vao->setVertices(std::move(tempMeshVerts));
         vao->setTexcoords(std::move(tempTexCoords));
-    } else {  // debug
-        for(const auto &point : points) {
-            if(skipOOBPoints && isOOB(point)) continue;
-
-            const vec3 topLeft = vec3(point.x, point.y, 0) - xOffset / 2.0f - yOffset / 2.0f + translation;
-            const vec3 topRight = topLeft + xOffset;
-            const vec3 bottomLeft = topLeft + yOffset;
-            const vec3 bottomRight = bottomLeft + xOffset;
-
-            vao->addVertices(std::array<vec3, 6>{topLeft,      //
-                                                 bottomLeft,   //
-                                                 bottomRight,  //
-                                                 topLeft,      //
-                                                 bottomRight,  //
-                                                 topRight});
-            vao->addTexcoords(std::array<vec2, 6>{vec2{0, 0},  //
-                                                  vec2{0, 1},  //
-                                                  vec2{1, 1},  //
-                                                  vec2{0, 0},  //
-                                                  vec2{1, 1},  //
-                                                  vec2{1, 0}});
-        }
     }
 
     if(vao->getNumVertices() > 0) {
@@ -252,8 +411,9 @@ void draw(const DrawLegacyParams &p) {
             if(useGradientImage) {
                 gradient = p.skinSettings.i_slider_gradient;
             }
-            // enables shader if gradient is not being used
-            preDrawColorSetup(p.skinSettings, gradient, p.sliderTimeForRainbow, p.colorRGBMultiplier, p.undimmedColor);
+            // legacy/dynamic-mod path always renders cone discs, so use the cone shader
+            preDrawColorSetup(s_BLEND_SHADER, p.skinSettings, gradient, p.sliderTimeForRainbow, p.colorRGBMultiplier,
+                              p.undimmedColor);
 
             // draw curve mesh
             drawFillSliderBodyPeppy(
@@ -301,6 +461,10 @@ void draw(const DrawVAOParams &p) {
         return;
     }
 
+    // the per-frame legacy path (dynamic mods) always renders cone discs and uses s_BLEND_SHADER directly
+    const bool sdf = usingSDF();
+    Shader *const shader = sdf ? s_BLEND_SHADER_SDF : s_BLEND_SHADER;
+
     // reset
     s_fBoundingBoxMinX = (std::numeric_limits<f32>::max)();
     s_fBoundingBoxMaxX = 0.0f;
@@ -321,20 +485,13 @@ void draw(const DrawVAOParams &p) {
                 gradient = p.skinSettings.i_slider_gradient;
             }
             // enables shader if gradient is not being used
-            preDrawColorSetup(p.skinSettings, gradient, p.sliderTimeForRainbow, p.colorRGBMultiplier, p.undimmedColor);
+            preDrawColorSetup(shader, p.skinSettings, gradient, p.sliderTimeForRainbow, p.colorRGBMultiplier,
+                              p.undimmedColor);
 
-            // when smoothsnake's alwaysPoint cone sits between the VAO's last cone and the next one,
-            // over-extend the VAO by a cone so its last cone hides the alwaysPoint and the cap is
-            // formed by a single smooth arc instead of two arcs kinking at the cone intersection
-            const i32 vertsPerCone = (i32)s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().size();
-            f32 effectiveTo = p.to;
-            if(p.alwaysPoints.size() > 0 && p.to < 1.0f && vertsPerCone > 0) {
-                const i32 totalCones = (i32)p.vao->getNumVertices() / vertsPerCone;
-                if(totalCones > 0) effectiveTo = std::min(1.0f, p.to + (1.0f / (f32)totalCones));
-            }
+            const i32 vertsPerBlock = sdf ? VERTS_PER_SDF_BLOCK : (i32)s_UNIT_CIRCLE_VAO_TRIANGLES.getVertices().size();
 
             // draw curve mesh
-            p.vao->setDrawPercent(p.from, effectiveTo, vertsPerCone);
+            p.vao->setDrawPercent(p.from, p.to, vertsPerBlock);
             g->pushTransform();
             {
                 g->scale(p.scale, p.scale);
@@ -346,12 +503,14 @@ void draw(const DrawVAOParams &p) {
             }
             g->popTransform();
 
+            // the moving snake head: an SDF disc-quad in SDF mode (the SDF shader can't read the cone mesh), else cone
             if(p.alwaysPoints.size() > 0)
-                drawFillSliderBodyPeppy(p.screenRect, p.alwaysPoints, s_UNIT_CIRCLE_VAO_BAKED,
+                drawFillSliderBodyPeppy(p.screenRect, p.alwaysPoints,
+                                        sdf ? &s_UNIT_DISC_QUAD_SDF : s_UNIT_CIRCLE_VAO_BAKED,
                                         p.hitcircleDiameter / 2.0f, 0, p.alwaysPoints.size());
 
             if(!useGradientImage) {
-                s_BLEND_SHADER->disable();
+                shader->disable();
             } else {
                 gradient->unbind();
             }
@@ -422,9 +581,10 @@ void checkUpdateVars(f32 hitcircleDiameter) {
         if(s_MESH_CENTER_HEIGHT > 0.0f) s_MESH_CENTER_HEIGHT = -s_MESH_CENTER_HEIGHT;
     }
 
-    // build shaders and circle mesh
+    // build shaders and circle mesh. the cone shader serves the legacy/dynamic-mod path and the cone fallback
     if(s_BLEND_SHADER == nullptr)  // only do this once
         s_BLEND_SHADER = resourceManager->createShaderAuto("slider");
+    if(s_BLEND_SHADER_SDF == nullptr) s_BLEND_SHADER_SDF = resourceManager->createShaderAuto("sliderSDF");
 
     const i32 subdivisions = cv::slider_body_unit_circle_subdivisions.getInt();
     if(subdivisions != s_UNIT_CIRCLE_SUBDIVISIONS) {
@@ -520,26 +680,44 @@ void checkUpdateVars(f32 hitcircleDiameter) {
             s_UNIT_CIRCLE_VAO_TRIANGLES.addTexcoord(
                 vec2(s_UNIT_CIRCLE[(i + 1) * 5 + 0], s_UNIT_CIRCLE[(i + 1) * 5 + 1]));
         }
+
+        // SDF snake-head disc: a centered 2r quad; corner texcoords (+/-1) make length(texcoord) the radial
+        // distance, so the sliderSDF shader renders it as an exact disc that matches the baked body's encoding
+        s_UNIT_DISC_QUAD_SDF.clear();
+        {
+            const std::array<vec2, 4> corners{vec2{-1, -1}, vec2{-1, 1}, vec2{1, 1}, vec2{1, -1}};
+            for(i32 k : std::array<i32, 6>{0, 1, 2, 0, 2, 3}) {
+                s_UNIT_DISC_QUAD_SDF.addVertex(vec3{corners[k].x * radius, corners[k].y * radius, 0.0f});
+                s_UNIT_DISC_QUAD_SDF.addTexcoord(corners[k]);
+            }
+        }
     }
 }
 
 // helper function to update color uniforms
-void updateColorUniforms(Color borderColor, Color bodyColor) {
-    if(!s_BLEND_SHADER) return;
+void updateColorUniforms(Shader *shader, Color borderColor, Color bodyColor) {
+    if(!shader) return;
 
     if(s_uniformCache.lastBorderColor != borderColor) {
-        s_BLEND_SHADER->setUniform3f("colBorder", borderColor.Rf(), borderColor.Gf(), borderColor.Bf());
+        shader->setUniform3f("colBorder", borderColor.Rf(), borderColor.Gf(), borderColor.Bf());
         s_uniformCache.lastBorderColor = borderColor;
     }
 
     if(s_uniformCache.lastBodyColor != bodyColor) {
-        s_BLEND_SHADER->setUniform3f("colBody", bodyColor.Rf(), bodyColor.Gf(), bodyColor.Bf());
+        shader->setUniform3f("colBody", bodyColor.Rf(), bodyColor.Gf(), bodyColor.Bf());
         s_uniformCache.lastBodyColor = bodyColor;
     }
 }
 
-void updateConfigUniforms() {
-    if(!s_BLEND_SHADER || !s_uniformCache.needsConfigUpdate) return;
+void updateConfigUniforms(Shader *shader) {
+    if(!shader) return;
+    // a program switch (cone <-> SDF) leaves the new program's uniforms unset, so force a full re-push
+    if(s_uniformCache.cacheShader != shader) {
+        s_uniformCache = UniformCache{};
+        s_uniformCache.cacheShader = shader;
+    } else if(!s_uniformCache.needsConfigUpdate) {
+        return;
+    }
 
     const i32 newStyle = cv::slider_osu_next_style.getBool() ? 1 : 0;
     const f32 newBodyAlpha = cv::slider_body_alpha_multiplier.getFloat();
@@ -548,27 +726,27 @@ void updateConfigUniforms() {
     const f32 newBorderFeather = cv::slider_border_feather.getFloat();
 
     if(s_uniformCache.style != newStyle) {
-        s_BLEND_SHADER->setUniform1i("style", newStyle);
+        shader->setUniform1i("style", newStyle);
         s_uniformCache.style = newStyle;
     }
 
     if(s_uniformCache.bodyAlphaMultiplier != newBodyAlpha) {
-        s_BLEND_SHADER->setUniform1f("bodyAlphaMultiplier", newBodyAlpha);
+        shader->setUniform1f("bodyAlphaMultiplier", newBodyAlpha);
         s_uniformCache.bodyAlphaMultiplier = newBodyAlpha;
     }
 
     if(s_uniformCache.bodyColorSaturation != newBodySat) {
-        s_BLEND_SHADER->setUniform1f("bodyColorSaturation", newBodySat);
+        shader->setUniform1f("bodyColorSaturation", newBodySat);
         s_uniformCache.bodyColorSaturation = newBodySat;
     }
 
     if(s_uniformCache.borderSizeMultiplier != newBorderSize) {
-        s_BLEND_SHADER->setUniform1f("borderSizeMultiplier", newBorderSize);
+        shader->setUniform1f("borderSizeMultiplier", newBorderSize);
         s_uniformCache.borderSizeMultiplier = newBorderSize;
     }
 
     if(s_uniformCache.borderFeather != newBorderFeather) {
-        s_BLEND_SHADER->setUniform1f("borderFeather", newBorderFeather);
+        shader->setUniform1f("borderFeather", newBorderFeather);
         s_uniformCache.borderFeather = newBorderFeather;
     }
 
