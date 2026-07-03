@@ -14,6 +14,7 @@
 #include "AsyncPoolTest.h"
 #include "EmojiRenderTest.h"
 #include "NetworkTest.h"
+#include "SliderRenderTest.h"
 
 #include <array>
 
@@ -28,6 +29,7 @@ static constexpr std::array sDescriptors{
     AppDescriptor{"AsyncPoolTest", [] -> App * { return new Mc::Tests::AsyncPoolTest(); }},
     AppDescriptor{"EmojiRenderTest", [] -> App * { return new Mc::Tests::EmojiRenderTest(); }},
     AppDescriptor{"NetworkTest", [] -> App * { return new Mc::Tests::NetworkTest(); }},
+    AppDescriptor{"SliderRenderTest", [] -> App * { return new Mc::Tests::SliderRenderTest(); }},
 };
 
 #else

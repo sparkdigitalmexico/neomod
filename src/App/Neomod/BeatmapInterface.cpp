@@ -4301,6 +4301,12 @@ void BeatmapInterface::updateHitobjectMetrics() {
     this->fSliderFollowCircleDiameter = this->fHitcircleDiameter * sliderFollowCircleDiameterMultiplier;
 }
 
+void BeatmapInterface::onSliderSDFCvarChange(float oldVal, float newVal) {
+    if(oldVal == newVal) return;
+    if(this->hitobjects.empty()) return;
+    this->updateSliderVertexBuffers();
+}
+
 void BeatmapInterface::updateSliderVertexBuffers() {
     this->updatePlayfieldMetrics();
     this->updateHitobjectMetrics();

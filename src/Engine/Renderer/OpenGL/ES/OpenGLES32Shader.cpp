@@ -172,15 +172,24 @@ bool OpenGLES32Shader::compile(const std::string &vertexShader, const std::strin
     m_iFragmentShader = source ? createShaderFromString(fragmentShader, GL_FRAGMENT_SHADER)
                                : createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER);
 
+    const bool showDebugPopup = cv::debug_shaders.getBool();  // || Env::cfg(BUILD::DEBUG);
     if(m_iVertexShader == 0 || m_iFragmentShader == 0) {
-        engine->showMessageError("OpenGLES32Shader Error", "Couldn't createShader()");
+        if(showDebugPopup) {
+            engine->showMessageError("OpenGLES32Shader Error", "Couldn't createShader()");
+        } else {
+            debugLog("couldn't createShader()");
+        }
         return false;
     }
 
     // create program
     m_iProgram = glCreateProgram();
     if(m_iProgram == 0) {
-        engine->showMessageError("OpenGLES32Shader Error", "Couldn't glCreateProgram()");
+        if(showDebugPopup) {
+            engine->showMessageError("OpenGLES32Shader Error", "Couldn't glCreateProgram()");
+        } else {
+            debugLog("couldn't glCreateProgram()");
+        }
         return false;
     }
 
@@ -201,7 +210,11 @@ bool OpenGLES32Shader::compile(const std::string &vertexShader, const std::strin
     GLint ret = GL_FALSE;
     glGetProgramiv(m_iProgram, GL_LINK_STATUS, &ret);
     if(ret == GL_FALSE) {
-        engine->showMessageError("OpenGLES32Shader Error", "Couldn't glLinkProgram()");
+        if(showDebugPopup) {
+            engine->showMessageError("OpenGLES32Shader Error", "Couldn't glLinkProgram()");
+        } else {
+            debugLog("couldn't glLinkProgram()");
+        }
         return false;
     }
 
