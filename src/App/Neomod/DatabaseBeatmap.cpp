@@ -543,6 +543,24 @@ DatabaseBeatmap::PRIMITIVE_CONTAINER DatabaseBeatmap::loadPrimitiveObjectsFromDa
                         c.totalBreakDuration += (u32)(endTime - startTime);
                     }
                 }
+
+                // neomod: capture background video ("Video,<offset>,\"file\"" or numeric "1,<offset>,\"file\"")
+                if(c.videoFileName.empty()) {
+                    i64 voffset{0};
+                    std::string vname;
+                    if(Parsing::parse(curLine, "Video", ',', &voffset, ',', &vname)) {
+                        c.videoFileName = std::move(vname);
+                        c.videoStartOffsetMS = static_cast<i32>(voffset);
+                    } else {
+                        i64 vtype{-1};
+                        i64 voff2{0};
+                        std::string vname2;
+                        if(Parsing::parse(curLine, &vtype, ',', &voff2, ',', &vname2) && vtype == 1) {
+                            c.videoFileName = std::move(vname2);
+                            c.videoStartOffsetMS = static_cast<i32>(voff2);
+                        }
+                    }
+                }
                 break;
             }
 
@@ -1666,6 +1684,15 @@ DatabaseBeatmap::LOAD_GAMEPLAY_RESULT DatabaseBeatmap::loadGameplay(BeatmapDiffi
     databaseBeatmap->fSliderTickRate = c.sliderTickRate;
     databaseBeatmap->fStackLeniency = c.stackLeniency;
     databaseBeatmap->iVersion = c.version;
+
+    // neomod: carry the parsed background video onto the play object.
+    // (it isn't stored in the maps.db cache, so it must be applied here every time a map loads)
+    if(c.videoFileName.empty()) {
+        databaseBeatmap->sVideoFileName = nullptr;
+    } else {
+        databaseBeatmap->sVideoFileName = SString::strcpy_u(c.videoFileName);
+    }
+    databaseBeatmap->iVideoStartOffsetMS = c.videoStartOffsetMS;
 
     // check if we have any timingpoints at all
     if(databaseBeatmap->timingpoints.size() == 0) {

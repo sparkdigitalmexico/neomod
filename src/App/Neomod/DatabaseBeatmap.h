@@ -168,6 +168,10 @@ class DatabaseBeatmap final {
         f32 sliderMultiplier{1.f};
         f32 sliderTickRate{1.f};
 
+        // neomod: background video parsed from [Events] (not stored in maps.db, so read at play time)
+        std::string videoFileName{};
+        i32 videoStartOffsetMS{0};
+
         [[nodiscard]] inline u32 getNumObjects() const { return hitcircles.size() + sliders.size() + spinners.size(); }
 
         u32 totalBreakDuration{0};

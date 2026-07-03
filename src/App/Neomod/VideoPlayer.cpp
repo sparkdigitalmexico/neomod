@@ -197,6 +197,8 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
     VideoPlayerImpl *d = this->impl.get();
     auto fail = [d]() -> bool { d->failed = true; return false; };
 
+    debugLog("VideoPlayer: loading \"{}\" (startOffset {}ms)", absPath, startOffsetMS);
+
     if(!Mc::FFmpeg::init()) {
         debugLog("VideoPlayer: FFmpeg unavailable: {}", Mc::FFmpeg::getInitError());
         return fail();
@@ -297,6 +299,7 @@ bool VideoPlayer::load(const std::string &absPath, i32 startOffsetMS) {
 
     ff_upload(d, this->iWidth, this->iHeight);
     d->lastDisplayedMS = firstMS;
+    debugLog("VideoPlayer: ready {}x{}", this->iWidth, this->iHeight);
     d->ready = true;
     return true;
 #endif
