@@ -27,6 +27,8 @@ namespace {
 constexpr int kDecodeBudgetPerUpdate = 8;
 // if the wanted time is more than this far ahead of the shown frame, seek instead of linear-decoding
 constexpr i64 kSeekAheadThresholdMS = 1500;
+// only seek BACKWARD for real scrubs/restarts, not the normal <1-frame overshoot (that caused per-frame flicker)
+constexpr i64 kSeekBackThresholdMS = 1000;
 
 #if defined(MCENGINE_FEATURE_FFMPEG)
 struct MemReader {
@@ -331,7 +333,7 @@ void VideoPlayer::update(i32 songPositionMS) {
 
     // seek for backward jumps (restart/scrub) or large forward jumps; small forward gaps decode linearly
     if(d->lastDisplayedMS != INT64_MIN &&
-       (target < d->lastDisplayedMS || target > d->lastDisplayedMS + kSeekAheadThresholdMS)) {
+       (target < d->lastDisplayedMS - kSeekBackThresholdMS || target > d->lastDisplayedMS + kSeekAheadThresholdMS)) {
         ff_seek(d, target);
     }
 
