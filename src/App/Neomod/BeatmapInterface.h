@@ -21,6 +21,7 @@ struct Skin;
 class Resource;
 class HitObject;
 class DatabaseBeatmap;
+class VideoPlayer;
 class SimulatedBeatmapInterface;
 struct LiveReplayFrame;
 struct ScoreFrame;
@@ -302,6 +303,9 @@ class BeatmapInterface final : public AbstractBeatmapInterface {
 
     // sound
     mutable std::unique_ptr<GameplayInterpolator> musicInterp;
+
+    // neomod: background video player (created lazily for maps that have a video)
+    std::unique_ptr<VideoPlayer> videoPlayer;
 
     f32 fMusicFrequencyBackup;
     i32 iCurMusicPos;

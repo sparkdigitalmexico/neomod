@@ -41,6 +41,7 @@
 #include "RoomScreen.h"
 #include "SimulatedBeatmapInterface.h"
 #include "Sound.h"
+#include "VideoPlayer.h"
 #include "Font.h"
 #include "Shader.h"
 #include "RenderTarget.h"
@@ -193,8 +194,47 @@ void BeatmapInterface::drawDebug() {
 void BeatmapInterface::drawBackground() {
     if(!this->canDraw()) return;
 
-    // draw beatmap background image
+    // neomod: draw the beatmap's background video in place of the static image while it's playing.
+    // Syncing to iCurMusicPos means speed-changing mods (DT/HT/custom speed) stay in sync for free.
+    bool videoDrawn = false;
     {
+        const bool wantVideo = cv::draw_video.getBool() && this->beatmap != nullptr && this->beatmap->hasVideo();
+        if(wantVideo) {
+            const std::string videoPath = this->beatmap->getFullVideoFilePath();
+            if(!this->videoPlayer || this->videoPlayer->getPath() != videoPath) {
+                this->videoPlayer = std::make_unique<VideoPlayer>();
+                this->videoPlayer->load(videoPath, this->beatmap->getVideoStartOffsetMS());
+            }
+            this->videoPlayer->update(this->iCurMusicPos);
+
+            const Image *videoImage = this->videoPlayer->getImage();
+            if(this->videoPlayer->isReady() && videoImage != nullptr &&
+               this->iCurMusicPos >= this->videoPlayer->getStartOffsetMS() &&
+               (cv::background_dim.getFloat() < 1.0f || this->fBreakBackgroundFade > 0.0f)) {
+                const float scale = Osu::getImageScaleToFillResolution(videoImage, osu->getVirtScreenSize());
+                const vec2 centerTrans = (osu->getVirtScreenSize() / 2.0f);
+                const float backgroundFadeDimMultiplier = 1.0f - (cv::background_dim.getFloat() - 0.3f);
+                const auto dim =
+                    (1.0f - cv::background_dim.getFloat()) + this->fBreakBackgroundFade * backgroundFadeDimMultiplier;
+                const auto alpha = cv::mod_fposu.getBool() ? cv::background_alpha.getFloat() : 1.0f;
+
+                g->setColor(argb(alpha, dim, dim, dim));
+                g->pushTransform();
+                {
+                    g->scale(scale, scale);
+                    g->translate((int)centerTrans.x, (int)centerTrans.y);
+                    g->drawImage(videoImage);
+                }
+                g->popTransform();
+                videoDrawn = true;
+            }
+        } else if(this->videoPlayer) {
+            this->videoPlayer.reset();
+        }
+    }
+
+    // draw beatmap background image
+    if(!videoDrawn) {
         const Image *backgroundImage = nullptr;
         if(cv::draw_beatmap_background_image.getBool() &&
            (cv::background_dim.getFloat() < 1.0f || this->fBreakBackgroundFade > 0.0f) &&

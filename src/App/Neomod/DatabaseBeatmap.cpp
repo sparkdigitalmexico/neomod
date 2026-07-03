@@ -103,6 +103,10 @@ std::string DatabaseBeatmap::getFullBackgroundImageFilePath() const {
     return fmt::format("{:s}{:s}", this->getFolder(), this->getBackgroundImageFileName());
 }
 
+std::string DatabaseBeatmap::getFullVideoFilePath() const {
+    return fmt::format("{:s}{:s}", this->getFolder(), this->getVideoFileName());
+}
+
 DatabaseBeatmap::LOAD_GAMEPLAY_RESULT::LOAD_GAMEPLAY_RESULT() = default;
 DatabaseBeatmap::LOAD_GAMEPLAY_RESULT::~LOAD_GAMEPLAY_RESULT() = default;
 
@@ -192,6 +196,7 @@ void swap(DatabaseBeatmap &a, DatabaseBeatmap &b) noexcept {
     SF(fStarsNomod)        SF(star_ratings)  SF(iMinBPM)                  SF(iMaxBPM)         SF(iMostCommonBPM)    SF(iNumCircles)
     SF(iNumSliders)        SF(iNumSpinners)  SF(last_queried_sr)          SF(last_queried_sr_idx)
     SF(iVersion)           SF(type)          SF(do_not_store)  SF(draw_background)
+    SF(sVideoFileName)     SF(iVideoStartOffsetMS)
 #undef SF
         // clang-format on
 
@@ -217,6 +222,7 @@ DatabaseBeatmap::DatabaseBeatmap(const DatabaseBeatmap &other)
       COPYUPCSTR(sTitleUnicode),      COPYUPCSTR(sArtist),                 COPYUPCSTR(sArtistUnicode),
       COPYUPCSTR(sCreator),           COPYUPCSTR(sDifficultyName),         COPYUPCSTR(sSource),
       COPYUPCSTR(sTags),              COPYUPCSTR(sBackgroundImageFileName),COPYUPCSTR(sAudioFileName),
+      COPYUPCSTR(sVideoFileName),     COPYOTHER(iVideoStartOffsetMS),
       COPYOTHER(iID),                 COPYOTHER(iLengthMS),                COPYOTHER(iLocalOffset),
       COPYOTHER(iOnlineOffset),       COPYOTHER(iSetID),                   COPYOTHER(iPreviewTime),
       COPYOTHER(fAR),                 COPYOTHER(fCS),                      COPYOTHER(fHP),
@@ -246,7 +252,8 @@ DatabaseBeatmap::DatabaseBeatmap(DatabaseBeatmap &&other) noexcept
       MOVEOTHER(sTitle),             MOVEOTHER(sTitleUnicode),       MOVEOTHER(sArtist),
       MOVEOTHER(sArtistUnicode),     MOVEOTHER(sCreator),            MOVEOTHER(sDifficultyName),
       MOVEOTHER(sSource),            MOVEOTHER(sTags),               MOVEOTHER(sBackgroundImageFileName),
-      MOVEOTHER(sAudioFileName),     COPYOTHER(iID),                 COPYOTHER(iLengthMS),
+      MOVEOTHER(sAudioFileName),     MOVEOTHER(sVideoFileName),      COPYOTHER(iVideoStartOffsetMS),
+      COPYOTHER(iID),                 COPYOTHER(iLengthMS),
       COPYOTHER(iLocalOffset),       COPYOTHER(iOnlineOffset),       COPYOTHER(iSetID),
       COPYOTHER(iPreviewTime),       COPYOTHER(fAR),                 COPYOTHER(fCS),
       COPYOTHER(fHP),                COPYOTHER(fOD),                 COPYOTHER(fStackLeniency),
@@ -1538,6 +1545,25 @@ DatabaseBeatmap::LOAD_META_RESULT DatabaseBeatmap::loadMetadata(bool compute_md5
                    (type == 0)) {
                     this->sBackgroundImageFileName = std::move(bgstr);
                     haveFilename = true;
+                }
+
+                // neomod: capture the beatmap's background video
+                // ("Video,<offset>,\"file\"" or the numeric "1,<offset>,\"file\"" form)
+                if(!this->sVideoFileName) {
+                    std::unique_ptr<char[]> vidstr;
+                    i64 voffset{0};
+                    if(Parsing::parse(curLine, "Video", ',', &voffset, ',', &vidstr)) {
+                        this->sVideoFileName = std::move(vidstr);
+                        this->iVideoStartOffsetMS = static_cast<i32>(voffset);
+                    } else {
+                        std::unique_ptr<char[]> vidstr2;
+                        i64 vtype{-1};
+                        i64 voffset2{0};
+                        if(Parsing::parse(curLine, &vtype, ',', &voffset2, ',', &vidstr2) && vtype == 1) {
+                            this->sVideoFileName = std::move(vidstr2);
+                            this->iVideoStartOffsetMS = static_cast<i32>(voffset2);
+                        }
+                    }
                 }
 
                 break;

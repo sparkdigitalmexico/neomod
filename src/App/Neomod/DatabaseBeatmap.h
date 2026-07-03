@@ -365,6 +365,11 @@ class DatabaseBeatmap final {
     [[nodiscard]] inline std::string_view getAudioFileName() const {
         return this->sAudioFileName ? std::string_view{this->sAudioFileName.get()} : ""sv;
     }
+    [[nodiscard]] inline std::string_view getVideoFileName() const {
+        return this->sVideoFileName ? std::string_view{this->sVideoFileName.get()} : ""sv;
+    }
+    [[nodiscard]] inline i32 getVideoStartOffsetMS() const { return this->iVideoStartOffsetMS; }
+    [[nodiscard]] inline bool hasVideo() const { return !!this->sVideoFileName; }
 
     [[nodiscard]] inline u32 getLengthMS() const { return this->iLengthMS; }
     [[nodiscard]] inline int getPreviewTime() const { return this->iPreviewTime; }
@@ -387,6 +392,7 @@ class DatabaseBeatmap final {
 
     [[nodiscard]] std::string getFullSoundFilePath() const;
     [[nodiscard]] std::string getFullBackgroundImageFilePath() const;
+    [[nodiscard]] std::string getFullVideoFilePath() const;
 
     // redundant data
 
@@ -464,6 +470,8 @@ class DatabaseBeatmap final {
     std::unique_ptr<char[]> sTags;            // only used by search
     std::unique_ptr<char[]> sBackgroundImageFileName;
     std::unique_ptr<char[]> sAudioFileName;
+    std::unique_ptr<char[]> sVideoFileName;  // [Events] "Video,..." (beatmap background video)
+    i32 iVideoStartOffsetMS{0};              // song time (ms) the video begins at
 
     int iID{0};  // online ID, if uploaded
     u32 iLengthMS{0};

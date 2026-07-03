@@ -41,6 +41,7 @@ using ::AVMEDIA_TYPE_VIDEO;
 // define core function groups by library
 #define AVFORMAT_FUNCTIONS(X)    \
     X(av_read_frame)             \
+    X(av_seek_frame)             \
     X(avformat_alloc_context)    \
     X(avformat_close_input)      \
     X(avformat_find_stream_info) \
@@ -54,6 +55,7 @@ using ::AVMEDIA_TYPE_VIDEO;
     X(av_packet_unref)               \
     X(avcodec_alloc_context3)        \
     X(avcodec_find_decoder)          \
+    X(avcodec_flush_buffers)         \
     X(avcodec_free_context)          \
     X(avcodec_open2)                 \
     X(avcodec_parameters_to_context) \
