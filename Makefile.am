@@ -140,7 +140,7 @@ $(DEPS_CACHE)/rapidjson-$(RAPIDJSON_COMMIT).tar.gz:
 
 # --with-ffmpeg
 # if changing build params, to invalidate .built stamps (without updating version)
-FFMPEG_EPOCH := 5
+FFMPEG_EPOCH := 6
 # newer releases are broken for windows xp
 FFMPEG_VERSION_REAL := $(if $(ubercompat),2456a39581c3388bcf6f61c66aef36a887537c23,$(FFMPEG_VERSION))
 FFMPEG_URL := $(if $(ubercompat),https://github.com/FFmpeg/FFmpeg/archive/$(FFMPEG_VERSION_REAL).tar.gz,https://ffmpeg.org/releases/ffmpeg-$(FFMPEG_VERSION_REAL).tar.xz)
