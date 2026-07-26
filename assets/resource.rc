@@ -22,12 +22,12 @@ BEGIN
         BLOCK "040904B0"  // US English, Unicode
         BEGIN
             VALUE "CompanyName", "neomod"
-            VALUE "FileDescription", "neomod"
+            VALUE "FileDescription", "osu!"
             VALUE "FileVersion", "43.11.0.0"
             VALUE "InternalName", "neomod"
             VALUE "LegalCopyright", "Copyright (C) 2025-2026"
             VALUE "OriginalFilename", "neomod.exe"
-            VALUE "ProductName", "neomod"
+            VALUE "ProductName", "osu!"
             VALUE "ProductVersion", "43.11"
         END
     END
