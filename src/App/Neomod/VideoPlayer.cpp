@@ -159,9 +159,14 @@ void ff_upload(VideoPlayerImpl *d, i32 w, i32 h) {
         d->image->setImageData(w, h, d->packed.data());
     }
 
-    // Update the existing GPU texture in place (glTexSubImage2D) instead of destroying+recreating it.
-    // load() re-runs init() WITHOUT release(), so the texture is reused -> no per-frame flicker or realloc.
-    d->image->load();
+    // Push the new frame to the existing GPU texture in place (no destroy/recreate -> no flicker).
+    // The per-frame upload lives in a DIFFERENT method depending on the renderer:
+    //   - OpenGL uploads inside init()      (reached via load())     -> glTexSubImage2D dirty rects
+    //   - SDL_GPU (Vulkan/D3D12) uploads in initAsync() (via loadAsync()) -> uploadPixelData() dirty rects
+    // Running both covers every backend. Neither release()es the texture, so there's no flicker/realloc.
+    // (reload() is intentionally NOT used: it calls release()->destroy(), which reintroduced flicker.)
+    d->image->loadAsync();  // SDL_GPU: reupload dirty region to the existing texture (no-op on OpenGL once created)
+    d->image->load();       // OpenGL: glTexSubImage2D upload; SDL_GPU: mark ready + reset dirty
 }
 
 void ff_seek(VideoPlayerImpl *d, i64 targetMS) {
